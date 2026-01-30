@@ -298,107 +298,107 @@ async function syncAccount(account) {
                 // Get mailbox lock and capture metadata
                 lock = await client.getMailboxLock(boxName);
 
-                console.log(`[Sync] Accessing ${boxName} (Mapped: ${targetCategory})`);
+                try {
+                    console.log(`[Sync] Accessing ${boxName} (Mapped: ${targetCategory})`);
 
-                // --- ROBUST LARGE DATA SYNC STRATEGY ---
-                // 1. Get total message count from client.mailbox
-                const totalMessages = client.mailbox.exists;
+                    // --- ROBUST LARGE DATA SYNC STRATEGY ---
+                    // 1. Get total message count from client.mailbox
+                    const totalMessages = client.mailbox.exists;
 
-                console.log(`[Sync] ${boxName}: Total messages on server: ${totalMessages}`);
+                    console.log(`[Sync] ${boxName}: Total messages on server: ${totalMessages}`);
 
-                if (totalMessages === 0) {
-                    lock.release();
-                    continue; // Empty box
-                }
+                    if (totalMessages === 0) {
+                        continue; // Empty box
+                    }
 
-                // Load ALL local UIDs once for efficient lookup
-                // Warning: For 100k emails, this array is large but manageable (approx 800KB-1MB RAM).
-                const localUids = db.getAllUidsForFolder(account.id, targetCategory);
-                const localUidSet = new Set(localUids);
-                console.log(`[Sync] ${boxName}: Local messages DB has: ${localUids.length}`);
+                    // Load ALL local UIDs once for efficient lookup
+                    // Warning: For 100k emails, this array is large but manageable (approx 800KB-1MB RAM).
+                    const localUids = db.getAllUidsForFolder(account.id, targetCategory);
+                    const localUidSet = new Set(localUids);
+                    console.log(`[Sync] ${boxName}: Local messages DB has: ${localUids.length}`);
 
-                // Config parameters
-                const UID_FETCH_BATCH_SIZE = 5000;
-                const MSG_FETCH_BATCH_SIZE = 50;
+                    // Config parameters
+                    const UID_FETCH_BATCH_SIZE = 5000;
+                    const MSG_FETCH_BATCH_SIZE = 50;
 
 
-                // --- RECONCILIATION: Track all server UIDs to detect deletions ---
-                const allServerUids = new Set();
+                    // --- RECONCILIATION: Track all server UIDs to detect deletions ---
+                    const allServerUids = new Set();
 
-                // Loop through sequence ranges (1-based index)
-                for (let seqStart = 1; seqStart <= totalMessages; seqStart += UID_FETCH_BATCH_SIZE) {
-                    const seqEnd = Math.min(seqStart + UID_FETCH_BATCH_SIZE - 1, totalMessages);
-                    const range = `${seqStart}:${seqEnd}`;
+                    // Loop through sequence ranges (1-based index)
+                    for (let seqStart = 1; seqStart <= totalMessages; seqStart += UID_FETCH_BATCH_SIZE) {
+                        const seqEnd = Math.min(seqStart + UID_FETCH_BATCH_SIZE - 1, totalMessages);
+                        const range = `${seqStart}:${seqEnd}`;
 
-                    console.log(`[Sync] ${boxName}: Checking range ${range} for missing UIDs...`);
+                        console.log(`[Sync] ${boxName}: Checking range ${range} for missing UIDs...`);
 
-                    try {
-                        // Fetch only UIDs for this sequence range
-                        const headers = await fetchBatchSeq(client, range);
+                        try {
+                            // Fetch only UIDs for this sequence range
+                            const headers = await fetchBatchSeq(client, range);
 
-                        // Extract server UIDs from this batch
-                        const batchServerUids = headers.map(m => m.attributes ? m.attributes.uid : null).filter(u => u != null);
+                            // Extract server UIDs from this batch
+                            const batchServerUids = headers.map(m => m.attributes ? m.attributes.uid : null).filter(u => u != null);
 
-                        // Add to reconciliation set
-                        batchServerUids.forEach(u => allServerUids.add(u));
+                            // Add to reconciliation set
+                            batchServerUids.forEach(u => allServerUids.add(u));
 
-                        console.log(`[Sync Debug] Range ${range}: Fetched ${headers.length} headers, extracted ${batchServerUids.length} UIDs.`);
+                            console.log(`[Sync Debug] Range ${range}: Fetched ${headers.length} headers, extracted ${batchServerUids.length} UIDs.`);
 
-                        // Identify which ones are missing locally
-                        const missingInBatch = batchServerUids.filter(uid => !localUidSet.has(uid));
-                        console.log(`[Sync Debug] Range ${range}: ${missingInBatch.length} missing locally.`);
+                            // Identify which ones are missing locally
+                            const missingInBatch = batchServerUids.filter(uid => !localUidSet.has(uid));
+                            console.log(`[Sync Debug] Range ${range}: ${missingInBatch.length} missing locally.`);
 
-                        if (missingInBatch.length > 0) {
-                            console.log(`[Sync] ${boxName}: Range ${range} has ${missingInBatch.length} new messages.`);
+                            if (missingInBatch.length > 0) {
+                                console.log(`[Sync] ${boxName}: Range ${range} has ${missingInBatch.length} new messages.`);
 
-                            // Download missing messages in smaller chunks
-                            missingInBatch.sort((a, b) => a - b); // Process in order
+                                // Download missing messages in smaller chunks
+                                missingInBatch.sort((a, b) => a - b); // Process in order
 
-                            for (let i = 0; i < missingInBatch.length; i += MSG_FETCH_BATCH_SIZE) {
-                                const chunkUids = missingInBatch.slice(i, i + MSG_FETCH_BATCH_SIZE);
-                                console.log(`[Sync] Downloading ${chunkUids.length} messages... (UIDs ${chunkUids[0]}..${chunkUids[chunkUids.length - 1]})`);
+                                for (let i = 0; i < missingInBatch.length; i += MSG_FETCH_BATCH_SIZE) {
+                                    const chunkUids = missingInBatch.slice(i, i + MSG_FETCH_BATCH_SIZE);
+                                    console.log(`[Sync] Downloading ${chunkUids.length} messages... (UIDs ${chunkUids[0]}..${chunkUids[chunkUids.length - 1]})`);
 
-                                try {
-                                    // Fetch FULL message content for these UIDs directly
-                                    console.log(`[Sync Debug] Downloading chunk directly via fetchBatchUid...`);
-                                    const messages = await fetchBatchUid(client, chunkUids);
+                                    try {
+                                        // Fetch FULL message content for these UIDs directly
+                                        console.log(`[Sync Debug] Downloading chunk directly via fetchBatchUid...`);
+                                        const messages = await fetchBatchUid(client, chunkUids);
 
-                                    if (!messages || messages.length === 0) {
-                                        console.error(`[Sync Error] Fetched 0 messages for UIDs ${chunkUids[0]}..${chunkUids[chunkUids.length - 1]}`);
-                                    } else {
-                                        console.log(`[Sync Debug] Fetched ${messages.length} raw messages. Processing...`);
-                                        const saved = await processMessages(client, messages, account, targetCategory);
-                                        totalNew += saved;
-                                        console.log(`[Sync Debug] Saved ${saved} messages from this chunk.`);
+                                        if (!messages || messages.length === 0) {
+                                            console.error(`[Sync Error] Fetched 0 messages for UIDs ${chunkUids[0]}..${chunkUids[chunkUids.length - 1]}`);
+                                        } else {
+                                            console.log(`[Sync Debug] Fetched ${messages.length} raw messages. Processing...`);
+                                            const saved = await processMessages(client, messages, account, targetCategory);
+                                            totalNew += saved;
+                                            console.log(`[Sync Debug] Saved ${saved} messages from this chunk.`);
+                                        }
+
+                                    } catch (fetchErr) {
+                                        console.error(`[Sync] Failed to fetch message chunk ${chunkUids.join(',')}:`, fetchErr);
                                     }
-
-                                } catch (fetchErr) {
-                                    console.error(`[Sync] Failed to fetch message chunk ${chunkUids.join(',')}:`, fetchErr);
                                 }
                             }
+
+                        } catch (rangeErr) {
+                            console.error(`[Sync] Failed to fetch UIDs for sequence range ${range}:`, rangeErr);
                         }
-
-                    } catch (rangeErr) {
-                        console.error(`[Sync] Failed to fetch UIDs for sequence range ${range}:`, rangeErr);
                     }
+
+                    // --- RECONCILIATION PHASE ---
+                    // 1. Identify local orphans (UIDs present locally but not on server)
+                    const localOrphans = localUids.filter(uid => !allServerUids.has(uid));
+
+                    if (localOrphans.length > 0) {
+                        console.log(`[Sync] Found ${localOrphans.length} orphaned emails in ${boxName} (deleted on server). removing locally...`);
+                        const deletedCount = db.deleteEmailsByUid(account.id, targetCategory, localOrphans);
+                        console.log(`[Sync] Deleted ${deletedCount} local emails.`);
+                    } else {
+                        console.log(`[Sync] No orphans found in ${boxName}. Local DB matches server.`);
+                    }
+
+                } catch (err) {
+                    console.error(`Error syncing folder ${boxName}:`, err);
                 }
-
-                // --- RECONCILIATION PHASE ---
-                // 1. Identify local orphans (UIDs present locally but not on server)
-                const localOrphans = localUids.filter(uid => !allServerUids.has(uid));
-
-                if (localOrphans.length > 0) {
-                    console.log(`[Sync] Found ${localOrphans.length} orphaned emails in ${boxName} (deleted on server). removing locally...`);
-                    const deletedCount = db.deleteEmailsByUid(account.id, targetCategory, localOrphans);
-                    console.log(`[Sync] Deleted ${deletedCount} local emails.`);
-                } else {
-                    console.log(`[Sync] No orphans found in ${boxName}. Local DB matches server.`);
-                }
-
-                lock.release();
-
-            } catch (err) {
-                console.error(`Error syncing folder ${boxName}:`, err);
+            } finally {
                 if (lock) lock.release();
             }
         } // End box loop
