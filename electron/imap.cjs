@@ -1,4 +1,4 @@
-const imaps = require('imap-simple');
+const { ImapFlow } = require('imapflow');
 const simpleParser = require('mailparser').simpleParser;
 const { saveEmail, updateAccountSync, updateAccountQuota, migrateFolder, getMaxUidForFolder, getAllUidsForFolder, deleteEmailsByUid } = require('./db.cjs');
 // Add db just for direct calls if needed, though we imported migrateFolder directly
@@ -11,32 +11,31 @@ const PROVIDERS = {
     gmx: {
         host: 'imap.gmx.net',
         port: 993,
-        tls: true,
-        authTimeout: 3000
+        secure: true
     },
     webde: {
         host: 'imap.web.de',
         port: 993,
-        tls: true
+        secure: true
     },
     gmail: {
         host: 'imap.gmail.com',
         port: 993,
-        tls: true
+        secure: true
     }
 };
 
 /**
- * Wrapper for node-imap fetch (Sequence Numbers)
- * imap-simple doesn't expose this directly.
+ * Wrapper for raw IMAP fetch (Sequence Numbers)
+ * Uses imapflow's client.imap for raw access.
  */
-function fetchBatchSeq(connection, range) {
+function fetchBatchSeq(client, range) {
     return new Promise((resolve, reject) => {
         const results = [];
         try {
-            // connection.imap is the node-imap instance
+            // client.imap provides raw node-imap access
             // .seq.fetch() uses sequence numbers (1:5000) instead of UIDs
-            const f = connection.imap.seq.fetch(range, { bodies: 'HEADER.FIELDS (UID)' });
+            const f = client.imap.seq.fetch(range, { bodies: 'HEADER.FIELDS (UID)' });
 
             f.on('message', (msg) => {
                 msg.on('attributes', (attrs) => {
@@ -58,15 +57,15 @@ function fetchBatchSeq(connection, range) {
 }
 
 /**
- * Wrapper for node-imap fetch (UIDs)
+ * Wrapper for raw IMAP fetch (UIDs)
  * Bypasses SEARCH and directly fetches by UID.
  */
-function fetchBatchUid(connection, uids) {
+function fetchBatchUid(client, uids) {
     return new Promise((resolve, reject) => {
         const messages = [];
         try {
-            // connection.imap.fetch takes UIDs directly (string or array)
-            const f = connection.imap.fetch(uids, { bodies: [''], markSeen: false });
+            // client.imap.fetch takes UIDs directly (string or array)
+            const f = client.imap.fetch(uids, { bodies: [''], markSeen: false });
 
             f.on('message', (msg) => {
                 const message = { parts: [], attributes: null };
@@ -90,7 +89,6 @@ function fetchBatchUid(connection, uids) {
             });
 
             f.once('error', (err) => {
-                console.error('[IMAP Raw] Fetch by UID error:', err);
                 reject(err);
             });
 
@@ -106,7 +104,7 @@ function fetchBatchUid(connection, uids) {
 /**
  * Helper to process a batch of fetch results and save them to DB
  */
-async function processMessages(connection, messages, account, targetCategory) {
+async function processMessages(client, messages, account, targetCategory) {
     let savedCount = 0;
 
     // Reverse to process newest first in this batch if desired, or just simple loop
@@ -201,37 +199,37 @@ async function processMessages(connection, messages, account, targetCategory) {
 
 async function syncAccount(account) {
     console.log(`Starting sync for account: ${account.email}`);
-    const config = {
-        imap: {
+
+    const client = new ImapFlow({
+        host: account.imapHost,
+        port: account.imapPort,
+        secure: true,
+        tls: { rejectUnauthorized: false },
+        auth: {
             user: account.username || account.email,
-            password: account.password,
-            host: account.imapHost,
-            port: account.imapPort,
-            tls: true,
-            tlsOptions: { rejectUnauthorized: false },
-            authTimeout: 10000 // Increased timeout for initial connection
-        }
-    };
+            pass: account.password
+        },
+        logger: false
+    });
 
     try {
-        const connection = await imaps.connect(config);
+        await client.connect();
         console.log("IMAP Connected");
 
-        // 1. Get all boxes
-        const boxes = await connection.getBoxes();
+        // 1. Get all mailboxes
+        const mailboxes = await client.list();
         const folderMap = { 'INBOX': 'Posteingang' };
 
         try {
             console.log('[Quota] Checking storage quota...');
             // LOG CAPABILITIES
             try {
-                // accessing private property _caps for debugging as serverSupports might be strict
-                const caps = connection.imap._caps || [];
-                console.log('[Quota Debug] Server Capabilities:', caps);
+                const caps = client.capabilities || new Set();
+                console.log('[Quota Debug] Server Capabilities:', Array.from(caps));
             } catch (e) { }
 
             await new Promise((resolve) => {
-                connection.imap.getQuotaRoot('INBOX', (err, quotas) => {
+                client.imap.getQuotaRoot('INBOX', (err, quotas) => {
                     console.log('[Quota Debug] Callback fired.');
                     if (err) {
                         console.log('[Quota Debug] Error:', err);
@@ -275,16 +273,19 @@ async function syncAccount(account) {
         }
 
         const findSpecialFolders = (boxList, prefix = '') => {
-            for (const key in boxList) {
-                const box = boxList[key];
+            for (const box of boxList) {
+                const key = box.name;
                 const fullPath = prefix + key;
+                const delimiter = box.delimiter || '/';
 
-                if (box.attribs) {
-                    if (box.attribs.some(a => typeof a === 'string' && a.toLowerCase().includes('\\sent'))) {
+                // Check specialUse attribute (imapflow uses specialUse instead of attribs)
+                if (box.specialUse) {
+                    const specialUse = box.specialUse.toLowerCase();
+                    if (specialUse.includes('\\sent') || specialUse.includes('sent')) {
                         folderMap[fullPath] = 'Gesendet';
-                    } else if (box.attribs.some(a => typeof a === 'string' && a.toLowerCase().includes('\\trash'))) {
+                    } else if (specialUse.includes('\\trash') || specialUse.includes('trash')) {
                         folderMap[fullPath] = 'Papierkorb';
-                    } else if (box.attribs.some(a => typeof a === 'string' && a.toLowerCase().includes('\\junk'))) {
+                    } else if (specialUse.includes('\\junk') || specialUse.includes('junk')) {
                         folderMap[fullPath] = 'Spam';
                     }
                 }
@@ -297,23 +298,21 @@ async function syncAccount(account) {
                     else if (lower !== 'inbox') {
                         let prettyPath = fullPath;
                         if (prettyPath.toUpperCase().startsWith('INBOX')) {
-                            const sep = box.delimiter || '/';
-                            const parts = fullPath.split(sep);
+                            const parts = fullPath.split(delimiter);
                             if (parts[0].toUpperCase() === 'INBOX') parts[0] = 'Posteingang';
                             prettyPath = parts.join('/');
                         } else {
-                            const sep = box.delimiter || '/';
-                            prettyPath = fullPath.split(sep).join('/');
+                            prettyPath = fullPath.split(delimiter).join('/');
                         }
                         folderMap[fullPath] = prettyPath;
                     }
                 }
 
-                if (box.children) findSpecialFolders(box.children, fullPath + box.delimiter);
+                // imapflow returns flat list with path, so no children to recurse
             }
         };
 
-        findSpecialFolders(boxes);
+        findSpecialFolders(mailboxes);
 
         // Migration step for folder naming
         for (const [fullPath, prettyName] of Object.entries(folderMap)) {
@@ -328,19 +327,21 @@ async function syncAccount(account) {
         let totalNew = 0;
 
         for (const [boxName, targetCategory] of Object.entries(folderMap)) {
+            let lock;
             try {
-                // Open box and capture metadata (messages count etc)
-                const box = await connection.openBox(boxName);
+                // Get mailbox lock and capture metadata
+                lock = await client.getMailboxLock(boxName);
 
                 console.log(`[Sync] Accessing ${boxName} (Mapped: ${targetCategory})`);
 
                 // --- ROBUST LARGE DATA SYNC STRATEGY ---
-                // 1. Get total message count from the generic box object returned by openBox
-                const totalMessages = box.messages.total;
+                // 1. Get total message count from client.mailbox
+                const totalMessages = client.mailbox.exists;
 
                 console.log(`[Sync] ${boxName}: Total messages on server: ${totalMessages}`);
 
                 if (totalMessages === 0) {
+                    lock.release();
                     continue; // Empty box
                 }
 
@@ -367,7 +368,7 @@ async function syncAccount(account) {
 
                     try {
                         // Fetch only UIDs for this sequence range
-                        const headers = await fetchBatchSeq(connection, range);
+                        const headers = await fetchBatchSeq(client, range);
 
                         // Extract server UIDs from this batch
                         const batchServerUids = headers.map(m => m.attributes ? m.attributes.uid : null).filter(u => u != null);
@@ -394,13 +395,13 @@ async function syncAccount(account) {
                                 try {
                                     // Fetch FULL message content for these UIDs directly
                                     console.log(`[Sync Debug] Downloading chunk directly via fetchBatchUid...`);
-                                    const messages = await fetchBatchUid(connection, chunkUids);
+                                    const messages = await fetchBatchUid(client, chunkUids);
 
                                     if (!messages || messages.length === 0) {
                                         console.error(`[Sync Error] Fetched 0 messages for UIDs ${chunkUids[0]}..${chunkUids[chunkUids.length - 1]}`);
                                     } else {
                                         console.log(`[Sync Debug] Fetched ${messages.length} raw messages. Processing...`);
-                                        const saved = await processMessages(connection, messages, account, targetCategory);
+                                        const saved = await processMessages(client, messages, account, targetCategory);
                                         totalNew += saved;
                                         console.log(`[Sync Debug] Saved ${saved} messages from this chunk.`);
                                     }
@@ -428,40 +429,49 @@ async function syncAccount(account) {
                     console.log(`[Sync] No orphans found in ${boxName}. Local DB matches server.`);
                 }
 
+                lock.release();
+
             } catch (err) {
                 console.error(`Error syncing folder ${boxName}:`, err);
+                if (lock) lock.release();
             }
         } // End box loop
 
-        connection.end();
+        await client.logout();
         console.log(`Sync completed. Total new messages: ${totalNew}`);
         return { success: true, count: totalNew };
 
     } catch (error) {
-        console.error('IMAP Error:', error);
+        if (process.env.NODE_ENV !== 'test') {
+            console.error('IMAP Error:', error);
+        }
         return { success: false, error: error.message };
     }
 }
 
 async function testConnection(account) {
-    const config = {
-        imap: {
+    const client = new ImapFlow({
+        host: account.imapHost,
+        port: account.imapPort,
+        secure: true,
+        tls: { rejectUnauthorized: false },
+        auth: {
             user: account.username || account.email,
-            password: account.password,
-            host: account.imapHost,
-            port: account.imapPort,
-            tls: true,
-            tlsOptions: { rejectUnauthorized: false },
-            authTimeout: 5000
-        }
-    };
+            pass: account.password
+        },
+        logger: false
+    });
 
     try {
-        const connection = await imaps.connect(config);
-        await connection.openBox('INBOX');
-        connection.end();
+        await client.connect();
+        const lock = await client.getMailboxLock('INBOX');
+        lock.release();
+        await client.logout();
         return { success: true };
     } catch (error) {
+        if (process.env.NODE_ENV !== 'test') {
+            console.error('IMAP Error:', error);
+        }
         return { success: false, error: error.message };
     }
 }
@@ -469,71 +479,62 @@ async function testConnection(account) {
 async function deleteEmail(account, uid, dbFolder) {
     if (!uid) return { success: false, error: 'No UID' };
 
-    const config = {
-        imap: {
+    const client = new ImapFlow({
+        host: account.imapHost,
+        port: account.imapPort,
+        secure: true,
+        tls: { rejectUnauthorized: false },
+        auth: {
             user: account.username || account.email,
-            password: account.password,
-            host: account.imapHost,
-            port: account.imapPort,
-            tls: true,
-            tlsOptions: { rejectUnauthorized: false },
-            authTimeout: 5000
-        }
-    };
+            pass: account.password
+        },
+        logger: false
+    });
 
     try {
-        const connection = await imaps.connect(config);
+        await client.connect();
 
         // Resolve Server Path from DB Folder Name
         let serverPath = 'INBOX';
         if (dbFolder && dbFolder !== 'Posteingang') {
-            const boxList = await connection.getBoxes();
+            const boxList = await client.list();
             let foundPath = null;
 
-            const findPath = (boxes, prefix = '') => {
-                if (foundPath) return; // Stop if found
-                for (const key in boxes) {
-                    const box = boxes[key];
-                    const fullPath = prefix + key;
-                    let mappedName = fullPath; // Default
+            for (const box of boxList) {
+                const fullPath = box.path;
+                let mappedName = fullPath; // Default
 
-                    // Check Special Attributes
-                    if (box.attribs) {
-                        if (box.attribs.some(a => typeof a === 'string' && a.toLowerCase().includes('\\sent'))) mappedName = 'Gesendet';
-                        else if (box.attribs.some(a => typeof a === 'string' && a.toLowerCase().includes('\\trash'))) mappedName = 'Papierkorb';
-                        else if (box.attribs.some(a => typeof a === 'string' && a.toLowerCase().includes('\\junk'))) mappedName = 'Spam';
-                    }
+                // Check specialUse attribute (imapflow uses specialUse instead of attribs)
+                if (box.specialUse) {
+                    const specialUse = box.specialUse.toLowerCase();
+                    if (specialUse.includes('\\sent') || specialUse.includes('sent')) mappedName = 'Gesendet';
+                    else if (specialUse.includes('\\trash') || specialUse.includes('trash')) mappedName = 'Papierkorb';
+                    else if (specialUse.includes('\\junk') || specialUse.includes('junk')) mappedName = 'Spam';
+                }
 
-                    // Name matching overrides
-                    const lower = key.toLowerCase();
-                    if (mappedName === fullPath) { // If not mapped by attribute yet
-                        if (lower === 'sent' || lower === 'gesendet') mappedName = 'Gesendet';
-                        else if (lower === 'trash' || lower === 'papierkorb') mappedName = 'Papierkorb';
-                        else if (lower === 'junk' || lower === 'spam') mappedName = 'Spam';
-                        else if (fullPath.toUpperCase().startsWith('INBOX')) {
-                            // Handle Subfolders: INBOX.Amazon -> Posteingang/Amazon
-                            const sep = box.delimiter || '/';
-                            // Normalize separators to / for DB
-                            const parts = fullPath.split(sep);
-                            if (parts[0].toUpperCase() === 'INBOX') {
-                                parts[0] = 'Posteingang';
-                                mappedName = parts.join('/');
-                            }
+                // Name matching overrides
+                const lower = box.name.toLowerCase();
+                if (mappedName === fullPath) { // If not mapped by attribute yet
+                    if (lower === 'sent' || lower === 'gesendet') mappedName = 'Gesendet';
+                    else if (lower === 'trash' || lower === 'papierkorb') mappedName = 'Papierkorb';
+                    else if (lower === 'junk' || lower === 'spam') mappedName = 'Spam';
+                    else if (fullPath.toUpperCase().startsWith('INBOX')) {
+                        // Handle Subfolders: INBOX.Amazon -> Posteingang/Amazon
+                        const sep = box.delimiter || '/';
+                        // Normalize separators to / for DB
+                        const parts = fullPath.split(sep);
+                        if (parts[0].toUpperCase() === 'INBOX') {
+                            parts[0] = 'Posteingang';
+                            mappedName = parts.join('/');
                         }
                     }
-
-                    if (mappedName === dbFolder) {
-                        foundPath = fullPath;
-                        return;
-                    }
-
-                    if (box.children) {
-                        findPath(box.children, fullPath + (box.delimiter || '/'));
-                    }
                 }
-            };
 
-            findPath(boxList);
+                if (mappedName === dbFolder) {
+                    foundPath = fullPath;
+                    break;
+                }
+            }
 
             if (foundPath) {
                 serverPath = foundPath;
@@ -543,12 +544,19 @@ async function deleteEmail(account, uid, dbFolder) {
             }
         }
 
-        await connection.openBox(serverPath);
-        // Add \Deleted flag
-        await connection.addFlags(uid, ['\\Deleted']);
-        await connection.imap.expunge(uid);
+        // Get mailbox lock for the target folder
+        const lock = await client.getMailboxLock(serverPath);
 
-        connection.end();
+        try {
+            // Add \Deleted flag using imapflow's messageFlagsAdd()
+            await client.messageFlagsAdd(uid, ['\\Deleted']);
+            // Expunge the message using raw imap access
+            await client.imap.expunge(uid);
+        } finally {
+            lock.release();
+        }
+
+        await client.logout();
         return { success: true };
     } catch (error) {
         console.error('Delete Error:', error);
@@ -559,29 +567,35 @@ async function deleteEmail(account, uid, dbFolder) {
 async function setEmailFlag(account, uid, flag, value) {
     if (!uid) return { success: false, error: 'No UID' };
 
-    const config = {
-        imap: {
+    const client = new ImapFlow({
+        host: account.imapHost,
+        port: account.imapPort,
+        secure: true,
+        tls: { rejectUnauthorized: false },
+        auth: {
             user: account.username || account.email,
-            password: account.password,
-            host: account.imapHost,
-            port: account.imapPort,
-            tls: true,
-            tlsOptions: { rejectUnauthorized: false },
-            authTimeout: 5000
-        }
-    };
+            pass: account.password
+        },
+        logger: false
+    });
 
     try {
-        const connection = await imaps.connect(config);
-        await connection.openBox('INBOX');
+        await client.connect();
 
-        if (value) {
-            await connection.addFlags(uid, [flag]);
-        } else {
-            await connection.delFlags(uid, [flag]);
+        // Get mailbox lock for INBOX
+        const lock = await client.getMailboxLock('INBOX');
+
+        try {
+            if (value) {
+                await client.messageFlagsAdd(uid, [flag]);
+            } else {
+                await client.messageFlagsRemove(uid, [flag]);
+            }
+        } finally {
+            lock.release();
         }
 
-        connection.end();
+        await client.logout();
         return { success: true };
     } catch (error) {
         console.error('Flag Update Error:', error);

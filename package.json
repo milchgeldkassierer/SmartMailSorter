@@ -18,7 +18,7 @@
   "dependencies": {
     "@google/genai": "^1.38.0",
     "better-sqlite3": "^12.6.2",
-    "imap-simple": "^1.6.3",
+    "imapflow": "^1.2.8",
     "lucide-react": "^0.562.0",
     "mailparser": "^3.9.1",
     "nanoid": "^5.1.6",
