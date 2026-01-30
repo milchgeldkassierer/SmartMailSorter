@@ -702,4 +702,420 @@ New email 3 body`,
             expect(email5000.subject).toBe('Sparse Email 5000');
         });
     });
+
+    describe('Orphan Detection', () => {
+        it('should delete local emails that are no longer on server', async () => {
+            // Setup: Create local emails with UIDs 1, 2, 3
+            const initialEmails = [
+                {
+                    uid: 1,
+                    subject: 'Email 1',
+                    from: 'sender1@example.com',
+                    body: `Subject: Email 1
+From: sender1@example.com
+Date: ${new Date('2024-01-15T10:00:00Z').toISOString()}
+
+Email 1 body`,
+                    date: new Date('2024-01-15T10:00:00Z').toISOString(),
+                    flags: []
+                },
+                {
+                    uid: 2,
+                    subject: 'Email 2',
+                    from: 'sender2@example.com',
+                    body: `Subject: Email 2
+From: sender2@example.com
+Date: ${new Date('2024-01-15T11:00:00Z').toISOString()}
+
+Email 2 body`,
+                    date: new Date('2024-01-15T11:00:00Z').toISOString(),
+                    flags: []
+                },
+                {
+                    uid: 3,
+                    subject: 'Email 3 - Will be deleted on server',
+                    from: 'sender3@example.com',
+                    body: `Subject: Email 3 - Will be deleted on server
+From: sender3@example.com
+Date: ${new Date('2024-01-15T12:00:00Z').toISOString()}
+
+Email 3 body`,
+                    date: new Date('2024-01-15T12:00:00Z').toISOString(),
+                    flags: []
+                }
+            ];
+
+            setServerEmails(initialEmails);
+
+            const account = createTestAccount({
+                id: 'test-account-orphan-1',
+                email: 'orphan@test.com'
+            });
+
+            addAccountToDb(account);
+
+            // First sync - all 3 emails should be saved locally
+            const result1 = await imap.syncAccount(account);
+            expect(result1.success).toBe(true);
+            expect(result1.count).toBe(3);
+
+            const savedEmails1 = db.getEmails(account.id);
+            expect(savedEmails1).toHaveLength(3);
+            expect(savedEmails1.some(e => e.uid === 3)).toBe(true);
+
+            // Simulate: Email with UID 3 deleted on server
+            // Mock server returning only UIDs 1, 2
+            setServerEmails([
+                {
+                    uid: 1,
+                    subject: 'Email 1',
+                    from: 'sender1@example.com',
+                    body: `Subject: Email 1
+From: sender1@example.com
+Date: ${new Date('2024-01-15T10:00:00Z').toISOString()}
+
+Email 1 body`,
+                    date: new Date('2024-01-15T10:00:00Z').toISOString(),
+                    flags: []
+                },
+                {
+                    uid: 2,
+                    subject: 'Email 2',
+                    from: 'sender2@example.com',
+                    body: `Subject: Email 2
+From: sender2@example.com
+Date: ${new Date('2024-01-15T11:00:00Z').toISOString()}
+
+Email 2 body`,
+                    date: new Date('2024-01-15T11:00:00Z').toISOString(),
+                    flags: []
+                }
+            ]);
+
+            // Second sync - should detect and delete orphaned email (UID 3)
+            const result2 = await imap.syncAccount(account);
+            expect(result2.success).toBe(true);
+            expect(result2.count).toBe(0); // No new emails
+
+            const savedEmails2 = db.getEmails(account.id);
+            expect(savedEmails2).toHaveLength(2);
+
+            // Verify email with UID 3 was deleted (orphaned)
+            expect(savedEmails2.some(e => e.uid === 3)).toBe(false);
+
+            // Verify emails 1 and 2 are preserved
+            expect(savedEmails2.some(e => e.uid === 1)).toBe(true);
+            expect(savedEmails2.some(e => e.uid === 2)).toBe(true);
+
+            // Verify content of preserved emails
+            const email1 = savedEmails2.find(e => e.uid === 1);
+            expect(email1.subject).toBe('Email 1');
+
+            const email2 = savedEmails2.find(e => e.uid === 2);
+            expect(email2.subject).toBe('Email 2');
+        });
+
+        it('should delete multiple orphaned emails', async () => {
+            // Setup: Create 5 local emails
+            const initialEmails = [];
+            for (let i = 1; i <= 5; i++) {
+                initialEmails.push({
+                    uid: i,
+                    subject: `Email ${i}`,
+                    from: `sender${i}@example.com`,
+                    body: `Subject: Email ${i}\nFrom: sender${i}@example.com\nDate: ${new Date('2024-01-15T10:00:00Z').toISOString()}\n\nEmail ${i} body`,
+                    date: new Date('2024-01-15T10:00:00Z').toISOString(),
+                    flags: []
+                });
+            }
+
+            setServerEmails(initialEmails);
+
+            const account = createTestAccount({
+                id: 'test-account-orphan-multi',
+                email: 'orphanmulti@test.com'
+            });
+
+            addAccountToDb(account);
+
+            // First sync - all 5 emails should be saved locally
+            const result1 = await imap.syncAccount(account);
+            expect(result1.success).toBe(true);
+            expect(result1.count).toBe(5);
+
+            // Simulate: Emails with UIDs 2 and 4 deleted on server
+            setServerEmails([
+                {
+                    uid: 1,
+                    subject: 'Email 1',
+                    from: 'sender1@example.com',
+                    body: `Subject: Email 1\nFrom: sender1@example.com\nDate: ${new Date('2024-01-15T10:00:00Z').toISOString()}\n\nEmail 1 body`,
+                    date: new Date('2024-01-15T10:00:00Z').toISOString(),
+                    flags: []
+                },
+                {
+                    uid: 3,
+                    subject: 'Email 3',
+                    from: 'sender3@example.com',
+                    body: `Subject: Email 3\nFrom: sender3@example.com\nDate: ${new Date('2024-01-15T10:00:00Z').toISOString()}\n\nEmail 3 body`,
+                    date: new Date('2024-01-15T10:00:00Z').toISOString(),
+                    flags: []
+                },
+                {
+                    uid: 5,
+                    subject: 'Email 5',
+                    from: 'sender5@example.com',
+                    body: `Subject: Email 5\nFrom: sender5@example.com\nDate: ${new Date('2024-01-15T10:00:00Z').toISOString()}\n\nEmail 5 body`,
+                    date: new Date('2024-01-15T10:00:00Z').toISOString(),
+                    flags: []
+                }
+            ]);
+
+            // Second sync - should detect and delete orphaned emails (UIDs 2 and 4)
+            const result2 = await imap.syncAccount(account);
+            expect(result2.success).toBe(true);
+            expect(result2.count).toBe(0); // No new emails
+
+            const savedEmails = db.getEmails(account.id);
+            expect(savedEmails).toHaveLength(3);
+
+            // Verify orphaned emails were deleted
+            expect(savedEmails.some(e => e.uid === 2)).toBe(false);
+            expect(savedEmails.some(e => e.uid === 4)).toBe(false);
+
+            // Verify preserved emails
+            const savedUids = new Set(savedEmails.map(e => e.uid));
+            expect(savedUids.has(1)).toBe(true);
+            expect(savedUids.has(3)).toBe(true);
+            expect(savedUids.has(5)).toBe(true);
+        });
+
+        it('should handle all emails being orphans except one', async () => {
+            // Note: When server returns 0 emails, the sync code skips the folder
+            // before orphan detection runs. This test verifies the case where
+            // almost all emails are orphans (leaving 1 so folder sync runs).
+            // Setup: Create 5 local emails
+            const initialEmails = [];
+            for (let i = 1; i <= 5; i++) {
+                initialEmails.push({
+                    uid: i,
+                    subject: `Email ${i}`,
+                    from: `sender${i}@example.com`,
+                    body: `Subject: Email ${i}\nFrom: sender${i}@example.com\nDate: ${new Date('2024-01-15T10:00:00Z').toISOString()}\n\nEmail ${i} body`,
+                    date: new Date('2024-01-15T10:00:00Z').toISOString(),
+                    flags: []
+                });
+            }
+
+            setServerEmails(initialEmails);
+
+            const account = createTestAccount({
+                id: 'test-account-orphan-all',
+                email: 'orphanall@test.com'
+            });
+
+            addAccountToDb(account);
+
+            // First sync - all 5 emails should be saved locally
+            const result1 = await imap.syncAccount(account);
+            expect(result1.success).toBe(true);
+            expect(result1.count).toBe(5);
+
+            // Simulate: 4 emails deleted on server, only 1 remains
+            setServerEmails([{
+                uid: 5,
+                subject: 'Email 5',
+                from: 'sender5@example.com',
+                body: `Subject: Email 5\nFrom: sender5@example.com\nDate: ${new Date('2024-01-15T10:00:00Z').toISOString()}\n\nEmail 5 body`,
+                date: new Date('2024-01-15T10:00:00Z').toISOString(),
+                flags: []
+            }]);
+
+            // Second sync - should delete 4 local emails as orphans
+            const result2 = await imap.syncAccount(account);
+            expect(result2.success).toBe(true);
+            expect(result2.count).toBe(0);
+
+            const savedEmails = db.getEmails(account.id);
+            expect(savedEmails).toHaveLength(1); // Only email 5 remains
+
+            // Verify only the remaining email is preserved
+            expect(savedEmails[0].uid).toBe(5);
+            expect(savedEmails[0].subject).toBe('Email 5');
+        });
+
+        it('should handle orphan detection with new emails added simultaneously', async () => {
+            // Setup: Create 3 local emails
+            const initialEmails = [
+                {
+                    uid: 1,
+                    subject: 'Email 1 - Keep',
+                    from: 'sender1@example.com',
+                    body: `Subject: Email 1 - Keep
+From: sender1@example.com
+Date: ${new Date('2024-01-15T10:00:00Z').toISOString()}
+
+Email 1 body`,
+                    date: new Date('2024-01-15T10:00:00Z').toISOString(),
+                    flags: []
+                },
+                {
+                    uid: 2,
+                    subject: 'Email 2 - Delete',
+                    from: 'sender2@example.com',
+                    body: `Subject: Email 2 - Delete
+From: sender2@example.com
+Date: ${new Date('2024-01-15T11:00:00Z').toISOString()}
+
+Email 2 body`,
+                    date: new Date('2024-01-15T11:00:00Z').toISOString(),
+                    flags: []
+                },
+                {
+                    uid: 3,
+                    subject: 'Email 3 - Keep',
+                    from: 'sender3@example.com',
+                    body: `Subject: Email 3 - Keep
+From: sender3@example.com
+Date: ${new Date('2024-01-15T12:00:00Z').toISOString()}
+
+Email 3 body`,
+                    date: new Date('2024-01-15T12:00:00Z').toISOString(),
+                    flags: []
+                }
+            ];
+
+            setServerEmails(initialEmails);
+
+            const account = createTestAccount({
+                id: 'test-account-orphan-mixed',
+                email: 'orphanmixed@test.com'
+            });
+
+            addAccountToDb(account);
+
+            // First sync - all 3 emails should be saved locally
+            const result1 = await imap.syncAccount(account);
+            expect(result1.success).toBe(true);
+            expect(result1.count).toBe(3);
+
+            // Simulate:
+            // - Email with UID 2 deleted on server
+            // - New email with UID 4 added on server
+            setServerEmails([
+                {
+                    uid: 1,
+                    subject: 'Email 1 - Keep',
+                    from: 'sender1@example.com',
+                    body: `Subject: Email 1 - Keep
+From: sender1@example.com
+Date: ${new Date('2024-01-15T10:00:00Z').toISOString()}
+
+Email 1 body`,
+                    date: new Date('2024-01-15T10:00:00Z').toISOString(),
+                    flags: []
+                },
+                {
+                    uid: 3,
+                    subject: 'Email 3 - Keep',
+                    from: 'sender3@example.com',
+                    body: `Subject: Email 3 - Keep
+From: sender3@example.com
+Date: ${new Date('2024-01-15T12:00:00Z').toISOString()}
+
+Email 3 body`,
+                    date: new Date('2024-01-15T12:00:00Z').toISOString(),
+                    flags: []
+                },
+                {
+                    uid: 4,
+                    subject: 'Email 4 - New',
+                    from: 'sender4@example.com',
+                    body: `Subject: Email 4 - New
+From: sender4@example.com
+Date: ${new Date('2024-01-16T10:00:00Z').toISOString()}
+
+Email 4 body`,
+                    date: new Date('2024-01-16T10:00:00Z').toISOString(),
+                    flags: []
+                }
+            ]);
+
+            // Second sync - should delete orphaned email (UID 2) and add new email (UID 4)
+            const result2 = await imap.syncAccount(account);
+            expect(result2.success).toBe(true);
+            expect(result2.count).toBe(1); // 1 new email added
+
+            const savedEmails = db.getEmails(account.id);
+            expect(savedEmails).toHaveLength(3); // 3 total (deleted 1, added 1)
+
+            // Verify orphaned email was deleted
+            expect(savedEmails.some(e => e.uid === 2)).toBe(false);
+
+            // Verify preserved emails are still there
+            expect(savedEmails.some(e => e.uid === 1)).toBe(true);
+            expect(savedEmails.some(e => e.uid === 3)).toBe(true);
+
+            // Verify new email was added
+            const newEmail = savedEmails.find(e => e.uid === 4);
+            expect(newEmail).toBeDefined();
+            expect(newEmail.subject).toBe('Email 4 - New');
+        });
+
+        it('should handle orphan detection with batch processing for large mailboxes', async () => {
+            // Setup: Create 100 local emails
+            const initialEmails = [];
+            for (let i = 1; i <= 100; i++) {
+                initialEmails.push({
+                    uid: i,
+                    subject: `Email ${i}`,
+                    from: `sender${i}@example.com`,
+                    body: `Subject: Email ${i}\nFrom: sender${i}@example.com\nDate: ${new Date('2024-01-15T10:00:00Z').toISOString()}\n\nEmail ${i} body`,
+                    date: new Date('2024-01-15T10:00:00Z').toISOString(),
+                    flags: []
+                });
+            }
+
+            setServerEmails(initialEmails);
+
+            const account = createTestAccount({
+                id: 'test-account-orphan-batch',
+                email: 'orphanbatch@test.com'
+            });
+
+            addAccountToDb(account);
+
+            // First sync - all 100 emails should be saved locally
+            const result1 = await imap.syncAccount(account);
+            expect(result1.success).toBe(true);
+            expect(result1.count).toBe(100);
+
+            const savedEmails1 = db.getEmails(account.id);
+            expect(savedEmails1).toHaveLength(100);
+
+            // Simulate: Delete every 5th email on server (20 emails total)
+            const remainingEmails = initialEmails.filter((e, idx) => (idx + 1) % 5 !== 0);
+            setServerEmails(remainingEmails);
+
+            // Second sync - should detect and delete 20 orphaned emails
+            const result2 = await imap.syncAccount(account);
+            expect(result2.success).toBe(true);
+            expect(result2.count).toBe(0); // No new emails
+
+            const savedEmails2 = db.getEmails(account.id);
+            expect(savedEmails2).toHaveLength(80); // 100 - 20 = 80
+
+            // Verify specific orphaned emails were deleted (UIDs 5, 10, 15, ...)
+            for (let i = 5; i <= 100; i += 5) {
+                expect(savedEmails2.some(e => e.uid === i)).toBe(false);
+            }
+
+            // Verify non-orphaned emails are preserved
+            for (let i = 1; i <= 100; i++) {
+                if (i % 5 !== 0) {
+                    expect(savedEmails2.some(e => e.uid === i)).toBe(true);
+                }
+            }
+        });
+    });
 });
