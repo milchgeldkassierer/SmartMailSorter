@@ -26,70 +26,6 @@ const PROVIDERS = {
 };
 
 /**
- * Wrapper for raw IMAP fetch (Sequence Numbers)
- * Uses imapflow's fetch() with sequence numbers (default behavior)
- */
-async function fetchBatchSeq(client, range) {
-    const results = [];
-    try {
-        // ImapFlow's fetch() uses sequence numbers by default (uid: false is default)
-        // Fetch minimal data - just need UIDs and flags
-        for await (const message of client.fetch(range, { uid: false, flags: true })) {
-            results.push({
-                attributes: {
-                    uid: message.uid,
-                    flags: message.flags || []
-                }
-            });
-        }
-        return results;
-    } catch (err) {
-        throw err;
-    }
-}
-
-/**
- * Wrapper for raw IMAP fetch (UIDs)
- * Bypasses SEARCH and directly fetches by UID.
- */
-async function fetchBatchUid(client, uids) {
-    const messages = [];
-    try {
-        // ImapFlow's fetch() with uid: true to fetch by UIDs
-        // Convert uids array to range string (e.g., "1,2,3" or "1:5")
-        const uidRange = Array.isArray(uids) ? uids.join(',') : uids.toString();
-
-        for await (const message of client.fetch(uidRange, {
-            uid: true,
-            source: true,  // Fetch full raw email source
-            flags: true
-        })) {
-            // ImapFlow returns message with source buffer directly
-            const msg = {
-                parts: [],
-                attributes: {
-                    uid: message.uid,
-                    flags: message.flags || []
-                }
-            };
-
-            // Add body part only if source exists (handles missing body parts)
-            if (message.source) {
-                msg.parts.push({
-                    which: '',
-                    body: message.source.toString('utf8')
-                });
-            }
-
-            messages.push(msg);
-        }
-        return messages;
-    } catch (err) {
-        throw err;
-    }
-}
-
-/**
  * Helper to process a batch of fetch results and save them to DB
  */
 async function processMessages(client, messages, account, targetCategory) {
@@ -221,12 +157,13 @@ async function syncAccount(account) {
 
             if (quota && quota.storage) {
                 console.log('[Quota Debug] Quota Object:', JSON.stringify(quota));
-                const used = quota.storage.used || 0;
-                const total = quota.storage.limit || 0;
+                // Convert bytes to KB (ImapFlow returns bytes, DB expects KB)
+                const usedKB = Math.round((quota.storage.used || 0) / 1024);
+                const totalKB = Math.round((quota.storage.limit || 0) / 1024);
 
-                if (total > 0) {
-                    console.log(`[Quota] Used: ${used}KB, Total: ${total}KB`);
-                    updateAccountQuota(account.id, used, total);
+                if (totalKB > 0) {
+                    console.log(`[Quota] Used: ${usedKB}KB, Total: ${totalKB}KB`);
+                    updateAccountQuota(account.id, usedKB, totalKB);
                 } else {
                     console.log('[Quota Debug] No valid storage limits returned.');
                 }
@@ -331,9 +268,17 @@ async function syncAccount(account) {
 
                         console.log(`[Sync] ${boxName}: Checking range ${range} for missing UIDs...`);
 
-                        try {
-                            // Fetch only UIDs for this sequence range
-                            const headers = await fetchBatchSeq(client, range);
+                    try {
+                        // Fetch only UIDs for this sequence range using native ImapFlow fetch()
+                        const headers = [];
+                        for await (const message of client.fetch(range, { uid: false, flags: true })) {
+                            headers.push({
+                                attributes: {
+                                    uid: message.uid,
+                                    flags: message.flags || []
+                                }
+                            });
+                        }
 
                             // Extract server UIDs from this batch
                             const batchServerUids = headers.map(m => m.attributes ? m.attributes.uid : null).filter(u => u != null);
@@ -357,10 +302,36 @@ async function syncAccount(account) {
                                     const chunkUids = missingInBatch.slice(i, i + MSG_FETCH_BATCH_SIZE);
                                     console.log(`[Sync] Downloading ${chunkUids.length} messages... (UIDs ${chunkUids[0]}..${chunkUids[chunkUids.length - 1]})`);
 
-                                    try {
-                                        // Fetch FULL message content for these UIDs directly
-                                        console.log(`[Sync Debug] Downloading chunk directly via fetchBatchUid...`);
-                                        const messages = await fetchBatchUid(client, chunkUids);
+                                try {
+                                    // Fetch FULL message content for these UIDs directly using native client.fetch()
+                                    console.log(`[Sync Debug] Downloading chunk directly via client.fetch()...`);
+                                    const messages = [];
+                                    const uidRange = chunkUids.join(',');
+
+                                    for await (const message of client.fetch(uidRange, {
+                                        uid: true,
+                                        source: true,  // Fetch full raw email source
+                                        flags: true
+                                    })) {
+                                        // ImapFlow returns message with source buffer directly
+                                        const msg = {
+                                            parts: [],
+                                            attributes: {
+                                                uid: message.uid,
+                                                flags: message.flags || []
+                                            }
+                                        };
+
+                                        // Add body part only if source exists (handles missing body parts)
+                                        if (message.source) {
+                                            msg.parts.push({
+                                                which: '',
+                                                body: message.source.toString('utf8')
+                                            });
+                                        }
+
+                                        messages.push(msg);
+                                    }
 
                                         if (!messages || messages.length === 0) {
                                             console.error(`[Sync Error] Fetched 0 messages for UIDs ${chunkUids[0]}..${chunkUids[chunkUids.length - 1]}`);

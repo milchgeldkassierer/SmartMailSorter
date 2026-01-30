@@ -193,7 +193,6 @@ class ImapFlow {
         this.connected = false;
         this.mailbox = null;
         this.capabilities = new Set(['IMAP4rev1', 'UIDPLUS', 'QUOTA']);
-        this.imap = new MockImapConnection();
     }
 
     async connect() {
