@@ -1,0 +1,39 @@
+{
+  "sandbox": {
+    "enabled": true,
+    "autoAllowBashIfSandboxed": true
+  },
+  "permissions": {
+    "defaultMode": "acceptEdits",
+    "allow": [
+      "Read(./**)",
+      "Write(./**)",
+      "Edit(./**)",
+      "Glob(./**)",
+      "Grep(./**)",
+      "Read(/home/adi/projects/SmartMailSorter/.auto-claude/worktrees/tasks/001-fix-sidebar-visual-consistency-and-color-contrast/**)",
+      "Write(/home/adi/projects/SmartMailSorter/.auto-claude/worktrees/tasks/001-fix-sidebar-visual-consistency-and-color-contrast/**)",
+      "Edit(/home/adi/projects/SmartMailSorter/.auto-claude/worktrees/tasks/001-fix-sidebar-visual-consistency-and-color-contrast/**)",
+      "Glob(/home/adi/projects/SmartMailSorter/.auto-claude/worktrees/tasks/001-fix-sidebar-visual-consistency-and-color-contrast/**)",
+      "Grep(/home/adi/projects/SmartMailSorter/.auto-claude/worktrees/tasks/001-fix-sidebar-visual-consistency-and-color-contrast/**)",
+      "Read(/home/adi/projects/SmartMailSorter/.auto-claude/worktrees/tasks/001-fix-sidebar-visual-consistency-and-color-contrast/.auto-claude/specs/001-fix-sidebar-visual-consistency-and-color-contrast/**)",
+      "Write(/home/adi/projects/SmartMailSorter/.auto-claude/worktrees/tasks/001-fix-sidebar-visual-consistency-and-color-contrast/.auto-claude/specs/001-fix-sidebar-visual-consistency-and-color-contrast/**)",
+      "Edit(/home/adi/projects/SmartMailSorter/.auto-claude/worktrees/tasks/001-fix-sidebar-visual-consistency-and-color-contrast/.auto-claude/specs/001-fix-sidebar-visual-consistency-and-color-contrast/**)",
+      "Read(/home/adi/projects/SmartMailSorter/.auto-claude/**)",
+      "Write(/home/adi/projects/SmartMailSorter/.auto-claude/**)",
+      "Edit(/home/adi/projects/SmartMailSorter/.auto-claude/**)",
+      "Glob(/home/adi/projects/SmartMailSorter/.auto-claude/**)",
+      "Grep(/home/adi/projects/SmartMailSorter/.auto-claude/**)",
+      "Bash(*)",
+      "WebFetch(*)",
+      "WebSearch(*)",
+      "mcp__context7__resolve-library-id(*)",
+      "mcp__context7__get-library-docs(*)",
+      "mcp__graphiti-memory__search_nodes(*)",
+      "mcp__graphiti-memory__search_facts(*)",
+      "mcp__graphiti-memory__add_episode(*)",
+      "mcp__graphiti-memory__get_episodes(*)",
+      "mcp__graphiti-memory__get_entity_edge(*)"
+    ]
+  }
+}

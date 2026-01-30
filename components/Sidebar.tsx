@@ -207,16 +207,16 @@ const Sidebar: React.FC<SidebarProps> = ({
                   <button
                     onClick={() => onSelectCategory(cat)}
                     className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-colors ${isActive
-                      ? 'bg-blue-50 text-blue-700'
-                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                      ? 'bg-blue-600 text-white'
+                      : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'
                       }`}
                   >
                     <div className="flex items-center gap-3">
-                      <CategoryIcon category={cat} className={`w-4 h-4 ${isActive ? 'text-blue-600' : 'text-slate-400'}`} />
+                      <CategoryIcon category={cat} className={`w-4 h-4 ${isActive ? 'text-blue-200' : 'text-slate-500'}`} />
                       <span>{cat}</span>
                     </div>
                     {count > 0 && (
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${isActive ? 'bg-blue-200 text-blue-800' : 'bg-slate-100 text-slate-600'
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${isActive ? 'bg-blue-500 text-white' : 'bg-slate-800 text-slate-500'
                         }`}>
                         {count}
                       </span>

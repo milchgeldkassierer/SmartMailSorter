@@ -1,0 +1,25 @@
+{
+  "active": true,
+  "spec": "001-fix-sidebar-visual-consistency-and-color-contrast",
+  "state": "planning",
+  "subtasks": {
+    "completed": 0,
+    "total": 0,
+    "in_progress": 1,
+    "failed": 0
+  },
+  "phase": {
+    "current": "Fix Sidebar Styling",
+    "id": null,
+    "total": 3
+  },
+  "workers": {
+    "active": 0,
+    "max": 1
+  },
+  "session": {
+    "number": 2,
+    "started_at": "2026-01-30T11:56:40.748023"
+  },
+  "last_update": "2026-01-30T12:00:57.896848"
+}
