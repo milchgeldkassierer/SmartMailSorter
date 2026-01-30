@@ -158,12 +158,13 @@ async function syncAccount(account) {
 
             if (quota && quota.storage) {
                 console.log('[Quota Debug] Quota Object:', JSON.stringify(quota));
-                const used = quota.storage.used || 0;
-                const total = quota.storage.limit || 0;
+                // Convert bytes to KB (ImapFlow returns bytes, DB expects KB)
+                const usedKB = Math.round((quota.storage.used || 0) / 1024);
+                const totalKB = Math.round((quota.storage.limit || 0) / 1024);
 
-                if (total > 0) {
-                    console.log(`[Quota] Used: ${used}KB, Total: ${total}KB`);
-                    updateAccountQuota(account.id, used, total);
+                if (totalKB > 0) {
+                    console.log(`[Quota] Used: ${usedKB}KB, Total: ${totalKB}KB`);
+                    updateAccountQuota(account.id, usedKB, totalKB);
                 } else {
                     console.log('[Quota Debug] No valid storage limits returned.');
                 }
