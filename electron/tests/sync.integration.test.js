@@ -322,6 +322,70 @@ describe('IMAP Sync Integration Tests', () => {
         resetMockState();
     });
 
+    describe('Connection Tests', () => {
+        it('should successfully test connection to IMAP server', async () => {
+            const account = createTestAccount({
+                id: 'test-account-connection-success',
+                email: 'connection@test.com'
+            });
+
+            addAccountToDb(account);
+
+            const result = await imap.testConnection(account);
+
+            expect(result.success).toBe(true);
+            expect(result.error).toBeUndefined();
+        });
+
+        it('should handle connection failure gracefully', async () => {
+            mockState.shouldFailConnect = true;
+
+            const account = createTestAccount({
+                id: 'test-account-connection-failure',
+                email: 'connectionfail@test.com'
+            });
+
+            addAccountToDb(account);
+
+            const result = await imap.testConnection(account);
+
+            expect(result.success).toBe(false);
+            expect(result.error).toBeDefined();
+            expect(result.error).toContain('Connection failed');
+        });
+
+        it('should test connection with valid credentials', async () => {
+            const account = createTestAccount({
+                id: 'test-account-valid-creds',
+                email: 'validcreds@test.com',
+                username: 'validuser@test.com',
+                password: 'validpass'
+            });
+
+            addAccountToDb(account);
+
+            const result = await imap.testConnection(account);
+
+            expect(result.success).toBe(true);
+        });
+
+        it('should return error for connection timeout', async () => {
+            mockState.shouldFailConnect = true;
+
+            const account = createTestAccount({
+                id: 'test-account-timeout',
+                email: 'timeout@test.com'
+            });
+
+            addAccountToDb(account);
+
+            const result = await imap.testConnection(account);
+
+            expect(result.success).toBe(false);
+            expect(result.error).toBeDefined();
+        });
+    });
+
     describe('Basic Sync Flow', () => {
         it('should successfully sync an empty mailbox', async () => {
             setServerEmails([]);
