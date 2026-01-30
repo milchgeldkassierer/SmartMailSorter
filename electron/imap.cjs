@@ -89,7 +89,6 @@ function fetchBatchUid(client, uids) {
             });
 
             f.once('error', (err) => {
-                console.error('[IMAP Raw] Fetch by UID error:', err);
                 reject(err);
             });
 
@@ -563,29 +562,35 @@ async function deleteEmail(account, uid, dbFolder) {
 async function setEmailFlag(account, uid, flag, value) {
     if (!uid) return { success: false, error: 'No UID' };
 
-    const config = {
-        imap: {
+    const client = new ImapFlow({
+        host: account.imapHost,
+        port: account.imapPort,
+        secure: true,
+        tls: { rejectUnauthorized: false },
+        auth: {
             user: account.username || account.email,
-            password: account.password,
-            host: account.imapHost,
-            port: account.imapPort,
-            tls: true,
-            tlsOptions: { rejectUnauthorized: false },
-            authTimeout: 5000
-        }
-    };
+            pass: account.password
+        },
+        logger: false
+    });
 
     try {
-        const connection = await imaps.connect(config);
-        await connection.openBox('INBOX');
+        await client.connect();
 
-        if (value) {
-            await connection.addFlags(uid, [flag]);
-        } else {
-            await connection.delFlags(uid, [flag]);
+        // Get mailbox lock for INBOX
+        const lock = await client.getMailboxLock('INBOX');
+
+        try {
+            if (value) {
+                await client.flags.add(uid, [flag]);
+            } else {
+                await client.flags.del(uid, [flag]);
+            }
+        } finally {
+            lock.release();
         }
 
-        connection.end();
+        await client.logout();
         return { success: true };
     } catch (error) {
         console.error('Flag Update Error:', error);
