@@ -4,6 +4,9 @@
   "version": "0.0.0",
   "type": "module",
   "main": "electron/main.cjs",
+  "overrides": {
+    "semver": "^7.7.3"
+  },
   "scripts": {
     "dev": "vite",
     "test": "vitest",
@@ -15,7 +18,7 @@
   "dependencies": {
     "@google/genai": "^1.38.0",
     "better-sqlite3": "^12.6.2",
-    "imap-simple": "^5.1.0",
+    "imap-simple": "^1.6.3",
     "lucide-react": "^0.562.0",
     "mailparser": "^3.9.1",
     "nanoid": "^5.1.6",
@@ -28,7 +31,6 @@
     "concurrently": "^9.2.1",
     "cross-env": "^10.1.0",
     "electron": "^40.0.0",
-    "electron-rebuild": "^3.2.9",
     "typescript": "~5.8.2",
     "vite": "^6.2.0",
     "vitest": "^4.0.18",
