@@ -27,78 +27,66 @@ const PROVIDERS = {
 
 /**
  * Wrapper for raw IMAP fetch (Sequence Numbers)
- * Uses imapflow's client.imap for raw access.
+ * Uses imapflow's fetch() with sequence numbers (default behavior)
  */
-function fetchBatchSeq(client, range) {
-    return new Promise((resolve, reject) => {
-        const results = [];
-        try {
-            // client.imap provides raw node-imap access
-            // .seq.fetch() uses sequence numbers (1:5000) instead of UIDs
-            const f = client.imap.seq.fetch(range, { bodies: 'HEADER.FIELDS (UID)' });
-
-            f.on('message', (msg) => {
-                msg.on('attributes', (attrs) => {
-                    results.push({ attributes: attrs });
-                });
+async function fetchBatchSeq(client, range) {
+    const results = [];
+    try {
+        // ImapFlow's fetch() uses sequence numbers by default (uid: false is default)
+        // Fetch minimal data - just need UIDs and flags
+        for await (const message of client.fetch(range, { uid: false, flags: true })) {
+            results.push({
+                attributes: {
+                    uid: message.uid,
+                    flags: message.flags || []
+                }
             });
-
-            f.once('error', (err) => {
-                reject(err);
-            });
-
-            f.once('end', () => {
-                resolve(results);
-            });
-        } catch (err) {
-            reject(err);
         }
-    });
+        return results;
+    } catch (err) {
+        throw err;
+    }
 }
 
 /**
  * Wrapper for raw IMAP fetch (UIDs)
  * Bypasses SEARCH and directly fetches by UID.
  */
-function fetchBatchUid(client, uids) {
-    return new Promise((resolve, reject) => {
-        const messages = [];
-        try {
-            // client.imap.fetch takes UIDs directly (string or array)
-            const f = client.imap.fetch(uids, { bodies: [''], markSeen: false });
+async function fetchBatchUid(client, uids) {
+    const messages = [];
+    try {
+        // ImapFlow's fetch() with uid: true to fetch by UIDs
+        // Convert uids array to range string (e.g., "1,2,3" or "1:5")
+        const uidRange = Array.isArray(uids) ? uids.join(',') : uids.toString();
 
-            f.on('message', (msg) => {
-                const message = { parts: [], attributes: null };
+        for await (const message of client.fetch(uidRange, {
+            uid: true,
+            source: true,  // Fetch full raw email source
+            flags: true
+        })) {
+            // ImapFlow returns message with source buffer directly
+            const msg = {
+                parts: [],
+                attributes: {
+                    uid: message.uid,
+                    flags: message.flags || []
+                }
+            };
 
-                msg.on('body', (stream, info) => {
-                    const chunks = [];
-                    stream.on('data', (chunk) => chunks.push(chunk));
-                    stream.once('end', () => {
-                        const body = Buffer.concat(chunks).toString('utf8');
-                        message.parts.push({ which: info.which, body: body });
-                    });
+            // Add body part only if source exists (handles missing body parts)
+            if (message.source) {
+                msg.parts.push({
+                    which: '',
+                    body: message.source.toString('utf8')
                 });
+            }
 
-                msg.on('attributes', (attrs) => {
-                    message.attributes = attrs;
-                });
-
-                msg.once('end', () => {
-                    messages.push(message);
-                });
-            });
-
-            f.once('error', (err) => {
-                reject(err);
-            });
-
-            f.once('end', () => {
-                resolve(messages);
-            });
-        } catch (err) {
-            reject(err);
+            messages.push(msg);
         }
-    });
+        return messages;
+    } catch (err) {
+        throw err;
+    }
 }
 
 /**
@@ -228,46 +216,24 @@ async function syncAccount(account) {
                 console.log('[Quota Debug] Server Capabilities:', Array.from(caps));
             } catch (e) { }
 
-            await new Promise((resolve) => {
-                client.imap.getQuotaRoot('INBOX', (err, quotas) => {
-                    console.log('[Quota Debug] Callback fired.');
-                    if (err) {
-                        console.log('[Quota Debug] Error:', err);
-                    }
-                    if (quotas) {
-                        console.log('[Quota Debug] Quotas Object:', JSON.stringify(quotas));
-                        for (let root in quotas) {
-                            const storage = quotas[root]['storage'];
-                            let used = 0;
-                            let total = 0;
-                            let valid = false;
+            // Use ImapFlow's getQuota() method
+            const quota = await client.getQuota('INBOX');
+            console.log('[Quota Debug] Quota response received.');
 
-                            // Handle Array format [used, total]
-                            if (Array.isArray(storage) && storage.length === 2 && typeof storage[0] === 'number') {
-                                used = storage[0];
-                                total = storage[1];
-                                valid = true;
-                            }
-                            // Handle Object format { usage: 123, limit: 456 }
-                            else if (storage && typeof storage === 'object' && 'usage' in storage && 'limit' in storage) {
-                                used = storage.usage;
-                                total = storage.limit;
-                                valid = true;
-                            }
+            if (quota && quota.storage) {
+                console.log('[Quota Debug] Quota Object:', JSON.stringify(quota));
+                const used = quota.storage.used || 0;
+                const total = quota.storage.limit || 0;
 
-                            if (valid) {
-                                console.log(`[Quota] Used: ${used}KB, Total: ${total}KB`);
-                                updateAccountQuota(account.id, used, total);
-                            } else {
-                                console.log(`[Quota Debug] Root ${root} has unknown storage format:`, storage);
-                            }
-                        }
-                    } else {
-                        console.log('[Quota Debug] No quotas object returned.');
-                    }
-                    resolve();
-                });
-            });
+                if (total > 0) {
+                    console.log(`[Quota] Used: ${used}KB, Total: ${total}KB`);
+                    updateAccountQuota(account.id, used, total);
+                } else {
+                    console.log('[Quota Debug] No valid storage limits returned.');
+                }
+            } else {
+                console.log('[Quota Debug] No quota object or storage property returned.');
+            }
         } catch (qErr) {
             console.warn('[Quota] Error fetching quota:', qErr);
         }
@@ -548,10 +514,8 @@ async function deleteEmail(account, uid, dbFolder) {
         const lock = await client.getMailboxLock(serverPath);
 
         try {
-            // Add \Deleted flag using imapflow's messageFlagsAdd()
-            await client.messageFlagsAdd(uid, ['\\Deleted']);
-            // Expunge the message using raw imap access
-            await client.imap.expunge(uid);
+            // Delete message using ImapFlow's messageDelete (marks as deleted and expunges)
+            await client.messageDelete(uid, { uid: true });
         } finally {
             lock.release();
         }

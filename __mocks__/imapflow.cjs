@@ -259,6 +259,80 @@ class ImapFlow {
             email.flags = email.flags.filter(f => !flags.includes(f));
         }
     }
+
+    // Modern ImapFlow fetch() API - returns async iterator
+    async *fetch(range, options = {}) {
+        if (shouldFailFetch) {
+            throw new Error('Fetch failed');
+        }
+
+        const isUid = options.uid === true;
+        const wantSource = options.source === true;
+
+        // Parse range (can be "1:5", "1,2,3", "1:*", etc.)
+        let messages = [];
+
+        if (isUid) {
+            // Fetching by UIDs
+            const uidList = range.split(',').map(u => parseInt(u.trim()));
+            messages = serverEmails.filter(e => uidList.includes(e.uid));
+        } else {
+            // Fetching by sequence numbers (1-based)
+            const parts = range.split(':');
+            if (parts.length === 2) {
+                const start = parseInt(parts[0]);
+                const end = parts[1] === '*' ? serverEmails.length : parseInt(parts[1]);
+                messages = serverEmails.slice(start - 1, end);
+            } else {
+                // Single number or comma-separated
+                const seqList = range.split(',').map(s => parseInt(s.trim()));
+                messages = seqList.map(seq => serverEmails[seq - 1]).filter(Boolean);
+            }
+        }
+
+        // Yield each message
+        for (const email of messages) {
+            const msg = {
+                uid: email.uid,
+                flags: email.flags || [],
+                seq: serverEmails.indexOf(email) + 1
+            };
+
+            if (wantSource) {
+                // Return full email source as buffer
+                msg.source = Buffer.from(email.body || '');
+            }
+
+            yield msg;
+        }
+    }
+
+    // Modern ImapFlow getQuota() API
+    async getQuota(mailbox) {
+        if (quotaInfo) {
+            return {
+                storage: {
+                    used: quotaInfo.used,
+                    limit: quotaInfo.total
+                }
+            };
+        }
+        return null;
+    }
+
+    // Modern ImapFlow messageDelete() API
+    async messageDelete(range, options = {}) {
+        const isUid = options.uid === true;
+        const uidList = isUid ? [parseInt(range)] : [range];
+
+        // Remove from serverEmails
+        for (const uid of uidList) {
+            const index = serverEmails.findIndex(e => e.uid === uid);
+            if (index !== -1) {
+                serverEmails.splice(index, 1);
+            }
+        }
+    }
 }
 
 // Mock connection class for imap-simple compatibility

@@ -78,6 +78,77 @@ class MockImapFlow {
         }
     }
 
+    // Modern ImapFlow fetch() API - returns async iterator
+    async *fetch(range, options = {}) {
+        // Check if fetch should fail
+        if (mockState.shouldFailFetch) {
+            throw new Error('Fetch failed');
+        }
+
+        const isUid = options.uid === true;
+        const wantSource = options.source === true;
+
+        // Parse range (can be "1:5", "1,2,3", etc.)
+        let messages = [];
+
+        if (isUid) {
+            // Fetching by UIDs
+            const uidList = range.split(',').map(u => parseInt(u.trim()));
+            messages = mockState.serverEmails.filter(e => uidList.includes(e.uid));
+        } else {
+            // Fetching by sequence numbers (1-based)
+            const parts = range.split(':');
+            if (parts.length === 2) {
+                const start = parseInt(parts[0]);
+                const end = parts[1] === '*' ? mockState.serverEmails.length : parseInt(parts[1]);
+                messages = mockState.serverEmails.slice(start - 1, end);
+            } else {
+                // Single number or comma-separated
+                const seqList = range.split(',').map(s => parseInt(s.trim()));
+                messages = seqList.map(seq => mockState.serverEmails[seq - 1]).filter(Boolean);
+            }
+        }
+
+        // Yield each message
+        for (const email of messages) {
+            const msg = {
+                uid: email.uid,
+                flags: email.flags || [],
+                seq: mockState.serverEmails.indexOf(email) + 1
+            };
+
+            if (wantSource) {
+                // Check if this UID should have missing body (simulate missing body parts error)
+                if (mockState.missingBodyUids.has(email.uid)) {
+                    // Don't add source property - this simulates missing body part
+                    // The production code will see no 'source' and handle it as missing body
+                } else {
+                    // Return full email source as buffer
+                    msg.source = Buffer.from(email.body || '');
+                }
+            }
+
+            yield msg;
+        }
+    }
+
+    // Modern ImapFlow getQuota() API
+    async getQuota(mailbox) {
+        return null; // No quota info in tests
+    }
+
+    // Modern ImapFlow messageDelete() API
+    async messageDelete(range, options = {}) {
+        const isUid = options.uid === true;
+        const uid = isUid ? parseInt(range) : parseInt(range);
+
+        // Remove from mockState.serverEmails
+        const index = mockState.serverEmails.findIndex(e => e.uid === uid);
+        if (index !== -1) {
+            mockState.serverEmails.splice(index, 1);
+        }
+    }
+
     get capabilities() {
         return new Set(['IMAP4rev1', 'UIDPLUS']);
     }
