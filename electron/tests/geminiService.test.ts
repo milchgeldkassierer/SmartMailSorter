@@ -369,6 +369,104 @@ describe('GeminiService - Batch Categorization', () => {
     expect(results[1].categoryId).toBe(DefaultEmailCategory.NEWSLETTER);
   });
 
+  // Edge Case Tests
+  describe('Edge Cases', () => {
+    it('edge: should handle empty batch gracefully', async () => {
+      const emails: Email[] = [];
+
+      mockCallLLM = vi.fn().mockResolvedValue([]);
+
+      const results = await geminiService.categorizeBatchWithAI(emails, availableCategories, defaultSettings);
+
+      expect(results).toHaveLength(0);
+      expect(mockCallLLM).not.toHaveBeenCalled();
+    });
+
+    it('edge: should handle single email batch', async () => {
+      const emails = [
+        createTestEmail('email-1', 'Your Invoice #12345', 'invoice@shop.com')
+      ];
+
+      mockCallLLM = vi.fn().mockResolvedValue([
+        { id: 'email-1', category: DefaultEmailCategory.INVOICE, summary: 'Rechnung #12345' }
+      ]);
+
+      const results = await geminiService.categorizeBatchWithAI(emails, availableCategories, defaultSettings);
+
+      expect(results).toHaveLength(1);
+      expect(results[0].categoryId).toBe(DefaultEmailCategory.INVOICE);
+      expect(results[0].summary).toBe('Rechnung #12345');
+    });
+
+    it('edge: should handle duplicate email IDs in AI response', async () => {
+      const emails = [
+        createTestEmail('email-1', 'First Email'),
+        createTestEmail('email-2', 'Second Email')
+      ];
+
+      // AI returns duplicate result for email-1 (edge case: AI malfunction)
+      mockCallLLM = vi.fn().mockResolvedValue([
+        { id: 'email-1', category: DefaultEmailCategory.BUSINESS, summary: 'First Result' },
+        { id: 'email-1', category: DefaultEmailCategory.PRIVATE, summary: 'Duplicate Result' },
+        { id: 'email-2', category: DefaultEmailCategory.NEWSLETTER, summary: 'Second Result' }
+      ]);
+
+      const results = await geminiService.categorizeBatchWithAI(emails, availableCategories, defaultSettings);
+
+      expect(results).toHaveLength(2);
+      // Map.set will use the last value for duplicate keys
+      expect(results[0].categoryId).toBe(DefaultEmailCategory.PRIVATE);
+      expect(results[0].summary).toBe('Duplicate Result');
+      expect(results[1].categoryId).toBe(DefaultEmailCategory.NEWSLETTER);
+      expect(results[1].summary).toBe('Second Result');
+    });
+
+    it('edge: should handle multiple emails with same category', async () => {
+      const emails = [
+        createTestEmail('email-1', 'Invoice 1', 'billing1@example.com'),
+        createTestEmail('email-2', 'Invoice 2', 'billing2@example.com'),
+        createTestEmail('email-3', 'Invoice 3', 'billing3@example.com')
+      ];
+
+      // All emails get categorized to the same category (normal but edge in terms of uniformity)
+      mockCallLLM = vi.fn().mockResolvedValue([
+        { id: 'email-1', category: DefaultEmailCategory.INVOICE, summary: 'Rechnung 1' },
+        { id: 'email-2', category: DefaultEmailCategory.INVOICE, summary: 'Rechnung 2' },
+        { id: 'email-3', category: DefaultEmailCategory.INVOICE, summary: 'Rechnung 3' }
+      ]);
+
+      const results = await geminiService.categorizeBatchWithAI(emails, availableCategories, defaultSettings);
+
+      expect(results).toHaveLength(3);
+      // All should have the same category
+      results.forEach((result, index) => {
+        expect(result.categoryId).toBe(DefaultEmailCategory.INVOICE);
+        expect(result.summary).toBe(`Rechnung ${index + 1}`);
+      });
+    });
+
+    it('edge: should handle empty AI response for non-empty batch', async () => {
+      const emails = [
+        createTestEmail('email-1', 'Test Email 1'),
+        createTestEmail('email-2', 'Test Email 2')
+      ];
+
+      // AI returns empty array despite having emails (edge case: AI failure)
+      mockCallLLM = vi.fn().mockResolvedValue([]);
+
+      const results = await geminiService.categorizeBatchWithAI(emails, availableCategories, defaultSettings);
+
+      expect(results).toHaveLength(2);
+      // All emails should get fallback categorization
+      results.forEach(result => {
+        expect(result.categoryId).toBe(DefaultEmailCategory.OTHER);
+        expect(result.summary).toBe('Fehler');
+        expect(result.reasoning).toContain('AI lieferte kein Ergebnis');
+        expect(result.confidence).toBe(0);
+      });
+    });
+  });
+
   // Partial API Failure Tests
   describe('Partial API Failures', () => {
     it('should handle only first email missing from API response', async () => {
