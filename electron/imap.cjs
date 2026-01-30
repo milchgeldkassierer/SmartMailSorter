@@ -192,7 +192,6 @@ async function syncAccount(account) {
         host: account.imapHost,
         port: account.imapPort,
         secure: true,
-        tls: { rejectUnauthorized: false },
         auth: {
             user: account.username || account.email,
             pass: account.password
@@ -420,7 +419,6 @@ async function testConnection(account) {
         host: account.imapHost,
         port: account.imapPort,
         secure: true,
-        tls: { rejectUnauthorized: false },
         auth: {
             user: account.username || account.email,
             pass: account.password
@@ -449,7 +447,6 @@ async function deleteEmail(account, uid, dbFolder) {
         host: account.imapHost,
         port: account.imapPort,
         secure: true,
-        tls: { rejectUnauthorized: false },
         auth: {
             user: account.username || account.email,
             pass: account.password
@@ -535,7 +532,6 @@ async function setEmailFlag(account, uid, flag, value) {
         host: account.imapHost,
         port: account.imapPort,
         secure: true,
-        tls: { rejectUnauthorized: false },
         auth: {
             user: account.username || account.email,
             pass: account.password
