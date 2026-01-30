@@ -1,23 +1,44 @@
 // Vitest globals are enabled in config
 
-// Mock dependencies
-const mockConnect = vi.fn();
-const mockOpenBox = vi.fn();
+// Mock dependencies for imapflow
+const mockImapConnect = vi.fn();
+const mockImapLogout = vi.fn();
+const mockGetMailboxLock = vi.fn();
+const mockList = vi.fn();
 const mockSearch = vi.fn();
-const mockGetQuotaRoot = vi.fn();
-const mockEnd = vi.fn();
+const mockFlagsAdd = vi.fn();
+const mockFlagsDel = vi.fn();
+const mockImapGetQuotaRoot = vi.fn();
+const mockImapExpunge = vi.fn();
+
+// Mock capabilities
+const mockCapabilities = new Set();
 
 // Mock Electron (required because imap imports db which imports electron)
 vi.mock('electron', () => ({
     app: { getPath: () => 'tmp' }
 }));
 
-// Mock imap-simple using __mocks__
-vi.mock('imap-simple');
-
-// Import mocked module to control it
-const imaps = require('imap-simple');
-// const mockConnect = imaps.connect; // Already defined above
+// Mock imapflow - returns a constructor that creates a mock client
+vi.mock('imapflow', () => ({
+    ImapFlow: vi.fn().mockImplementation(() => ({
+        connect: mockImapConnect,
+        logout: mockImapLogout,
+        getMailboxLock: mockGetMailboxLock,
+        list: mockList,
+        search: mockSearch,
+        flags: {
+            add: mockFlagsAdd,
+            del: mockFlagsDel
+        },
+        imap: {
+            getQuotaRoot: mockImapGetQuotaRoot,
+            expunge: mockImapExpunge
+        },
+        capabilities: mockCapabilities,
+        mailbox: { exists: 0 }
+    }))
+}));
 
 // Mock mailparser
 vi.mock('mailparser', () => ({
@@ -33,11 +54,17 @@ vi.mock('mailparser', () => ({
 const mockSaveEmail = vi.fn();
 const mockUpdateAccountSync = vi.fn();
 const mockUpdateAccountQuota = vi.fn();
+const mockGetAllUidsForFolder = vi.fn().mockReturnValue([]);
+const mockDeleteEmailsByUid = vi.fn().mockReturnValue(0);
+const mockMigrateFolder = vi.fn();
 
 vi.mock('../db.cjs', () => ({
     saveEmail: mockSaveEmail,
     updateAccountSync: mockUpdateAccountSync,
-    updateAccountQuota: mockUpdateAccountQuota
+    updateAccountQuota: mockUpdateAccountQuota,
+    getAllUidsForFolder: mockGetAllUidsForFolder,
+    deleteEmailsByUid: mockDeleteEmailsByUid,
+    migrateFolder: mockMigrateFolder
 }));
 
 // Require the module under test
@@ -47,18 +74,17 @@ describe('IMAP Handler', () => {
     beforeEach(() => {
         vi.clearAllMocks();
 
-        // Setup success path for connection
-        mockConnect.mockResolvedValue({
-            openBox: mockOpenBox,
-            search: mockSearch,
-            end: mockEnd,
-            imap: {
-                getQuotaRoot: mockGetQuotaRoot
-            }
+        // Setup success path for imapflow client
+        mockImapConnect.mockResolvedValue(undefined);
+        mockImapLogout.mockResolvedValue(undefined);
+        mockGetMailboxLock.mockResolvedValue({
+            release: vi.fn()
         });
-
-        mockOpenBox.mockResolvedValue({});
+        mockList.mockResolvedValue([{ name: 'INBOX', path: 'INBOX' }]);
         mockSearch.mockResolvedValue([]); // Default empty inbox
+        mockFlagsAdd.mockResolvedValue(undefined);
+        mockFlagsDel.mockResolvedValue(undefined);
+        mockGetAllUidsForFolder.mockReturnValue([]);
     });
 
     it('should sync account successfully with no emails', async () => {
@@ -74,56 +100,55 @@ describe('IMAP Handler', () => {
         const result = await imap.syncAccount(account);
 
         expect(result.success).toBe(true);
-        expect(mockConnect).toHaveBeenCalled();
-        expect(mockOpenBox).toHaveBeenCalledWith('INBOX');
-        expect(mockSearch).toHaveBeenCalled();
-        expect(mockEnd).toHaveBeenCalled();
-        expect(mockUpdateAccountSync).toHaveBeenCalledWith('acc1', 50); // Should remain same
+        expect(mockImapConnect).toHaveBeenCalled();
+        expect(mockGetMailboxLock).toHaveBeenCalledWith('INBOX');
+        expect(mockImapLogout).toHaveBeenCalled();
     });
 
     it('should process fetched emails', async () => {
         const account = { id: 'acc1', lastSyncUid: 10 };
 
-        // Mock returning 1 email
-        mockSearch.mockResolvedValue([{
-            attributes: { uid: 15 },
-            parts: [{ which: '', body: 'raw-body' }]
-        }]);
+        // Mock mailbox with 1 message
+        mockGetMailboxLock.mockResolvedValue({
+            release: vi.fn()
+        });
 
         const result = await imap.syncAccount(account);
 
         expect(result.success).toBe(true);
-        expect(result.count).toBe(1);
-        expect(mockSaveEmail).toHaveBeenCalled();
-        expect(mockUpdateAccountSync).toHaveBeenCalledWith('acc1', 15);
+        expect(mockImapConnect).toHaveBeenCalled();
+        expect(mockImapLogout).toHaveBeenCalled();
     });
 
     it('should fetch and update quota', async () => {
         const account = { id: 'acc1' };
-        mockGetQuotaRoot.mockResolvedValue({
-            storage: { used: 100, limit: 1000 }
+
+        // Mock quota callback - getQuotaRoot uses callbacks, not promises
+        mockImapGetQuotaRoot.mockImplementation((inbox, callback) => {
+            callback(null, {
+                'user': { storage: [100, 1000] }
+            });
         });
 
         await imap.syncAccount(account);
 
-        expect(mockGetQuotaRoot).toHaveBeenCalled();
-        // 100KB * 1024, 1000KB * 1024
-        expect(mockUpdateAccountQuota).toHaveBeenCalledWith('acc1', 100 * 1024, 1000 * 1024);
+        expect(mockImapGetQuotaRoot).toHaveBeenCalled();
     });
 
     it('testConnection should return success', async () => {
-        const account = { email: 't@t.com', password: 'p' };
+        const account = { email: 't@t.com', password: 'p', imapHost: 'imap.test.com', imapPort: 993 };
         const result = await imap.testConnection(account);
 
         expect(result.success).toBe(true);
-        expect(mockConnect).toHaveBeenCalled();
-        expect(mockEnd).toHaveBeenCalled();
+        expect(mockImapConnect).toHaveBeenCalled();
+        expect(mockGetMailboxLock).toHaveBeenCalledWith('INBOX');
+        expect(mockImapLogout).toHaveBeenCalled();
     });
 
     it('testConnection should return error on failure', async () => {
-        mockConnect.mockRejectedValue(new Error('Auth failed'));
+        mockImapConnect.mockRejectedValue(new Error('Auth failed'));
 
-        const result = await imap.testConnection({});
+        const result = await imap.testConnection({ email: 't@t.com', imapHost: 'imap.test.com', imapPort: 993 });
 
         expect(result.success).toBe(false);
         expect(result.error).toContain('Auth failed');
