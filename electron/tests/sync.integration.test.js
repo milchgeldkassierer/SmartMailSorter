@@ -1600,4 +1600,376 @@ Body 1`,
             expect(validEmail3.sender).not.toBe('System Error');
         });
     });
+
+    describe('Flag Operations', () => {
+        it('should set read flag (\\Seen) on an email', async () => {
+            const emails = [
+                {
+                    uid: 1,
+                    subject: 'Unread Email',
+                    from: 'sender@example.com',
+                    body: `Subject: Unread Email
+From: sender@example.com
+Date: ${new Date('2024-01-15T10:00:00Z').toISOString()}
+
+Email body`,
+                    date: new Date('2024-01-15T10:00:00Z').toISOString(),
+                    flags: []
+                }
+            ];
+
+            setServerEmails(emails);
+
+            const account = createTestAccount({
+                id: 'test-account-flag-read',
+                email: 'flagread@test.com'
+            });
+
+            addAccountToDb(account);
+
+            const result = await imap.syncAccount(account);
+            expect(result.success).toBe(true);
+            expect(result.count).toBe(1);
+
+            const savedEmails = db.getEmails(account.id);
+            const email = savedEmails.find(e => e.uid === 1);
+            expect(email.isRead).toBe(false);
+
+            const flagResult = await imap.setEmailFlag(account, 1, '\\Seen', true);
+            expect(flagResult.success).toBe(true);
+
+            const serverEmail = mockState.serverEmails.find(e => e.uid === 1);
+            expect(serverEmail.flags).toContain('\\Seen');
+        });
+
+        it('should unset read flag (\\Seen) on an email', async () => {
+            const emails = [
+                {
+                    uid: 1,
+                    subject: 'Read Email',
+                    from: 'sender@example.com',
+                    body: `Subject: Read Email
+From: sender@example.com
+Date: ${new Date('2024-01-15T10:00:00Z').toISOString()}
+
+Email body`,
+                    date: new Date('2024-01-15T10:00:00Z').toISOString(),
+                    flags: ['\\Seen']
+                }
+            ];
+
+            setServerEmails(emails);
+
+            const account = createTestAccount({
+                id: 'test-account-flag-unread',
+                email: 'flagunread@test.com'
+            });
+
+            addAccountToDb(account);
+
+            const result = await imap.syncAccount(account);
+            expect(result.success).toBe(true);
+            expect(result.count).toBe(1);
+
+            const savedEmails = db.getEmails(account.id);
+            const email = savedEmails.find(e => e.uid === 1);
+            expect(email.isRead).toBe(true);
+
+            const flagResult = await imap.setEmailFlag(account, 1, '\\Seen', false);
+            expect(flagResult.success).toBe(true);
+
+            const serverEmail = mockState.serverEmails.find(e => e.uid === 1);
+            expect(serverEmail.flags).not.toContain('\\Seen');
+        });
+
+        it('should set flagged flag (\\Flagged) on an email', async () => {
+            const emails = [
+                {
+                    uid: 1,
+                    subject: 'Unflagged Email',
+                    from: 'sender@example.com',
+                    body: `Subject: Unflagged Email
+From: sender@example.com
+Date: ${new Date('2024-01-15T10:00:00Z').toISOString()}
+
+Email body`,
+                    date: new Date('2024-01-15T10:00:00Z').toISOString(),
+                    flags: []
+                }
+            ];
+
+            setServerEmails(emails);
+
+            const account = createTestAccount({
+                id: 'test-account-flag-flagged',
+                email: 'flagflagged@test.com'
+            });
+
+            addAccountToDb(account);
+
+            const result = await imap.syncAccount(account);
+            expect(result.success).toBe(true);
+            expect(result.count).toBe(1);
+
+            const savedEmails = db.getEmails(account.id);
+            const email = savedEmails.find(e => e.uid === 1);
+            expect(email.isFlagged).toBe(false);
+
+            const flagResult = await imap.setEmailFlag(account, 1, '\\Flagged', true);
+            expect(flagResult.success).toBe(true);
+
+            const serverEmail = mockState.serverEmails.find(e => e.uid === 1);
+            expect(serverEmail.flags).toContain('\\Flagged');
+        });
+
+        it('should unset flagged flag (\\Flagged) on an email', async () => {
+            const emails = [
+                {
+                    uid: 1,
+                    subject: 'Flagged Email',
+                    from: 'sender@example.com',
+                    body: `Subject: Flagged Email
+From: sender@example.com
+Date: ${new Date('2024-01-15T10:00:00Z').toISOString()}
+
+Email body`,
+                    date: new Date('2024-01-15T10:00:00Z').toISOString(),
+                    flags: ['\\Flagged']
+                }
+            ];
+
+            setServerEmails(emails);
+
+            const account = createTestAccount({
+                id: 'test-account-flag-unflagged',
+                email: 'flagunflagged@test.com'
+            });
+
+            addAccountToDb(account);
+
+            const result = await imap.syncAccount(account);
+            expect(result.success).toBe(true);
+            expect(result.count).toBe(1);
+
+            const savedEmails = db.getEmails(account.id);
+            const email = savedEmails.find(e => e.uid === 1);
+            expect(email.isFlagged).toBe(true);
+
+            const flagResult = await imap.setEmailFlag(account, 1, '\\Flagged', false);
+            expect(flagResult.success).toBe(true);
+
+            const serverEmail = mockState.serverEmails.find(e => e.uid === 1);
+            expect(serverEmail.flags).not.toContain('\\Flagged');
+        });
+
+        it('should persist flag changes on server', async () => {
+            const emails = [
+                {
+                    uid: 1,
+                    subject: 'Test Email',
+                    from: 'sender@example.com',
+                    body: `Subject: Test Email
+From: sender@example.com
+Date: ${new Date('2024-01-15T10:00:00Z').toISOString()}
+
+Email body`,
+                    date: new Date('2024-01-15T10:00:00Z').toISOString(),
+                    flags: []
+                }
+            ];
+
+            setServerEmails(emails);
+
+            const account = createTestAccount({
+                id: 'test-account-flag-persist',
+                email: 'flagpersist@test.com'
+            });
+
+            addAccountToDb(account);
+
+            const result1 = await imap.syncAccount(account);
+            expect(result1.success).toBe(true);
+            expect(result1.count).toBe(1);
+
+            const serverEmailBefore = mockState.serverEmails.find(e => e.uid === 1);
+            expect(serverEmailBefore.flags).not.toContain('\\Seen');
+            expect(serverEmailBefore.flags).not.toContain('\\Flagged');
+
+            await imap.setEmailFlag(account, 1, '\\Seen', true);
+            await imap.setEmailFlag(account, 1, '\\Flagged', true);
+
+            const serverEmailAfter = mockState.serverEmails.find(e => e.uid === 1);
+            expect(serverEmailAfter.flags).toContain('\\Seen');
+            expect(serverEmailAfter.flags).toContain('\\Flagged');
+        });
+
+        it('should handle flag operations on multiple emails', async () => {
+            const emails = [
+                {
+                    uid: 1,
+                    subject: 'Email 1',
+                    from: 'sender1@example.com',
+                    body: `Subject: Email 1
+From: sender1@example.com
+Date: ${new Date('2024-01-15T10:00:00Z').toISOString()}
+
+Email 1 body`,
+                    date: new Date('2024-01-15T10:00:00Z').toISOString(),
+                    flags: []
+                },
+                {
+                    uid: 2,
+                    subject: 'Email 2',
+                    from: 'sender2@example.com',
+                    body: `Subject: Email 2
+From: sender2@example.com
+Date: ${new Date('2024-01-15T11:00:00Z').toISOString()}
+
+Email 2 body`,
+                    date: new Date('2024-01-15T11:00:00Z').toISOString(),
+                    flags: []
+                },
+                {
+                    uid: 3,
+                    subject: 'Email 3',
+                    from: 'sender3@example.com',
+                    body: `Subject: Email 3
+From: sender3@example.com
+Date: ${new Date('2024-01-15T12:00:00Z').toISOString()}
+
+Email 3 body`,
+                    date: new Date('2024-01-15T12:00:00Z').toISOString(),
+                    flags: []
+                }
+            ];
+
+            setServerEmails(emails);
+
+            const account = createTestAccount({
+                id: 'test-account-flag-multiple',
+                email: 'flagmultiple@test.com'
+            });
+
+            addAccountToDb(account);
+
+            const result = await imap.syncAccount(account);
+            expect(result.success).toBe(true);
+            expect(result.count).toBe(3);
+
+            await imap.setEmailFlag(account, 1, '\\Seen', true);
+            await imap.setEmailFlag(account, 2, '\\Flagged', true);
+            await imap.setEmailFlag(account, 3, '\\Seen', true);
+            await imap.setEmailFlag(account, 3, '\\Flagged', true);
+
+            const serverEmail1 = mockState.serverEmails.find(e => e.uid === 1);
+            expect(serverEmail1.flags).toContain('\\Seen');
+            expect(serverEmail1.flags).not.toContain('\\Flagged');
+
+            const serverEmail2 = mockState.serverEmails.find(e => e.uid === 2);
+            expect(serverEmail2.flags).not.toContain('\\Seen');
+            expect(serverEmail2.flags).toContain('\\Flagged');
+
+            const serverEmail3 = mockState.serverEmails.find(e => e.uid === 3);
+            expect(serverEmail3.flags).toContain('\\Seen');
+            expect(serverEmail3.flags).toContain('\\Flagged');
+        });
+
+        it('should handle flag operation with invalid UID', async () => {
+            const account = createTestAccount({
+                id: 'test-account-flag-invalid',
+                email: 'flaginvalid@test.com'
+            });
+
+            addAccountToDb(account);
+
+            const result = await imap.setEmailFlag(account, null, '\\Seen', true);
+            expect(result.success).toBe(false);
+            expect(result.error).toContain('No UID');
+        });
+
+        it('should correctly sync emails with mixed flag states', async () => {
+            const emails = [
+                {
+                    uid: 1,
+                    subject: 'Email 1 - Unread Unflagged',
+                    from: 'sender1@example.com',
+                    body: `Subject: Email 1 - Unread Unflagged
+From: sender1@example.com
+Date: ${new Date('2024-01-15T10:00:00Z').toISOString()}
+
+Email 1 body`,
+                    date: new Date('2024-01-15T10:00:00Z').toISOString(),
+                    flags: []
+                },
+                {
+                    uid: 2,
+                    subject: 'Email 2 - Read Unflagged',
+                    from: 'sender2@example.com',
+                    body: `Subject: Email 2 - Read Unflagged
+From: sender2@example.com
+Date: ${new Date('2024-01-15T11:00:00Z').toISOString()}
+
+Email 2 body`,
+                    date: new Date('2024-01-15T11:00:00Z').toISOString(),
+                    flags: ['\\Seen']
+                },
+                {
+                    uid: 3,
+                    subject: 'Email 3 - Unread Flagged',
+                    from: 'sender3@example.com',
+                    body: `Subject: Email 3 - Unread Flagged
+From: sender3@example.com
+Date: ${new Date('2024-01-15T12:00:00Z').toISOString()}
+
+Email 3 body`,
+                    date: new Date('2024-01-15T12:00:00Z').toISOString(),
+                    flags: ['\\Flagged']
+                },
+                {
+                    uid: 4,
+                    subject: 'Email 4 - Read Flagged',
+                    from: 'sender4@example.com',
+                    body: `Subject: Email 4 - Read Flagged
+From: sender4@example.com
+Date: ${new Date('2024-01-15T13:00:00Z').toISOString()}
+
+Email 4 body`,
+                    date: new Date('2024-01-15T13:00:00Z').toISOString(),
+                    flags: ['\\Seen', '\\Flagged']
+                }
+            ];
+
+            setServerEmails(emails);
+
+            const account = createTestAccount({
+                id: 'test-account-flag-mixed',
+                email: 'flagmixed@test.com'
+            });
+
+            addAccountToDb(account);
+
+            const result = await imap.syncAccount(account);
+            expect(result.success).toBe(true);
+            expect(result.count).toBe(4);
+
+            const savedEmails = db.getEmails(account.id);
+            expect(savedEmails).toHaveLength(4);
+
+            const email1 = savedEmails.find(e => e.uid === 1);
+            expect(email1.isRead).toBe(false);
+            expect(email1.isFlagged).toBe(false);
+
+            const email2 = savedEmails.find(e => e.uid === 2);
+            expect(email2.isRead).toBe(true);
+            expect(email2.isFlagged).toBe(false);
+
+            const email3 = savedEmails.find(e => e.uid === 3);
+            expect(email3.isRead).toBe(false);
+            expect(email3.isFlagged).toBe(true);
+
+            const email4 = savedEmails.find(e => e.uid === 4);
+            expect(email4.isRead).toBe(true);
+            expect(email4.isFlagged).toBe(true);
+        });
+    });
 });
