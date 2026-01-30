@@ -1,0 +1,36 @@
+export { };
+
+declare global {
+    interface Window {
+        electron: {
+            getAccounts: () => Promise<any[]>;
+            addAccount: (account: any) => Promise<any>;
+            deleteAccount: (id: string) => Promise<boolean>;
+            getEmails: (accountId: string) => Promise<any[]>;
+            syncAccount: (account: any) => Promise<any>;
+            testConnection: (account: any) => Promise<{ success: boolean; error?: string }>;
+            resetDb: () => Promise<boolean>;
+            deleteEmail: (data: { account: any, emailId: string, uid: number }) => Promise<any>;
+            updateEmailRead: (data: { account: any, emailId: string, uid: number, isRead: boolean }) => Promise<any>;
+            updateEmailFlag: (data: { account: any, emailId: string, uid: number, isFlagged: boolean }) => Promise<any>;
+            moveEmail: (data: { emailId: string, category: string }) => Promise<any>;
+            updateEmailSmartCategory: (data: { emailId: string, category: string, summary?: string, reasoning?: string, confidence?: number }) => Promise<any>;
+            saveEmail: (email: any) => Promise<void>;
+
+            // Categories
+            getCategories: () => Promise<{ name: string, type: string }[]>;
+            addCategory: (name: string, type?: string) => Promise<any>;
+            updateCategoryType: (name: string, type: string) => Promise<any>;
+            deleteSmartCategory: (categoryName: string) => Promise<any>;
+            renameSmartCategory: (data: { oldName: string, newName: string }) => Promise<{ success: boolean }>;
+
+            // Attachments & Content
+            getEmailAttachments: (emailId: string) => Promise<any[]>;
+            getEmailContent: (emailId: string) => Promise<{ body: string | null, bodyHtml: string | null }>;
+            openAttachment: (attachmentId: string) => Promise<void>;
+
+            // Debug
+            log: (msg: string) => void;
+        };
+    }
+}

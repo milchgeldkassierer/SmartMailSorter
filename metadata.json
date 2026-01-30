@@ -1,0 +1,5 @@
+{
+  "name": "SmartMail AI Sorter (GMX-Style)",
+  "description": "An intelligent email client simulator that uses Gemini AI to automatically categorize emails into folders like Spam, Invoices, Newsletters, and Private conversations. Note: This is a frontend simulation demonstrating AI sorting capabilities, as direct IMAP access is not possible from a browser.",
+  "requestFramePermissions": []
+}
