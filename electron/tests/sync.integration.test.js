@@ -6,24 +6,37 @@ import path from 'path';
 // Setup mock state before any imports
 const mockState = {
     serverEmails: [],
-    shouldFailConnect: false
+    shouldFailConnect: false,
+    shouldFailFetch: false,
+    parseErrorUids: new Set(),
+    missingBodyUids: new Set()
 };
 
 // Helper to set server emails
 function setServerEmails(emails) {
-    mockState.serverEmails = emails.map(e => ({
-        uid: e.uid,
-        subject: e.subject || '(No Subject)',
-        from: e.from || 'test@example.com',
-        body: e.body || '',
-        date: e.date || new Date().toISOString(),
-        flags: e.flags || []
-    }));
+    mockState.serverEmails = emails.map(e => {
+        let body = e.body || '';
+        // Add UID marker if not already present (for parse error detection)
+        if (!body.includes('UID:')) {
+            body = `UID:${e.uid}\n${body}`;
+        }
+        return {
+            uid: e.uid,
+            subject: e.subject || '(No Subject)',
+            from: e.from || 'test@example.com',
+            body: body,
+            date: e.date || new Date().toISOString(),
+            flags: e.flags || []
+        };
+    });
 }
 
 function resetMockState() {
     mockState.serverEmails = [];
     mockState.shouldFailConnect = false;
+    mockState.shouldFailFetch = false;
+    mockState.parseErrorUids = new Set();
+    mockState.missingBodyUids = new Set();
 }
 
 // Mock ImapFlow class
@@ -99,6 +112,14 @@ class MockImapFlow {
                 const uidList = Array.isArray(uids) ? uids : [uids];
                 const emitter = new EventEmitter();
 
+                // Simulate fetch error if flag is set
+                if (mockState.shouldFailFetch) {
+                    setImmediate(() => {
+                        emitter.emit('error', new Error('Fetch operation failed'));
+                    });
+                    return emitter;
+                }
+
                 // Process asynchronously to mimic real IMAP behavior
                 setImmediate(() => {
                     let pendingMessages = 0;
@@ -114,34 +135,49 @@ class MockImapFlow {
 
                             // Simulate async body streaming
                             setImmediate(() => {
-                                const bodyStream = new EventEmitter();
-
-                                // Emit body first (as imapflow does)
-                                msg.emit('body', bodyStream, { which: '' });
-
-                                // Then stream the data
-                                setImmediate(() => {
-                                    bodyStream.emit('data', Buffer.from(email.body));
+                                // Check if this UID should have missing body
+                                if (mockState.missingBodyUids.has(uid)) {
+                                    // Skip body emission, go straight to attributes
                                     setImmediate(() => {
-                                        bodyStream.emit('end');
-
-                                        // After body ends, emit attributes
+                                        msg.emit('attributes', { uid: email.uid, flags: email.flags });
                                         setImmediate(() => {
-                                            msg.emit('attributes', { uid: email.uid, flags: email.flags });
+                                            msg.emit('end');
+                                            pendingMessages--;
+                                            if (pendingMessages === 0) {
+                                                setImmediate(() => emitter.emit('end'));
+                                            }
+                                        });
+                                    });
+                                } else {
+                                    const bodyStream = new EventEmitter();
 
-                                            // Finally, message ends
+                                    // Emit body first (as imapflow does)
+                                    msg.emit('body', bodyStream, { which: '' });
+
+                                    // Then stream the data
+                                    setImmediate(() => {
+                                        bodyStream.emit('data', Buffer.from(email.body));
+                                        setImmediate(() => {
+                                            bodyStream.emit('end');
+
+                                            // After body ends, emit attributes
                                             setImmediate(() => {
-                                                msg.emit('end');
-                                                pendingMessages--;
+                                                msg.emit('attributes', { uid: email.uid, flags: email.flags });
 
-                                                // Only emit fetch end when all messages are done
-                                                if (pendingMessages === 0) {
-                                                    setImmediate(() => emitter.emit('end'));
-                                                }
+                                                // Finally, message ends
+                                                setImmediate(() => {
+                                                    msg.emit('end');
+                                                    pendingMessages--;
+
+                                                    // Only emit fetch end when all messages are done
+                                                    if (pendingMessages === 0) {
+                                                        setImmediate(() => emitter.emit('end'));
+                                                    }
+                                                });
                                             });
                                         });
                                     });
-                                });
+                                }
                             });
                         }
                     }
@@ -194,23 +230,30 @@ require.cache[electronPath] = {
     }
 };
 
-// Mock mailparser
+// Mock mailparser - inject at both package and index level
 const mailparserPath = path.join(process.cwd(), 'node_modules', 'mailparser');
-require.cache[mailparserPath] = {
-    id: mailparserPath,
-    filename: path.join(mailparserPath, 'index.js'),
-    loaded: true,
-    exports: {
-        simpleParser: (rawBody) => {
+const mailparserIndexPath = path.join(process.cwd(), 'node_modules', 'mailparser', 'index.js');
+
+const mailparserMock = {
+    simpleParser: (rawBody) => {
+            // First extract basic fields to check for parse error condition
             const subjectMatch = rawBody.match(/Subject: (.+)/);
             const fromMatch = rawBody.match(/From: (.+)/);
             const dateMatch = rawBody.match(/Date: (.+)/);
             const bodyMatch = rawBody.match(/\r?\n\r?\n([\s\S]+)$/);
+            const uidMatch = rawBody.match(/UID:(\d+)/);
 
             const subject = subjectMatch ? subjectMatch[1] : '(No Subject)';
             const from = fromMatch ? fromMatch[1] : 'test@example.com';
             const date = dateMatch ? new Date(dateMatch[1]) : new Date();
             const body = bodyMatch ? bodyMatch[1].trim() : '';
+            const uid = uidMatch ? parseInt(uidMatch[1]) : null;
+
+            // Simulate parse error - use both UID check and subject check for reliability
+            if ((uid !== null && mockState.parseErrorUids.has(uid)) ||
+                (subject && subject.includes('PARSE_ERROR_MARKER'))) {
+                return Promise.reject(new Error(`Invalid email format${uid ? ` for UID ${uid}` : ''}`));
+            }
 
             return Promise.resolve({
                 subject,
@@ -221,7 +264,22 @@ require.cache[mailparserPath] = {
                 attachments: []
             });
         }
-    }
+};
+
+// Install at package level
+require.cache[mailparserPath] = {
+    id: mailparserPath,
+    filename: path.join(mailparserPath, 'index.js'),
+    loaded: true,
+    exports: mailparserMock
+};
+
+// Also install at index.js level
+require.cache[mailparserIndexPath] = {
+    id: mailparserIndexPath,
+    filename: mailparserIndexPath,
+    loaded: true,
+    exports: mailparserMock
 };
 
 // Now load the actual modules
@@ -1116,6 +1174,430 @@ Email 4 body`,
                     expect(savedEmails2.some(e => e.uid === i)).toBe(true);
                 }
             }
+        });
+    });
+
+    describe('Error Handling', () => {
+        it('should handle connection failures gracefully', async () => {
+            mockState.shouldFailConnect = true;
+
+            const account = createTestAccount({
+                id: 'test-account-conn-fail',
+                email: 'connfail@test.com'
+            });
+
+            addAccountToDb(account);
+
+            const result = await imap.syncAccount(account);
+
+            expect(result.success).toBe(false);
+            expect(result.error).toBeDefined();
+            expect(result.error).toContain('Connection failed');
+
+            const emails = db.getEmails(account.id);
+            expect(emails).toHaveLength(0);
+        });
+
+        it('should handle parse errors for individual emails', async () => {
+            const emails = [
+                {
+                    uid: 1,
+                    subject: 'Valid Email 1',
+                    from: 'sender1@example.com',
+                    body: `Subject: Valid Email 1
+From: sender1@example.com
+Date: ${new Date('2024-01-15T10:00:00Z').toISOString()}
+
+Valid email body 1`,
+                    date: new Date('2024-01-15T10:00:00Z').toISOString(),
+                    flags: []
+                },
+                {
+                    uid: 2,
+                    subject: 'Invalid Email - PARSE_ERROR_MARKER',
+                    from: 'sender2@example.com',
+                    body: `Subject: Invalid Email - PARSE_ERROR_MARKER
+From: sender2@example.com
+Date: ${new Date('2024-01-15T11:00:00Z').toISOString()}
+
+This email will fail to parse`,
+                    date: new Date('2024-01-15T11:00:00Z').toISOString(),
+                    flags: []
+                },
+                {
+                    uid: 3,
+                    subject: 'Valid Email 3',
+                    from: 'sender3@example.com',
+                    body: `Subject: Valid Email 3
+From: sender3@example.com
+Date: ${new Date('2024-01-15T12:00:00Z').toISOString()}
+
+Valid email body 3`,
+                    date: new Date('2024-01-15T12:00:00Z').toISOString(),
+                    flags: []
+                }
+            ];
+
+            setServerEmails(emails);
+            mockState.parseErrorUids.add(2);
+
+            const account = createTestAccount({
+                id: 'test-account-parse-error',
+                email: 'parseerror@test.com'
+            });
+
+            addAccountToDb(account);
+
+            const result = await imap.syncAccount(account);
+
+            expect(result.success).toBe(true);
+            // Count only includes successfully parsed emails, not error placeholders
+            expect(result.count).toBe(2);
+
+            const savedEmails = db.getEmails(account.id);
+            // But database should have all 3 (including error placeholder)
+            expect(savedEmails).toHaveLength(3);
+
+            const email1 = savedEmails.find(e => e.uid === 1);
+            expect(email1).toBeDefined();
+            expect(email1.subject).toBe('Valid Email 1');
+            expect(email1.sender).not.toBe('System Error');
+
+            const email2 = savedEmails.find(e => e.uid === 2);
+            expect(email2).toBeDefined();
+            expect(email2.sender).toBe('System Error');
+            expect(email2.senderEmail).toBe('error@local');
+            expect(email2.subject).toContain('Error loading email UID 2');
+            expect(email2.smartCategory).toBe('System Error');
+            expect(email2.isRead).toBe(true);
+            expect(email2.isFlagged).toBe(true);
+
+            const email3 = savedEmails.find(e => e.uid === 3);
+            expect(email3).toBeDefined();
+            expect(email3.subject).toBe('Valid Email 3');
+            expect(email3.sender).not.toBe('System Error');
+        });
+
+        it('should handle multiple parse errors in a batch', async () => {
+            const emails = [];
+            for (let i = 1; i <= 10; i++) {
+                emails.push({
+                    uid: i,
+                    subject: `Email ${i}`,
+                    from: `sender${i}@example.com`,
+                    body: `Subject: Email ${i}\nFrom: sender${i}@example.com\nDate: ${new Date('2024-01-15T10:00:00Z').toISOString()}\n\nBody ${i}`,
+                    date: new Date('2024-01-15T10:00:00Z').toISOString(),
+                    flags: []
+                });
+            }
+
+            setServerEmails(emails);
+            mockState.parseErrorUids.add(2);
+            mockState.parseErrorUids.add(5);
+            mockState.parseErrorUids.add(8);
+
+            const account = createTestAccount({
+                id: 'test-account-multi-parse-error',
+                email: 'multiparseerror@test.com'
+            });
+
+            addAccountToDb(account);
+
+            const result = await imap.syncAccount(account);
+
+            expect(result.success).toBe(true);
+            // Count only includes successfully parsed emails (7), not error placeholders (3)
+            expect(result.count).toBe(7);
+
+            const savedEmails = db.getEmails(account.id);
+            // Database should have all 10 (7 valid + 3 error placeholders)
+            expect(savedEmails).toHaveLength(10);
+
+            const errorEmails = savedEmails.filter(e => e.sender === 'System Error');
+            expect(errorEmails).toHaveLength(3);
+            expect(errorEmails.map(e => e.uid).sort()).toEqual([2, 5, 8]);
+
+            for (const errorEmail of errorEmails) {
+                expect(errorEmail.senderEmail).toBe('error@local');
+                expect(errorEmail.subject).toContain('Error loading email UID');
+                expect(errorEmail.smartCategory).toBe('System Error');
+                expect(errorEmail.isRead).toBe(true);
+                expect(errorEmail.isFlagged).toBe(true);
+            }
+
+            const validEmails = savedEmails.filter(e => e.sender !== 'System Error');
+            expect(validEmails).toHaveLength(7);
+        });
+
+        it('should handle emails with missing body parts', async () => {
+            const emails = [
+                {
+                    uid: 1,
+                    subject: 'Valid Email 1',
+                    from: 'sender1@example.com',
+                    body: `Subject: Valid Email 1
+From: sender1@example.com
+Date: ${new Date('2024-01-15T10:00:00Z').toISOString()}
+
+Valid body`,
+                    date: new Date('2024-01-15T10:00:00Z').toISOString(),
+                    flags: []
+                },
+                {
+                    uid: 2,
+                    subject: 'Missing Body Email',
+                    from: 'sender2@example.com',
+                    body: '',
+                    date: new Date('2024-01-15T11:00:00Z').toISOString(),
+                    flags: []
+                },
+                {
+                    uid: 3,
+                    subject: 'Valid Email 3',
+                    from: 'sender3@example.com',
+                    body: `Subject: Valid Email 3
+From: sender3@example.com
+Date: ${new Date('2024-01-15T12:00:00Z').toISOString()}
+
+Valid body 3`,
+                    date: new Date('2024-01-15T12:00:00Z').toISOString(),
+                    flags: []
+                }
+            ];
+
+            setServerEmails(emails);
+            mockState.missingBodyUids.add(2);
+
+            const account = createTestAccount({
+                id: 'test-account-missing-body',
+                email: 'missingbody@test.com'
+            });
+
+            addAccountToDb(account);
+
+            const result = await imap.syncAccount(account);
+
+            expect(result.success).toBe(true);
+            // Count only includes successfully parsed emails (2), not error placeholders (1)
+            expect(result.count).toBe(2);
+
+            const savedEmails = db.getEmails(account.id);
+            // Database should have all 3 (2 valid + 1 error placeholder)
+            expect(savedEmails).toHaveLength(3);
+
+            const email1 = savedEmails.find(e => e.uid === 1);
+            expect(email1).toBeDefined();
+            expect(email1.subject).toBe('Valid Email 1');
+
+            const email2 = savedEmails.find(e => e.uid === 2);
+            expect(email2).toBeDefined();
+            expect(email2.sender).toBe('System Error');
+            expect(email2.senderEmail).toBe('error@local');
+            expect(email2.subject).toBe('Empty Body UID 2');
+            expect(email2.smartCategory).toBe('System Error');
+            expect(email2.isRead).toBe(true);
+            expect(email2.isFlagged).toBe(false);
+
+            const email3 = savedEmails.find(e => e.uid === 3);
+            expect(email3).toBeDefined();
+            expect(email3.subject).toBe('Valid Email 3');
+        });
+
+        it('should handle partial fetch failures', async () => {
+            const emails = [
+                {
+                    uid: 1,
+                    subject: 'Email 1',
+                    from: 'sender1@example.com',
+                    body: `Subject: Email 1
+From: sender1@example.com
+Date: ${new Date('2024-01-15T10:00:00Z').toISOString()}
+
+Body 1`,
+                    date: new Date('2024-01-15T10:00:00Z').toISOString(),
+                    flags: []
+                }
+            ];
+
+            setServerEmails(emails);
+
+            const account = createTestAccount({
+                id: 'test-account-fetch-fail',
+                email: 'fetchfail@test.com'
+            });
+
+            addAccountToDb(account);
+
+            mockState.shouldFailFetch = true;
+
+            const result = await imap.syncAccount(account);
+
+            expect(result.success).toBe(false);
+            expect(result.error).toBeDefined();
+
+            const savedEmails = db.getEmails(account.id);
+            expect(savedEmails).toHaveLength(0);
+        });
+
+        it('should continue processing after parse errors', async () => {
+            const batchSize = 20;
+            const emails = [];
+            for (let i = 1; i <= batchSize; i++) {
+                emails.push({
+                    uid: i,
+                    subject: `Batch Email ${i}`,
+                    from: `sender${i}@example.com`,
+                    body: `Subject: Batch Email ${i}\nFrom: sender${i}@example.com\nDate: ${new Date('2024-01-15T10:00:00Z').toISOString()}\n\nBody ${i}`,
+                    date: new Date('2024-01-15T10:00:00Z').toISOString(),
+                    flags: []
+                });
+            }
+
+            setServerEmails(emails);
+            mockState.parseErrorUids.add(5);
+            mockState.parseErrorUids.add(10);
+            mockState.parseErrorUids.add(15);
+
+            const account = createTestAccount({
+                id: 'test-account-continue-after-error',
+                email: 'continueerror@test.com'
+            });
+
+            addAccountToDb(account);
+
+            const result = await imap.syncAccount(account);
+
+            expect(result.success).toBe(true);
+            // Count only includes successfully parsed emails (17), not error placeholders (3)
+            expect(result.count).toBe(17);
+
+            const savedEmails = db.getEmails(account.id);
+            // Database should have all 20 (17 valid + 3 error placeholders)
+            expect(savedEmails).toHaveLength(20);
+
+            const lastEmail = savedEmails.find(e => e.uid === 20);
+            expect(lastEmail).toBeDefined();
+            expect(lastEmail.subject).toBe('Batch Email 20');
+            expect(lastEmail.sender).not.toBe('System Error');
+        });
+
+        it('should handle mixed errors (parse + missing body)', async () => {
+            const emails = [];
+            for (let i = 1; i <= 10; i++) {
+                emails.push({
+                    uid: i,
+                    subject: `Email ${i}`,
+                    from: `sender${i}@example.com`,
+                    body: `Subject: Email ${i}\nFrom: sender${i}@example.com\nDate: ${new Date('2024-01-15T10:00:00Z').toISOString()}\n\nBody ${i}`,
+                    date: new Date('2024-01-15T10:00:00Z').toISOString(),
+                    flags: []
+                });
+            }
+
+            setServerEmails(emails);
+            mockState.parseErrorUids.add(3);
+            mockState.parseErrorUids.add(7);
+            mockState.missingBodyUids.add(5);
+
+            const account = createTestAccount({
+                id: 'test-account-mixed-errors',
+                email: 'mixederrors@test.com'
+            });
+
+            addAccountToDb(account);
+
+            const result = await imap.syncAccount(account);
+
+            expect(result.success).toBe(true);
+            // Count only includes successfully parsed emails (7), not error placeholders (3)
+            expect(result.count).toBe(7);
+
+            const savedEmails = db.getEmails(account.id);
+            // Database should have all 10 (7 valid + 3 error placeholders)
+            expect(savedEmails).toHaveLength(10);
+
+            const errorEmails = savedEmails.filter(e => e.sender === 'System Error');
+            expect(errorEmails).toHaveLength(3);
+
+            const parseErrors = errorEmails.filter(e => e.subject.includes('Error loading email'));
+            expect(parseErrors).toHaveLength(2);
+            expect(parseErrors.map(e => e.uid).sort()).toEqual([3, 7]);
+
+            const missingBodyErrors = errorEmails.filter(e => e.subject.includes('Empty Body'));
+            expect(missingBodyErrors).toHaveLength(1);
+            expect(missingBodyErrors[0].uid).toBe(5);
+
+            const validEmails = savedEmails.filter(e => e.sender !== 'System Error');
+            expect(validEmails).toHaveLength(7);
+        });
+
+        it('should handle error placeholders in incremental sync', async () => {
+            const initialEmails = [
+                {
+                    uid: 1,
+                    subject: 'Email 1',
+                    from: 'sender1@example.com',
+                    body: `Subject: Email 1\nFrom: sender1@example.com\nDate: ${new Date('2024-01-15T10:00:00Z').toISOString()}\n\nBody 1`,
+                    date: new Date('2024-01-15T10:00:00Z').toISOString(),
+                    flags: []
+                }
+            ];
+
+            setServerEmails(initialEmails);
+
+            const account = createTestAccount({
+                id: 'test-account-error-incremental',
+                email: 'errorincremental@test.com'
+            });
+
+            addAccountToDb(account);
+
+            const result1 = await imap.syncAccount(account);
+            expect(result1.success).toBe(true);
+            expect(result1.count).toBe(1);
+
+            const updatedEmails = [
+                ...initialEmails,
+                {
+                    uid: 2,
+                    subject: 'Email 2 - Parse Error',
+                    from: 'sender2@example.com',
+                    body: `Subject: Email 2 - Parse Error\nFrom: sender2@example.com\nDate: ${new Date('2024-01-15T11:00:00Z').toISOString()}\n\nBody 2`,
+                    date: new Date('2024-01-15T11:00:00Z').toISOString(),
+                    flags: []
+                },
+                {
+                    uid: 3,
+                    subject: 'Email 3',
+                    from: 'sender3@example.com',
+                    body: `Subject: Email 3\nFrom: sender3@example.com\nDate: ${new Date('2024-01-15T12:00:00Z').toISOString()}\n\nBody 3`,
+                    date: new Date('2024-01-15T12:00:00Z').toISOString(),
+                    flags: []
+                }
+            ];
+
+            setServerEmails(updatedEmails);
+            mockState.parseErrorUids.add(2);
+
+            const result2 = await imap.syncAccount(account);
+            expect(result2.success).toBe(true);
+            // Count only includes successfully parsed email (1), not error placeholder (1)
+            expect(result2.count).toBe(1);
+
+            const savedEmails = db.getEmails(account.id);
+            // Database should have all 3 (2 valid + 1 error placeholder)
+            expect(savedEmails).toHaveLength(3);
+
+            const errorEmail = savedEmails.find(e => e.uid === 2);
+            expect(errorEmail).toBeDefined();
+            expect(errorEmail.sender).toBe('System Error');
+            expect(errorEmail.senderEmail).toBe('error@local');
+            expect(errorEmail.subject).toContain('Error loading email UID 2');
+
+            const validEmail3 = savedEmails.find(e => e.uid === 3);
+            expect(validEmail3).toBeDefined();
+            expect(validEmail3.subject).toBe('Email 3');
+            expect(validEmail3.sender).not.toBe('System Error');
         });
     });
 });
