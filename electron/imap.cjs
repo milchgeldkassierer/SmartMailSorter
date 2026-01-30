@@ -443,22 +443,23 @@ async function syncAccount(account) {
 }
 
 async function testConnection(account) {
-    const config = {
-        imap: {
+    const client = new ImapFlow({
+        host: account.imapHost,
+        port: account.imapPort,
+        secure: true,
+        tls: { rejectUnauthorized: false },
+        auth: {
             user: account.username || account.email,
-            password: account.password,
-            host: account.imapHost,
-            port: account.imapPort,
-            tls: true,
-            tlsOptions: { rejectUnauthorized: false },
-            authTimeout: 5000
-        }
-    };
+            pass: account.password
+        },
+        logger: false
+    });
 
     try {
-        const connection = await imaps.connect(config);
-        await connection.openBox('INBOX');
-        connection.end();
+        await client.connect();
+        const lock = await client.getMailboxLock('INBOX');
+        lock.release();
+        await client.logout();
         return { success: true };
     } catch (error) {
         return { success: false, error: error.message };
