@@ -475,71 +475,62 @@ async function testConnection(account) {
 async function deleteEmail(account, uid, dbFolder) {
     if (!uid) return { success: false, error: 'No UID' };
 
-    const config = {
-        imap: {
+    const client = new ImapFlow({
+        host: account.imapHost,
+        port: account.imapPort,
+        secure: true,
+        tls: { rejectUnauthorized: false },
+        auth: {
             user: account.username || account.email,
-            password: account.password,
-            host: account.imapHost,
-            port: account.imapPort,
-            tls: true,
-            tlsOptions: { rejectUnauthorized: false },
-            authTimeout: 5000
-        }
-    };
+            pass: account.password
+        },
+        logger: false
+    });
 
     try {
-        const connection = await imaps.connect(config);
+        await client.connect();
 
         // Resolve Server Path from DB Folder Name
         let serverPath = 'INBOX';
         if (dbFolder && dbFolder !== 'Posteingang') {
-            const boxList = await connection.getBoxes();
+            const boxList = await client.list();
             let foundPath = null;
 
-            const findPath = (boxes, prefix = '') => {
-                if (foundPath) return; // Stop if found
-                for (const key in boxes) {
-                    const box = boxes[key];
-                    const fullPath = prefix + key;
-                    let mappedName = fullPath; // Default
+            for (const box of boxList) {
+                const fullPath = box.path;
+                let mappedName = fullPath; // Default
 
-                    // Check Special Attributes
-                    if (box.attribs) {
-                        if (box.attribs.some(a => typeof a === 'string' && a.toLowerCase().includes('\\sent'))) mappedName = 'Gesendet';
-                        else if (box.attribs.some(a => typeof a === 'string' && a.toLowerCase().includes('\\trash'))) mappedName = 'Papierkorb';
-                        else if (box.attribs.some(a => typeof a === 'string' && a.toLowerCase().includes('\\junk'))) mappedName = 'Spam';
-                    }
+                // Check specialUse attribute (imapflow uses specialUse instead of attribs)
+                if (box.specialUse) {
+                    const specialUse = box.specialUse.toLowerCase();
+                    if (specialUse.includes('\\sent') || specialUse.includes('sent')) mappedName = 'Gesendet';
+                    else if (specialUse.includes('\\trash') || specialUse.includes('trash')) mappedName = 'Papierkorb';
+                    else if (specialUse.includes('\\junk') || specialUse.includes('junk')) mappedName = 'Spam';
+                }
 
-                    // Name matching overrides
-                    const lower = key.toLowerCase();
-                    if (mappedName === fullPath) { // If not mapped by attribute yet
-                        if (lower === 'sent' || lower === 'gesendet') mappedName = 'Gesendet';
-                        else if (lower === 'trash' || lower === 'papierkorb') mappedName = 'Papierkorb';
-                        else if (lower === 'junk' || lower === 'spam') mappedName = 'Spam';
-                        else if (fullPath.toUpperCase().startsWith('INBOX')) {
-                            // Handle Subfolders: INBOX.Amazon -> Posteingang/Amazon
-                            const sep = box.delimiter || '/';
-                            // Normalize separators to / for DB
-                            const parts = fullPath.split(sep);
-                            if (parts[0].toUpperCase() === 'INBOX') {
-                                parts[0] = 'Posteingang';
-                                mappedName = parts.join('/');
-                            }
+                // Name matching overrides
+                const lower = box.name.toLowerCase();
+                if (mappedName === fullPath) { // If not mapped by attribute yet
+                    if (lower === 'sent' || lower === 'gesendet') mappedName = 'Gesendet';
+                    else if (lower === 'trash' || lower === 'papierkorb') mappedName = 'Papierkorb';
+                    else if (lower === 'junk' || lower === 'spam') mappedName = 'Spam';
+                    else if (fullPath.toUpperCase().startsWith('INBOX')) {
+                        // Handle Subfolders: INBOX.Amazon -> Posteingang/Amazon
+                        const sep = box.delimiter || '/';
+                        // Normalize separators to / for DB
+                        const parts = fullPath.split(sep);
+                        if (parts[0].toUpperCase() === 'INBOX') {
+                            parts[0] = 'Posteingang';
+                            mappedName = parts.join('/');
                         }
                     }
-
-                    if (mappedName === dbFolder) {
-                        foundPath = fullPath;
-                        return;
-                    }
-
-                    if (box.children) {
-                        findPath(box.children, fullPath + (box.delimiter || '/'));
-                    }
                 }
-            };
 
-            findPath(boxList);
+                if (mappedName === dbFolder) {
+                    foundPath = fullPath;
+                    break;
+                }
+            }
 
             if (foundPath) {
                 serverPath = foundPath;
@@ -549,12 +540,19 @@ async function deleteEmail(account, uid, dbFolder) {
             }
         }
 
-        await connection.openBox(serverPath);
-        // Add \Deleted flag
-        await connection.addFlags(uid, ['\\Deleted']);
-        await connection.imap.expunge(uid);
+        // Get mailbox lock for the target folder
+        const lock = await client.getMailboxLock(serverPath);
 
-        connection.end();
+        try {
+            // Add \Deleted flag using imapflow's flags.add()
+            await client.flags.add(uid, ['\\Deleted']);
+            // Expunge the message using raw imap access
+            await client.imap.expunge(uid);
+        } finally {
+            lock.release();
+        }
+
+        await client.logout();
         return { success: true };
     } catch (error) {
         console.error('Delete Error:', error);
