@@ -491,4 +491,215 @@ New email 3 body`,
             expect(newEmail.subject).toBe('New Email 3');
         });
     });
+
+    describe('Batch Processing', () => {
+        it('should sync 100+ emails in batches correctly', async () => {
+            // Generate 150 emails to test batch processing
+            const emailCount = 150;
+            const emails = [];
+
+            for (let i = 1; i <= emailCount; i++) {
+                const date = new Date('2024-01-15T10:00:00Z');
+                date.setDate(date.getDate() + ((i - 1) % 30));
+                const dateStr = date.toISOString();
+
+                emails.push({
+                    uid: i,
+                    subject: `Batch Email ${i}`,
+                    from: `sender${i}@example.com`,
+                    body: `Subject: Batch Email ${i}\nFrom: sender${i}@example.com\nDate: ${dateStr}\n\nEmail body ${i}`,
+                    date: dateStr,
+                    flags: i % 3 === 0 ? ['\\Seen'] : []
+                });
+            }
+
+            setServerEmails(emails);
+
+            const account = createTestAccount({
+                id: 'test-account-batch-150',
+                email: 'batch150@test.com'
+            });
+
+            addAccountToDb(account);
+
+            const result = await imap.syncAccount(account);
+
+            expect(result.success).toBe(true);
+            expect(result.count).toBe(150);
+
+            const savedEmails = db.getEmails(account.id);
+            expect(savedEmails).toHaveLength(150);
+
+            // Verify all UIDs are present
+            const savedUids = new Set(savedEmails.map(e => e.uid));
+            for (let i = 1; i <= emailCount; i++) {
+                expect(savedUids.has(i)).toBe(true);
+            }
+
+            // Verify email content
+            const firstEmail = savedEmails.find(e => e.uid === 1);
+            expect(firstEmail.subject).toBe('Batch Email 1');
+            expect(firstEmail.senderEmail).toBe('sender1@example.com');
+
+            const lastEmail = savedEmails.find(e => e.uid === 150);
+            expect(lastEmail.subject).toBe('Batch Email 150');
+            expect(lastEmail.senderEmail).toBe('sender150@example.com');
+
+            // Verify read flags were correctly processed
+            const readEmails = savedEmails.filter(e => e.isRead);
+            expect(readEmails.length).toBe(50); // Every 3rd email (150/3 = 50)
+        });
+
+        it('should handle batch processing across sequence ranges (1:5000, 5001:10000)', async () => {
+            // Create emails that span across typical batch boundaries
+            // We test with 5200 emails which crosses the 5000 boundary
+            const emailCount = 5200;
+            const emails = [];
+
+            for (let i = 1; i <= emailCount; i++) {
+                emails.push({
+                    uid: i,
+                    subject: `Large Batch Email ${i}`,
+                    from: `bulk${i}@example.com`,
+                    body: `Subject: Large Batch Email ${i}\nFrom: bulk${i}@example.com\nDate: ${new Date('2024-01-15T10:00:00Z').toISOString()}\n\nBody ${i}`,
+                    date: new Date('2024-01-15T10:00:00Z').toISOString(),
+                    flags: []
+                });
+            }
+
+            setServerEmails(emails);
+
+            const account = createTestAccount({
+                id: 'test-account-large-batch',
+                email: 'largebatch@test.com'
+            });
+
+            addAccountToDb(account);
+
+            const result = await imap.syncAccount(account);
+
+            expect(result.success).toBe(true);
+            expect(result.count).toBe(5200);
+
+            const savedEmails = db.getEmails(account.id);
+            expect(savedEmails).toHaveLength(5200);
+
+            // Verify emails from both sides of the 5000 boundary
+            const emailAt4999 = savedEmails.find(e => e.uid === 4999);
+            expect(emailAt4999).toBeDefined();
+            expect(emailAt4999.subject).toBe('Large Batch Email 4999');
+
+            const emailAt5000 = savedEmails.find(e => e.uid === 5000);
+            expect(emailAt5000).toBeDefined();
+            expect(emailAt5000.subject).toBe('Large Batch Email 5000');
+
+            const emailAt5001 = savedEmails.find(e => e.uid === 5001);
+            expect(emailAt5001).toBeDefined();
+            expect(emailAt5001.subject).toBe('Large Batch Email 5001');
+
+            const emailAt5200 = savedEmails.find(e => e.uid === 5200);
+            expect(emailAt5200).toBeDefined();
+            expect(emailAt5200.subject).toBe('Large Batch Email 5200');
+        });
+
+        it('should handle incremental sync with batch processing for large mailboxes', async () => {
+            // Start with 3000 emails
+            const initialEmails = [];
+            for (let i = 1; i <= 3000; i++) {
+                initialEmails.push({
+                    uid: i,
+                    subject: `Initial Email ${i}`,
+                    from: `initial${i}@example.com`,
+                    body: `Subject: Initial Email ${i}\nFrom: initial${i}@example.com\nDate: ${new Date('2024-01-15T10:00:00Z').toISOString()}\n\nBody ${i}`,
+                    date: new Date('2024-01-15T10:00:00Z').toISOString(),
+                    flags: []
+                });
+            }
+
+            setServerEmails(initialEmails);
+
+            const account = createTestAccount({
+                id: 'test-account-incremental-large',
+                email: 'incrementallarge@test.com'
+            });
+
+            addAccountToDb(account);
+
+            // First sync - all 3000 emails
+            const result1 = await imap.syncAccount(account);
+            expect(result1.success).toBe(true);
+            expect(result1.count).toBe(3000);
+
+            // Now add 200 more emails (simulating new arrivals)
+            const updatedEmails = [...initialEmails];
+            for (let i = 3001; i <= 3200; i++) {
+                updatedEmails.push({
+                    uid: i,
+                    subject: `New Email ${i}`,
+                    from: `new${i}@example.com`,
+                    body: `Subject: New Email ${i}\nFrom: new${i}@example.com\nDate: ${new Date('2024-01-16T10:00:00Z').toISOString()}\n\nBody ${i}`,
+                    date: new Date('2024-01-16T10:00:00Z').toISOString(),
+                    flags: []
+                });
+            }
+
+            setServerEmails(updatedEmails);
+
+            // Second sync - only new emails
+            const result2 = await imap.syncAccount(account);
+            expect(result2.success).toBe(true);
+            expect(result2.count).toBe(200);
+
+            const savedEmails = db.getEmails(account.id);
+            expect(savedEmails).toHaveLength(3200);
+
+            // Verify both old and new emails are present
+            const oldEmail = savedEmails.find(e => e.uid === 1);
+            expect(oldEmail.subject).toBe('Initial Email 1');
+
+            const newEmail = savedEmails.find(e => e.uid === 3200);
+            expect(newEmail.subject).toBe('New Email 3200');
+        });
+
+        it('should handle batch processing with sparse UIDs', async () => {
+            // Simulate a mailbox where some emails were deleted (sparse UIDs)
+            // UIDs are not sequential: 1, 2, 5, 10, 50, 100, etc.
+            const sparseUids = [1, 2, 5, 10, 50, 100, 500, 1000, 5000, 5100];
+            const emails = sparseUids.map(uid => ({
+                uid,
+                subject: `Sparse Email ${uid}`,
+                from: `sparse${uid}@example.com`,
+                body: `Subject: Sparse Email ${uid}\nFrom: sparse${uid}@example.com\nDate: ${new Date('2024-01-15T10:00:00Z').toISOString()}\n\nBody ${uid}`,
+                date: new Date('2024-01-15T10:00:00Z').toISOString(),
+                flags: []
+            }));
+
+            setServerEmails(emails);
+
+            const account = createTestAccount({
+                id: 'test-account-sparse',
+                email: 'sparse@test.com'
+            });
+
+            addAccountToDb(account);
+
+            const result = await imap.syncAccount(account);
+
+            expect(result.success).toBe(true);
+            expect(result.count).toBe(10);
+
+            const savedEmails = db.getEmails(account.id);
+            expect(savedEmails).toHaveLength(10);
+
+            // Verify all sparse UIDs are present
+            const savedUids = new Set(savedEmails.map(e => e.uid));
+            for (const uid of sparseUids) {
+                expect(savedUids.has(uid)).toBe(true);
+            }
+
+            // Verify specific sparse email
+            const email5000 = savedEmails.find(e => e.uid === 5000);
+            expect(email5000.subject).toBe('Sparse Email 5000');
+        });
+    });
 });
