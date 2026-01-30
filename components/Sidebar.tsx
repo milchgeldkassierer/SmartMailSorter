@@ -266,7 +266,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           {/* Add Category Input */}
           {isAdding && (
             <form onSubmit={handleAddNewCategory} className="px-3 mt-2">
-              <div className="flex items-center gap-2 bg-slate-50 border border-blue-500 rounded-md px-2 py-1">
+              <div className="flex items-center gap-2 bg-slate-800 border border-blue-500 rounded-md px-2 py-1">
                 <input
                   autoFocus
                   type="text"
