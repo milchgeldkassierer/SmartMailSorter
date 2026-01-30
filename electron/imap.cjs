@@ -442,7 +442,9 @@ async function syncAccount(account) {
         return { success: true, count: totalNew };
 
     } catch (error) {
-        console.error('IMAP Error:', error);
+        if (process.env.NODE_ENV !== 'test') {
+            console.error('IMAP Error:', error);
+        }
         return { success: false, error: error.message };
     }
 }
@@ -467,6 +469,9 @@ async function testConnection(account) {
         await client.logout();
         return { success: true };
     } catch (error) {
+        if (process.env.NODE_ENV !== 'test') {
+            console.error('IMAP Error:', error);
+        }
         return { success: false, error: error.message };
     }
 }

@@ -29,22 +29,29 @@ vi.mock('mailparser', () => ({
 // Mock imapflow with a factory that returns the mock implementation
 // The factory runs at test time, not module load time
 vi.mock('imapflow', () => {
+    const mockInstance = {
+        connect: vi.fn().mockResolvedValue(undefined),
+        logout: vi.fn().mockResolvedValue(undefined),
+        getMailboxLock: vi.fn().mockResolvedValue({ release: vi.fn() }),
+        list: vi.fn().mockResolvedValue([{ name: 'INBOX', path: 'INBOX' }]),
+        search: vi.fn().mockResolvedValue([]),
+        messageFlagsAdd: vi.fn().mockResolvedValue(undefined),
+        messageFlagsRemove: vi.fn().mockResolvedValue(undefined),
+        fetchOne: vi.fn().mockResolvedValue(null),
+        fetch: vi.fn().mockResolvedValue([]),
+        on: vi.fn(),
+        once: vi.fn(),
+        removeListener: vi.fn(),
+        imap: {
+            getQuotaRoot: vi.fn().mockImplementation((inbox, cb) => cb(null, {})),
+            expunge: vi.fn().mockResolvedValue(undefined)
+        },
+        capabilities: new Set(),
+        mailbox: { exists: 0 }
+    };
+    
     return {
-        ImapFlow: vi.fn().mockImplementation(() => ({
-            connect: vi.fn().mockResolvedValue(undefined),
-            logout: vi.fn().mockResolvedValue(undefined),
-            getMailboxLock: vi.fn().mockResolvedValue({ release: vi.fn() }),
-            list: vi.fn().mockResolvedValue([{ name: 'INBOX', path: 'INBOX' }]),
-            search: vi.fn().mockResolvedValue([]),
-            messageFlagsAdd: vi.fn().mockResolvedValue(undefined),
-            messageFlagsRemove: vi.fn().mockResolvedValue(undefined),
-            imap: {
-                getQuotaRoot: vi.fn().mockImplementation((inbox, cb) => cb(null, {})),
-                expunge: vi.fn().mockResolvedValue(undefined)
-            },
-            capabilities: new Set(),
-            mailbox: { exists: 0 }
-        }))
+        ImapFlow: vi.fn(() => mockInstance)
     };
 });
 
