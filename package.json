@@ -9,10 +9,12 @@
   },
   "scripts": {
     "dev": "vite",
-    "test": "vitest",
+    "test": "npm run rebuild:node && vitest",
     "build": "vite build",
     "preview": "vite preview",
-    "electron:dev": "concurrently \"npm run dev\" \"wait-on tcp:3000 && electron .\"",
+    "rebuild:node": "npm rebuild better-sqlite3",
+    "rebuild:electron": "electron-rebuild -f -m node_modules/better-sqlite3",
+    "electron:dev": "npm run rebuild:electron && concurrently \"npm run dev\" \"wait-on tcp:3000 && electron .\"",
     "electron:build": "npm run build && electron-builder"
   },
   "dependencies": {
@@ -26,8 +28,10 @@
     "react-dom": "^19.2.3"
   },
   "devDependencies": {
+    "@electron/rebuild": "^4.0.3",
     "@types/node": "^22.14.0",
     "@vitejs/plugin-react": "^5.0.0",
+    "@vitest/coverage-v8": "^4.0.18",
     "concurrently": "^9.2.1",
     "cross-env": "^10.1.0",
     "electron": "^40.0.0",
