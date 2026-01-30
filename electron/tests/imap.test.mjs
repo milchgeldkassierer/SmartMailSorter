@@ -42,10 +42,6 @@ vi.mock('imapflow', () => {
         on: vi.fn(),
         once: vi.fn(),
         removeListener: vi.fn(),
-        imap: {
-            getQuotaRoot: vi.fn().mockImplementation((inbox, cb) => cb(null, {})),
-            expunge: vi.fn().mockResolvedValue(undefined)
-        },
         capabilities: new Set(),
         mailbox: { exists: 0 }
     };
