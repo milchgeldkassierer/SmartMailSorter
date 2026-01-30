@@ -36,10 +36,8 @@ vi.mock('imapflow', () => {
             getMailboxLock: vi.fn().mockResolvedValue({ release: vi.fn() }),
             list: vi.fn().mockResolvedValue([{ name: 'INBOX', path: 'INBOX' }]),
             search: vi.fn().mockResolvedValue([]),
-            flags: {
-                add: vi.fn().mockResolvedValue(undefined),
-                del: vi.fn().mockResolvedValue(undefined)
-            },
+            messageFlagsAdd: vi.fn().mockResolvedValue(undefined),
+            messageFlagsRemove: vi.fn().mockResolvedValue(undefined),
             imap: {
                 getQuotaRoot: vi.fn().mockImplementation((inbox, cb) => cb(null, {})),
                 expunge: vi.fn().mockResolvedValue(undefined)

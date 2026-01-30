@@ -543,8 +543,8 @@ async function deleteEmail(account, uid, dbFolder) {
         const lock = await client.getMailboxLock(serverPath);
 
         try {
-            // Add \Deleted flag using imapflow's flags.add()
-            await client.flags.add(uid, ['\\Deleted']);
+            // Add \Deleted flag using imapflow's messageFlagsAdd()
+            await client.messageFlagsAdd(uid, ['\\Deleted']);
             // Expunge the message using raw imap access
             await client.imap.expunge(uid);
         } finally {
@@ -582,9 +582,9 @@ async function setEmailFlag(account, uid, flag, value) {
 
         try {
             if (value) {
-                await client.flags.add(uid, [flag]);
+                await client.messageFlagsAdd(uid, [flag]);
             } else {
-                await client.flags.del(uid, [flag]);
+                await client.messageFlagsRemove(uid, [flag]);
             }
         } finally {
             lock.release();
