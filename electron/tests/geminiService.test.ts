@@ -368,4 +368,175 @@ describe('GeminiService - Batch Categorization', () => {
     expect(results[0].summary).toBe('Duplicate Result');
     expect(results[1].categoryId).toBe(DefaultEmailCategory.NEWSLETTER);
   });
+
+  // Partial API Failure Tests
+  describe('Partial API Failures', () => {
+    it('should handle only first email missing from API response', async () => {
+      const emails = [
+        createTestEmail('email-1', 'First Email'),
+        createTestEmail('email-2', 'Second Email'),
+        createTestEmail('email-3', 'Third Email')
+      ];
+
+      // API returns results for all except first email
+      mockCallLLM = vi.fn().mockResolvedValue([
+        { id: 'email-2', category: DefaultEmailCategory.NEWSLETTER, summary: 'Second' },
+        { id: 'email-3', category: DefaultEmailCategory.BUSINESS, summary: 'Third' }
+      ]);
+
+      const results = await geminiService.categorizeBatchWithAI(emails, availableCategories, defaultSettings);
+
+      expect(results).toHaveLength(3);
+      // First email should get fallback
+      expect(results[0].categoryId).toBe(DefaultEmailCategory.OTHER);
+      expect(results[0].summary).toBe('Fehler');
+      expect(results[0].reasoning).toContain('AI lieferte kein Ergebnis');
+      expect(results[0].confidence).toBe(0);
+      // Others should have correct categorization
+      expect(results[1].categoryId).toBe(DefaultEmailCategory.NEWSLETTER);
+      expect(results[1].summary).toBe('Second');
+      expect(results[2].categoryId).toBe(DefaultEmailCategory.BUSINESS);
+      expect(results[2].summary).toBe('Third');
+    });
+
+    it('should handle only last email missing from API response', async () => {
+      const emails = [
+        createTestEmail('email-1', 'First Email'),
+        createTestEmail('email-2', 'Second Email'),
+        createTestEmail('email-3', 'Third Email')
+      ];
+
+      // API returns results for all except last email
+      mockCallLLM = vi.fn().mockResolvedValue([
+        { id: 'email-1', category: DefaultEmailCategory.INVOICE, summary: 'First' },
+        { id: 'email-2', category: DefaultEmailCategory.NEWSLETTER, summary: 'Second' }
+      ]);
+
+      const results = await geminiService.categorizeBatchWithAI(emails, availableCategories, defaultSettings);
+
+      expect(results).toHaveLength(3);
+      expect(results[0].categoryId).toBe(DefaultEmailCategory.INVOICE);
+      expect(results[0].summary).toBe('First');
+      expect(results[1].categoryId).toBe(DefaultEmailCategory.NEWSLETTER);
+      expect(results[1].summary).toBe('Second');
+      // Last email should get fallback
+      expect(results[2].categoryId).toBe(DefaultEmailCategory.OTHER);
+      expect(results[2].summary).toBe('Fehler');
+      expect(results[2].reasoning).toContain('AI lieferte kein Ergebnis');
+      expect(results[2].confidence).toBe(0);
+    });
+
+    it('should handle majority of emails missing from API response', async () => {
+      const emails = [
+        createTestEmail('email-1', 'First Email'),
+        createTestEmail('email-2', 'Second Email'),
+        createTestEmail('email-3', 'Third Email'),
+        createTestEmail('email-4', 'Fourth Email'),
+        createTestEmail('email-5', 'Fifth Email')
+      ];
+
+      // API only returns result for 1 out of 5 emails
+      mockCallLLM = vi.fn().mockResolvedValue([
+        { id: 'email-3', category: DefaultEmailCategory.BUSINESS, summary: 'Only this one worked' }
+      ]);
+
+      const results = await geminiService.categorizeBatchWithAI(emails, availableCategories, defaultSettings);
+
+      expect(results).toHaveLength(5);
+      // First email - fallback
+      expect(results[0].categoryId).toBe(DefaultEmailCategory.OTHER);
+      expect(results[0].summary).toBe('Fehler');
+      expect(results[0].confidence).toBe(0);
+      // Second email - fallback
+      expect(results[1].categoryId).toBe(DefaultEmailCategory.OTHER);
+      expect(results[1].summary).toBe('Fehler');
+      expect(results[1].confidence).toBe(0);
+      // Third email - success
+      expect(results[2].categoryId).toBe(DefaultEmailCategory.BUSINESS);
+      expect(results[2].summary).toBe('Only this one worked');
+      // Fourth email - fallback
+      expect(results[3].categoryId).toBe(DefaultEmailCategory.OTHER);
+      expect(results[3].summary).toBe('Fehler');
+      expect(results[3].confidence).toBe(0);
+      // Fifth email - fallback
+      expect(results[4].categoryId).toBe(DefaultEmailCategory.OTHER);
+      expect(results[4].summary).toBe('Fehler');
+      expect(results[4].confidence).toBe(0);
+    });
+
+    it('should handle alternating pattern of missing results', async () => {
+      const emails = [
+        createTestEmail('email-1', 'First Email'),
+        createTestEmail('email-2', 'Second Email'),
+        createTestEmail('email-3', 'Third Email'),
+        createTestEmail('email-4', 'Fourth Email')
+      ];
+
+      // API returns results for alternating emails (1st and 3rd)
+      mockCallLLM = vi.fn().mockResolvedValue([
+        { id: 'email-1', category: DefaultEmailCategory.PRIVATE, summary: 'First' },
+        { id: 'email-3', category: DefaultEmailCategory.INVOICE, summary: 'Third' }
+      ]);
+
+      const results = await geminiService.categorizeBatchWithAI(emails, availableCategories, defaultSettings);
+
+      expect(results).toHaveLength(4);
+      expect(results[0].categoryId).toBe(DefaultEmailCategory.PRIVATE);
+      expect(results[0].summary).toBe('First');
+      expect(results[1].categoryId).toBe(DefaultEmailCategory.OTHER);
+      expect(results[1].summary).toBe('Fehler');
+      expect(results[2].categoryId).toBe(DefaultEmailCategory.INVOICE);
+      expect(results[2].summary).toBe('Third');
+      expect(results[3].categoryId).toBe(DefaultEmailCategory.OTHER);
+      expect(results[3].summary).toBe('Fehler');
+    });
+
+    it('should handle all emails missing from API response (empty array)', async () => {
+      const emails = [
+        createTestEmail('email-1', 'First Email'),
+        createTestEmail('email-2', 'Second Email')
+      ];
+
+      // API returns empty array
+      mockCallLLM = vi.fn().mockResolvedValue([]);
+
+      const results = await geminiService.categorizeBatchWithAI(emails, availableCategories, defaultSettings);
+
+      expect(results).toHaveLength(2);
+      // All emails should get fallback
+      results.forEach(result => {
+        expect(result.categoryId).toBe(DefaultEmailCategory.OTHER);
+        expect(result.summary).toBe('Fehler');
+        expect(result.reasoning).toContain('AI lieferte kein Ergebnis');
+        expect(result.confidence).toBe(0);
+      });
+    });
+
+    it('should handle partial results with wrong IDs from API', async () => {
+      const emails = [
+        createTestEmail('email-1', 'First Email'),
+        createTestEmail('email-2', 'Second Email'),
+        createTestEmail('email-3', 'Third Email')
+      ];
+
+      // API returns results with some correct IDs and some wrong IDs
+      mockCallLLM = vi.fn().mockResolvedValue([
+        { id: 'email-1', category: DefaultEmailCategory.BUSINESS, summary: 'First' },
+        { id: 'wrong-id', category: DefaultEmailCategory.SPAM, summary: 'Wrong ID' },
+        { id: 'email-3', category: DefaultEmailCategory.NEWSLETTER, summary: 'Third' }
+      ]);
+
+      const results = await geminiService.categorizeBatchWithAI(emails, availableCategories, defaultSettings);
+
+      expect(results).toHaveLength(3);
+      expect(results[0].categoryId).toBe(DefaultEmailCategory.BUSINESS);
+      expect(results[0].summary).toBe('First');
+      // email-2 should get fallback since its ID wasn't in response
+      expect(results[1].categoryId).toBe(DefaultEmailCategory.OTHER);
+      expect(results[1].summary).toBe('Fehler');
+      expect(results[1].reasoning).toContain('AI lieferte kein Ergebnis');
+      expect(results[2].categoryId).toBe(DefaultEmailCategory.NEWSLETTER);
+      expect(results[2].summary).toBe('Third');
+    });
+  });
 });
