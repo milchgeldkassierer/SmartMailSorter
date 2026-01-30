@@ -1,4 +1,4 @@
-const imaps = require('imap-simple');
+const { ImapFlow } = require('imapflow');
 const simpleParser = require('mailparser').simpleParser;
 const { saveEmail, updateAccountSync, updateAccountQuota, migrateFolder, getMaxUidForFolder, getAllUidsForFolder, deleteEmailsByUid } = require('./db.cjs');
 // Add db just for direct calls if needed, though we imported migrateFolder directly
@@ -11,18 +11,17 @@ const PROVIDERS = {
     gmx: {
         host: 'imap.gmx.net',
         port: 993,
-        tls: true,
-        authTimeout: 3000
+        secure: true
     },
     webde: {
         host: 'imap.web.de',
         port: 993,
-        tls: true
+        secure: true
     },
     gmail: {
         host: 'imap.gmail.com',
         port: 993,
-        tls: true
+        secure: true
     }
 };
 
