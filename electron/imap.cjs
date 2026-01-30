@@ -26,29 +26,6 @@ const PROVIDERS = {
 };
 
 /**
- * Wrapper for raw IMAP fetch (Sequence Numbers)
- * Uses imapflow's fetch() with sequence numbers (default behavior)
- */
-async function fetchBatchSeq(client, range) {
-    const results = [];
-    try {
-        // ImapFlow's fetch() uses sequence numbers by default (uid: false is default)
-        // Fetch minimal data - just need UIDs and flags
-        for await (const message of client.fetch(range, { uid: false, flags: true })) {
-            results.push({
-                attributes: {
-                    uid: message.uid,
-                    flags: message.flags || []
-                }
-            });
-        }
-        return results;
-    } catch (err) {
-        throw err;
-    }
-}
-
-/**
  * Wrapper for raw IMAP fetch (UIDs)
  * Bypasses SEARCH and directly fetches by UID.
  */
@@ -333,8 +310,16 @@ async function syncAccount(account) {
                     console.log(`[Sync] ${boxName}: Checking range ${range} for missing UIDs...`);
 
                     try {
-                        // Fetch only UIDs for this sequence range
-                        const headers = await fetchBatchSeq(client, range);
+                        // Fetch only UIDs for this sequence range using native ImapFlow fetch()
+                        const headers = [];
+                        for await (const message of client.fetch(range, { uid: false, flags: true })) {
+                            headers.push({
+                                attributes: {
+                                    uid: message.uid,
+                                    flags: message.flags || []
+                                }
+                            });
+                        }
 
                         // Extract server UIDs from this batch
                         const batchServerUids = headers.map(m => m.attributes ? m.attributes.uid : null).filter(u => u != null);
