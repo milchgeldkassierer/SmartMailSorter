@@ -26,47 +26,6 @@ const PROVIDERS = {
 };
 
 /**
- * Wrapper for raw IMAP fetch (UIDs)
- * Bypasses SEARCH and directly fetches by UID.
- */
-async function fetchBatchUid(client, uids) {
-    const messages = [];
-    try {
-        // ImapFlow's fetch() with uid: true to fetch by UIDs
-        // Convert uids array to range string (e.g., "1,2,3" or "1:5")
-        const uidRange = Array.isArray(uids) ? uids.join(',') : uids.toString();
-
-        for await (const message of client.fetch(uidRange, {
-            uid: true,
-            source: true,  // Fetch full raw email source
-            flags: true
-        })) {
-            // ImapFlow returns message with source buffer directly
-            const msg = {
-                parts: [],
-                attributes: {
-                    uid: message.uid,
-                    flags: message.flags || []
-                }
-            };
-
-            // Add body part only if source exists (handles missing body parts)
-            if (message.source) {
-                msg.parts.push({
-                    which: '',
-                    body: message.source.toString('utf8')
-                });
-            }
-
-            messages.push(msg);
-        }
-        return messages;
-    } catch (err) {
-        throw err;
-    }
-}
-
-/**
  * Helper to process a batch of fetch results and save them to DB
  */
 async function processMessages(client, messages, account, targetCategory) {
@@ -344,9 +303,35 @@ async function syncAccount(account) {
                                 console.log(`[Sync] Downloading ${chunkUids.length} messages... (UIDs ${chunkUids[0]}..${chunkUids[chunkUids.length - 1]})`);
 
                                 try {
-                                    // Fetch FULL message content for these UIDs directly
-                                    console.log(`[Sync Debug] Downloading chunk directly via fetchBatchUid...`);
-                                    const messages = await fetchBatchUid(client, chunkUids);
+                                    // Fetch FULL message content for these UIDs directly using native client.fetch()
+                                    console.log(`[Sync Debug] Downloading chunk directly via client.fetch()...`);
+                                    const messages = [];
+                                    const uidRange = chunkUids.join(',');
+
+                                    for await (const message of client.fetch(uidRange, {
+                                        uid: true,
+                                        source: true,  // Fetch full raw email source
+                                        flags: true
+                                    })) {
+                                        // ImapFlow returns message with source buffer directly
+                                        const msg = {
+                                            parts: [],
+                                            attributes: {
+                                                uid: message.uid,
+                                                flags: message.flags || []
+                                            }
+                                        };
+
+                                        // Add body part only if source exists (handles missing body parts)
+                                        if (message.source) {
+                                            msg.parts.push({
+                                                which: '',
+                                                body: message.source.toString('utf8')
+                                            });
+                                        }
+
+                                        messages.push(msg);
+                                    }
 
                                     if (!messages || messages.length === 0) {
                                         console.error(`[Sync Error] Fetched 0 messages for UIDs ${chunkUids[0]}..${chunkUids[chunkUids.length - 1]}`);
