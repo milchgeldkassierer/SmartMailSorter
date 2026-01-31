@@ -10,14 +10,20 @@ export default defineConfig({
         coverage: {
             provider: 'v8',
             reporter: ['text', 'html', 'clover', 'json'],
-            include: ['electron/**/*.{js,cjs,ts}', 'services/**/*.{js,ts}'],
+            include: ['electron/**/*.{js,cjs,ts}', 'services/**/*.{js,ts}', 'components/**/*.{tsx,ts}'],
             exclude: [
                 'electron/tests/**',
                 'electron/main.cjs',
                 '**/*.config.{js,ts}',
                 '**/node_modules/**',
-                '**/__mocks__/**'
-            ]
+                '**/__mocks__/**',
+                'components/__tests__/**'
+            ],
+            thresholds: {
+                lines: 90,
+                functions: 90,
+                branches: 90
+            }
         }
     },
 });
