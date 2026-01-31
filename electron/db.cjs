@@ -110,7 +110,16 @@ function createSchema() {
 }
 
 function init(appOrPath) {
-  // ... (previous init code remains same, just ensuring schema runs)
+  // Close existing database if reinitializing (for tests)
+  if (db && typeof appOrPath === 'string' && appOrPath === ':memory:') {
+    try {
+      db.close();
+    } catch (e) {
+      // Ignore close errors
+    }
+    db = null;
+  }
+
   if (!db) {
     let fullPath;
     if (typeof appOrPath === 'string') {

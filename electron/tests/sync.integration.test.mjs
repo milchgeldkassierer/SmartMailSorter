@@ -1,44 +1,22 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { createRequire } from 'module';
 
-// Tell vitest to use __mocks__/imapflow.cjs
-vi.mock('imapflow');
+// The vitest-setup.js file patches require() to intercept 'imapflow' imports
+// Import helpers from setup to control mock state
+import { resetMockState, setServerEmails } from './vitest-setup.js';
 
-// Mock electron
+// Use CommonJS require to ensure we get the SAME module instances as imap.cjs
+const require = createRequire(import.meta.url);
+
+// Mock electron (still use vi.mock for this)
 vi.mock('electron', () => ({
     app: { getPath: () => './test-data' }
 }));
 
-// Mock mailparser
-vi.mock('mailparser', () => ({
-    simpleParser: vi.fn((rawBody) => {
-        const bodyStr = rawBody.toString();
-        const subjectMatch = bodyStr.match(/Subject: (.+)/);
-        const fromMatch = bodyStr.match(/From: (.+)/);
-        const dateMatch = bodyStr.match(/Date: (.+)/);
-        const bodyMatch = bodyStr.match(/\r?\n\r?\n([\s\S]+)$/);
-
-        const subject = subjectMatch ? subjectMatch[1] : '(No Subject)';
-        const from = fromMatch ? fromMatch[1] : 'test@example.com';
-        const date = dateMatch ? new Date(dateMatch[1]) : new Date();
-        const body = bodyMatch ? bodyMatch[1].trim() : '';
-
-        return Promise.resolve({
-            subject,
-            from: { text: from, value: [{ address: from.replace(/[<>]/g, '') }] },
-            text: body,
-            html: null,
-            date,
-            attachments: []
-        });
-    })
-}));
-
-// Import the mock helpers from the __mocks__ directory
-const { setServerEmails, resetMockState } = await import('imapflow');
-
-// Import the modules AFTER mocks are set up
-const db = await import('../db.cjs');
-const imap = await import('../imap.cjs');
+// Use CJS require to get the same module instances that imap.cjs uses
+// This ensures db.init() affects the same db variable that saveEmail() uses
+const db = require('../db.cjs');
+const imap = require('../imap.cjs');
 
 // Helper function to create test accounts
 function createTestAccount(overrides = {}) {
@@ -55,7 +33,7 @@ function createTestAccount(overrides = {}) {
 
 // Helper to add account to database
 function addAccountToDb(account) {
-    db.default.addAccount({
+    db.addAccount({
         id: account.id,
         email: account.email,
         name: account.name || account.email,
@@ -71,7 +49,7 @@ function addAccountToDb(account) {
 describe('IMAP Sync Integration Tests', () => {
     beforeEach(() => {
         // Initialize with in-memory database
-        db.default.init(':memory:');
+        db.init(':memory:');
         // Reset mock server state
         resetMockState();
     });
@@ -87,7 +65,7 @@ describe('IMAP Sync Integration Tests', () => {
 
             addAccountToDb(account);
 
-            const result = await imap.default.syncAccount(account);
+            const result = await imap.syncAccount(account);
 
             if (!result.success) {
                 console.error('Sync failed with error:', result.error);
@@ -96,7 +74,7 @@ describe('IMAP Sync Integration Tests', () => {
             expect(result.success).toBe(true);
             expect(result.count).toBe(0);
 
-            const emails = db.default.getEmails(account.id);
+            const emails = db.getEmails(account.id);
             expect(emails).toHaveLength(0);
         });
 
@@ -122,12 +100,12 @@ This is the email body content.`,
 
             addAccountToDb(account);
 
-            const result = await imap.default.syncAccount(account);
+            const result = await imap.syncAccount(account);
 
             expect(result.success).toBe(true);
             expect(result.count).toBe(1);
 
-            const emails = db.default.getEmails(account.id);
+            const emails = db.getEmails(account.id);
             expect(emails).toHaveLength(1);
 
             const savedEmail = emails[0];
@@ -186,12 +164,12 @@ Third email body`,
 
             addAccountToDb(account);
 
-            const result = await imap.default.syncAccount(account);
+            const result = await imap.syncAccount(account);
 
             expect(result.success).toBe(true);
             expect(result.count).toBe(3);
 
-            const savedEmails = db.default.getEmails(account.id);
+            const savedEmails = db.getEmails(account.id);
             expect(savedEmails).toHaveLength(3);
 
             const emailByUid = (uid) => savedEmails.find(e => e.uid === uid);
@@ -248,7 +226,7 @@ Existing email 2 body`,
                 }
             ]);
 
-            const result1 = await imap.default.syncAccount(account);
+            const result1 = await imap.syncAccount(account);
             expect(result1.count).toBe(2);
 
             setServerEmails([
@@ -290,12 +268,12 @@ New email 3 body`,
                 }
             ]);
 
-            const result2 = await imap.default.syncAccount(account);
+            const result2 = await imap.syncAccount(account);
 
             expect(result2.success).toBe(true);
             expect(result2.count).toBe(1);
 
-            const savedEmails = db.default.getEmails(account.id);
+            const savedEmails = db.getEmails(account.id);
             expect(savedEmails).toHaveLength(3);
 
             const newEmail = savedEmails.find(e => e.uid === 3);
@@ -344,12 +322,12 @@ Email body content ${i}`,
 
             addAccountToDb(account);
 
-            const result = await imap.default.syncAccount(account);
+            const result = await imap.syncAccount(account);
 
             expect(result.success).toBe(true);
             expect(result.count).toBe(60);
 
-            const savedEmails = db.default.getEmails(account.id);
+            const savedEmails = db.getEmails(account.id);
             expect(savedEmails).toHaveLength(60);
 
             const unreadUnflagged = savedEmails.filter(e => !e.isRead && !e.isFlagged);
