@@ -104,11 +104,10 @@ app.whenReady().then(() => {
 
         if (isWSL) {
             // In WSL, use cmd.exe to open URL in Windows default browser
-            const { exec } = require('child_process');
+            // Use execFile instead of exec to avoid shell interpretation and command injection
+            const { execFile } = require('child_process');
             return new Promise((resolve) => {
-                // Escape URL for cmd.exe - replace & with ^& to prevent command injection
-                const escapedUrl = url.replace(/&/g, '^&');
-                exec(`cmd.exe /c start "" "${escapedUrl}"`, (error) => {
+                execFile('cmd.exe', ['/c', 'start', '', url], (error) => {
                     if (error) {
                         console.error('WSL browser open error:', error);
                         resolve(false);
