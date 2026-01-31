@@ -26,7 +26,7 @@ function setServerEmails(emails) {
             from: e.from || 'test@example.com',
             body: body,
             date: e.date || new Date().toISOString(),
-            flags: e.flags || []
+            flags: e.flags instanceof Set ? e.flags : new Set(e.flags || [])
         };
     });
 }
@@ -67,14 +67,22 @@ class MockImapFlow {
     async messageFlagsAdd(uid, flags) {
         const email = mockState.serverEmails.find(e => e.uid === uid);
         if (email) {
-            flags.forEach(f => { if (!email.flags.includes(f)) email.flags.push(f); });
+            // Ensure flags is a Set
+            if (!(email.flags instanceof Set)) {
+                email.flags = new Set(email.flags || []);
+            }
+            flags.forEach(f => email.flags.add(f));
         }
     }
 
     async messageFlagsRemove(uid, flags) {
         const email = mockState.serverEmails.find(e => e.uid === uid);
         if (email) {
-            email.flags = email.flags.filter(f => !flags.includes(f));
+            // Ensure flags is a Set
+            if (!(email.flags instanceof Set)) {
+                email.flags = new Set(email.flags || []);
+            }
+            flags.forEach(f => email.flags.delete(f));
         }
     }
 
@@ -113,7 +121,7 @@ class MockImapFlow {
         for (const email of messages) {
             const msg = {
                 uid: email.uid,
-                flags: email.flags || [],
+                flags: email.flags instanceof Set ? email.flags : new Set(email.flags || []),
                 seq: mockState.serverEmails.indexOf(email) + 1
             };
 
@@ -169,7 +177,10 @@ class MockImapFlow {
                             if (email) {
                                 emitter.emit('message', {
                                     on: (evt, cb) => {
-                                        if (evt === 'attributes') cb({ uid: email.uid, flags: email.flags });
+                                        if (evt === 'attributes') cb({
+                                            uid: email.uid,
+                                            flags: email.flags instanceof Set ? email.flags : new Set(email.flags || [])
+                                        });
                                     }
                                 });
                             }
@@ -210,7 +221,10 @@ class MockImapFlow {
                                 if (mockState.missingBodyUids.has(uid)) {
                                     // Skip body emission, go straight to attributes
                                     setImmediate(() => {
-                                        msg.emit('attributes', { uid: email.uid, flags: email.flags });
+                                        msg.emit('attributes', {
+                                            uid: email.uid,
+                                            flags: email.flags instanceof Set ? email.flags : new Set(email.flags || [])
+                                        });
                                         setImmediate(() => {
                                             msg.emit('end');
                                             pendingMessages--;
@@ -233,7 +247,10 @@ class MockImapFlow {
 
                                             // After body ends, emit attributes
                                             setImmediate(() => {
-                                                msg.emit('attributes', { uid: email.uid, flags: email.flags });
+                                                msg.emit('attributes', {
+                                                    uid: email.uid,
+                                                    flags: email.flags instanceof Set ? email.flags : new Set(email.flags || [])
+                                                });
 
                                                 // Finally, message ends
                                                 setImmediate(() => {

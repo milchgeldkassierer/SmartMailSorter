@@ -17,10 +17,10 @@ function setServerEmails(emails) {
     serverEmails = emails.map((email, index) => ({
         ...email,
         uid: email.uid || index + 1,
-        flags: email.flags || [],
+        flags: email.flags instanceof Set ? email.flags : new Set(email.flags || []),
         attributes: {
             uid: email.uid || index + 1,
-            flags: email.flags || []
+            flags: email.flags instanceof Set ? email.flags : new Set(email.flags || [])
         }
     }));
 }
@@ -82,7 +82,7 @@ class MockImapConnection {
                     const msg = {
                         attributes: {
                             uid: email.uid,
-                            flags: email.flags || []
+                            flags: email.flags instanceof Set ? email.flags : new Set(email.flags || [])
                         }
                     };
                     events.messageHandlers.forEach(h => h(msg));
@@ -125,7 +125,7 @@ class MockImapConnection {
                         parts: [],
                         attributes: {
                             uid: email.uid,
-                            flags: email.flags || []
+                            flags: email.flags instanceof Set ? email.flags : new Set(email.flags || [])
                         }
                     };
 
@@ -244,18 +244,22 @@ class ImapFlow {
     async messageFlagsAdd(uid, flags) {
         const email = serverEmails.find(e => e.uid === uid);
         if (email) {
-            flags.forEach(flag => {
-                if (!email.flags.includes(flag)) {
-                    email.flags.push(flag);
-                }
-            });
+            // Ensure flags is a Set
+            if (!(email.flags instanceof Set)) {
+                email.flags = new Set(email.flags || []);
+            }
+            flags.forEach(flag => email.flags.add(flag));
         }
     }
 
     async messageFlagsRemove(uid, flags) {
         const email = serverEmails.find(e => e.uid === uid);
         if (email) {
-            email.flags = email.flags.filter(f => !flags.includes(f));
+            // Ensure flags is a Set
+            if (!(email.flags instanceof Set)) {
+                email.flags = new Set(email.flags || []);
+            }
+            flags.forEach(flag => email.flags.delete(flag));
         }
     }
 
@@ -293,7 +297,7 @@ class ImapFlow {
         for (const email of messages) {
             const msg = {
                 uid: email.uid,
-                flags: email.flags || [],
+                flags: email.flags instanceof Set ? email.flags : new Set(email.flags || []),
                 seq: serverEmails.indexOf(email) + 1
             };
 
