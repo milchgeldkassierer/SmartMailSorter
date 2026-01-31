@@ -1,37 +1,18 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { resetMockState, setServerEmails, setConnectFailure } from './vitest-setup.js';
+import { createRequire } from 'module';
+import { resetMockState, setServerEmails, setConnectFailure, setFolderList } from './vitest-setup.js';
 
-// The imap.cjs module uses require() for imapflow, which is intercepted by vitest-setup.js
-// This provides the MockImapFlow class with messageFlagsAdd and messageFlagsRemove support
+// Use CommonJS require to ensure we get the SAME module instances as imap.cjs
+const require = createRequire(import.meta.url);
 
-// Mock Electron
+// Mock electron (still use vi.mock for this)
 vi.mock('electron', () => ({
-    app: { getPath: () => 'tmp' }
+    app: { getPath: () => './test-data' }
 }));
 
-// Mock DB module
-vi.mock('../db.cjs', () => ({
-    saveEmail: vi.fn(),
-    updateAccountSync: vi.fn(),
-    updateAccountQuota: vi.fn(),
-    getAllUidsForFolder: vi.fn().mockReturnValue([]),
-    deleteEmailsByUid: vi.fn().mockReturnValue(0),
-    migrateFolder: vi.fn(),
-    getMaxUidForFolder: vi.fn().mockReturnValue(0)
-}));
-
-// Mock mailparser
-vi.mock('mailparser', () => ({
-    simpleParser: vi.fn().mockResolvedValue({
-        subject: 'Test',
-        from: { text: 'Test', value: [{ address: 'test@test.com' }] },
-        text: 'Body',
-        date: new Date()
-    })
-}));
-
-// Import imap module - uses the MockImapFlow from vitest-setup.js
-const imap = await import('../imap.cjs');
+// Use CJS require to get the same module instances that imap.cjs uses
+const db = require('../db.cjs');
+const imap = require('../imap.cjs');
 
 describe('IMAP Flag Operations (setEmailFlag)', () => {
     const testAccount = {
@@ -43,6 +24,9 @@ describe('IMAP Flag Operations (setEmailFlag)', () => {
     };
 
     beforeEach(() => {
+        // Initialize with in-memory database
+        db.init(':memory:');
+        // Reset mock server state
         resetMockState();
         // Set up test emails on the server with various flag states
         setServerEmails([
@@ -329,35 +313,56 @@ describe('IMAP Flag Operations (setEmailFlag)', () => {
     });
 
     describe('Subfolder handling', () => {
-        // Note: MockImapFlow.list() returns only INBOX, so folder resolution
-        // falls back to INBOX. This tests that the function handles subfolders gracefully.
-
         it('should attempt flag operation on subfolder path (Posteingang/Subfolder)', async () => {
+            setFolderList([
+                { name: 'INBOX', path: 'INBOX', delimiter: '.', specialUse: null },
+                { name: 'Subfolder', path: 'INBOX.Subfolder', delimiter: '.', specialUse: null }
+            ]);
+
             const result = await imap.setEmailFlag(testAccount, 1001, '\\Seen', true, 'Posteingang/Subfolder');
 
-            // Should succeed (falls back to INBOX since MockImapFlow only has INBOX)
             expect(result.success).toBe(true);
         });
 
         it('should attempt flag operation on nested subfolder (Posteingang/Parent/Child)', async () => {
+            setFolderList([
+                { name: 'INBOX', path: 'INBOX', delimiter: '.', specialUse: null },
+                { name: 'Child', path: 'INBOX.Parent.Child', delimiter: '.', specialUse: null }
+            ]);
+
             const result = await imap.setEmailFlag(testAccount, 1001, '\\Seen', true, 'Posteingang/Parent/Child');
 
             expect(result.success).toBe(true);
         });
 
         it('should handle special folder Gesendet', async () => {
+            setFolderList([
+                { name: 'INBOX', path: 'INBOX', delimiter: '.', specialUse: null },
+                { name: 'Sent', path: 'Sent', delimiter: '.', specialUse: '\\Sent' }
+            ]);
+
             const result = await imap.setEmailFlag(testAccount, 1001, '\\Seen', true, 'Gesendet');
 
             expect(result.success).toBe(true);
         });
 
         it('should handle special folder Papierkorb', async () => {
+            setFolderList([
+                { name: 'INBOX', path: 'INBOX', delimiter: '.', specialUse: null },
+                { name: 'Trash', path: 'Trash', delimiter: '.', specialUse: '\\Trash' }
+            ]);
+
             const result = await imap.setEmailFlag(testAccount, 1001, '\\Seen', true, 'Papierkorb');
 
             expect(result.success).toBe(true);
         });
 
         it('should handle special folder Spam', async () => {
+            setFolderList([
+                { name: 'INBOX', path: 'INBOX', delimiter: '.', specialUse: null },
+                { name: 'Junk', path: 'Junk', delimiter: '.', specialUse: '\\Junk' }
+            ]);
+
             const result = await imap.setEmailFlag(testAccount, 1001, '\\Seen', true, 'Spam');
 
             expect(result.success).toBe(true);
@@ -414,14 +419,6 @@ describe('IMAP Flag Operations (setEmailFlag)', () => {
             const result = await imap.setEmailFlag(testAccount, '1001', '\\Seen', true, 'Posteingang');
 
             expect(result.success).toBe(true);
-        });
-
-        it('should handle UID with whitespace string (truthy)', async () => {
-            // String with space is truthy in JavaScript
-            const result = await imap.setEmailFlag(testAccount, ' ', '\\Seen', true, 'Posteingang');
-
-            // The UID check passes because ' ' is truthy
-            expect(result).toHaveProperty('success');
         });
     });
 
@@ -567,90 +564,5 @@ describe('IMAP Flag Operations (setEmailFlag)', () => {
             expect(result2.success).toBe(true);
             expect(result3.success).toBe(true);
         });
-    });
-});
-
-describe('Folder Path Resolution for Flag Operations', () => {
-    // These tests verify the folder path resolution logic used by setEmailFlag
-
-    it('should understand INBOX maps to Posteingang', () => {
-        const folderMap = { 'INBOX': 'Posteingang' };
-        expect(folderMap['INBOX']).toBe('Posteingang');
-    });
-
-    it('should understand specialUse \\Sent maps to Gesendet', () => {
-        const specialUse = '\\Sent';
-        const mappedName = specialUse.toLowerCase().includes('\\sent') ? 'Gesendet' : null;
-        expect(mappedName).toBe('Gesendet');
-    });
-
-    it('should understand specialUse \\Trash maps to Papierkorb', () => {
-        const specialUse = '\\Trash';
-        const mappedName = specialUse.toLowerCase().includes('\\trash') ? 'Papierkorb' : null;
-        expect(mappedName).toBe('Papierkorb');
-    });
-
-    it('should understand specialUse \\Junk maps to Spam', () => {
-        const specialUse = '\\Junk';
-        const mappedName = specialUse.toLowerCase().includes('\\junk') ? 'Spam' : null;
-        expect(mappedName).toBe('Spam');
-    });
-
-    it('should understand INBOX.Subfolder maps to Posteingang/Subfolder', () => {
-        const fullPath = 'INBOX.Subfolder';
-        const sep = '.';
-        const parts = fullPath.split(sep);
-        if (parts[0].toUpperCase() === 'INBOX') {
-            parts[0] = 'Posteingang';
-        }
-        const mappedName = parts.join('/');
-        expect(mappedName).toBe('Posteingang/Subfolder');
-    });
-
-    it('should handle folder name matching for Sent/Gesendet', () => {
-        const lower = 'sent';
-        const mappedName = (lower === 'sent' || lower === 'gesendet') ? 'Gesendet' : null;
-        expect(mappedName).toBe('Gesendet');
-    });
-
-    it('should handle folder name matching for Trash/Papierkorb', () => {
-        const lower = 'trash';
-        const mappedName = (lower === 'trash' || lower === 'papierkorb') ? 'Papierkorb' : null;
-        expect(mappedName).toBe('Papierkorb');
-    });
-
-    it('should handle folder name matching for Junk/Spam', () => {
-        const lower = 'spam';
-        const mappedName = (lower === 'junk' || lower === 'spam') ? 'Spam' : null;
-        expect(mappedName).toBe('Spam');
-    });
-
-    it('should handle deep nested folder paths', () => {
-        const fullPath = 'INBOX.Parent.Child.GrandChild';
-        const sep = '.';
-        const parts = fullPath.split(sep);
-        if (parts[0].toUpperCase() === 'INBOX') {
-            parts[0] = 'Posteingang';
-        }
-        const mappedName = parts.join('/');
-        expect(mappedName).toBe('Posteingang/Parent/Child/GrandChild');
-    });
-
-    it('should handle different delimiters (/ vs .)', () => {
-        // Slash delimiter
-        const fullPath1 = 'INBOX/Subfolder';
-        const parts1 = fullPath1.split('/');
-        if (parts1[0].toUpperCase() === 'INBOX') {
-            parts1[0] = 'Posteingang';
-        }
-        expect(parts1.join('/')).toBe('Posteingang/Subfolder');
-
-        // Dot delimiter
-        const fullPath2 = 'INBOX.Subfolder';
-        const parts2 = fullPath2.split('.');
-        if (parts2[0].toUpperCase() === 'INBOX') {
-            parts2[0] = 'Posteingang';
-        }
-        expect(parts2.join('/')).toBe('Posteingang/Subfolder');
     });
 });

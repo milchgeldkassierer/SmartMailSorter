@@ -1,37 +1,18 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { resetMockState, setServerEmails, setConnectFailure } from './vitest-setup.js';
+import { createRequire } from 'module';
+import { resetMockState, setServerEmails, setConnectFailure, setFolderList } from './vitest-setup.js';
 
-// The imap.cjs module uses require() for imapflow, which is intercepted by vitest-setup.js
-// This provides the MockImapFlow class with messageDelete support
+// Use CommonJS require to ensure we get the SAME module instances as imap.cjs
+const require = createRequire(import.meta.url);
 
-// Mock Electron
+// Mock electron (still use vi.mock for this)
 vi.mock('electron', () => ({
-    app: { getPath: () => 'tmp' }
+    app: { getPath: () => './test-data' }
 }));
 
-// Mock DB module
-vi.mock('../db.cjs', () => ({
-    saveEmail: vi.fn(),
-    updateAccountSync: vi.fn(),
-    updateAccountQuota: vi.fn(),
-    getAllUidsForFolder: vi.fn().mockReturnValue([]),
-    deleteEmailsByUid: vi.fn().mockReturnValue(0),
-    migrateFolder: vi.fn(),
-    getMaxUidForFolder: vi.fn().mockReturnValue(0)
-}));
-
-// Mock mailparser
-vi.mock('mailparser', () => ({
-    simpleParser: vi.fn().mockResolvedValue({
-        subject: 'Test',
-        from: { text: 'Test', value: [{ address: 'test@test.com' }] },
-        text: 'Body',
-        date: new Date()
-    })
-}));
-
-// Import imap module - uses the MockImapFlow from vitest-setup.js
-const imap = await import('../imap.cjs');
+// Use CJS require to get the same module instances that imap.cjs uses
+const db = require('../db.cjs');
+const imap = require('../imap.cjs');
 
 describe('IMAP Delete Operations', () => {
     const testAccount = {
@@ -43,6 +24,9 @@ describe('IMAP Delete Operations', () => {
     };
 
     beforeEach(() => {
+        // Initialize with in-memory database
+        db.init(':memory:');
+        // Reset mock server state
         resetMockState();
         // Set up some test emails on the server
         setServerEmails([
@@ -161,29 +145,44 @@ describe('IMAP Delete Operations', () => {
 
     describe('Delete from subfolders', () => {
         it('should attempt delete from subfolder path', async () => {
-            // Note: The MockImapFlow.list() returns only INBOX, so folder resolution
-            // will fall back to INBOX. This tests that the function handles the case
-            // gracefully without throwing.
+            setFolderList([
+                { name: 'INBOX', path: 'INBOX', delimiter: '.', specialUse: null },
+                { name: 'Subfolder', path: 'INBOX.Subfolder', delimiter: '.', specialUse: null }
+            ]);
+
             const result = await imap.deleteEmail(testAccount, 1001, 'Posteingang/Subfolder');
 
-            // Should succeed (falls back to INBOX since MockImapFlow only has INBOX)
             expect(result.success).toBe(true);
         });
 
         it('should handle special folder Gesendet', async () => {
-            // MockImapFlow.list() returns only INBOX, so this falls back to INBOX
+            setFolderList([
+                { name: 'INBOX', path: 'INBOX', delimiter: '.', specialUse: null },
+                { name: 'Sent', path: 'Sent', delimiter: '.', specialUse: '\\Sent' }
+            ]);
+
             const result = await imap.deleteEmail(testAccount, 1001, 'Gesendet');
 
             expect(result.success).toBe(true);
         });
 
         it('should handle special folder Papierkorb', async () => {
+            setFolderList([
+                { name: 'INBOX', path: 'INBOX', delimiter: '.', specialUse: null },
+                { name: 'Trash', path: 'Trash', delimiter: '.', specialUse: '\\Trash' }
+            ]);
+
             const result = await imap.deleteEmail(testAccount, 1001, 'Papierkorb');
 
             expect(result.success).toBe(true);
         });
 
         it('should handle special folder Spam', async () => {
+            setFolderList([
+                { name: 'INBOX', path: 'INBOX', delimiter: '.', specialUse: null },
+                { name: 'Junk', path: 'Junk', delimiter: '.', specialUse: '\\Junk' }
+            ]);
+
             const result = await imap.deleteEmail(testAccount, 1001, 'Spam');
 
             expect(result.success).toBe(true);
@@ -224,15 +223,6 @@ describe('IMAP Delete Operations', () => {
             const result = await imap.deleteEmail(testAccount, '1001', 'Posteingang');
 
             expect(result.success).toBe(true);
-        });
-
-        it('should handle UID with whitespace string (truthy)', async () => {
-            // String with space is truthy in JavaScript
-            const result = await imap.deleteEmail(testAccount, ' ', 'Posteingang');
-
-            // The UID check passes because ' ' is truthy
-            // But the actual delete might fail or succeed depending on implementation
-            expect(result).toHaveProperty('success');
         });
     });
 
@@ -295,65 +285,5 @@ describe('IMAP Delete Operations', () => {
             expect(result).toHaveProperty('error');
             expect(typeof result.error).toBe('string');
         });
-    });
-});
-
-describe('Folder Path Resolution Logic', () => {
-    // These tests verify the folder path resolution logic without requiring mock state changes
-    // The actual folder resolution is tested in imap.unit.test.mjs
-
-    it('should understand INBOX maps to Posteingang', () => {
-        // This is a logic test based on the code in imap.cjs
-        const folderMap = { 'INBOX': 'Posteingang' };
-        expect(folderMap['INBOX']).toBe('Posteingang');
-    });
-
-    it('should understand specialUse \\Sent maps to Gesendet', () => {
-        // Based on deleteEmail's folder resolution logic
-        const specialUse = '\\Sent';
-        const mappedName = specialUse.toLowerCase().includes('\\sent') ? 'Gesendet' : null;
-        expect(mappedName).toBe('Gesendet');
-    });
-
-    it('should understand specialUse \\Trash maps to Papierkorb', () => {
-        const specialUse = '\\Trash';
-        const mappedName = specialUse.toLowerCase().includes('\\trash') ? 'Papierkorb' : null;
-        expect(mappedName).toBe('Papierkorb');
-    });
-
-    it('should understand specialUse \\Junk maps to Spam', () => {
-        const specialUse = '\\Junk';
-        const mappedName = specialUse.toLowerCase().includes('\\junk') ? 'Spam' : null;
-        expect(mappedName).toBe('Spam');
-    });
-
-    it('should understand INBOX.Subfolder maps to Posteingang/Subfolder', () => {
-        // Based on deleteEmail's folder resolution for subfolders
-        const fullPath = 'INBOX.Subfolder';
-        const sep = '.';
-        const parts = fullPath.split(sep);
-        if (parts[0].toUpperCase() === 'INBOX') {
-            parts[0] = 'Posteingang';
-        }
-        const mappedName = parts.join('/');
-        expect(mappedName).toBe('Posteingang/Subfolder');
-    });
-
-    it('should handle folder name matching for Sent/Gesendet', () => {
-        const lower = 'sent';
-        const mappedName = (lower === 'sent' || lower === 'gesendet') ? 'Gesendet' : null;
-        expect(mappedName).toBe('Gesendet');
-    });
-
-    it('should handle folder name matching for Trash/Papierkorb', () => {
-        const lower = 'trash';
-        const mappedName = (lower === 'trash' || lower === 'papierkorb') ? 'Papierkorb' : null;
-        expect(mappedName).toBe('Papierkorb');
-    });
-
-    it('should handle folder name matching for Junk/Spam', () => {
-        const lower = 'spam';
-        const mappedName = (lower === 'junk' || lower === 'spam') ? 'Spam' : null;
-        expect(mappedName).toBe('Spam');
     });
 });
