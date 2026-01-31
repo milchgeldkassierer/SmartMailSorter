@@ -232,16 +232,7 @@ async function syncAccount(account) {
             let lock;
             try {
                 // Get mailbox lock and capture metadata
-                try {
-                    lock = await client.getMailboxLock(boxName);
-                } catch (lockErr) {
-                    // Handle missing/deleted folders gracefully
-                    if (lockErr.mailboxMissing || lockErr.responseText?.includes('unknown folder') || lockErr.message?.includes('Mailbox doesn\'t exist')) {
-                        console.warn(`[Sync] Skipping ${boxName} - folder no longer exists on server (may have been deleted or renamed)`);
-                        continue;
-                    }
-                    throw lockErr; // Re-throw if it's a different error
-                }
+                lock = await client.getMailboxLock(boxName);
 
                 try {
                     console.log(`[Sync] Accessing ${boxName} (Mapped: ${targetCategory})`);
