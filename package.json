@@ -10,6 +10,7 @@
   "scripts": {
     "dev": "vite",
     "test": "npm run rebuild:node && vitest",
+    "test:coverage": "npm run rebuild:node && vitest run --coverage",
     "build": "vite build",
     "preview": "vite preview",
     "rebuild:node": "npm rebuild better-sqlite3",
