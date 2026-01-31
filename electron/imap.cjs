@@ -65,15 +65,15 @@ async function processMessages(client, messages, account, targetCategory) {
                     date: parsed.date ? parsed.date.toISOString() : new Date().toISOString(),
                     folder: targetCategory,
                     smartCategory: null,
-                    isRead: message.attributes.flags && message.attributes.flags.has('\\Seen'),
-                    isFlagged: message.attributes.flags && message.attributes.flags.has('\\Flagged'),
+                    isRead: message.attributes.flags?.has('\\Seen') || false,
+                    isFlagged: message.attributes.flags?.has('\\Flagged') || false,
                     hasAttachments: attachments.length > 0,
                     attachments: attachments,
                     uid: currentUid
                 };
 
                 if (targetCategory === 'Posteingang') {
-                    email.isRead = message.attributes.flags && message.attributes.flags.has('\\Seen');
+                    email.isRead = message.attributes.flags?.has('\\Seen') || false;
                 }
 
                 saveEmail(email);
