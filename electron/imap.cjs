@@ -176,7 +176,7 @@ async function syncAccount(account) {
 
         const findSpecialFolders = (boxList, prefix = '') => {
             for (const box of boxList) {
-                const key = box.name;
+                const key = box.path;
                 const fullPath = prefix + key;
                 const delimiter = box.delimiter || '/';
 
