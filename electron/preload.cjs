@@ -8,6 +8,7 @@ contextBridge.exposeInMainWorld('electron', {
     getEmailAttachments: (emailId) => ipcRenderer.invoke('get-email-attachments', emailId),
     getEmailContent: (emailId) => ipcRenderer.invoke('get-email-content', emailId),
     openAttachment: (attachmentId) => ipcRenderer.invoke('open-attachment', attachmentId),
+    saveAttachmentAs: (attachmentId) => ipcRenderer.invoke('save-attachment-as', attachmentId),
     syncAccount: (account) => ipcRenderer.invoke('sync-account', account),
     testConnection: (account) => ipcRenderer.invoke('test-connection', account),
     resetDb: () => ipcRenderer.invoke('reset-db'),
