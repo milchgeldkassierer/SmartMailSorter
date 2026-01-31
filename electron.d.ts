@@ -28,6 +28,7 @@ declare global {
             getEmailAttachments: (emailId: string) => Promise<any[]>;
             getEmailContent: (emailId: string) => Promise<{ body: string | null, bodyHtml: string | null }>;
             openAttachment: (attachmentId: string) => Promise<void>;
+            saveAttachmentAs: (attachmentId: string) => Promise<{ success: boolean; path?: string; error?: string; canceled?: boolean }>;
 
             // Debug
             log: (msg: string) => void;
