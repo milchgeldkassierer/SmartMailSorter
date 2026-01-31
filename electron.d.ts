@@ -11,8 +11,8 @@ declare global {
             testConnection: (account: any) => Promise<{ success: boolean; error?: string }>;
             resetDb: () => Promise<boolean>;
             deleteEmail: (data: { account: any, emailId: string, uid: number }) => Promise<any>;
-            updateEmailRead: (data: { account: any, emailId: string, uid: number, isRead: boolean }) => Promise<any>;
-            updateEmailFlag: (data: { account: any, emailId: string, uid: number, isFlagged: boolean }) => Promise<any>;
+            updateEmailRead: (data: { account: any, emailId: string, uid: number, isRead: boolean, folder?: string }) => Promise<any>;
+            updateEmailFlag: (data: { account: any, emailId: string, uid: number, isFlagged: boolean, folder?: string }) => Promise<any>;
             moveEmail: (data: { emailId: string, category: string }) => Promise<any>;
             updateEmailSmartCategory: (data: { emailId: string, category: string, summary?: string, reasoning?: string, confidence?: number }) => Promise<any>;
             saveEmail: (email: any) => Promise<void>;

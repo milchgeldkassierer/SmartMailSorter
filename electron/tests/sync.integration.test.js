@@ -64,7 +64,8 @@ class MockImapFlow {
         };
     }
 
-    async messageFlagsAdd(uid, flags) {
+    async messageFlagsAdd(uid, flags, options = {}) {
+        // options.uid indicates that uid parameter is a UID, not sequence number
         const email = mockState.serverEmails.find(e => e.uid === uid);
         if (email) {
             // Ensure flags is a Set
@@ -75,7 +76,8 @@ class MockImapFlow {
         }
     }
 
-    async messageFlagsRemove(uid, flags) {
+    async messageFlagsRemove(uid, flags, options = {}) {
+        // options.uid indicates that uid parameter is a UID, not sequence number
         const email = mockState.serverEmails.find(e => e.uid === uid);
         if (email) {
             // Ensure flags is a Set
@@ -87,14 +89,15 @@ class MockImapFlow {
     }
 
     // Modern ImapFlow fetch() API - returns async iterator
-    async *fetch(range, options = {}) {
+    // 3-parameter signature: fetch(range, queryObject, options)
+    async *fetch(range, queryObject = {}, options = {}) {
         // Check if fetch should fail
         if (mockState.shouldFailFetch) {
             throw new Error('Fetch failed');
         }
 
-        const isUid = options.uid === true;
-        const wantSource = options.source === true;
+        const isUid = options && options.uid === true;
+        const wantSource = queryObject && queryObject.source === true;
 
         // Parse range (can be "1:5", "1,2,3", etc.)
         let messages = [];
