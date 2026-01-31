@@ -77,13 +77,46 @@ app.whenReady().then(() => {
     });
 
     ipcMain.handle('open-external-url', async (event, url) => {
-        // Only allow http/https URLs for security
-        if (!url.startsWith('http://') && !url.startsWith('https://')) {
-            return false;
+        // Validate URL structure and protocol using URL constructor
+        // This prevents malformed URLs, null bytes, newlines, and other injection vectors
+        let parsed;
+        try {
+            parsed = new URL(url);
+        } catch {
+            // Invalid URL structure
+            return { success: false, error: 'INVALID_URL', message: 'Invalid URL format' };
         }
 
-        // Check if running in WSL (Windows Subsystem for Linux)
-        // In WSL, shell.openExternal uses xdg-open which can't find Windows browsers
+        // Allow http, https, mailto, and tel protocols
+        const allowedProtocols = ['http:', 'https:', 'mailto:', 'tel:'];
+        if (!allowedProtocols.includes(parsed.protocol)) {
+            return {
+                success: false,
+                error: 'UNSUPPORTED_PROTOCOL',
+                message: `Protocol '${parsed.protocol}' is not allowed. Supported: ${allowedProtocols.join(', ')}`
+            };
+        }
+
+        // Use normalized URL from parser
+        url = parsed.href;
+
+        // For mailto and tel links, use shell.openExternal on all platforms
+        if (parsed.protocol === 'mailto:' || parsed.protocol === 'tel:') {
+            const { shell } = require('electron');
+            try {
+                await shell.openExternal(url);
+                return { success: true };
+            } catch (error) {
+                console.error(`Failed to open ${parsed.protocol} link:`, error);
+                return {
+                    success: false,
+                    error: 'OPEN_FAILED',
+                    message: `Failed to open ${parsed.protocol} link`
+                };
+            }
+        }
+
+        // For http/https URLs, check if running in WSL
         const isWSL = await (async () => {
             try {
                 const fs = require('fs');
@@ -110,9 +143,9 @@ app.whenReady().then(() => {
                 execFile('cmd.exe', ['/c', 'start', '', url], (error) => {
                     if (error) {
                         console.error('WSL browser open error:', error);
-                        resolve(false);
+                        resolve({ success: false, error: 'WSL_OPEN_FAILED', message: 'Failed to open URL in Windows browser' });
                     } else {
-                        resolve(true);
+                        resolve({ success: true });
                     }
                 });
             });
@@ -121,10 +154,10 @@ app.whenReady().then(() => {
             const { shell } = require('electron');
             try {
                 await shell.openExternal(url);
-                return true;
+                return { success: true };
             } catch (error) {
                 console.error('Failed to open external URL:', error);
-                return false;
+                return { success: false, error: 'OPEN_FAILED', message: 'Failed to open URL' };
             }
         }
     });

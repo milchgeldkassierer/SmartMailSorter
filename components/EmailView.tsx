@@ -10,6 +10,7 @@ const EmailView: React.FC<EmailViewProps> = ({ email }) => {
   const [showHtml, setShowHtml] = useState(true);
   const [attachments, setAttachments] = useState<any[]>([]);
   const [isLoadingAttachments, setIsLoadingAttachments] = useState(false);
+  const [linkError, setLinkError] = useState<string | null>(null);
 
   useEffect(() => {
     if (email && email.hasAttachments && window.electron) {
@@ -50,17 +51,51 @@ const EmailView: React.FC<EmailViewProps> = ({ email }) => {
   const hasHtml = !!email.bodyHtml;
 
   // Handle clicks on links in email HTML content to open in external browser
-  const handleLinkClick = (e: React.MouseEvent) => {
+  const handleLinkClick = async (e: React.MouseEvent) => {
     const target = e.target as HTMLElement;
     const anchor = target.closest('a');
     if (anchor && anchor.href && window.electron?.openExternal) {
       e.preventDefault();
-      window.electron.openExternal(anchor.href);
+      setLinkError(null);
+
+      const result = await window.electron.openExternal(anchor.href);
+      if (!result.success) {
+        // Show user-friendly error message
+        setLinkError(result.message || 'Failed to open link');
+        // Auto-hide error after 5 seconds
+        setTimeout(() => setLinkError(null), 5000);
+      }
     }
   };
 
   return (
     <div className="flex-1 bg-slate-50 flex flex-col h-full overflow-hidden">
+      {/* Link Error Notification */}
+      {linkError && (
+        <div className="bg-red-50 border-l-4 border-red-500 p-4 flex-shrink-0">
+          <div className="flex items-center">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <p className="text-sm text-red-700">{linkError}</p>
+            </div>
+            <div className="ml-auto pl-3">
+              <button
+                onClick={() => setLinkError(null)}
+                className="inline-flex rounded-md p-1.5 text-red-500 hover:bg-red-100 focus:outline-none"
+              >
+                <span className="sr-only">Dismiss</span>
+                <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Header */}
       <div className="bg-white p-6 border-b border-slate-200 shadow-sm flex-shrink-0">
         <div className="flex items-start justify-between mb-4">
