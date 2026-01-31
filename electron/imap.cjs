@@ -309,10 +309,9 @@ async function syncAccount(account) {
                                     const uidRange = chunkUids.join(',');
 
                                     for await (const message of client.fetch(uidRange, {
-                                        uid: true,
                                         source: true,  // Fetch full raw email source
                                         flags: true
-                                    })) {
+                                    }, { uid: true })) {
                                         // ImapFlow returns message with source buffer directly
                                         const msg = {
                                             parts: [],
