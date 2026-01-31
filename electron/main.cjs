@@ -78,6 +78,92 @@ app.whenReady().then(() => {
         return true;
     });
 
+    ipcMain.handle('open-external-url', async (event, url) => {
+        // Validate URL structure and protocol using URL constructor
+        // This prevents malformed URLs, null bytes, newlines, and other injection vectors
+        let parsed;
+        try {
+            parsed = new URL(url);
+        } catch {
+            // Invalid URL structure
+            return { success: false, error: 'INVALID_URL', message: 'Invalid URL format' };
+        }
+
+        // Allow http, https, mailto, and tel protocols
+        const allowedProtocols = ['http:', 'https:', 'mailto:', 'tel:'];
+        if (!allowedProtocols.includes(parsed.protocol)) {
+            return {
+                success: false,
+                error: 'UNSUPPORTED_PROTOCOL',
+                message: `Protocol '${parsed.protocol}' is not allowed. Supported: ${allowedProtocols.join(', ')}`
+            };
+        }
+
+        // Use normalized URL from parser
+        url = parsed.href;
+
+        // For mailto and tel links, use shell.openExternal on all platforms
+        if (parsed.protocol === 'mailto:' || parsed.protocol === 'tel:') {
+            const { shell } = require('electron');
+            try {
+                await shell.openExternal(url);
+                return { success: true };
+            } catch (error) {
+                console.error(`Failed to open ${parsed.protocol} link:`, error);
+                return {
+                    success: false,
+                    error: 'OPEN_FAILED',
+                    message: `Failed to open ${parsed.protocol} link`
+                };
+            }
+        }
+
+        // For http/https URLs, check if running in WSL
+        const isWSL = await (async () => {
+            try {
+                const fs = require('fs');
+                // Check for WSL-specific environment variable (fastest)
+                if (process.env.WSL_DISTRO_NAME || process.env.WSL_INTEROP) {
+                    return true;
+                }
+                // Check /proc/version for "Microsoft" or "WSL" markers
+                if (fs.existsSync('/proc/version')) {
+                    const version = fs.readFileSync('/proc/version', 'utf8');
+                    return /microsoft|wsl/i.test(version);
+                }
+                return false;
+            } catch {
+                return false;
+            }
+        })();
+        if (isWSL) {
+            // In WSL, use rundll32.exe to open URL in Windows default browser
+            // rundll32 url.dll,FileProtocolHandler is the standard Windows method for opening URLs
+            // The URL is passed as a separate argument, preventing command injection
+            const { execFile } = require('child_process');
+            return new Promise((resolve) => {
+                execFile('rundll32.exe', ['url.dll,FileProtocolHandler', url], (error) => {
+                    if (error) {
+                        console.error('WSL browser open error:', error);
+                        resolve({ success: false, error: 'WSL_OPEN_FAILED', message: 'Failed to open URL in Windows browser' });
+                    } else {
+                        resolve({ success: true });
+                    }
+                });
+            });
+        } else {
+            // Standard approach for native Windows/Mac/Linux
+            const { shell } = require('electron');
+            try {
+                await shell.openExternal(url);
+                return { success: true };
+            } catch (error) {
+                console.error('Failed to open external URL:', error);
+                return { success: false, error: 'OPEN_FAILED', message: 'Failed to open URL' };
+            }
+        }
+    });
+
     ipcMain.handle('sync-account', async (event, account) => {
         return await imap.syncAccount(account);
     });

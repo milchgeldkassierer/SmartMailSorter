@@ -29,6 +29,9 @@ declare global {
             getEmailContent: (emailId: string) => Promise<{ body: string | null, bodyHtml: string | null }>;
             openAttachment: (attachmentId: string) => Promise<void>;
 
+            // External links
+            openExternal: (url: string) => Promise<{ success: boolean; error?: string; message?: string }>;
+
             // Debug
             log: (msg: string) => void;
         };
