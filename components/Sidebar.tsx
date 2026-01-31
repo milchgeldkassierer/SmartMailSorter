@@ -207,16 +207,16 @@ const Sidebar: React.FC<SidebarProps> = ({
                   <button
                     onClick={() => onSelectCategory(cat)}
                     className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-colors ${isActive
-                      ? 'bg-blue-50 text-blue-700'
-                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                      ? 'bg-blue-600 text-white'
+                      : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'
                       }`}
                   >
                     <div className="flex items-center gap-3">
-                      <CategoryIcon category={cat} className={`w-4 h-4 ${isActive ? 'text-blue-600' : 'text-slate-400'}`} />
+                      <CategoryIcon category={cat} className={`w-4 h-4 ${isActive ? 'text-blue-200' : 'text-slate-500'}`} />
                       <span>{cat}</span>
                     </div>
                     {count > 0 && (
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${isActive ? 'bg-blue-200 text-blue-800' : 'bg-slate-100 text-slate-600'
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${isActive ? 'bg-blue-500 text-white' : 'bg-slate-800 text-slate-500'
                         }`}>
                         {count}
                       </span>
@@ -266,7 +266,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           {/* Add Category Input */}
           {isAdding && (
             <form onSubmit={handleAddNewCategory} className="px-3 mt-2">
-              <div className="flex items-center gap-2 bg-slate-50 border border-blue-500 rounded-md px-2 py-1">
+              <div className="flex items-center gap-2 bg-slate-800 border border-blue-500 rounded-md px-2 py-1">
                 <input
                   autoFocus
                   type="text"
@@ -285,11 +285,11 @@ const Sidebar: React.FC<SidebarProps> = ({
       {/* Context Menu Portal */}
       {contextMenu && (
         <div
-          className="fixed bg-white border border-slate-200 shadow-xl rounded-lg py-1 z-50 min-w-[150px] animate-in fade-in zoom-in-95 duration-100"
+          className="fixed bg-slate-800 border border-slate-700 shadow-xl rounded-lg py-1 z-50 min-w-[150px] animate-in fade-in zoom-in-95 duration-100"
           style={{ left: contextMenu.x, top: contextMenu.y }}
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="px-3 py-1.5 text-xs font-semibold text-slate-400 border-b border-slate-100 mb-1">
+          <div className="px-3 py-1.5 text-xs font-semibold text-slate-400 border-b border-slate-700 mb-1">
             {contextMenu.category}
           </div>
 
@@ -301,11 +301,11 @@ const Sidebar: React.FC<SidebarProps> = ({
                   if (newName && newName.trim()) onRenameCategory(contextMenu.category, newName.trim());
                   setContextMenu(null);
                 }}
-                className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+                className="w-full text-left px-3 py-2 text-sm text-slate-300 hover:bg-slate-700 flex items-center gap-2"
               >
                 <div className="w-4 h-4" /> <span>Umbenennen</span>
               </button>
-              <div className="h-px bg-slate-100 my-1" />
+              <div className="h-px bg-slate-700 my-1" />
               <button
                 onClick={() => {
                   if (confirm(`Ordner '${contextMenu.category}' wirklich löschen?`)) {
@@ -313,11 +313,11 @@ const Sidebar: React.FC<SidebarProps> = ({
                   }
                   setContextMenu(null);
                 }}
-                className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                className="w-full text-left px-3 py-2 text-sm text-red-400 hover:bg-red-900/30 flex items-center gap-2"
               >
                 <LogOut className="w-4 h-4" /> <span>Löschen</span>
               </button>
-              <div className="h-px bg-slate-100 my-1" />
+              <div className="h-px bg-slate-700 my-1" />
             </>
           )}
 
@@ -326,7 +326,7 @@ const Sidebar: React.FC<SidebarProps> = ({
               alert("Icon-Auswahl folgt bald!");
               setContextMenu(null);
             }}
-            className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+            className="w-full text-left px-3 py-2 text-sm text-slate-300 hover:bg-slate-700 flex items-center gap-2"
           >
             <div className="w-4 h-4" /> <span>Icon ändern</span>
           </button>
