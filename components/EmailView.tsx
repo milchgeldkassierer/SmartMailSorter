@@ -10,6 +10,20 @@ const EmailView: React.FC<EmailViewProps> = ({ email }) => {
   const [showHtml, setShowHtml] = useState(true);
   const [attachments, setAttachments] = useState<any[]>([]);
   const [isLoadingAttachments, setIsLoadingAttachments] = useState(false);
+  const [attachmentContextMenu, setAttachmentContextMenu] = useState<{ x: number, y: number, attachmentId: string } | null>(null);
+
+  // Handler to open context menu on attachment right-click
+  const handleAttachmentContextMenu = (e: React.MouseEvent, attachmentId: string) => {
+    e.preventDefault();
+    setAttachmentContextMenu({ x: e.clientX, y: e.clientY, attachmentId });
+  };
+
+  // Close context menu on global click
+  useEffect(() => {
+    const close = () => setAttachmentContextMenu(null);
+    window.addEventListener('click', close);
+    return () => window.removeEventListener('click', close);
+  }, []);
 
   useEffect(() => {
     if (email && email.hasAttachments && window.electron) {
