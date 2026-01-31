@@ -119,8 +119,13 @@ app.whenReady().then(() => {
         } else {
             // Standard approach for native Windows/Mac/Linux
             const { shell } = require('electron');
-            await shell.openExternal(url);
-            return true;
+            try {
+                await shell.openExternal(url);
+                return true;
+            } catch (error) {
+                console.error('Failed to open external URL:', error);
+                return false;
+            }
         }
     });
 
