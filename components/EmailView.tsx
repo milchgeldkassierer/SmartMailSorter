@@ -25,6 +25,31 @@ const EmailView: React.FC<EmailViewProps> = ({ email }) => {
     return () => window.removeEventListener('click', close);
   }, []);
 
+  // Handler for Open attachment
+  const handleOpenAttachment = async () => {
+    if (!attachmentContextMenu || !window.electron) return;
+    try {
+      await window.electron.openAttachment(attachmentContextMenu.attachmentId);
+    } catch (err) {
+      console.error('Failed to open attachment:', err);
+    }
+    setAttachmentContextMenu(null);
+  };
+
+  // Handler for Save As attachment
+  const handleSaveAttachmentAs = async () => {
+    if (!attachmentContextMenu || !window.electron) return;
+    try {
+      const result = await window.electron.saveAttachmentAs(attachmentContextMenu.attachmentId);
+      if (!result.success && result.error) {
+        console.error('Failed to save attachment:', result.error);
+      }
+    } catch (err) {
+      console.error('Failed to save attachment:', err);
+    }
+    setAttachmentContextMenu(null);
+  };
+
   useEffect(() => {
     if (email && email.hasAttachments && window.electron) {
       setIsLoadingAttachments(true);
@@ -104,7 +129,12 @@ const EmailView: React.FC<EmailViewProps> = ({ email }) => {
         {attachments.length > 0 && (
           <div className="mt-4 flex flex-wrap gap-2">
             {attachments.map((att: any) => (
-              <div key={att.id} className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 border border-slate-200 px-3 py-1.5 rounded-md text-sm text-slate-700 cursor-pointer transition-colors" title={`Size: ${(att.size / 1024).toFixed(1)} KB`}>
+              <div
+                key={att.id}
+                className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 border border-slate-200 px-3 py-1.5 rounded-md text-sm text-slate-700 cursor-pointer transition-colors"
+                title={`Size: ${(att.size / 1024).toFixed(1)} KB`}
+                onContextMenu={(e) => handleAttachmentContextMenu(e, att.id)}
+              >
                 <Paperclip className="w-3.5 h-3.5" />
                 <span className="truncate max-w-[200px]">{att.filename}</span>
               </div>
@@ -162,6 +192,31 @@ const EmailView: React.FC<EmailViewProps> = ({ email }) => {
           )}
         </div>
       </div>
+
+      {/* Attachment Context Menu Portal */}
+      {attachmentContextMenu && (
+        <div
+          className="fixed bg-slate-800 border border-slate-700 shadow-xl rounded-lg py-1 z-50 min-w-[150px] animate-in fade-in zoom-in-95 duration-100"
+          style={{ left: attachmentContextMenu.x, top: attachmentContextMenu.y }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            onClick={handleOpenAttachment}
+            className="w-full text-left px-3 py-2 text-sm text-slate-300 hover:bg-slate-700 flex items-center gap-2"
+          >
+            <FileText className="w-4 h-4" />
+            <span>Open</span>
+          </button>
+          <div className="h-px bg-slate-700 my-1" />
+          <button
+            onClick={handleSaveAttachmentAs}
+            className="w-full text-left px-3 py-2 text-sm text-slate-300 hover:bg-slate-700 flex items-center gap-2"
+          >
+            <Paperclip className="w-4 h-4" />
+            <span>Save As...</span>
+          </button>
+        </div>
+      )}
     </div>
   );
 };
