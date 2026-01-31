@@ -8,7 +8,9 @@ const originalRequire = Module.prototype.require;
 global.__mockState = {
     serverEmails: [],
     shouldFailConnect: false,
-    shouldFailFetch: false
+    shouldFailFetch: false,
+    folderList: null, // Custom folder list for testing folder mapping
+    quotaResponse: null // Custom quota response for testing
 };
 
 // Mock ImapFlow class
@@ -32,6 +34,10 @@ class MockImapFlow {
     }
 
     async list() {
+        // Use custom folder list if provided, otherwise default to INBOX only
+        if (global.__mockState.folderList) {
+            return global.__mockState.folderList;
+        }
         // Only return INBOX to simplify testing - sync will only sync one folder
         return [
             { name: 'INBOX', path: 'INBOX', delimiter: '/', specialUse: null }
@@ -107,6 +113,9 @@ class MockImapFlow {
     }
 
     async getQuota(mailbox) {
+        if (global.__mockState.quotaResponse) {
+            return global.__mockState.quotaResponse;
+        }
         return null;
     }
 
@@ -138,6 +147,8 @@ module.exports = {
         global.__mockState.serverEmails = [];
         global.__mockState.shouldFailConnect = false;
         global.__mockState.shouldFailFetch = false;
+        global.__mockState.folderList = null;
+        global.__mockState.quotaResponse = null;
     },
     setServerEmails(emails) {
         global.__mockState.serverEmails = emails.map((email, index) => ({
@@ -151,5 +162,16 @@ module.exports = {
     },
     setFetchFailure(fail) {
         global.__mockState.shouldFailFetch = fail;
+    },
+    setFolderList(folders) {
+        // Set custom folder list for testing folder mapping
+        // Example: [{ name: 'INBOX', path: 'INBOX', delimiter: '.', specialUse: null },
+        //          { name: 'Sent', path: 'Sent', delimiter: '.', specialUse: '\\Sent' }]
+        global.__mockState.folderList = folders;
+    },
+    setQuotaResponse(quota) {
+        // Set custom quota response for testing
+        // Example: { storage: { used: 1024000, limit: 10240000 } }
+        global.__mockState.quotaResponse = quota;
     }
 };
