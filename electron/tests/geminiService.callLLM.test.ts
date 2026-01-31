@@ -972,4 +972,445 @@ describe('GeminiService - callLLM Function', () => {
       expect(results[0].categoryId).toBe(DefaultEmailCategory.OTHER);
     });
   });
+
+  describe('Rate Limit Edge Cases', () => {
+    it('should handle rate limit with "Resource has been exhausted" message', async () => {
+      mockGenerateContent = vi.fn().mockRejectedValue(
+        new Error('Resource has been exhausted (e.g. check quota).')
+      );
+
+      const email = createTestEmail('email-1', 'Test Email');
+      const results = await geminiService.categorizeBatchWithAI([email], availableCategories, geminiSettings);
+
+      expect(results).toHaveLength(1);
+      expect(results[0].categoryId).toBe(DefaultEmailCategory.OTHER);
+      expect(results[0].reasoning).toContain('AI Busy (429)');
+    });
+
+    it('should handle rate limit with lowercase "quota" in message', async () => {
+      mockGenerateContent = vi.fn().mockRejectedValue(
+        new Error('Your daily quota has been exceeded')
+      );
+
+      const email = createTestEmail('email-1', 'Test Email');
+      const results = await geminiService.categorizeBatchWithAI([email], availableCategories, geminiSettings);
+
+      expect(results).toHaveLength(1);
+      expect(results[0].categoryId).toBe(DefaultEmailCategory.OTHER);
+      expect(results[0].reasoning).toContain('AI Busy (429)');
+    });
+
+    it('should handle rate limit with HTTP status in message', async () => {
+      mockGenerateContent = vi.fn().mockRejectedValue(
+        new Error('HTTP Error 429 Too Many Requests')
+      );
+
+      const email = createTestEmail('email-1', 'Test Email');
+      const results = await geminiService.categorizeBatchWithAI([email], availableCategories, geminiSettings);
+
+      expect(results).toHaveLength(1);
+      expect(results[0].categoryId).toBe(DefaultEmailCategory.OTHER);
+      expect(results[0].reasoning).toContain('AI Busy (429)');
+    });
+
+    it('should fail all batch emails on rate limit error', async () => {
+      mockGenerateContent = vi.fn().mockRejectedValue(
+        new Error('Rate limit exceeded 429')
+      );
+
+      const emails = [
+        createTestEmail('email-1', 'First Email'),
+        createTestEmail('email-2', 'Second Email'),
+        createTestEmail('email-3', 'Third Email')
+      ];
+
+      const results = await geminiService.categorizeBatchWithAI(emails, availableCategories, geminiSettings);
+
+      expect(results).toHaveLength(3);
+      results.forEach(result => {
+        expect(result.categoryId).toBe(DefaultEmailCategory.OTHER);
+        expect(result.reasoning).toContain('AI Busy (429)');
+        expect(result.confidence).toBe(0);
+      });
+    });
+
+    it('should handle OpenAI 429 status in response', async () => {
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: false,
+        status: 429,
+        json: () => Promise.resolve({
+          error: { message: 'Rate limit exceeded' }
+        })
+      });
+
+      const email = createTestEmail('email-1', 'Test Email');
+      const results = await geminiService.categorizeBatchWithAI([email], availableCategories, openaiSettings);
+
+      expect(results).toHaveLength(1);
+      expect(results[0].categoryId).toBe(DefaultEmailCategory.OTHER);
+    });
+  });
+
+  describe('Empty Response Edge Cases', () => {
+    it('should handle empty string from text() function', async () => {
+      mockGenerateContent = vi.fn().mockResolvedValue({
+        response: {
+          text: () => ''
+        },
+        candidates: []
+      });
+
+      const email = createTestEmail('email-1', 'Test Email');
+      const results = await geminiService.categorizeBatchWithAI([email], availableCategories, geminiSettings);
+
+      expect(results).toHaveLength(1);
+      expect(results[0].categoryId).toBe(DefaultEmailCategory.OTHER);
+      expect(results[0].reasoning).toContain('Failed to extract text');
+    });
+
+    it('should handle whitespace-only response from text()', async () => {
+      mockGenerateContent = vi.fn().mockResolvedValue({
+        response: {
+          text: () => '   \n\t  '
+        },
+        candidates: []
+      });
+
+      const email = createTestEmail('email-1', 'Test Email');
+      const results = await geminiService.categorizeBatchWithAI([email], availableCategories, geminiSettings);
+
+      expect(results).toHaveLength(1);
+      expect(results[0].categoryId).toBe(DefaultEmailCategory.OTHER);
+    });
+
+    it('should handle empty array result for batch request', async () => {
+      mockGenerateContent = vi.fn().mockResolvedValue({
+        response: {
+          text: () => '[]'
+        }
+      });
+
+      const emails = [
+        createTestEmail('email-1', 'First Email'),
+        createTestEmail('email-2', 'Second Email')
+      ];
+
+      const results = await geminiService.categorizeBatchWithAI(emails, availableCategories, geminiSettings);
+
+      expect(results).toHaveLength(2);
+      results.forEach(result => {
+        expect(result.categoryId).toBe(DefaultEmailCategory.OTHER);
+        expect(result.summary).toBe('Fehler');
+        expect(result.reasoning).toContain('AI lieferte kein Ergebnis');
+      });
+    });
+
+    it('should handle null response object', async () => {
+      mockGenerateContent = vi.fn().mockResolvedValue({
+        response: null,
+        candidates: []
+      });
+
+      const email = createTestEmail('email-1', 'Test Email');
+      const results = await geminiService.categorizeBatchWithAI([email], availableCategories, geminiSettings);
+
+      expect(results).toHaveLength(1);
+      expect(results[0].categoryId).toBe(DefaultEmailCategory.OTHER);
+    });
+
+    it('should handle undefined response', async () => {
+      mockGenerateContent = vi.fn().mockResolvedValue({
+        response: undefined,
+        candidates: undefined
+      });
+
+      const email = createTestEmail('email-1', 'Test Email');
+      const results = await geminiService.categorizeBatchWithAI([email], availableCategories, geminiSettings);
+
+      expect(results).toHaveLength(1);
+      expect(results[0].categoryId).toBe(DefaultEmailCategory.OTHER);
+    });
+
+    it('should handle OpenAI empty response body', async () => {
+      global.fetch = vi.fn().mockResolvedValue({
+        json: () => Promise.resolve({})
+      });
+
+      const email = createTestEmail('email-1', 'Test Email');
+      const results = await geminiService.categorizeBatchWithAI([email], availableCategories, openaiSettings);
+
+      expect(results).toHaveLength(1);
+      expect(results[0].categoryId).toBe(DefaultEmailCategory.OTHER);
+    });
+
+    it('should handle OpenAI null message content', async () => {
+      global.fetch = vi.fn().mockResolvedValue({
+        json: () => Promise.resolve({
+          choices: [{ message: { content: null } }]
+        })
+      });
+
+      const email = createTestEmail('email-1', 'Test Email');
+      const results = await geminiService.categorizeBatchWithAI([email], availableCategories, openaiSettings);
+
+      expect(results).toHaveLength(1);
+      expect(results[0].categoryId).toBe(DefaultEmailCategory.OTHER);
+    });
+
+    it('should handle OpenAI undefined message', async () => {
+      global.fetch = vi.fn().mockResolvedValue({
+        json: () => Promise.resolve({
+          choices: [{ message: undefined }]
+        })
+      });
+
+      const email = createTestEmail('email-1', 'Test Email');
+      const results = await geminiService.categorizeBatchWithAI([email], availableCategories, openaiSettings);
+
+      expect(results).toHaveLength(1);
+      expect(results[0].categoryId).toBe(DefaultEmailCategory.OTHER);
+    });
+  });
+
+  describe('Error Handling Edge Cases', () => {
+    it('should handle connection refused error', async () => {
+      mockGenerateContent = vi.fn().mockRejectedValue(
+        new Error('ECONNREFUSED: Connection refused')
+      );
+
+      const email = createTestEmail('email-1', 'Test Email');
+      const results = await geminiService.categorizeBatchWithAI([email], availableCategories, geminiSettings);
+
+      expect(results).toHaveLength(1);
+      expect(results[0].categoryId).toBe(DefaultEmailCategory.OTHER);
+      expect(results[0].reasoning).toContain('Batch API Error');
+      expect(results[0].reasoning).toContain('ECONNREFUSED');
+    });
+
+    it('should handle connection reset error', async () => {
+      mockGenerateContent = vi.fn().mockRejectedValue(
+        new Error('ECONNRESET: Connection reset by peer')
+      );
+
+      const email = createTestEmail('email-1', 'Test Email');
+      const results = await geminiService.categorizeBatchWithAI([email], availableCategories, geminiSettings);
+
+      expect(results).toHaveLength(1);
+      expect(results[0].categoryId).toBe(DefaultEmailCategory.OTHER);
+      expect(results[0].reasoning).toContain('ECONNRESET');
+    });
+
+    it('should handle socket timeout error', async () => {
+      mockGenerateContent = vi.fn().mockRejectedValue(
+        new Error('ETIMEDOUT: Socket timeout')
+      );
+
+      const email = createTestEmail('email-1', 'Test Email');
+      const results = await geminiService.categorizeBatchWithAI([email], availableCategories, geminiSettings);
+
+      expect(results).toHaveLength(1);
+      expect(results[0].categoryId).toBe(DefaultEmailCategory.OTHER);
+      expect(results[0].reasoning).toContain('ETIMEDOUT');
+    });
+
+    it('should handle DNS resolution failure', async () => {
+      mockGenerateContent = vi.fn().mockRejectedValue(
+        new Error('ENOTFOUND: getaddrinfo ENOTFOUND api.google.com')
+      );
+
+      const email = createTestEmail('email-1', 'Test Email');
+      const results = await geminiService.categorizeBatchWithAI([email], availableCategories, geminiSettings);
+
+      expect(results).toHaveLength(1);
+      expect(results[0].categoryId).toBe(DefaultEmailCategory.OTHER);
+      expect(results[0].reasoning).toContain('ENOTFOUND');
+    });
+
+    it('should handle non-Error object thrown', async () => {
+      mockGenerateContent = vi.fn().mockRejectedValue('String error message');
+
+      const email = createTestEmail('email-1', 'Test Email');
+      const results = await geminiService.categorizeBatchWithAI([email], availableCategories, geminiSettings);
+
+      expect(results).toHaveLength(1);
+      expect(results[0].categoryId).toBe(DefaultEmailCategory.OTHER);
+      expect(results[0].reasoning).toContain('Batch API Error');
+    });
+
+    it('should handle error object without message property', async () => {
+      const customError = { code: 'CUSTOM_ERROR', details: 'Something went wrong' };
+      mockGenerateContent = vi.fn().mockRejectedValue(customError);
+
+      const email = createTestEmail('email-1', 'Test Email');
+      const results = await geminiService.categorizeBatchWithAI([email], availableCategories, geminiSettings);
+
+      expect(results).toHaveLength(1);
+      expect(results[0].categoryId).toBe(DefaultEmailCategory.OTHER);
+    });
+
+    it('should handle JSON parse error with truncated response', async () => {
+      mockGenerateContent = vi.fn().mockResolvedValue({
+        response: {
+          text: () => '[{"id": "email-1", "category": "Test", "summa'
+        }
+      });
+
+      const email = createTestEmail('email-1', 'Test Email');
+      const results = await geminiService.categorizeBatchWithAI([email], availableCategories, geminiSettings);
+
+      expect(results).toHaveLength(1);
+      expect(results[0].categoryId).toBe(DefaultEmailCategory.OTHER);
+      expect(results[0].reasoning).toContain('Batch API Error');
+    });
+
+    it('should handle JSON with invalid unicode escape', async () => {
+      mockGenerateContent = vi.fn().mockResolvedValue({
+        response: {
+          text: () => '[{"id": "email-1", "summary": "Test\\uXXXX"}]'
+        }
+      });
+
+      const email = createTestEmail('email-1', 'Test Email');
+      const results = await geminiService.categorizeBatchWithAI([email], availableCategories, geminiSettings);
+
+      expect(results).toHaveLength(1);
+      expect(results[0].categoryId).toBe(DefaultEmailCategory.OTHER);
+    });
+
+    it('should handle object response instead of array', async () => {
+      mockGenerateContent = vi.fn().mockResolvedValue({
+        response: {
+          text: () => JSON.stringify({ id: 'email-1', category: 'Test', summary: 'Not an array' })
+        }
+      });
+
+      const email = createTestEmail('email-1', 'Test Email');
+      const results = await geminiService.categorizeBatchWithAI([email], availableCategories, geminiSettings);
+
+      expect(results).toHaveLength(1);
+      expect(results[0].categoryId).toBe(DefaultEmailCategory.OTHER);
+      expect(results[0].summary).toBe('Fehler');
+    });
+
+    it('should handle primitive value response', async () => {
+      mockGenerateContent = vi.fn().mockResolvedValue({
+        response: {
+          text: () => '"just a string"'
+        }
+      });
+
+      const email = createTestEmail('email-1', 'Test Email');
+      const results = await geminiService.categorizeBatchWithAI([email], availableCategories, geminiSettings);
+
+      expect(results).toHaveLength(1);
+      expect(results[0].categoryId).toBe(DefaultEmailCategory.OTHER);
+    });
+
+    it('should handle null JSON response', async () => {
+      mockGenerateContent = vi.fn().mockResolvedValue({
+        response: {
+          text: () => 'null'
+        }
+      });
+
+      const email = createTestEmail('email-1', 'Test Email');
+      const results = await geminiService.categorizeBatchWithAI([email], availableCategories, geminiSettings);
+
+      expect(results).toHaveLength(1);
+      expect(results[0].categoryId).toBe(DefaultEmailCategory.OTHER);
+    });
+
+    it('should handle OpenAI fetch throwing TypeError', async () => {
+      global.fetch = vi.fn().mockRejectedValue(
+        new TypeError('Failed to fetch')
+      );
+
+      const email = createTestEmail('email-1', 'Test Email');
+      const results = await geminiService.categorizeBatchWithAI([email], availableCategories, openaiSettings);
+
+      expect(results).toHaveLength(1);
+      expect(results[0].categoryId).toBe(DefaultEmailCategory.OTHER);
+      expect(results[0].reasoning).toContain('Failed to fetch');
+    });
+
+    it('should handle OpenAI response json() throwing', async () => {
+      global.fetch = vi.fn().mockResolvedValue({
+        json: () => Promise.reject(new Error('Invalid JSON'))
+      });
+
+      const email = createTestEmail('email-1', 'Test Email');
+      const results = await geminiService.categorizeBatchWithAI([email], availableCategories, openaiSettings);
+
+      expect(results).toHaveLength(1);
+      expect(results[0].categoryId).toBe(DefaultEmailCategory.OTHER);
+    });
+
+    it('should handle multiple batch errors returning consistent fallbacks', async () => {
+      mockGenerateContent = vi.fn().mockRejectedValue(
+        new Error('Service Unavailable')
+      );
+
+      const emails = [
+        createTestEmail('email-1', 'First Email'),
+        createTestEmail('email-2', 'Second Email'),
+        createTestEmail('email-3', 'Third Email'),
+        createTestEmail('email-4', 'Fourth Email'),
+        createTestEmail('email-5', 'Fifth Email')
+      ];
+
+      const results = await geminiService.categorizeBatchWithAI(emails, availableCategories, geminiSettings);
+
+      expect(results).toHaveLength(5);
+      results.forEach((result, index) => {
+        expect(result.categoryId).toBe(DefaultEmailCategory.OTHER);
+        expect(result.summary).toBe('Fehler');
+        expect(result.reasoning).toContain('Batch API Error');
+        expect(result.confidence).toBe(0);
+      });
+    });
+
+    it('should preserve batch order on partial failures', async () => {
+      // API returns results but with some IDs missing
+      mockGenerateContent = vi.fn().mockResolvedValue({
+        response: {
+          text: () => JSON.stringify([
+            { id: 'email-2', category: DefaultEmailCategory.INVOICE, summary: 'Second worked' },
+            { id: 'email-4', category: DefaultEmailCategory.BUSINESS, summary: 'Fourth worked' }
+          ])
+        }
+      });
+
+      const emails = [
+        createTestEmail('email-1', 'First Email'),
+        createTestEmail('email-2', 'Second Email'),
+        createTestEmail('email-3', 'Third Email'),
+        createTestEmail('email-4', 'Fourth Email'),
+        createTestEmail('email-5', 'Fifth Email')
+      ];
+
+      const results = await geminiService.categorizeBatchWithAI(emails, availableCategories, geminiSettings);
+
+      expect(results).toHaveLength(5);
+
+      // First email - fallback
+      expect(results[0].categoryId).toBe(DefaultEmailCategory.OTHER);
+      expect(results[0].summary).toBe('Fehler');
+
+      // Second email - success
+      expect(results[1].categoryId).toBe(DefaultEmailCategory.INVOICE);
+      expect(results[1].summary).toBe('Second worked');
+
+      // Third email - fallback
+      expect(results[2].categoryId).toBe(DefaultEmailCategory.OTHER);
+      expect(results[2].summary).toBe('Fehler');
+
+      // Fourth email - success
+      expect(results[3].categoryId).toBe(DefaultEmailCategory.BUSINESS);
+      expect(results[3].summary).toBe('Fourth worked');
+
+      // Fifth email - fallback
+      expect(results[4].categoryId).toBe(DefaultEmailCategory.OTHER);
+      expect(results[4].summary).toBe('Fehler');
+    });
+  });
 });
