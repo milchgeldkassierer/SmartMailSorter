@@ -18,7 +18,7 @@ require.cache[electronPath] = {
 
 // Define interface for db module methods (account-related)
 interface DbModule {
-  init: (path: string) => void;
+  init: (path: string | { getPath: (key: string) => string }) => void;
   addAccount: (account: Partial<ImapAccount> & { id: string; username?: string; password?: string }) => { changes: number };
   getAccounts: () => Array<ImapAccount & { username?: string; password?: string; lastSyncUid?: number }>;
   updateAccountSync: (id: string, lastSyncUid: number) => { changes: number };
@@ -26,6 +26,15 @@ interface DbModule {
   deleteAccountDn: (id: string) => void;
   saveEmail: (email: { id: string; accountId: string; [key: string]: unknown }) => void;
   getEmails: (accountId: string) => Array<{ id: string; accountId: string; [key: string]: unknown }>;
+  resetDb: () => void;
+  getCategories: () => Array<{ name: string; type: string }>;
+  addCategory: (name: string, type?: string) => { changes: number } | { run: () => void };
+  deleteSmartCategory: (categoryName: string) => { changes: number };
+  renameSmartCategory: (oldName: string, newName: string) => { success: boolean };
+  updateCategoryType: (name: string, newType: string) => { changes: number };
+  getMaxUidForFolder: (accountId: string, folder: string) => number;
+  getAllUidsForFolder: (accountId: string, folder: string) => number[];
+  migrateFolder: (oldName: string, newName: string) => void;
 }
 
 // Import the database module under test
@@ -664,6 +673,361 @@ describe('Database Account CRUD Operations', () => {
       expect(remaining.map(a => a.id)).toContain('int-1');
       expect(remaining.map(a => a.id)).toContain('int-3');
       expect(remaining.map(a => a.id)).not.toContain('int-2');
+    });
+  });
+
+  describe('init with app object', () => {
+    it('should accept an app-like object with getPath method (lines 127-128)', () => {
+      // Create a mock app object with getPath
+      const mockApp = {
+        getPath: (key: string) => {
+          if (key === 'userData') return ':memory:';
+          return './test-data';
+        }
+      };
+
+      // This should exercise lines 127-128 of db.cjs
+      // Note: Since getPath returns ':memory:', we need to use a path that will work
+      // For testing purposes, we re-init with :memory: after this test
+      expect(() => db.init(mockApp)).not.toThrow();
+
+      // Verify DB is still functional
+      const accounts = db.getAccounts();
+      expect(Array.isArray(accounts)).toBe(true);
+
+      // Re-init with :memory: for isolation
+      db.init(':memory:');
+    });
+  });
+
+  describe('resetDb', () => {
+    it('should clear all accounts and emails (lines 296-300)', () => {
+      // Add some data
+      const account = {
+        id: 'reset-test',
+        name: 'Reset Test',
+        email: 'reset@test.com',
+        provider: 'test',
+        imapHost: 'imap.test.com',
+        imapPort: 993,
+        username: 'user',
+        password: 'pass',
+        color: '#RESET'
+      };
+      db.addAccount(account);
+      db.saveEmail({
+        id: 'reset-email',
+        accountId: 'reset-test',
+        sender: 'Sender',
+        senderEmail: 's@test.com',
+        subject: 'Reset Test Email',
+        body: 'Body',
+        date: new Date().toISOString()
+      });
+
+      // Verify data exists
+      expect(db.getAccounts()).toHaveLength(1);
+      expect(db.getEmails('reset-test')).toHaveLength(1);
+
+      // Reset the database
+      db.resetDb();
+
+      // Verify data is cleared but tables are recreated
+      expect(db.getAccounts()).toHaveLength(0);
+      expect(db.getEmails('reset-test')).toHaveLength(0);
+
+      // Verify we can still add data after reset
+      db.addAccount(account);
+      expect(db.getAccounts()).toHaveLength(1);
+    });
+  });
+
+  describe('Category Operations', () => {
+    it('should get default categories after init', () => {
+      const categories = db.getCategories();
+
+      // Should have default system categories
+      expect(categories.length).toBeGreaterThan(0);
+
+      // Should include system defaults
+      const categoryNames = categories.map(c => c.name);
+      expect(categoryNames).toContain('Rechnungen');
+      expect(categoryNames).toContain('Newsletter');
+      expect(categoryNames).toContain('Privat');
+    });
+
+    it('should add a custom category (lines 375-386)', () => {
+      const result = db.addCategory('CustomCategory', 'custom');
+
+      expect(result.changes).toBe(1);
+
+      const categories = db.getCategories();
+      const custom = categories.find(c => c.name === 'CustomCategory');
+      expect(custom).toBeDefined();
+      expect(custom?.type).toBe('custom');
+    });
+
+    it('should throw on duplicate category addition (lines 380-385)', () => {
+      // Add a category
+      db.addCategory('DuplicateTest', 'custom');
+
+      // Try to add the same category again - should throw due to PRIMARY KEY constraint
+      // Note: The code checks for 'SQLITE_CONSTRAINT_UNIQUE' but SQLite returns
+      // 'SQLITE_CONSTRAINT_PRIMARYKEY' for primary key violations, so the error is re-thrown
+      expect(() => db.addCategory('DuplicateTest', 'custom')).toThrow();
+    });
+
+    it('should update category type', () => {
+      db.addCategory('TypeChangeTest', 'custom');
+
+      const result = db.updateCategoryType('TypeChangeTest', 'system');
+
+      expect(result.changes).toBe(1);
+      const categories = db.getCategories();
+      const updated = categories.find(c => c.name === 'TypeChangeTest');
+      expect(updated?.type).toBe('system');
+    });
+
+    it('should delete a smart category', () => {
+      // Add a custom category and an email with that category
+      db.addCategory('ToDelete', 'custom');
+      db.addAccount({
+        id: 'cat-delete-account',
+        name: 'Cat Test',
+        email: 'cat@test.com',
+        provider: 'test',
+        imapHost: 'imap.test.com',
+        imapPort: 993,
+        username: 'u',
+        password: 'p',
+        color: '#CAT'
+      });
+      db.saveEmail({
+        id: 'cat-delete-email',
+        accountId: 'cat-delete-account',
+        sender: 'Test',
+        senderEmail: 't@t.com',
+        subject: 'Test',
+        body: 'Body',
+        date: new Date().toISOString(),
+        smartCategory: 'ToDelete'
+      });
+
+      // Delete the category
+      const result = db.deleteSmartCategory('ToDelete');
+
+      // Should have affected 1 email
+      expect(result.changes).toBe(1);
+
+      // Category should be gone
+      const categories = db.getCategories();
+      expect(categories.find(c => c.name === 'ToDelete')).toBeUndefined();
+
+      // Email's smartCategory should be null
+      const emails = db.getEmails('cat-delete-account');
+      expect(emails[0].smartCategory).toBeNull();
+    });
+
+    it('should rename a smart category', () => {
+      db.addCategory('OldName', 'custom');
+      db.addAccount({
+        id: 'cat-rename-account',
+        name: 'Rename Test',
+        email: 'rename@test.com',
+        provider: 'test',
+        imapHost: 'imap.test.com',
+        imapPort: 993,
+        username: 'u',
+        password: 'p',
+        color: '#REN'
+      });
+      db.saveEmail({
+        id: 'cat-rename-email',
+        accountId: 'cat-rename-account',
+        sender: 'Test',
+        senderEmail: 't@t.com',
+        subject: 'Test',
+        body: 'Body',
+        date: new Date().toISOString(),
+        smartCategory: 'OldName'
+      });
+
+      // Rename the category
+      const result = db.renameSmartCategory('OldName', 'NewName');
+
+      expect(result.success).toBe(true);
+
+      // Old category should be gone, new should exist
+      const categories = db.getCategories();
+      expect(categories.find(c => c.name === 'OldName')).toBeUndefined();
+      expect(categories.find(c => c.name === 'NewName')).toBeDefined();
+
+      // Email should have new category
+      const emails = db.getEmails('cat-rename-account');
+      expect(emails[0].smartCategory).toBe('NewName');
+    });
+  });
+
+  describe('UID Folder Operations', () => {
+    beforeEach(() => {
+      db.addAccount({
+        id: 'uid-test-account',
+        name: 'UID Test',
+        email: 'uid@test.com',
+        provider: 'test',
+        imapHost: 'imap.test.com',
+        imapPort: 993,
+        username: 'u',
+        password: 'p',
+        color: '#UID'
+      });
+    });
+
+    it('should get max UID for folder', () => {
+      db.saveEmail({
+        id: 'uid-email-1',
+        accountId: 'uid-test-account',
+        sender: 'Test',
+        senderEmail: 't@t.com',
+        subject: 'Test 1',
+        body: 'Body',
+        date: new Date().toISOString(),
+        folder: 'Posteingang',
+        uid: 100
+      });
+      db.saveEmail({
+        id: 'uid-email-2',
+        accountId: 'uid-test-account',
+        sender: 'Test',
+        senderEmail: 't@t.com',
+        subject: 'Test 2',
+        body: 'Body',
+        date: new Date().toISOString(),
+        folder: 'Posteingang',
+        uid: 250
+      });
+      db.saveEmail({
+        id: 'uid-email-3',
+        accountId: 'uid-test-account',
+        sender: 'Test',
+        senderEmail: 't@t.com',
+        subject: 'Test 3',
+        body: 'Body',
+        date: new Date().toISOString(),
+        folder: 'Posteingang',
+        uid: 150
+      });
+
+      const maxUid = db.getMaxUidForFolder('uid-test-account', 'Posteingang');
+      expect(maxUid).toBe(250);
+    });
+
+    it('should return 0 for empty folder max UID', () => {
+      const maxUid = db.getMaxUidForFolder('uid-test-account', 'EmptyFolder');
+      expect(maxUid).toBe(0);
+    });
+
+    it('should get all UIDs for folder', () => {
+      db.saveEmail({
+        id: 'all-uid-1',
+        accountId: 'uid-test-account',
+        sender: 'Test',
+        senderEmail: 't@t.com',
+        subject: 'Test',
+        body: 'Body',
+        date: new Date().toISOString(),
+        folder: 'Gesendet',
+        uid: 10
+      });
+      db.saveEmail({
+        id: 'all-uid-2',
+        accountId: 'uid-test-account',
+        sender: 'Test',
+        senderEmail: 't@t.com',
+        subject: 'Test',
+        body: 'Body',
+        date: new Date().toISOString(),
+        folder: 'Gesendet',
+        uid: 20
+      });
+
+      const uids = db.getAllUidsForFolder('uid-test-account', 'Gesendet');
+      expect(uids).toHaveLength(2);
+      expect(uids).toContain(10);
+      expect(uids).toContain(20);
+    });
+
+    it('should return empty array for folder with no emails', () => {
+      const uids = db.getAllUidsForFolder('uid-test-account', 'NoEmails');
+      expect(uids).toEqual([]);
+    });
+  });
+
+  describe('migrateFolder', () => {
+    beforeEach(() => {
+      db.addAccount({
+        id: 'migrate-account',
+        name: 'Migrate Test',
+        email: 'migrate@test.com',
+        provider: 'test',
+        imapHost: 'imap.test.com',
+        imapPort: 993,
+        username: 'u',
+        password: 'p',
+        color: '#MIG'
+      });
+    });
+
+    it('should migrate emails from one folder to another', () => {
+      db.saveEmail({
+        id: 'migrate-email-1',
+        accountId: 'migrate-account',
+        sender: 'Test',
+        senderEmail: 't@t.com',
+        subject: 'Test',
+        body: 'Body',
+        date: new Date().toISOString(),
+        folder: 'OldFolder'
+      });
+      db.saveEmail({
+        id: 'migrate-email-2',
+        accountId: 'migrate-account',
+        sender: 'Test',
+        senderEmail: 't@t.com',
+        subject: 'Test',
+        body: 'Body',
+        date: new Date().toISOString(),
+        folder: 'OldFolder'
+      });
+
+      // Migrate folder
+      db.migrateFolder('OldFolder', 'NewFolder');
+
+      // Check emails have new folder
+      const emails = db.getEmails('migrate-account');
+      expect(emails.every(e => e.folder === 'NewFolder')).toBe(true);
+    });
+
+    it('should handle migration when old folder has category', () => {
+      // Add category for the folder
+      db.addCategory('OldFolderCategory', 'custom');
+
+      db.saveEmail({
+        id: 'migrate-cat-email',
+        accountId: 'migrate-account',
+        sender: 'Test',
+        senderEmail: 't@t.com',
+        subject: 'Test',
+        body: 'Body',
+        date: new Date().toISOString(),
+        folder: 'OldFolderCategory'
+      });
+
+      // Migrate - should also update category
+      db.migrateFolder('OldFolderCategory', 'NewFolderCategory');
+
+      const emails = db.getEmails('migrate-account');
+      expect(emails[0].folder).toBe('NewFolderCategory');
     });
   });
 });

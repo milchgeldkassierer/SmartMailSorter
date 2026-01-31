@@ -29,6 +29,7 @@ interface DbModule {
   updateEmailFlagStatus: (id: string, isFlagged: boolean) => { changes: number };
   updateEmailSmartCategory: (id: string, smartCategory: string | null, aiSummary: string | null, aiReasoning: string | null, confidence: number) => { changes: number };
   getEmailAttachments: (emailId: string) => Array<{ id: string; filename: string; contentType: string; size: number }>;
+  getAttachment: (id: string) => { id: string; emailId: string; filename: string; contentType: string; size: number; data: Buffer } | undefined;
 }
 
 // Import the database module under test
@@ -498,6 +499,100 @@ describe('Database Email Operations', () => {
         const email = emails.find(e => e.id === `email-cat-${index}`);
         expect(email?.smartCategory).toBe(category);
       });
+    });
+  });
+
+  describe('getAttachment', () => {
+    it('should get attachment by id including data', () => {
+      const attachmentData = Buffer.from('This is test file content');
+      const emailWithAttachment = {
+        ...createTestEmail('email-get-attach', accountId),
+        hasAttachments: true,
+        attachments: [
+          {
+            id: 'attachment-to-get',
+            filename: 'testfile.txt',
+            contentType: 'text/plain',
+            size: attachmentData.length,
+            data: attachmentData
+          }
+        ]
+      };
+
+      db.saveEmail(emailWithAttachment);
+
+      const attachment = db.getAttachment('attachment-to-get');
+
+      expect(attachment).toBeDefined();
+      expect(attachment?.id).toBe('attachment-to-get');
+      expect(attachment?.filename).toBe('testfile.txt');
+      expect(attachment?.contentType).toBe('text/plain');
+      expect(attachment?.size).toBe(attachmentData.length);
+      expect(attachment?.data).toBeDefined();
+      expect(Buffer.isBuffer(attachment?.data)).toBe(true);
+    });
+
+    it('should return undefined for non-existent attachment', () => {
+      const attachment = db.getAttachment('non-existent-attachment');
+      expect(attachment).toBeUndefined();
+    });
+
+    it('should get correct attachment when multiple exist', () => {
+      const emailWithMultiple = {
+        ...createTestEmail('email-multi-attach', accountId),
+        hasAttachments: true,
+        attachments: [
+          {
+            id: 'attach-first',
+            filename: 'first.pdf',
+            contentType: 'application/pdf',
+            size: 1000,
+            data: Buffer.from('pdf content')
+          },
+          {
+            id: 'attach-second',
+            filename: 'second.png',
+            contentType: 'image/png',
+            size: 2000,
+            data: Buffer.from('png content')
+          }
+        ]
+      };
+
+      db.saveEmail(emailWithMultiple);
+
+      const first = db.getAttachment('attach-first');
+      const second = db.getAttachment('attach-second');
+
+      expect(first?.filename).toBe('first.pdf');
+      expect(second?.filename).toBe('second.png');
+    });
+  });
+
+  describe('saveEmail with attachment defaults', () => {
+    it('should apply default values for attachment fields', () => {
+      const emailWithMinimalAttachment = {
+        ...createTestEmail('email-min-attach', accountId),
+        hasAttachments: true,
+        attachments: [
+          {
+            // No id, filename, contentType, size, or data - should use defaults
+          }
+        ]
+      };
+
+      db.saveEmail(emailWithMinimalAttachment);
+      const attachments = db.getEmailAttachments('email-min-attach');
+
+      expect(attachments).toHaveLength(1);
+      // Should have generated an id
+      expect(attachments[0].id).toBeDefined();
+      // Default filename
+      expect(attachments[0].filename).toBe('unnamed');
+      // Default content type
+      expect(attachments[0].contentType).toBe('application/octet-stream');
+      // Default size
+      expect(attachments[0].size).toBe(0);
     });
   });
 });
