@@ -264,13 +264,14 @@ class ImapFlow {
     }
 
     // Modern ImapFlow fetch() API - returns async iterator
-    async *fetch(range, options = {}) {
+    // 3-parameter signature: fetch(range, queryObject, options)
+    async *fetch(range, queryObject = {}, options = {}) {
         if (shouldFailFetch) {
             throw new Error('Fetch failed');
         }
 
-        const isUid = options.uid === true;
-        const wantSource = options.source === true;
+        const isUid = options && options.uid === true;
+        const wantSource = queryObject && queryObject.source === true;
 
         // Parse range (can be "1:5", "1,2,3", "1:*", etc.)
         let messages = [];
