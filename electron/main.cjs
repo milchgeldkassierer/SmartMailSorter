@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 
 process.on('uncaughtException', (error) => {
@@ -74,6 +74,27 @@ app.whenReady().then(() => {
         const { shell } = require('electron');
         await shell.openPath(tempPath);
         return true;
+    });
+
+    ipcMain.handle('save-attachment-as', async (event, attachmentId) => {
+        const att = db.getAttachment(attachmentId);
+        if (!att) return { success: false, error: 'Attachment not found' };
+
+        const fs = require('fs').promises;
+
+        const result = await dialog.showSaveDialog({
+            defaultPath: att.filename,
+            filters: [{ name: 'All Files', extensions: ['*'] }]
+        });
+
+        if (result.canceled) return { success: false, canceled: true };
+
+        try {
+            await fs.writeFile(result.filePath, att.data);
+            return { success: true, path: result.filePath };
+        } catch (err) {
+            return { success: false, error: err.message };
+        }
     });
 
     ipcMain.handle('sync-account', async (event, account) => {
