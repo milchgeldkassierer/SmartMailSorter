@@ -2108,5 +2108,90 @@ Email 4 body`,
             expect(email4.isRead).toBe(true);
             expect(email4.isFlagged).toBe(true);
         });
+
+        it('should sync 50+ emails with mixed flag states', async () => {
+            const emailCount = 60;
+            const emails = [];
+
+            for (let i = 1; i <= emailCount; i++) {
+                const date = new Date('2024-01-15T10:00:00Z');
+                date.setMinutes(date.getMinutes() + i);
+                const dateStr = date.toISOString();
+
+                let flags = [];
+                if (i % 4 === 0) {
+                    flags = ['\\Seen', '\\Flagged'];
+                } else if (i % 3 === 0) {
+                    flags = ['\\Seen'];
+                } else if (i % 2 === 0) {
+                    flags = ['\\Flagged'];
+                }
+
+                emails.push({
+                    uid: i,
+                    subject: `Mixed State Email ${i}`,
+                    from: `sender${i}@example.com`,
+                    body: `Subject: Mixed State Email ${i}
+From: sender${i}@example.com
+Date: ${dateStr}
+
+Email body content ${i}`,
+                    date: dateStr,
+                    flags: flags
+                });
+            }
+
+            setServerEmails(emails);
+
+            const account = createTestAccount({
+                id: 'test-account-mixed-batch',
+                email: 'mixedbatch@test.com'
+            });
+
+            addAccountToDb(account);
+
+            const result = await imap.syncAccount(account);
+
+            expect(result.success).toBe(true);
+            expect(result.count).toBe(60);
+
+            const savedEmails = db.getEmails(account.id);
+            expect(savedEmails).toHaveLength(60);
+
+            const unreadUnflagged = savedEmails.filter(e => !e.isRead && !e.isFlagged);
+            const unreadFlagged = savedEmails.filter(e => !e.isRead && e.isFlagged);
+            const readUnflagged = savedEmails.filter(e => e.isRead && !e.isFlagged);
+            const readFlagged = savedEmails.filter(e => e.isRead && e.isFlagged);
+
+            expect(unreadUnflagged.length).toBeGreaterThan(0);
+            expect(unreadFlagged.length).toBeGreaterThan(0);
+            expect(readUnflagged.length).toBeGreaterThan(0);
+            expect(readFlagged.length).toBeGreaterThan(0);
+
+            expect(unreadUnflagged.length + unreadFlagged.length + readUnflagged.length + readFlagged.length).toBe(60);
+
+            const email1 = savedEmails.find(e => e.uid === 1);
+            expect(email1.subject).toBe('Mixed State Email 1');
+            expect(email1.isRead).toBe(false);
+            expect(email1.isFlagged).toBe(false);
+
+            const email2 = savedEmails.find(e => e.uid === 2);
+            expect(email2.isRead).toBe(false);
+            expect(email2.isFlagged).toBe(true);
+
+            const email3 = savedEmails.find(e => e.uid === 3);
+            expect(email3.isRead).toBe(true);
+            expect(email3.isFlagged).toBe(false);
+
+            const email4 = savedEmails.find(e => e.uid === 4);
+            expect(email4.isRead).toBe(true);
+            expect(email4.isFlagged).toBe(true);
+
+            const email60 = savedEmails.find(e => e.uid === 60);
+            expect(email60).toBeDefined();
+            expect(email60.subject).toBe('Mixed State Email 60');
+            expect(email60.isRead).toBe(true);
+            expect(email60.isFlagged).toBe(true);
+        });
     });
 });
