@@ -11,6 +11,7 @@ process.on('unhandledRejection', (reason, promise) => {
 
 const db = require('./db.cjs');
 const imap = require('./imap.cjs');
+const { sanitizeFilename } = require('./utils/security.cjs');
 
 const isDev = !app.isPackaged;
 
@@ -67,8 +68,9 @@ app.whenReady().then(() => {
 
         const fs = require('fs');
         const os = require('os');
-        // Create temp file
-        const tempPath = path.join(os.tmpdir(), att.filename);
+        // Create temp file with sanitized filename to prevent path traversal
+        const safeFilename = sanitizeFilename(att.filename);
+        const tempPath = path.join(os.tmpdir(), safeFilename);
         fs.writeFileSync(tempPath, att.data);
 
         const { shell } = require('electron');
