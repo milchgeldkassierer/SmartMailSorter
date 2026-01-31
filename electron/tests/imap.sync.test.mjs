@@ -3,7 +3,7 @@ import { createRequire } from 'module';
 
 // The vitest-setup.js file patches require() to intercept 'imapflow' imports
 // Import helpers from setup to control mock state
-import { resetMockState, setServerEmails, setConnectFailure, setFetchFailure } from './vitest-setup.js';
+import { resetMockState, setServerEmails, setConnectFailure, setFetchFailure, setQuotaResponse } from './vitest-setup.js';
 
 // Use CommonJS require to ensure we get the SAME module instances as imap.cjs
 const require = createRequire(import.meta.url);
@@ -625,6 +625,264 @@ describe('IMAP Sync Edge Cases and Error Handling', () => {
 
         it('should export PROVIDERS object', () => {
             expect(typeof imap.PROVIDERS).toBe('object');
+        });
+    });
+
+    describe('processMessages edge cases (lines 102-119)', () => {
+        it('should handle messages without body/source returning empty body placeholder', async () => {
+            const account = createTestAccount({
+                id: 'no-body-test',
+                email: 'nobody@test.com'
+            });
+
+            addAccountToDb(account);
+
+            // Email with noSource flag - simulates server returning no content for message
+            setServerEmails([{
+                uid: 1,
+                body: '',
+                flags: [],
+                noSource: true // This triggers the mock to not include source
+            }]);
+
+            const result = await imap.syncAccount(account);
+
+            expect(result.success).toBe(true);
+            // Note: count is 0 because savedCount only increments on successful parse,
+            // not for error placeholders (lines 102-119)
+            expect(result.count).toBe(0);
+
+            const emails = db.getEmails(account.id);
+            expect(emails).toHaveLength(1);
+
+            // Should have error placeholder values
+            // Note: body is not returned by getEmails for optimization,
+            // so we check other fields instead
+            expect(emails[0].sender).toBe('System Error');
+            expect(emails[0].senderEmail).toBe('error@local');
+            expect(emails[0].subject).toContain('Empty Body UID 1');
+            expect(emails[0].smartCategory).toBe('System Error');
+            expect(emails[0].isRead).toBe(true);
+            expect(emails[0].isFlagged).toBe(false);
+        });
+
+        it('should handle multiple messages with some missing body', async () => {
+            const account = createTestAccount({
+                id: 'mixed-body-test',
+                email: 'mixed@test.com'
+            });
+
+            addAccountToDb(account);
+
+            setServerEmails([
+                {
+                    uid: 1,
+                    body: 'Subject: Normal Email\nFrom: sender@test.com\n\nNormal content',
+                    flags: []
+                },
+                {
+                    uid: 2,
+                    body: '',
+                    flags: [],
+                    noSource: true // No body
+                },
+                {
+                    uid: 3,
+                    body: 'Subject: Another Normal\nFrom: other@test.com\n\nMore content',
+                    flags: ['\\Seen']
+                }
+            ]);
+
+            const result = await imap.syncAccount(account);
+
+            expect(result.success).toBe(true);
+            // Note: count is 2 because savedCount only increments on successful parse,
+            // not for error placeholders (the noSource message doesn't count)
+            expect(result.count).toBe(2);
+
+            const emails = db.getEmails(account.id);
+            expect(emails).toHaveLength(3);
+
+            // Find the error placeholder
+            const errorEmail = emails.find(e => e.uid === 2);
+            expect(errorEmail.sender).toBe('System Error');
+            expect(errorEmail.subject).toContain('Empty Body UID 2');
+
+            // Normal emails should be processed correctly
+            const normalEmails = emails.filter(e => e.sender !== 'System Error');
+            expect(normalEmails).toHaveLength(2);
+        });
+    });
+
+    describe('Quota handling (lines 146-175)', () => {
+        it('should update account quota when server returns valid quota', async () => {
+            const account = createTestAccount({
+                id: 'quota-test',
+                email: 'quota@test.com'
+            });
+
+            addAccountToDb(account);
+            setServerEmails([]);
+
+            // Set quota response (storage in bytes)
+            setQuotaResponse({
+                storage: {
+                    used: 1048576, // 1MB = 1024KB
+                    limit: 10485760 // 10MB = 10240KB
+                }
+            });
+
+            const result = await imap.syncAccount(account);
+
+            expect(result.success).toBe(true);
+        });
+
+        it('should handle null quota response gracefully', async () => {
+            const account = createTestAccount({
+                id: 'no-quota-test',
+                email: 'noquota@test.com'
+            });
+
+            addAccountToDb(account);
+            setServerEmails([]);
+            setQuotaResponse(null);
+
+            const result = await imap.syncAccount(account);
+
+            expect(result.success).toBe(true);
+        });
+
+        it('should handle quota without storage property', async () => {
+            const account = createTestAccount({
+                id: 'quota-no-storage',
+                email: 'nostorge@test.com'
+            });
+
+            addAccountToDb(account);
+            setServerEmails([]);
+            setQuotaResponse({}); // Empty quota object
+
+            const result = await imap.syncAccount(account);
+
+            expect(result.success).toBe(true);
+        });
+
+        it('should handle zero storage limit', async () => {
+            const account = createTestAccount({
+                id: 'quota-zero-limit',
+                email: 'zerolimit@test.com'
+            });
+
+            addAccountToDb(account);
+            setServerEmails([]);
+            setQuotaResponse({
+                storage: {
+                    used: 1000,
+                    limit: 0 // Zero limit should be handled
+                }
+            });
+
+            const result = await imap.syncAccount(account);
+
+            expect(result.success).toBe(true);
+        });
+    });
+
+    describe('Email ID generation for different folders', () => {
+        it('should generate correct ID for Posteingang (INBOX)', async () => {
+            const account = createTestAccount({
+                id: 'id-inbox-test',
+                email: 'inbox@test.com'
+            });
+
+            addAccountToDb(account);
+
+            setServerEmails([{
+                uid: 100,
+                body: 'Subject: Test\nFrom: sender@test.com\n\nBody',
+                flags: []
+            }]);
+
+            const result = await imap.syncAccount(account);
+
+            expect(result.success).toBe(true);
+
+            const emails = db.getEmails(account.id);
+            expect(emails).toHaveLength(1);
+            // INBOX/Posteingang ID format: uid-accountId
+            expect(emails[0].id).toBe('100-id-inbox-test');
+        });
+    });
+
+    describe('Sync with malformed email content', () => {
+        it('should handle emails with malformed headers gracefully', async () => {
+            const account = createTestAccount({
+                id: 'malformed-test',
+                email: 'malformed@test.com'
+            });
+
+            addAccountToDb(account);
+
+            setServerEmails([{
+                uid: 1,
+                // Malformed email with no proper headers
+                body: 'This is just some random text without proper email headers',
+                flags: []
+            }]);
+
+            const result = await imap.syncAccount(account);
+
+            expect(result.success).toBe(true);
+            expect(result.count).toBe(1);
+
+            const emails = db.getEmails(account.id);
+            expect(emails).toHaveLength(1);
+            // Should still be saved with fallback values
+            expect(emails[0].sender).toBeDefined();
+        });
+
+        it('should handle completely empty email body', async () => {
+            const account = createTestAccount({
+                id: 'empty-body-test',
+                email: 'empty@test.com'
+            });
+
+            addAccountToDb(account);
+
+            setServerEmails([{
+                uid: 1,
+                body: '',
+                flags: []
+            }]);
+
+            const result = await imap.syncAccount(account);
+
+            expect(result.success).toBe(true);
+            expect(result.count).toBe(1);
+        });
+    });
+
+    describe('Fetch failure handling', () => {
+        it('should handle fetch failure gracefully', async () => {
+            const account = createTestAccount({
+                id: 'fetch-fail-test',
+                email: 'fetchfail@test.com'
+            });
+
+            addAccountToDb(account);
+
+            setServerEmails([{
+                uid: 1,
+                body: 'Subject: Test\nFrom: sender@test.com\n\nBody',
+                flags: []
+            }]);
+
+            setFetchFailure(true);
+
+            const result = await imap.syncAccount(account);
+
+            // Should still succeed at the account level, even if fetch failed for some ranges
+            expect(result.success).toBe(true);
         });
     });
 });

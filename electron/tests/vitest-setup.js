@@ -104,7 +104,7 @@ class MockImapFlow {
                 seq: global.__mockState.serverEmails.indexOf(email) + 1
             };
 
-            if (wantSource) {
+            if (wantSource && !email.noSource) {
                 msg.source = Buffer.from(email.body || '');
             }
 
