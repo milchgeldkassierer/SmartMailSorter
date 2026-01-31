@@ -134,13 +134,13 @@ app.whenReady().then(() => {
                 return false;
             }
         })();
-
         if (isWSL) {
-            // In WSL, use cmd.exe to open URL in Windows default browser
-            // Use execFile instead of exec to avoid shell interpretation and command injection
+            // In WSL, use rundll32.exe to open URL in Windows default browser
+            // rundll32 url.dll,FileProtocolHandler is the standard Windows method for opening URLs
+            // The URL is passed as a separate argument, preventing command injection
             const { execFile } = require('child_process');
             return new Promise((resolve) => {
-                execFile('cmd.exe', ['/c', 'start', '', url], (error) => {
+                execFile('rundll32.exe', ['url.dll,FileProtocolHandler', url], (error) => {
                     if (error) {
                         console.error('WSL browser open error:', error);
                         resolve({ success: false, error: 'WSL_OPEN_FAILED', message: 'Failed to open URL in Windows browser' });

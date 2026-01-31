@@ -26,6 +26,14 @@ const EmailView: React.FC<EmailViewProps> = ({ email }) => {
     setShowHtml(true);
   }, [email]);
 
+  // Auto-hide error notification after 5 seconds with proper cleanup
+  useEffect(() => {
+    if (linkError) {
+      const timeoutId = setTimeout(() => setLinkError(null), 5000);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [linkError]);
+
   if (!email) {
     return (
       <div className="flex-1 bg-slate-50 flex items-center justify-center text-slate-400">
@@ -62,8 +70,6 @@ const EmailView: React.FC<EmailViewProps> = ({ email }) => {
       if (!result.success) {
         // Show user-friendly error message
         setLinkError(result.message || 'Failed to open link');
-        // Auto-hide error after 5 seconds
-        setTimeout(() => setLinkError(null), 5000);
       }
     }
   };
