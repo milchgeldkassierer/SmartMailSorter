@@ -76,6 +76,16 @@ app.whenReady().then(() => {
         return true;
     });
 
+    ipcMain.handle('open-external-url', async (event, url) => {
+        const { shell } = require('electron');
+        // Only allow http/https URLs for security
+        if (url.startsWith('http://') || url.startsWith('https://')) {
+            await shell.openExternal(url);
+            return true;
+        }
+        return false;
+    });
+
     ipcMain.handle('sync-account', async (event, account) => {
         return await imap.syncAccount(account);
     });

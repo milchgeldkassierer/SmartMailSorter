@@ -24,4 +24,7 @@ contextBridge.exposeInMainWorld('electron', {
     updateCategoryType: (name, type) => ipcRenderer.invoke('update-category-type', name, type),
     deleteSmartCategory: (categoryName) => ipcRenderer.invoke('delete-smart-category', categoryName),
     renameSmartCategory: (data) => ipcRenderer.invoke('rename-smart-category', data),
+
+    // External links
+    openExternal: (url) => ipcRenderer.invoke('open-external-url', url),
 });
