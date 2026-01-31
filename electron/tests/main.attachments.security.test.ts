@@ -39,6 +39,9 @@ const db: DbModule = require('../db.cjs');
 // Import path module to test sanitization
 const pathModule = require('path');
 
+// Import the sanitizeFilename function from the security utility module
+const { sanitizeFilename } = require('../utils/security.cjs');
+
 describe('Attachment Filename Security Tests', () => {
   // Helper to create a test account
   const createTestAccount = (id: string = 'test-acc') => {
@@ -85,45 +88,6 @@ describe('Attachment Filename Security Tests', () => {
     db.saveEmail(email);
     return email;
   };
-
-  /**
-   * Sanitize filename to prevent path traversal attacks
-   * This is a copy of the sanitizeFilename function from main.cjs for testing purposes
-   */
-  function sanitizeFilename(filename: string): string {
-    if (!filename || typeof filename !== 'string') {
-      return 'attachment';
-    }
-
-    // Extract basename to remove any directory components (../../../etc/passwd -> passwd)
-    let sanitized = pathModule.basename(filename);
-
-    // Remove null bytes (file.txt\0.exe -> file.txt.exe)
-    sanitized = sanitized.replace(/\0/g, '');
-
-    // Remove any remaining path separators (both / and \)
-    sanitized = sanitized.replace(/[/\\]/g, '');
-
-    // Remove other potentially dangerous characters
-    sanitized = sanitized.replace(/[<>:"|?*]/g, '');
-
-    // Trim whitespace and dots from start/end
-    sanitized = sanitized.replace(/^[\s.]+|[\s.]+$/g, '');
-
-    // Reject dangerous filenames
-    if (!sanitized || sanitized === '.' || sanitized === '..') {
-      return 'attachment';
-    }
-
-    // Limit filename length (255 is typical filesystem limit)
-    if (sanitized.length > 255) {
-      const ext = pathModule.extname(sanitized);
-      const base = pathModule.basename(sanitized, ext);
-      sanitized = base.substring(0, 255 - ext.length) + ext;
-    }
-
-    return sanitized;
-  }
 
   /**
    * Helper to verify that a sanitized path stays within the temp directory
