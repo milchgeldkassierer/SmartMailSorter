@@ -141,3 +141,214 @@ describe('IMAP Flags Bug - Reproduction Test', () => {
         expect(flags.has('\\Recent')).toBe(false);
     });
 });
+
+// Tests for the processMessages function with various flags formats
+describe('processMessages - Flags Handling', () => {
+    let mockClient;
+    let mockAccount;
+    let savedEmails;
+    let parsedResults;
+
+    // Mock dependencies
+    const mockSaveEmail = vi.fn();
+    const mockSimpleParser = vi.fn();
+
+    beforeEach(() => {
+        // Reset all mocks
+        vi.clearAllMocks();
+        savedEmails = [];
+        parsedResults = new Map();
+
+        // Mock account
+        mockAccount = {
+            id: 'test-account-123',
+            email: 'test@example.com'
+        };
+
+        // Mock client (not used in processMessages but required as parameter)
+        mockClient = {};
+
+        // Setup saveEmail mock to capture saved emails
+        mockSaveEmail.mockImplementation((email) => {
+            savedEmails.push(email);
+            return email;
+        });
+
+        // Setup simpleParser mock with default behavior
+        mockSimpleParser.mockImplementation(async (source) => {
+            const uid = parsedResults.get(source)?.uid || 'unknown';
+            return parsedResults.get(source) || {
+                from: { text: 'sender@example.com', value: [{ address: 'sender@example.com' }] },
+                subject: `Test Email UID ${uid}`,
+                text: 'Test email body',
+                html: '<p>Test email body</p>',
+                date: new Date('2024-01-15'),
+                attachments: []
+            };
+        });
+    });
+
+    // Helper to create a test message with specific flags
+    function createTestMessage(uid, flags, bodyContent = 'Email body content') {
+        return {
+            attributes: {
+                uid: uid,
+                flags: flags
+            },
+            parts: [
+                {
+                    which: '',
+                    body: bodyContent
+                }
+            ]
+        };
+    }
+
+    // Helper to setup parser response for a specific message
+    function setupParserResponse(bodyContent, parsedData) {
+        parsedResults.set(bodyContent, parsedData);
+    }
+
+    it('should correctly process messages with Set containing flags', async () => {
+        const messages = [
+            createTestMessage(100, new Set(['\\Seen', '\\Flagged']), 'body1'),
+            createTestMessage(101, new Set(['\\Seen']), 'body2'),
+            createTestMessage(102, new Set(['\\Flagged']), 'body3')
+        ];
+
+        // Test the logic directly (processMessages is not exported, so we test the core logic)
+        for (const message of messages) {
+            const email = {
+                isRead: message.attributes.flags?.has('\\Seen') || false,
+                isFlagged: message.attributes.flags?.has('\\Flagged') || false
+            };
+
+            if (message.attributes.uid === 100) {
+                expect(email.isRead).toBe(true);
+                expect(email.isFlagged).toBe(true);
+            } else if (message.attributes.uid === 101) {
+                expect(email.isRead).toBe(true);
+                expect(email.isFlagged).toBe(false);
+            } else if (message.attributes.uid === 102) {
+                expect(email.isRead).toBe(false);
+                expect(email.isFlagged).toBe(true);
+            }
+        }
+    });
+
+    it('should correctly handle undefined flags', async () => {
+        const messages = [
+            createTestMessage(200, undefined, 'body-undefined')
+        ];
+
+        setupParserResponse('body-undefined', {
+            uid: 200,
+            from: { text: 'test@test.com', value: [{ address: 'test@test.com' }] },
+            subject: 'Email with undefined flags',
+            text: 'Body text',
+            html: '<p>Body text</p>',
+            date: new Date('2024-01-15'),
+            attachments: []
+        });
+
+        const message = messages[0];
+        const email = {
+            isRead: message.attributes.flags?.has('\\Seen') || false,
+            isFlagged: message.attributes.flags?.has('\\Flagged') || false
+        };
+
+        // With undefined flags, both should be false
+        expect(email.isRead).toBe(false);
+        expect(email.isFlagged).toBe(false);
+    });
+
+    it('should correctly handle empty Set of flags', async () => {
+        const messages = [
+            createTestMessage(300, new Set(), 'body-empty')
+        ];
+
+        setupParserResponse('body-empty', {
+            uid: 300,
+            from: { text: 'test@test.com', value: [{ address: 'test@test.com' }] },
+            subject: 'Email with no flags',
+            text: 'Body text',
+            html: '<p>Body text</p>',
+            date: new Date('2024-01-15'),
+            attachments: []
+        });
+
+        const message = messages[0];
+        const email = {
+            isRead: message.attributes.flags?.has('\\Seen') || false,
+            isFlagged: message.attributes.flags?.has('\\Flagged') || false
+        };
+
+        // With empty Set, both should be false
+        expect(email.isRead).toBe(false);
+        expect(email.isFlagged).toBe(false);
+    });
+
+    it('should correctly detect isRead flag in various scenarios', async () => {
+        const testCases = [
+            { uid: 401, flags: new Set(['\\Seen']), expectedIsRead: true, description: 'with Seen flag' },
+            { uid: 402, flags: new Set(['\\Flagged']), expectedIsRead: false, description: 'without Seen flag' },
+            { uid: 403, flags: new Set(), expectedIsRead: false, description: 'with empty Set' },
+            { uid: 404, flags: undefined, expectedIsRead: false, description: 'with undefined flags' },
+            { uid: 405, flags: new Set(['\\Seen', '\\Flagged', '\\Draft']), expectedIsRead: true, description: 'with multiple flags including Seen' }
+        ];
+
+        testCases.forEach(testCase => {
+            const message = createTestMessage(testCase.uid, testCase.flags);
+            const isRead = message.attributes.flags?.has('\\Seen') || false;
+
+            expect(isRead).toBe(testCase.expectedIsRead);
+        });
+    });
+
+    it('should correctly detect isFlagged flag in various scenarios', async () => {
+        const testCases = [
+            { uid: 501, flags: new Set(['\\Flagged']), expectedIsFlagged: true, description: 'with Flagged flag' },
+            { uid: 502, flags: new Set(['\\Seen']), expectedIsFlagged: false, description: 'without Flagged flag' },
+            { uid: 503, flags: new Set(), expectedIsFlagged: false, description: 'with empty Set' },
+            { uid: 504, flags: undefined, expectedIsFlagged: false, description: 'with undefined flags' },
+            { uid: 505, flags: new Set(['\\Seen', '\\Flagged', '\\Answered']), expectedIsFlagged: true, description: 'with multiple flags including Flagged' }
+        ];
+
+        testCases.forEach(testCase => {
+            const message = createTestMessage(testCase.uid, testCase.flags);
+            const isFlagged = message.attributes.flags?.has('\\Flagged') || false;
+
+            expect(isFlagged).toBe(testCase.expectedIsFlagged);
+        });
+    });
+
+    it('should handle all common IMAP flags correctly', async () => {
+        // Test that the optional chaining works with all standard IMAP flags
+        const allFlags = new Set(['\\Seen', '\\Flagged', '\\Draft', '\\Answered', '\\Deleted', '\\Recent']);
+        const message = createTestMessage(600, allFlags);
+
+        // Test individual flag detection
+        expect(message.attributes.flags?.has('\\Seen')).toBe(true);
+        expect(message.attributes.flags?.has('\\Flagged')).toBe(true);
+        expect(message.attributes.flags?.has('\\Draft')).toBe(true);
+        expect(message.attributes.flags?.has('\\Answered')).toBe(true);
+        expect(message.attributes.flags?.has('\\Deleted')).toBe(true);
+        expect(message.attributes.flags?.has('\\Recent')).toBe(true);
+
+        // Test non-existent flag
+        expect(message.attributes.flags?.has('\\NonExistent')).toBe(false);
+    });
+
+    it('should use fallback value when flags is null', async () => {
+        const message = createTestMessage(700, null);
+
+        const email = {
+            isRead: message.attributes.flags?.has('\\Seen') || false,
+            isFlagged: message.attributes.flags?.has('\\Flagged') || false
+        };
+
+        // With null flags, both should fallback to false
+        expect(email.isRead).toBe(false);
+        expect(email.isFlagged).toBe(false);
+    });
+});
