@@ -366,6 +366,299 @@ describe('GeminiService - callLLM Function', () => {
       expect(results[0].categoryId).toBe(DefaultEmailCategory.OTHER);
       expect(results[0].reasoning).toContain('Batch API Error');
     });
+
+    it('should handle OpenAI rate limit errors (429)', async () => {
+      // Mock fetch to throw a rate limit error
+      global.fetch = vi.fn().mockRejectedValue(new Error('Rate limit exceeded 429'));
+
+      const email = createTestEmail('email-1', 'Test Email');
+      const results = await geminiService.categorizeBatchWithAI([email], availableCategories, openaiSettings);
+
+      expect(results).toHaveLength(1);
+      expect(results[0].categoryId).toBe(DefaultEmailCategory.OTHER);
+      expect(results[0].reasoning).toContain('Batch API Error');
+    });
+
+    it('should handle OpenAI network timeout', async () => {
+      global.fetch = vi.fn().mockRejectedValue(new Error('Network timeout'));
+
+      const email = createTestEmail('email-1', 'Test Email');
+      const results = await geminiService.categorizeBatchWithAI([email], availableCategories, openaiSettings);
+
+      expect(results).toHaveLength(1);
+      expect(results[0].categoryId).toBe(DefaultEmailCategory.OTHER);
+      expect(results[0].reasoning).toContain('Network timeout');
+    });
+
+    it('should categorize multiple emails in batch with OpenAI', async () => {
+      global.fetch = vi.fn().mockResolvedValue({
+        json: () => Promise.resolve({
+          choices: [
+            {
+              message: {
+                content: JSON.stringify([
+                  { id: 'email-1', category: DefaultEmailCategory.INVOICE, summary: 'Invoice from vendor' },
+                  { id: 'email-2', category: DefaultEmailCategory.NEWSLETTER, summary: 'Weekly digest' },
+                  { id: 'email-3', category: DefaultEmailCategory.SPAM, summary: 'Promotional offer' }
+                ])
+              }
+            }
+          ]
+        })
+      });
+
+      const emails = [
+        createTestEmail('email-1', 'Invoice #12345', 'billing@vendor.com'),
+        createTestEmail('email-2', 'Weekly Newsletter', 'news@example.com'),
+        createTestEmail('email-3', 'Special Offer!', 'spam@example.com')
+      ];
+
+      const results = await geminiService.categorizeBatchWithAI(emails, availableCategories, openaiSettings);
+
+      expect(results).toHaveLength(3);
+      expect(results[0].categoryId).toBe(DefaultEmailCategory.INVOICE);
+      expect(results[1].categoryId).toBe(DefaultEmailCategory.NEWSLETTER);
+      expect(results[2].categoryId).toBe(DefaultEmailCategory.SPAM);
+    });
+
+    it('should preserve OpenAI email order when mapping results back', async () => {
+      // OpenAI returns results in different order than input
+      global.fetch = vi.fn().mockResolvedValue({
+        json: () => Promise.resolve({
+          choices: [
+            {
+              message: {
+                content: JSON.stringify([
+                  { id: 'email-3', category: DefaultEmailCategory.BUSINESS, summary: 'Third' },
+                  { id: 'email-1', category: DefaultEmailCategory.PRIVATE, summary: 'First' },
+                  { id: 'email-2', category: DefaultEmailCategory.NEWSLETTER, summary: 'Second' }
+                ])
+              }
+            }
+          ]
+        })
+      });
+
+      const emails = [
+        createTestEmail('email-1', 'First Email'),
+        createTestEmail('email-2', 'Second Email'),
+        createTestEmail('email-3', 'Third Email')
+      ];
+
+      const results = await geminiService.categorizeBatchWithAI(emails, availableCategories, openaiSettings);
+
+      // Results should be mapped back to original order
+      expect(results[0].summary).toBe('First');
+      expect(results[1].summary).toBe('Second');
+      expect(results[2].summary).toBe('Third');
+    });
+
+    it('should handle OpenAI invalid JSON response', async () => {
+      global.fetch = vi.fn().mockResolvedValue({
+        json: () => Promise.resolve({
+          choices: [
+            {
+              message: {
+                content: 'This is not valid JSON'
+              }
+            }
+          ]
+        })
+      });
+
+      const email = createTestEmail('email-1', 'Test');
+      const results = await geminiService.categorizeBatchWithAI([email], availableCategories, openaiSettings);
+
+      expect(results).toHaveLength(1);
+      expect(results[0].categoryId).toBe(DefaultEmailCategory.OTHER);
+      expect(results[0].reasoning).toContain('Batch API Error');
+    });
+
+    it('should handle OpenAI empty choices array', async () => {
+      global.fetch = vi.fn().mockResolvedValue({
+        json: () => Promise.resolve({
+          choices: []
+        })
+      });
+
+      const email = createTestEmail('email-1', 'Test');
+      const results = await geminiService.categorizeBatchWithAI([email], availableCategories, openaiSettings);
+
+      expect(results).toHaveLength(1);
+      expect(results[0].categoryId).toBe(DefaultEmailCategory.OTHER);
+    });
+
+    it('should handle OpenAI missing message content', async () => {
+      global.fetch = vi.fn().mockResolvedValue({
+        json: () => Promise.resolve({
+          choices: [
+            {
+              message: {
+                content: null
+              }
+            }
+          ]
+        })
+      });
+
+      const email = createTestEmail('email-1', 'Test');
+      const results = await geminiService.categorizeBatchWithAI([email], availableCategories, openaiSettings);
+
+      expect(results).toHaveLength(1);
+      expect(results[0].categoryId).toBe(DefaultEmailCategory.OTHER);
+    });
+
+    it('should use different OpenAI models when specified', async () => {
+      global.fetch = vi.fn().mockResolvedValue({
+        json: () => Promise.resolve({
+          choices: [{ message: { content: JSON.stringify([{ id: 'email-1', category: 'Test', summary: 'Test' }]) } }]
+        })
+      });
+
+      const customOpenAISettings: AISettings = {
+        provider: LLMProvider.OPENAI,
+        model: 'gpt-4-turbo',
+        apiKey: 'test-openai-api-key'
+      };
+
+      const email = createTestEmail('email-1', 'Test');
+      await geminiService.categorizeBatchWithAI([email], availableCategories, customOpenAISettings);
+
+      expect(global.fetch).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({
+          body: expect.stringContaining('"model":"gpt-4-turbo"')
+        })
+      );
+    });
+
+    it('should include system instruction in OpenAI request', async () => {
+      global.fetch = vi.fn().mockResolvedValue({
+        json: () => Promise.resolve({
+          choices: [{ message: { content: JSON.stringify([{ id: 'email-1', category: 'Test', summary: 'Test' }]) } }]
+        })
+      });
+
+      const email = createTestEmail('email-1', 'Test');
+      await geminiService.categorizeBatchWithAI([email], availableCategories, openaiSettings);
+
+      // Check that system role message is included
+      expect(global.fetch).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({
+          body: expect.stringContaining('"role":"system"')
+        })
+      );
+    });
+
+    it('should include user prompt in OpenAI request', async () => {
+      global.fetch = vi.fn().mockResolvedValue({
+        json: () => Promise.resolve({
+          choices: [{ message: { content: JSON.stringify([{ id: 'email-1', category: 'Test', summary: 'Test' }]) } }]
+        })
+      });
+
+      const email = createTestEmail('email-1', 'Test');
+      await geminiService.categorizeBatchWithAI([email], availableCategories, openaiSettings);
+
+      // Check that user role message is included
+      expect(global.fetch).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({
+          body: expect.stringContaining('"role":"user"')
+        })
+      );
+    });
+
+    it('should handle OpenAI partial results (missing email IDs)', async () => {
+      // OpenAI returns fewer results than input emails
+      global.fetch = vi.fn().mockResolvedValue({
+        json: () => Promise.resolve({
+          choices: [
+            {
+              message: {
+                content: JSON.stringify([
+                  { id: 'email-1', category: DefaultEmailCategory.INVOICE, summary: 'Invoice' }
+                  // email-2 is missing from response
+                ])
+              }
+            }
+          ]
+        })
+      });
+
+      const emails = [
+        createTestEmail('email-1', 'Invoice Email'),
+        createTestEmail('email-2', 'Missing Email')
+      ];
+
+      const results = await geminiService.categorizeBatchWithAI(emails, availableCategories, openaiSettings);
+
+      expect(results).toHaveLength(2);
+      expect(results[0].categoryId).toBe(DefaultEmailCategory.INVOICE);
+      // Fallback for missing email
+      expect(results[1].categoryId).toBe(DefaultEmailCategory.OTHER);
+      expect(results[1].reasoning).toContain('AI lieferte kein Ergebnis');
+    });
+
+    it('should handle OpenAI response with extra whitespace', async () => {
+      global.fetch = vi.fn().mockResolvedValue({
+        json: () => Promise.resolve({
+          choices: [
+            {
+              message: {
+                content: '  \n  [{"id": "email-1", "category": "Geschäftlich", "summary": "Business"}]  \n  '
+              }
+            }
+          ]
+        })
+      });
+
+      const email = createTestEmail('email-1', 'Test');
+      const results = await geminiService.categorizeBatchWithAI([email], availableCategories, openaiSettings);
+
+      expect(results).toHaveLength(1);
+      expect(results[0].categoryId).toBe(DefaultEmailCategory.BUSINESS);
+    });
+
+    it('should categorize single email with OpenAI via categorizeEmailWithAI wrapper', async () => {
+      global.fetch = vi.fn().mockResolvedValue({
+        json: () => Promise.resolve({
+          choices: [
+            {
+              message: {
+                content: JSON.stringify([
+                  { id: 'email-1', category: DefaultEmailCategory.SPAM, summary: 'Spam detected' }
+                ])
+              }
+            }
+          ]
+        })
+      });
+
+      const email = createTestEmail('email-1', 'Win a prize!');
+      const result = await geminiService.categorizeEmailWithAI(email, availableCategories, openaiSettings);
+
+      expect(result.categoryId).toBe(DefaultEmailCategory.SPAM);
+      expect(result.summary).toBe('Spam detected');
+    });
+
+    it('should handle OpenAI HTTP error status', async () => {
+      // Mock fetch to return non-ok response
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: false,
+        status: 500,
+        json: () => Promise.resolve({
+          error: { message: 'Internal Server Error' }
+        })
+      });
+
+      const email = createTestEmail('email-1', 'Test');
+      const results = await geminiService.categorizeBatchWithAI([email], availableCategories, openaiSettings);
+
+      expect(results).toHaveLength(1);
+      expect(results[0].categoryId).toBe(DefaultEmailCategory.OTHER);
+    });
   });
 
   describe('Unknown Provider', () => {
