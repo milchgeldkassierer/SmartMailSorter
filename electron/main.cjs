@@ -77,13 +77,52 @@ app.whenReady().then(() => {
     });
 
     ipcMain.handle('open-external-url', async (event, url) => {
-        const { shell } = require('electron');
         // Only allow http/https URLs for security
-        if (url.startsWith('http://') || url.startsWith('https://')) {
+        if (!url.startsWith('http://') && !url.startsWith('https://')) {
+            return false;
+        }
+
+        // Check if running in WSL (Windows Subsystem for Linux)
+        // In WSL, shell.openExternal uses xdg-open which can't find Windows browsers
+        const isWSL = await (async () => {
+            try {
+                const fs = require('fs');
+                // Check for WSL-specific environment variable (fastest)
+                if (process.env.WSL_DISTRO_NAME || process.env.WSL_INTEROP) {
+                    return true;
+                }
+                // Check /proc/version for "Microsoft" or "WSL" markers
+                if (fs.existsSync('/proc/version')) {
+                    const version = fs.readFileSync('/proc/version', 'utf8');
+                    return /microsoft|wsl/i.test(version);
+                }
+                return false;
+            } catch {
+                return false;
+            }
+        })();
+
+        if (isWSL) {
+            // In WSL, use cmd.exe to open URL in Windows default browser
+            const { exec } = require('child_process');
+            return new Promise((resolve) => {
+                // Escape URL for cmd.exe - replace & with ^& to prevent command injection
+                const escapedUrl = url.replace(/&/g, '^&');
+                exec(`cmd.exe /c start "" "${escapedUrl}"`, (error) => {
+                    if (error) {
+                        console.error('WSL browser open error:', error);
+                        resolve(false);
+                    } else {
+                        resolve(true);
+                    }
+                });
+            });
+        } else {
+            // Standard approach for native Windows/Mac/Linux
+            const { shell } = require('electron');
             await shell.openExternal(url);
             return true;
         }
-        return false;
     });
 
     ipcMain.handle('sync-account', async (event, account) => {
