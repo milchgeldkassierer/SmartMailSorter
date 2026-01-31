@@ -295,6 +295,93 @@ describe('Attachment Filename Security Tests', () => {
     });
   });
 
+  describe('Windows Reserved Filenames', () => {
+    it('should block basic Windows reserved device names', () => {
+      const reservedNames = ['CON', 'PRN', 'AUX', 'NUL'];
+
+      reservedNames.forEach(name => {
+        const sanitized = sanitizeFilename(name);
+        expect(sanitized).toBe('attachment');
+      });
+    });
+
+    it('should block Windows reserved device names with extensions', () => {
+      const reservedWithExtensions = [
+        'CON.txt',
+        'PRN.pdf',
+        'AUX.doc',
+        'NUL.exe'
+      ];
+
+      reservedWithExtensions.forEach(filename => {
+        const sanitized = sanitizeFilename(filename);
+        expect(sanitized).toBe('attachment');
+      });
+    });
+
+    it('should block COM1-9 and LPT1-9 device names', () => {
+      const comLptNames = [
+        'COM1', 'COM2', 'COM3', 'COM4', 'COM5', 'COM6', 'COM7', 'COM8', 'COM9',
+        'LPT1', 'LPT2', 'LPT3', 'LPT4', 'LPT5', 'LPT6', 'LPT7', 'LPT8', 'LPT9'
+      ];
+
+      comLptNames.forEach(name => {
+        const sanitized = sanitizeFilename(name);
+        expect(sanitized).toBe('attachment');
+      });
+    });
+
+    it('should block COM/LPT device names with extensions', () => {
+      const comLptWithExtensions = [
+        'COM1.txt',
+        'COM5.pdf',
+        'LPT1.doc',
+        'LPT9.xlsx'
+      ];
+
+      comLptWithExtensions.forEach(filename => {
+        const sanitized = sanitizeFilename(filename);
+        expect(sanitized).toBe('attachment');
+      });
+    });
+
+    it('should handle case-insensitive reserved names', () => {
+      const caseVariations = [
+        'con', 'Con', 'CON', 'cOn',
+        'prn', 'Prn', 'PRN',
+        'aux', 'Aux', 'AUX',
+        'nul', 'Nul', 'NUL',
+        'com1', 'Com1', 'COM1',
+        'lpt1', 'Lpt1', 'LPT1'
+      ];
+
+      caseVariations.forEach(name => {
+        const sanitized = sanitizeFilename(name);
+        expect(sanitized).toBe('attachment');
+      });
+    });
+
+    it('should allow filenames that contain but are not reserved names', () => {
+      const validFilenames = [
+        'config.txt',      // contains 'con' but not reserved
+        'context.pdf',     // contains 'con' but not reserved
+        'printer.doc',     // contains 'prn' but not reserved
+        'auxiliary.txt',   // contains 'aux' but not reserved
+        'nullable.js',     // contains 'nul' but not reserved
+        'COM10.txt',       // COM10 is not reserved (only COM1-9)
+        'LPT0.txt',        // LPT0 is not reserved (only LPT1-9)
+        'COMMAND.exe',     // contains 'COM' but not reserved
+        'laptop.pdf'       // contains 'lpt' but not reserved
+      ];
+
+      validFilenames.forEach(filename => {
+        const sanitized = sanitizeFilename(filename);
+        expect(sanitized).toBe(filename);
+        expect(sanitized).not.toBe('attachment');
+      });
+    });
+  });
+
   describe('Filename Length Limits', () => {
     it('should truncate very long filenames to 255 characters', () => {
       const longName = 'a'.repeat(300) + '.txt';
@@ -314,6 +401,53 @@ describe('Attachment Filename Security Tests', () => {
       const longName = 'c'.repeat(300) + '.verylongextension';
       const sanitized = sanitizeFilename(longName);
       expect(sanitized.length).toBeLessThanOrEqual(255);
+    });
+
+    it('should handle filenames with extremely long extensions (>= 255 chars)', () => {
+      // Edge case: extension itself is >= 255 characters
+      const extremelyLongExt = '.' + 'e'.repeat(255);
+      const filename = 'file' + extremelyLongExt;
+      const sanitized = sanitizeFilename(filename);
+
+      // Should truncate to exactly 255 characters
+      expect(sanitized.length).toBe(255);
+      expect(sanitized.length).toBeLessThanOrEqual(255);
+    });
+
+    it('should handle filenames with extension > 255 chars and long base', () => {
+      // Extension is 260 chars, base is 100 chars = total 360 chars
+      const extremelyLongExt = '.' + 'x'.repeat(260);
+      const filename = 'basename'.repeat(12) + extremelyLongExt;
+      const sanitized = sanitizeFilename(filename);
+
+      // Should truncate to exactly 255 characters
+      expect(sanitized.length).toBe(255);
+      expect(sanitized.length).toBeLessThanOrEqual(255);
+    });
+
+    it('should not have leading dots after truncation', () => {
+      // Create a filename where truncation might result in a leading dot
+      // For example: very long extension that causes base to become empty or start with dot
+      const filename = 'a' + '.' + 'x'.repeat(254);
+      const sanitized = sanitizeFilename(filename);
+
+      // Should not start with a dot
+      expect(sanitized).not.toMatch(/^\./);
+      expect(sanitized.length).toBeLessThanOrEqual(255);
+    });
+
+    it('should handle edge case where truncation leaves only extension', () => {
+      // Edge case: after truncation, only the extension remains
+      const shortBase = 'f';
+      const longExt = '.' + 'e'.repeat(254);
+      const filename = shortBase + longExt;
+      const sanitized = sanitizeFilename(filename);
+
+      // Should not start with a leading dot
+      expect(sanitized).not.toMatch(/^\./);
+      expect(sanitized.length).toBeLessThanOrEqual(255);
+      // Should not be empty
+      expect(sanitized.length).toBeGreaterThan(0);
     });
   });
 

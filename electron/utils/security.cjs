@@ -25,6 +25,12 @@ function sanitizeFilename(filename) {
     // Trim whitespace and dots from start/end
     sanitized = sanitized.replace(/^[\s.]+|[\s.]+$/g, '');
 
+    // Block Windows reserved device names (CON, PRN, AUX, NUL, COM1-9, LPT1-9)
+    const WINDOWS_RESERVED = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(\..*)?$/i;
+    if (WINDOWS_RESERVED.test(sanitized)) {
+        return 'attachment';
+    }
+
     // Reject dangerous filenames
     if (!sanitized || sanitized === '.' || sanitized === '..') {
         return 'attachment';
@@ -33,8 +39,23 @@ function sanitizeFilename(filename) {
     // Limit filename length (255 is typical filesystem limit)
     if (sanitized.length > 255) {
         const ext = path.extname(sanitized);
-        const base = path.basename(sanitized, ext);
-        sanitized = base.substring(0, 255 - ext.length) + ext;
+
+        // If extension itself is >= 255 chars, just truncate the whole filename
+        if (ext.length >= 255) {
+            sanitized = sanitized.substring(0, 255);
+        } else {
+            // Normal case: preserve extension, truncate base name
+            const base = path.basename(sanitized, ext);
+            sanitized = base.substring(0, 255 - ext.length) + ext;
+        }
+
+        // Trim any leading dots that may have appeared after truncation
+        sanitized = sanitized.replace(/^\.+/, '');
+
+        // If trimming made it empty, use fallback
+        if (!sanitized) {
+            return 'attachment';
+        }
     }
 
     return sanitized;
