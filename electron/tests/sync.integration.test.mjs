@@ -1,303 +1,20 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import { EventEmitter } from 'events';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { createRequire } from 'module';
-import path from 'path';
 
-// Setup mock state before any imports
-const mockState = {
-    serverEmails: [],
-    shouldFailConnect: false
-};
+// The vitest-setup.js file patches require() to intercept 'imapflow' imports
+// Import helpers from setup to control mock state
+import { resetMockState, setServerEmails } from './vitest-setup.js';
 
-// Helper to set server emails
-function setServerEmails(emails) {
-    mockState.serverEmails = emails.map(e => ({
-        uid: e.uid,
-        subject: e.subject || '(No Subject)',
-        from: e.from || 'test@example.com',
-        body: e.body || '',
-        date: e.date || new Date().toISOString(),
-        flags: new Set(e.flags || [])
-    }));
-}
-
-function resetMockState() {
-    mockState.serverEmails = [];
-    mockState.shouldFailConnect = false;
-}
-
-// Mock ImapFlow class
-class MockImapFlow {
-    constructor(config) {
-        this.config = config;
-    }
-
-    async connect() {
-        if (mockState.shouldFailConnect) {
-            throw new Error('Connection failed');
-        }
-    }
-
-    async logout() {}
-
-    async list() {
-        return [{ name: 'INBOX', path: 'INBOX', specialUse: null }];
-    }
-
-    async getMailboxLock(path) {
-        mockState.currentMailbox = { exists: mockState.serverEmails.length, name: path };
-        return {
-            release: () => { mockState.currentMailbox = null; }
-        };
-    }
-
-    async messageFlagsAdd(uid, flags) {
-        const email = mockState.serverEmails.find(e => e.uid === uid);
-        if (email) {
-            flags.forEach(f => email.flags.add(f));
-        }
-    }
-
-    async messageFlagsRemove(uid, flags) {
-        const email = mockState.serverEmails.find(e => e.uid === uid);
-        if (email) {
-            flags.forEach(f => email.flags.delete(f));
-        }
-    }
-
-    // Modern ImapFlow fetch() API - returns async iterator
-    async *fetch(range, options = {}) {
-        const isUid = options.uid === true;
-        const wantSource = options.source === true;
-
-        // Parse range (can be "1:5", "1,2,3", etc.)
-        let messages = [];
-
-        if (isUid) {
-            // Fetching by UIDs
-            const uidList = range.split(',').map(u => parseInt(u.trim()));
-            messages = mockState.serverEmails.filter(e => uidList.includes(e.uid));
-        } else {
-            // Fetching by sequence numbers (1-based)
-            const parts = range.split(':');
-            if (parts.length === 2) {
-                const start = parseInt(parts[0]);
-                const end = parts[1] === '*' ? mockState.serverEmails.length : parseInt(parts[1]);
-                messages = mockState.serverEmails.slice(start - 1, end);
-            } else {
-                // Single number or comma-separated
-                const seqList = range.split(',').map(s => parseInt(s.trim()));
-                messages = seqList.map(seq => mockState.serverEmails[seq - 1]).filter(Boolean);
-            }
-        }
-
-        // Yield each message
-        for (const email of messages) {
-            const msg = {
-                uid: email.uid,
-                flags: email.flags || new Set(),
-                seq: mockState.serverEmails.indexOf(email) + 1
-            };
-
-            if (wantSource) {
-                // Return full email source as buffer
-                msg.source = Buffer.from(email.body || '');
-            }
-
-            yield msg;
-        }
-    }
-
-    // Modern ImapFlow getQuota() API
-    async getQuota(mailbox) {
-        return null; // No quota info in tests
-    }
-
-    // Modern ImapFlow messageDelete() API
-    async messageDelete(range, options = {}) {
-        const isUid = options.uid === true;
-        const uid = isUid ? parseInt(range) : parseInt(range);
-
-        // Remove from mockState.serverEmails
-        const index = mockState.serverEmails.findIndex(e => e.uid === uid);
-        if (index !== -1) {
-            mockState.serverEmails.splice(index, 1);
-        }
-    }
-
-    get capabilities() {
-        return new Set(['IMAP4rev1', 'UIDPLUS']);
-    }
-
-    get mailbox() {
-        return mockState.currentMailbox || { exists: 0 };
-    }
-
-    get imap() {
-        return {
-            seq: {
-                fetch: (range, options) => {
-                    const [start, end] = range.split(':').map(Number);
-                    const emitter = new EventEmitter();
-                    process.nextTick(() => {
-                        for (let seq = start; seq <= end && seq <= mockState.serverEmails.length; seq++) {
-                            const email = mockState.serverEmails[seq - 1];
-                            if (email) {
-                                emitter.emit('message', {
-                                    on: (evt, cb) => {
-                                        if (evt === 'attributes') cb({ uid: email.uid, flags: email.flags || new Set() });
-                                    }
-                                });
-                            }
-                        }
-                        emitter.emit('end');
-                    });
-                    return emitter;
-                }
-            },
-            fetch: (uids, options) => {
-                const uidList = Array.isArray(uids) ? uids : [uids];
-                const emitter = new EventEmitter();
-
-                // Process asynchronously to mimic real IMAP behavior
-                setImmediate(() => {
-                    let pendingMessages = 0;
-
-                    for (const uid of uidList) {
-                        const email = mockState.serverEmails.find(e => e.uid === uid);
-                        if (email) {
-                            pendingMessages++;
-                            const msg = new EventEmitter();
-
-                            // Emit the message event
-                            emitter.emit('message', msg);
-
-                            // Simulate async body streaming
-                            setImmediate(() => {
-                                const bodyStream = new EventEmitter();
-
-                                // Emit body first (as imapflow does)
-                                msg.emit('body', bodyStream, { which: '' });
-
-                                // Then stream the data
-                                setImmediate(() => {
-                                    bodyStream.emit('data', Buffer.from(email.body));
-                                    setImmediate(() => {
-                                        bodyStream.emit('end');
-
-                                        // After body ends, emit attributes
-                                        setImmediate(() => {
-                                            msg.emit('attributes', { uid: email.uid, flags: email.flags || new Set() });
-
-                                            // Finally, message ends
-                                            setImmediate(() => {
-                                                msg.emit('end');
-                                                pendingMessages--;
-
-                                                // Only emit fetch end when all messages are done
-                                                if (pendingMessages === 0) {
-                                                    setImmediate(() => emitter.emit('end'));
-                                                }
-                                            });
-                                        });
-                                    });
-                                });
-                            });
-                        }
-                    }
-
-                    // If no messages found, emit end immediately
-                    if (pendingMessages === 0) {
-                        setImmediate(() => emitter.emit('end'));
-                    }
-                });
-
-                return emitter;
-            },
-            getQuotaRoot: (inbox, cb) => process.nextTick(() => cb(null, null)),
-            expunge: () => Promise.resolve()
-        };
-    }
-}
-
-// Register mock in Node's module cache before loading imap.cjs
+// Use CommonJS require to ensure we get the SAME module instances as imap.cjs
 const require = createRequire(import.meta.url);
 
-// Manually inject the mock into the cache using a path that matches what imap.cjs will resolve
-const mockPath = path.join(process.cwd(), 'node_modules', 'imapflow', 'lib', 'imap-flow.js');
-require.cache[mockPath] = {
-    id: mockPath,
-    filename: mockPath,
-    loaded: true,
-    exports: { ImapFlow: MockImapFlow }
-};
+// Mock electron (still use vi.mock for this)
+vi.mock('electron', () => ({
+    app: { getPath: () => './test-data' }
+}));
 
-// Also inject at the package level
-const mockPath2 = path.join(process.cwd(), 'node_modules', 'imapflow');
-require.cache[mockPath2] = {
-    id: mockPath2,
-    filename: path.join(mockPath2, 'index.js'),
-    loaded: true,
-    exports: { ImapFlow: MockImapFlow }
-};
-
-// Mock electron before loading db
-const electronPath = path.join(process.cwd(), 'node_modules', 'electron');
-require.cache[electronPath] = {
-    id: electronPath,
-    filename: path.join(electronPath, 'index.js'),
-    loaded: true,
-    exports: {
-        app: {
-            getPath: () => './test-data'
-        }
-    }
-};
-
-// Mock mailparser - inject at both package and index level
-const mailparserPath = path.join(process.cwd(), 'node_modules', 'mailparser');
-const mailparserIndexPath = path.join(process.cwd(), 'node_modules', 'mailparser', 'index.js');
-
-const mailparserMock = {
-    simpleParser: (rawBody) => {
-        const subjectMatch = rawBody.match(/Subject: (.+)/);
-        const fromMatch = rawBody.match(/From: (.+)/);
-        const dateMatch = rawBody.match(/Date: (.+)/);
-        const bodyMatch = rawBody.match(/\r?\n\r?\n([\s\S]+)$/);
-
-        const subject = subjectMatch ? subjectMatch[1] : '(No Subject)';
-        const from = fromMatch ? fromMatch[1] : 'test@example.com';
-        const date = dateMatch ? new Date(dateMatch[1]) : new Date();
-        const body = bodyMatch ? bodyMatch[1].trim() : '';
-
-        return Promise.resolve({
-            subject,
-            from: { text: from, value: [{ address: from.replace(/[<>]/g, '') }] },
-            text: body,
-            html: null,
-            date,
-            attachments: []
-        });
-    }
-};
-
-// Install at package level
-require.cache[mailparserPath] = {
-    id: mailparserPath,
-    filename: path.join(mailparserPath, 'index.js'),
-    loaded: true,
-    exports: mailparserMock
-};
-
-// Also install at index.js level
-require.cache[mailparserIndexPath] = {
-    id: mailparserIndexPath,
-    filename: mailparserIndexPath,
-    loaded: true,
-    exports: mailparserMock
-};
-
-// Now load the actual modules
+// Use CJS require to get the same module instances that imap.cjs uses
+// This ensures db.init() affects the same db variable that saveEmail() uses
 const db = require('../db.cjs');
 const imap = require('../imap.cjs');
 
@@ -346,7 +63,6 @@ describe('IMAP Sync Integration Tests', () => {
                 email: 'empty@test.com'
             });
 
-            // Add account to database first (foreign key constraint)
             addAccountToDb(account);
 
             const result = await imap.syncAccount(account);
@@ -382,7 +98,6 @@ This is the email body content.`,
                 email: 'single@test.com'
             });
 
-            // Add account to database first (foreign key constraint)
             addAccountToDb(account);
 
             const result = await imap.syncAccount(account);
@@ -447,7 +162,6 @@ Third email body`,
                 email: 'multiple@test.com'
             });
 
-            // Add account to database first (foreign key constraint)
             addAccountToDb(account);
 
             const result = await imap.syncAccount(account);
@@ -483,7 +197,6 @@ Third email body`,
                 email: 'incremental@test.com'
             });
 
-            // Add account to database first (foreign key constraint)
             addAccountToDb(account);
 
             setServerEmails([

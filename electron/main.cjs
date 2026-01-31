@@ -96,14 +96,14 @@ app.whenReady().then(() => {
         return await imap.deleteEmail(account, uid, folder);
     });
 
-    ipcMain.handle('update-email-read', async (event, { account, emailId, uid, isRead }) => {
+    ipcMain.handle('update-email-read', async (event, { account, emailId, uid, isRead, folder }) => {
         db.updateEmailReadStatus(emailId, isRead);
-        return await imap.setEmailFlag(account, uid, '\\Seen', isRead);
+        return await imap.setEmailFlag(account, uid, '\\Seen', isRead, folder);
     });
 
-    ipcMain.handle('update-email-flag', async (event, { account, emailId, uid, isFlagged }) => {
+    ipcMain.handle('update-email-flag', async (event, { account, emailId, uid, isFlagged, folder }) => {
         db.updateEmailFlagStatus(emailId, isFlagged);
-        return await imap.setEmailFlag(account, uid, '\\Flagged', isFlagged);
+        return await imap.setEmailFlag(account, uid, '\\Flagged', isFlagged, folder);
     });
 
 
