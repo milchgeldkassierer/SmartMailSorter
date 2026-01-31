@@ -453,7 +453,8 @@ const App: React.FC = () => {
             account,
             emailId: id,
             uid: email.uid,
-            isRead: !email.isRead
+            isRead: !email.isRead,
+            folder: email.folder
           });
         } catch (e) {
           console.error("Failed to update read status", e);
@@ -481,7 +482,8 @@ const App: React.FC = () => {
             account,
             emailId: id,
             uid: email.uid,
-            isFlagged: !email.isFlagged
+            isFlagged: !email.isFlagged,
+            folder: email.folder
           });
         } catch (e) {
           console.error("Failed to update flag status", e);
