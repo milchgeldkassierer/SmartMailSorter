@@ -1029,5 +1029,33 @@ describe('Database Account CRUD Operations', () => {
       const emails = db.getEmails('migrate-account');
       expect(emails[0].folder).toBe('NewFolderCategory');
     });
+
+    it('should migrate emails when target folder exists', () => {
+      // Add target folder as a category
+      db.addCategory('TargetFolder', 'custom');
+
+      db.saveEmail({
+        id: 'migrate-existing-email',
+        accountId: 'migrate-account',
+        sender: 'Test',
+        senderEmail: 't@t.com',
+        subject: 'Test',
+        body: 'Body',
+        date: new Date().toISOString(),
+        folder: 'SourceFolder'
+      });
+
+      // Migrate source to target - should update emails even if target exists
+      db.migrateFolder('SourceFolder', 'TargetFolder');
+
+      // Email should now be in target folder
+      const emails = db.getEmails('migrate-account');
+      expect(emails[0].folder).toBe('TargetFolder');
+    });
+
+    it('should handle migration with no emails in source folder', () => {
+      // Just migrate folders, no emails
+      expect(() => db.migrateFolder('EmptySource', 'EmptyTarget')).not.toThrow();
+    });
   });
 });

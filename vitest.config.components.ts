@@ -17,7 +17,13 @@ export default defineConfig({
                 '**/*.config.{js,ts}',
                 '**/node_modules/**',
                 '**/__mocks__/**'
-            ]
+            ],
+            thresholds: {
+                // Overall component coverage target: 85%+
+                lines: 80,
+                functions: 80,
+                branches: 75
+            }
         }
     },
 });
