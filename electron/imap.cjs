@@ -65,15 +65,15 @@ async function processMessages(client, messages, account, targetCategory) {
                     date: parsed.date ? parsed.date.toISOString() : new Date().toISOString(),
                     folder: targetCategory,
                     smartCategory: null,
-                    isRead: message.attributes.flags && message.attributes.flags.includes('\\Seen'),
-                    isFlagged: message.attributes.flags && message.attributes.flags.includes('\\Flagged'),
+                    isRead: message.attributes.flags?.has('\\Seen') || false,
+                    isFlagged: message.attributes.flags?.has('\\Flagged') || false,
                     hasAttachments: attachments.length > 0,
                     attachments: attachments,
                     uid: currentUid
                 };
 
                 if (targetCategory === 'Posteingang') {
-                    email.isRead = message.attributes.flags && message.attributes.flags.includes('\\Seen');
+                    email.isRead = message.attributes.flags?.has('\\Seen') || false;
                 }
 
                 saveEmail(email);
@@ -366,8 +366,16 @@ async function syncAccount(account) {
                     }
 
                 } catch (err) {
-                    console.error(`Error syncing folder ${boxName}:`, err);
+                    console.error(`[Sync] Error syncing folder ${boxName}:`, err.message);
                 }
+            } catch (lockErr) {
+                // Handle folder access errors (missing, renamed, or permission issues)
+                console.warn(`[Sync] Skipping ${boxName} - cannot access folder: ${lockErr.message}`);
+                if (lockErr.mailboxMissing) {
+                    console.warn(`[Sync] Folder ${boxName} no longer exists on server`);
+                }
+                // Continue to next folder instead of stopping entire sync
+                continue;
             } finally {
                 if (lock) lock.release();
             }

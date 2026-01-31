@@ -1,0 +1,884 @@
+
+> smartmail-ai-sorter-gmx-style@0.0.0 test:coverage
+> npm run rebuild:node && vitest run --coverage
+
+
+> smartmail-ai-sorter-gmx-style@0.0.0 rebuild:node
+> npm rebuild better-sqlite3
+
+rebuilt dependencies successfully
+
+[1m[46m RUN [49m[22m [36mv4.0.18 [39m[90m/home/adi/projects/SmartMailSorter/.auto-claude/worktrees/tasks/008-bug-imap-failed-to-parse-message[39m
+      [2mCoverage enabled with [22m[33mv8[39m
+
+ [32m✓[39m electron/tests/db.test.js [2m([22m[2m3 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m electron/tests/imap-flags-bug.test.mjs [2m([22m[2m14 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+[90mstdout[2m | electron/tests/sync.integration.test.mjs
+[22m[39mIMAP Module Loaded: Version LargeScaleSync_v1
+
+[90mstdout[2m | electron/tests/sync.integration.test.js
+[22m[39mIMAP Module Loaded: Version LargeScaleSync_v1
+
+[90mstdout[2m | electron/tests/sync.integration.test.mjs[2m > [22m[2mIMAP Sync Integration Tests[2m > [22m[2mBasic Sync Flow[2m > [22m[2mshould successfully sync an empty mailbox
+[22m[39mStarting sync for account: empty@test.com
+
+[90mstdout[2m | electron/tests/geminiService.test.ts
+[22m[39mGeminiService: Loaded Version 6.0 (Batch Processing)
+
+[90mstderr[2m | electron/tests/sync.integration.test.mjs[2m > [22m[2mIMAP Sync Integration Tests[2m > [22m[2mBasic Sync Flow[2m > [22m[2mshould successfully sync an empty mailbox
+[22m[39mSync failed with error: getaddrinfo ENOTFOUND imap.test.com
+
+[90mstdout[2m | electron/tests/sync.integration.test.mjs[2m > [22m[2mIMAP Sync Integration Tests[2m > [22m[2mBasic Sync Flow[2m > [22m[2mshould sync a single email correctly
+[22m[39mStarting sync for account: single@test.com
+
+[90mstdout[2m | electron/tests/sync.integration.test.mjs[2m > [22m[2mIMAP Sync Integration Tests[2m > [22m[2mBasic Sync Flow[2m > [22m[2mshould sync multiple emails correctly
+[22m[39mStarting sync for account: multiple@test.com
+
+ [32m✓[39m electron/tests/geminiService.test.ts [2m([22m[2m24 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+[90mstdout[2m | electron/tests/imap.test.mjs
+[22m[39mIMAP Module Loaded: Version LargeScaleSync_v1
+
+[90mstdout[2m | electron/tests/sync.integration.test.mjs[2m > [22m[2mIMAP Sync Integration Tests[2m > [22m[2mBasic Sync Flow[2m > [22m[2mshould preserve existing emails and only sync new ones
+[22m[39mStarting sync for account: incremental@test.com
+
+[90mstdout[2m | electron/tests/sync.integration.test.mjs[2m > [22m[2mIMAP Sync Integration Tests[2m > [22m[2mBasic Sync Flow[2m > [22m[2mshould sync 50+ emails with mixed flag states
+[22m[39mStarting sync for account: mixedbatch@test.com
+
+[90mstdout[2m | electron/tests/imap.test.mjs[2m > [22m[2mIMAP Module[2m > [22m[2mshould sync account and return result
+[22m[39mStarting sync for account: test@test.com
+
+[90mstdout[2m | electron/tests/sync.integration.test.js[2m > [22m[2mIMAP Sync Integration Tests[2m > [22m[2mBasic Sync Flow[2m > [22m[2mshould successfully sync an empty mailbox
+[22m[39mStarting sync for account: empty@test.com
+
+ [31m❯[39m electron/tests/sync.integration.test.mjs [2m([22m[2m5 tests[22m[2m | [22m[31m5 failed[39m[2m)[22m[32m 73[2mms[22m[39m
+[31m       [31m×[31m should successfully sync an empty mailbox[39m[32m 30[2mms[22m[39m
+[31m       [31m×[31m should sync a single email correctly[39m[32m 13[2mms[22m[39m
+[31m       [31m×[31m should sync multiple emails correctly[39m[32m 11[2mms[22m[39m
+[31m       [31m×[31m should preserve existing emails and only sync new ones[39m[32m 9[2mms[22m[39m
+[31m       [31m×[31m should sync 50+ emails with mixed flag states[39m[32m 9[2mms[22m[39m
+[90mstdout[2m | electron/tests/sync.integration.test.js[2m > [22m[2mIMAP Sync Integration Tests[2m > [22m[2mBasic Sync Flow[2m > [22m[2mshould sync a single email correctly
+[22m[39mStarting sync for account: single@test.com
+
+ [32m✓[39m electron/tests/imap.test.mjs [2m([22m[2m7 tests[22m[2m)[22m[32m 27[2mms[22m[39m
+[90mstdout[2m | electron/tests/sync.integration.test.js[2m > [22m[2mIMAP Sync Integration Tests[2m > [22m[2mBasic Sync Flow[2m > [22m[2mshould sync multiple emails correctly
+[22m[39mStarting sync for account: multiple@test.com
+
+[90mstdout[2m | electron/tests/sync.integration.test.js[2m > [22m[2mIMAP Sync Integration Tests[2m > [22m[2mBasic Sync Flow[2m > [22m[2mshould preserve existing emails and only sync new ones
+[22m[39mStarting sync for account: incremental@test.com
+
+[90mstdout[2m | electron/tests/sync.integration.test.js[2m > [22m[2mIMAP Sync Integration Tests[2m > [22m[2mBatch Processing[2m > [22m[2mshould sync 100+ emails in batches correctly
+[22m[39mStarting sync for account: batch150@test.com
+
+[90mstdout[2m | electron/tests/sync.integration.test.js[2m > [22m[2mIMAP Sync Integration Tests[2m > [22m[2mBatch Processing[2m > [22m[2mshould handle batch processing across sequence ranges (1:5000, 5001:10000)
+[22m[39mStarting sync for account: largebatch@test.com
+
+[90mstdout[2m | electron/tests/sync.integration.test.js[2m > [22m[2mIMAP Sync Integration Tests[2m > [22m[2mBatch Processing[2m > [22m[2mshould handle incremental sync with batch processing for large mailboxes
+[22m[39mStarting sync for account: incrementallarge@test.com
+
+[90mstdout[2m | electron/tests/sync.integration.test.js[2m > [22m[2mIMAP Sync Integration Tests[2m > [22m[2mBatch Processing[2m > [22m[2mshould handle batch processing with sparse UIDs
+[22m[39mStarting sync for account: sparse@test.com
+
+[90mstdout[2m | electron/tests/sync.integration.test.js[2m > [22m[2mIMAP Sync Integration Tests[2m > [22m[2mOrphan Detection[2m > [22m[2mshould delete local emails that are no longer on server
+[22m[39mStarting sync for account: orphan@test.com
+
+[90mstdout[2m | electron/tests/sync.integration.test.js[2m > [22m[2mIMAP Sync Integration Tests[2m > [22m[2mOrphan Detection[2m > [22m[2mshould delete multiple orphaned emails
+[22m[39mStarting sync for account: orphanmulti@test.com
+
+[90mstdout[2m | electron/tests/sync.integration.test.js[2m > [22m[2mIMAP Sync Integration Tests[2m > [22m[2mOrphan Detection[2m > [22m[2mshould handle all emails being orphans except one
+[22m[39mStarting sync for account: orphanall@test.com
+
+[90mstdout[2m | electron/tests/sync.integration.test.js[2m > [22m[2mIMAP Sync Integration Tests[2m > [22m[2mOrphan Detection[2m > [22m[2mshould handle orphan detection with new emails added simultaneously
+[22m[39mStarting sync for account: orphanmixed@test.com
+
+[90mstdout[2m | electron/tests/sync.integration.test.js[2m > [22m[2mIMAP Sync Integration Tests[2m > [22m[2mOrphan Detection[2m > [22m[2mshould handle orphan detection with batch processing for large mailboxes
+[22m[39mStarting sync for account: orphanbatch@test.com
+
+[90mstdout[2m | electron/tests/sync.integration.test.js[2m > [22m[2mIMAP Sync Integration Tests[2m > [22m[2mError Handling[2m > [22m[2mshould handle connection failures gracefully
+[22m[39mStarting sync for account: connfail@test.com
+
+[90mstdout[2m | electron/tests/sync.integration.test.js[2m > [22m[2mIMAP Sync Integration Tests[2m > [22m[2mError Handling[2m > [22m[2mshould handle parse errors for individual emails
+[22m[39mStarting sync for account: parseerror@test.com
+
+[90mstdout[2m | electron/tests/sync.integration.test.js[2m > [22m[2mIMAP Sync Integration Tests[2m > [22m[2mError Handling[2m > [22m[2mshould handle multiple parse errors in a batch
+[22m[39mStarting sync for account: multiparseerror@test.com
+
+[90mstdout[2m | electron/tests/sync.integration.test.js[2m > [22m[2mIMAP Sync Integration Tests[2m > [22m[2mError Handling[2m > [22m[2mshould handle emails with missing body parts
+[22m[39mStarting sync for account: missingbody@test.com
+
+[90mstdout[2m | electron/tests/sync.integration.test.js[2m > [22m[2mIMAP Sync Integration Tests[2m > [22m[2mError Handling[2m > [22m[2mshould handle partial fetch failures
+[22m[39mStarting sync for account: fetchfail@test.com
+
+[90mstdout[2m | electron/tests/sync.integration.test.js[2m > [22m[2mIMAP Sync Integration Tests[2m > [22m[2mError Handling[2m > [22m[2mshould continue processing after parse errors
+[22m[39mStarting sync for account: continueerror@test.com
+
+[90mstdout[2m | electron/tests/sync.integration.test.js[2m > [22m[2mIMAP Sync Integration Tests[2m > [22m[2mError Handling[2m > [22m[2mshould handle mixed errors (parse + missing body)
+[22m[39mStarting sync for account: mixederrors@test.com
+
+[90mstdout[2m | electron/tests/sync.integration.test.js[2m > [22m[2mIMAP Sync Integration Tests[2m > [22m[2mError Handling[2m > [22m[2mshould handle error placeholders in incremental sync
+[22m[39mStarting sync for account: errorincremental@test.com
+
+[90mstdout[2m | electron/tests/sync.integration.test.js[2m > [22m[2mIMAP Sync Integration Tests[2m > [22m[2mFlag Operations[2m > [22m[2mshould set read flag (\Seen) on an email
+[22m[39mStarting sync for account: flagread@test.com
+
+[90mstdout[2m | electron/tests/sync.integration.test.js[2m > [22m[2mIMAP Sync Integration Tests[2m > [22m[2mFlag Operations[2m > [22m[2mshould unset read flag (\Seen) on an email
+[22m[39mStarting sync for account: flagunread@test.com
+
+[90mstdout[2m | electron/tests/sync.integration.test.js[2m > [22m[2mIMAP Sync Integration Tests[2m > [22m[2mFlag Operations[2m > [22m[2mshould set flagged flag (\Flagged) on an email
+[22m[39mStarting sync for account: flagflagged@test.com
+
+[90mstdout[2m | electron/tests/sync.integration.test.js[2m > [22m[2mIMAP Sync Integration Tests[2m > [22m[2mFlag Operations[2m > [22m[2mshould unset flagged flag (\Flagged) on an email
+[22m[39mStarting sync for account: flagunflagged@test.com
+
+[90mstdout[2m | electron/tests/sync.integration.test.js[2m > [22m[2mIMAP Sync Integration Tests[2m > [22m[2mFlag Operations[2m > [22m[2mshould persist flag changes on server
+[22m[39mStarting sync for account: flagpersist@test.com
+
+[90mstdout[2m | electron/tests/sync.integration.test.js[2m > [22m[2mIMAP Sync Integration Tests[2m > [22m[2mFlag Operations[2m > [22m[2mshould handle flag operations on multiple emails
+[22m[39mStarting sync for account: flagmultiple@test.com
+
+[90mstdout[2m | electron/tests/sync.integration.test.js[2m > [22m[2mIMAP Sync Integration Tests[2m > [22m[2mFlag Operations[2m > [22m[2mshould correctly sync emails with mixed flag states
+[22m[39mStarting sync for account: flagmixed@test.com
+
+[90mstdout[2m | electron/tests/sync.integration.test.js[2m > [22m[2mIMAP Sync Integration Tests[2m > [22m[2mFlag Operations[2m > [22m[2mshould sync 50+ emails with mixed flag states
+[22m[39mStarting sync for account: mixedbatch@test.com
+
+ [31m❯[39m electron/tests/sync.integration.test.js [2m([22m[2m34 tests[22m[2m | [22m[31m32 failed[39m[2m)[22m[32m 299[2mms[22m[39m
+[31m       [31m×[31m should successfully test connection to IMAP server[39m[32m 33[2mms[22m[39m
+[31m       [31m×[31m should handle connection failure gracefully[39m[32m 13[2mms[22m[39m
+[31m       [31m×[31m should test connection with valid credentials[39m[32m 8[2mms[22m[39m
+       [32m✓[39m should return error for connection timeout[32m 9[2mms[22m[39m
+[31m       [31m×[31m should successfully sync an empty mailbox[39m[32m 7[2mms[22m[39m
+[31m       [31m×[31m should sync a single email correctly[39m[32m 6[2mms[22m[39m
+[31m       [31m×[31m should sync multiple emails correctly[39m[32m 7[2mms[22m[39m
+[31m       [31m×[31m should preserve existing emails and only sync new ones[39m[32m 7[2mms[22m[39m
+[31m       [31m×[31m should sync 100+ emails in batches correctly[39m[32m 7[2mms[22m[39m
+[31m       [31m×[31m should handle batch processing across sequence ranges (1:5000, 5001:10000)[39m[32m 16[2mms[22m[39m
+[31m       [31m×[31m should handle incremental sync with batch processing for large mailboxes[39m[32m 11[2mms[22m[39m
+[31m       [31m×[31m should handle batch processing with sparse UIDs[39m[32m 6[2mms[22m[39m
+[31m       [31m×[31m should delete local emails that are no longer on server[39m[32m 6[2mms[22m[39m
+[31m       [31m×[31m should delete multiple orphaned emails[39m[32m 6[2mms[22m[39m
+[31m       [31m×[31m should handle all emails being orphans except one[39m[32m 7[2mms[22m[39m
+[31m       [31m×[31m should handle orphan detection with new emails added simultaneously[39m[32m 7[2mms[22m[39m
+[31m       [31m×[31m should handle orphan detection with batch processing for large mailboxes[39m[32m 10[2mms[22m[39m
+[31m       [31m×[31m should handle connection failures gracefully[39m[32m 11[2mms[22m[39m
+[31m       [31m×[31m should handle parse errors for individual emails[39m[32m 5[2mms[22m[39m
+[31m       [31m×[31m should handle multiple parse errors in a batch[39m[32m 9[2mms[22m[39m
+[31m       [31m×[31m should handle emails with missing body parts[39m[32m 16[2mms[22m[39m
+[31m       [31m×[31m should handle partial fetch failures[39m[32m 11[2mms[22m[39m
+[31m       [31m×[31m should continue processing after parse errors[39m[32m 8[2mms[22m[39m
+[31m       [31m×[31m should handle mixed errors (parse + missing body)[39m[32m 7[2mms[22m[39m
+[31m       [31m×[31m should handle error placeholders in incremental sync[39m[32m 6[2mms[22m[39m
+[31m       [31m×[31m should set read flag (\Seen) on an email[39m[32m 7[2mms[22m[39m
+[31m       [31m×[31m should unset read flag (\Seen) on an email[39m[32m 7[2mms[22m[39m
+[31m       [31m×[31m should set flagged flag (\Flagged) on an email[39m[32m 7[2mms[22m[39m
+[31m       [31m×[31m should unset flagged flag (\Flagged) on an email[39m[32m 7[2mms[22m[39m
+[31m       [31m×[31m should persist flag changes on server[39m[32m 7[2mms[22m[39m
+[31m       [31m×[31m should handle flag operations on multiple emails[39m[32m 6[2mms[22m[39m
+       [32m✓[39m should handle flag operation with invalid UID[32m 0[2mms[22m[39m
+[31m       [31m×[31m should correctly sync emails with mixed flag states[39m[32m 6[2mms[22m[39m
+[31m       [31m×[31m should sync 50+ emails with mixed flag states[39m[32m 9[2mms[22m[39m
+
+[31m⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Tests 37 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[41m[1m FAIL [22m[49m electron/tests/sync.integration.test.js[2m > [22mIMAP Sync Integration Tests[2m > [22mConnection Tests[2m > [22mshould successfully test connection to IMAP server
+[31m[1mAssertionError[22m: expected false to be true // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- true[39m
+[31m+ false[39m
+
+[36m [2m❯[22m electron/tests/sync.integration.test.js:[2m407:36[22m[39m
+    [90m405| [39m            [35mconst[39m result [33m=[39m [35mawait[39m imap[33m.[39m[34mtestConnection[39m(account)[33m;[39m
+    [90m406| [39m
+    [90m407| [39m            [34mexpect[39m(result[33m.[39msuccess)[33m.[39m[34mtoBe[39m([35mtrue[39m)[33m;[39m
+    [90m   | [39m                                   [31m^[39m
+    [90m408| [39m            [34mexpect[39m(result[33m.[39merror)[33m.[39m[34mtoBeUndefined[39m()[33m;[39m
+    [90m409| [39m        })[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/37]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m electron/tests/sync.integration.test.js[2m > [22mIMAP Sync Integration Tests[2m > [22mConnection Tests[2m > [22mshould handle connection failure gracefully
+[31m[1mAssertionError[22m: expected 'getaddrinfo ENOTFOUND imap.test.com' to contain 'Connection failed'[39m
+
+Expected: [32m"Connection failed"[39m
+Received: [31m"getaddrinfo ENOTFOUND imap.test.com"[39m
+
+[36m [2m❯[22m electron/tests/sync.integration.test.js:[2m425:34[22m[39m
+    [90m423| [39m            [34mexpect[39m(result[33m.[39msuccess)[33m.[39m[34mtoBe[39m([35mfalse[39m)[33m;[39m
+    [90m424| [39m            [34mexpect[39m(result[33m.[39merror)[33m.[39m[34mtoBeDefined[39m()[33m;[39m
+    [90m425| [39m            [34mexpect[39m(result[33m.[39merror)[33m.[39m[34mtoContain[39m([32m'Connection failed'[39m)[33m;[39m
+    [90m   | [39m                                 [31m^[39m
+    [90m426| [39m        })[33m;[39m
+    [90m427| [39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/37]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m electron/tests/sync.integration.test.js[2m > [22mIMAP Sync Integration Tests[2m > [22mConnection Tests[2m > [22mshould test connection with valid credentials
+[31m[1mAssertionError[22m: expected false to be true // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- true[39m
+[31m+ false[39m
+
+[36m [2m❯[22m electron/tests/sync.integration.test.js:[2m440:36[22m[39m
+    [90m438| [39m            [35mconst[39m result [33m=[39m [35mawait[39m imap[33m.[39m[34mtestConnection[39m(account)[33m;[39m
+    [90m439| [39m
+    [90m440| [39m            [34mexpect[39m(result[33m.[39msuccess)[33m.[39m[34mtoBe[39m([35mtrue[39m)[33m;[39m
+    [90m   | [39m                                   [31m^[39m
+    [90m441| [39m        })[33m;[39m
+    [90m442| [39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/37]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m electron/tests/sync.integration.test.js[2m > [22mIMAP Sync Integration Tests[2m > [22mBasic Sync Flow[2m > [22mshould successfully sync an empty mailbox
+[31m[1mAssertionError[22m: expected false to be true // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- true[39m
+[31m+ false[39m
+
+[36m [2m❯[22m electron/tests/sync.integration.test.js:[2m474:36[22m[39m
+    [90m472| [39m            [35mconst[39m result [33m=[39m [35mawait[39m imap[33m.[39m[34msyncAccount[39m(account)[33m;[39m
+    [90m473| [39m
+    [90m474| [39m            [34mexpect[39m(result[33m.[39msuccess)[33m.[39m[34mtoBe[39m([35mtrue[39m)[33m;[39m
+    [90m   | [39m                                   [31m^[39m
+    [90m475| [39m            [34mexpect[39m(result[33m.[39mcount)[33m.[39m[34mtoBe[39m([34m0[39m)[33m;[39m
+    [90m476| [39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/37]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m electron/tests/sync.integration.test.js[2m > [22mIMAP Sync Integration Tests[2m > [22mBasic Sync Flow[2m > [22mshould sync a single email correctly
+[31m[1mAssertionError[22m: expected false to be true // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- true[39m
+[31m+ false[39m
+
+[36m [2m❯[22m electron/tests/sync.integration.test.js:[2m506:36[22m[39m
+    [90m504| [39m            [35mconst[39m result [33m=[39m [35mawait[39m imap[33m.[39m[34msyncAccount[39m(account)[33m;[39m
+    [90m505| [39m
+    [90m506| [39m            [34mexpect[39m(result[33m.[39msuccess)[33m.[39m[34mtoBe[39m([35mtrue[39m)[33m;[39m
+    [90m   | [39m                                   [31m^[39m
+    [90m507| [39m            [34mexpect[39m(result[33m.[39mcount)[33m.[39m[34mtoBe[39m([34m1[39m)[33m;[39m
+    [90m508| [39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/37]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m electron/tests/sync.integration.test.js[2m > [22mIMAP Sync Integration Tests[2m > [22mBasic Sync Flow[2m > [22mshould sync multiple emails correctly
+[31m[1mAssertionError[22m: expected false to be true // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- true[39m
+[31m+ false[39m
+
+[36m [2m❯[22m electron/tests/sync.integration.test.js:[2m571:36[22m[39m
+    [90m569| [39m            [35mconst[39m result [33m=[39m [35mawait[39m imap[33m.[39m[34msyncAccount[39m(account)[33m;[39m
+    [90m570| [39m
+    [90m571| [39m            [34mexpect[39m(result[33m.[39msuccess)[33m.[39m[34mtoBe[39m([35mtrue[39m)[33m;[39m
+    [90m   | [39m                                   [31m^[39m
+    [90m572| [39m            [34mexpect[39m(result[33m.[39mcount)[33m.[39m[34mtoBe[39m([34m3[39m)[33m;[39m
+    [90m573| [39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/37]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m electron/tests/sync.integration.test.js[2m > [22mIMAP Sync Integration Tests[2m > [22mBasic Sync Flow[2m > [22mshould preserve existing emails and only sync new ones
+[31m[1mAssertionError[22m: expected undefined to be 2 // Object.is equality[39m
+
+[32m- Expected:[39m 
+2
+
+[31m+ Received:[39m 
+undefined
+
+[36m [2m❯[22m electron/tests/sync.integration.test.js:[2m633:35[22m[39m
+    [90m631| [39m
+    [90m632| [39m            [35mconst[39m result1 [33m=[39m [35mawait[39m imap[33m.[39m[34msyncAccount[39m(account)[33m;[39m
+    [90m633| [39m            [34mexpect[39m(result1[33m.[39mcount)[33m.[39m[34mtoBe[39m([34m2[39m)[33m;[39m
+    [90m   | [39m                                  [31m^[39m
+    [90m634| [39m
+    [90m635| [39m            [34msetServerEmails[39m([
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/37]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m electron/tests/sync.integration.test.js[2m > [22mIMAP Sync Integration Tests[2m > [22mBatch Processing[2m > [22mshould sync 100+ emails in batches correctly
+[31m[1mAssertionError[22m: expected false to be true // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- true[39m
+[31m+ false[39m
+
+[36m [2m❯[22m electron/tests/sync.integration.test.js:[2m720:36[22m[39m
+    [90m718| [39m            [35mconst[39m result [33m=[39m [35mawait[39m imap[33m.[39m[34msyncAccount[39m(account)[33m;[39m
+    [90m719| [39m
+    [90m720| [39m            [34mexpect[39m(result[33m.[39msuccess)[33m.[39m[34mtoBe[39m([35mtrue[39m)[33m;[39m
+    [90m   | [39m                                   [31m^[39m
+    [90m721| [39m            [34mexpect[39m(result[33m.[39mcount)[33m.[39m[34mtoBe[39m([34m150[39m)[33m;[39m
+    [90m722| [39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/37]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m electron/tests/sync.integration.test.js[2m > [22mIMAP Sync Integration Tests[2m > [22mBatch Processing[2m > [22mshould handle batch processing across sequence ranges (1:5000, 5001:10000)
+[31m[1mAssertionError[22m: expected false to be true // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- true[39m
+[31m+ false[39m
+
+[36m [2m❯[22m electron/tests/sync.integration.test.js:[2m774:36[22m[39m
+    [90m772| [39m            [35mconst[39m result [33m=[39m [35mawait[39m imap[33m.[39m[34msyncAccount[39m(account)[33m;[39m
+    [90m773| [39m
+    [90m774| [39m            [34mexpect[39m(result[33m.[39msuccess)[33m.[39m[34mtoBe[39m([35mtrue[39m)[33m;[39m
+    [90m   | [39m                                   [31m^[39m
+    [90m775| [39m            [34mexpect[39m(result[33m.[39mcount)[33m.[39m[34mtoBe[39m([34m5200[39m)[33m;[39m
+    [90m776| [39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/37]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m electron/tests/sync.integration.test.js[2m > [22mIMAP Sync Integration Tests[2m > [22mBatch Processing[2m > [22mshould handle incremental sync with batch processing for large mailboxes
+[31m[1mAssertionError[22m: expected false to be true // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- true[39m
+[31m+ false[39m
+
+[36m [2m❯[22m electron/tests/sync.integration.test.js:[2m823:37[22m[39m
+    [90m821| [39m            [90m// First sync - all 3000 emails[39m
+    [90m822| [39m            [35mconst[39m result1 [33m=[39m [35mawait[39m imap[33m.[39m[34msyncAccount[39m(account)[33m;[39m
+    [90m823| [39m            [34mexpect[39m(result1[33m.[39msuccess)[33m.[39m[34mtoBe[39m([35mtrue[39m)[33m;[39m
+    [90m   | [39m                                    [31m^[39m
+    [90m824| [39m            [34mexpect[39m(result1[33m.[39mcount)[33m.[39m[34mtoBe[39m([34m3000[39m)[33m;[39m
+    [90m825| [39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/37]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m electron/tests/sync.integration.test.js[2m > [22mIMAP Sync Integration Tests[2m > [22mBatch Processing[2m > [22mshould handle batch processing with sparse UIDs
+[31m[1mAssertionError[22m: expected false to be true // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- true[39m
+[31m+ false[39m
+
+[36m [2m❯[22m electron/tests/sync.integration.test.js:[2m881:36[22m[39m
+    [90m879| [39m            [35mconst[39m result [33m=[39m [35mawait[39m imap[33m.[39m[34msyncAccount[39m(account)[33m;[39m
+    [90m880| [39m
+    [90m881| [39m            [34mexpect[39m(result[33m.[39msuccess)[33m.[39m[34mtoBe[39m([35mtrue[39m)[33m;[39m
+    [90m   | [39m                                   [31m^[39m
+    [90m882| [39m            [34mexpect[39m(result[33m.[39mcount)[33m.[39m[34mtoBe[39m([34m10[39m)[33m;[39m
+    [90m883| [39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[11/37]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m electron/tests/sync.integration.test.js[2m > [22mIMAP Sync Integration Tests[2m > [22mOrphan Detection[2m > [22mshould delete local emails that are no longer on server
+[31m[1mAssertionError[22m: expected false to be true // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- true[39m
+[31m+ false[39m
+
+[36m [2m❯[22m electron/tests/sync.integration.test.js:[2m952:37[22m[39m
+    [90m950| [39m            [90m// First sync - all 3 emails should be saved locally[39m
+    [90m951| [39m            [35mconst[39m result1 [33m=[39m [35mawait[39m imap[33m.[39m[34msyncAccount[39m(account)[33m;[39m
+    [90m952| [39m            [34mexpect[39m(result1[33m.[39msuccess)[33m.[39m[34mtoBe[39m([35mtrue[39m)[33m;[39m
+    [90m   | [39m                                    [31m^[39m
+    [90m953| [39m            [34mexpect[39m(result1[33m.[39mcount)[33m.[39m[34mtoBe[39m([34m3[39m)[33m;[39m
+    [90m954| [39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[12/37]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m electron/tests/sync.integration.test.js[2m > [22mIMAP Sync Integration Tests[2m > [22mOrphan Detection[2m > [22mshould delete multiple orphaned emails
+[31m[1mAssertionError[22m: expected false to be true // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- true[39m
+[31m+ false[39m
+
+[36m [2m❯[22m electron/tests/sync.integration.test.js:[2m1036:37[22m[39m
+    [90m1034| [39m            [90m// First sync - all 5 emails should be saved locally[39m
+    [90m1035| [39m            [35mconst[39m result1 [33m=[39m [35mawait[39m imap[33m.[39m[34msyncAccount[39m(account)[33m;[39m
+    [90m1036| [39m            [34mexpect[39m(result1[33m.[39msuccess)[33m.[39m[34mtoBe[39m([35mtrue[39m)[33m;[39m
+    [90m   | [39m                                    [31m^[39m
+    [90m1037| [39m            [34mexpect[39m(result1[33m.[39mcount)[33m.[39m[34mtoBe[39m([34m5[39m)[33m;[39m
+    [90m1038| [39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[13/37]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m electron/tests/sync.integration.test.js[2m > [22mIMAP Sync Integration Tests[2m > [22mOrphan Detection[2m > [22mshould handle all emails being orphans except one
+[31m[1mAssertionError[22m: expected false to be true // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- true[39m
+[31m+ false[39m
+
+[36m [2m❯[22m electron/tests/sync.integration.test.js:[2m1114:37[22m[39m
+    [90m1112| [39m            [90m// First sync - all 5 emails should be saved locally[39m
+    [90m1113| [39m            [35mconst[39m result1 [33m=[39m [35mawait[39m imap[33m.[39m[34msyncAccount[39m(account)[33m;[39m
+    [90m1114| [39m            [34mexpect[39m(result1[33m.[39msuccess)[33m.[39m[34mtoBe[39m([35mtrue[39m)[33m;[39m
+    [90m   | [39m                                    [31m^[39m
+    [90m1115| [39m            [34mexpect[39m(result1[33m.[39mcount)[33m.[39m[34mtoBe[39m([34m5[39m)[33m;[39m
+    [90m1116| [39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[14/37]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m electron/tests/sync.integration.test.js[2m > [22mIMAP Sync Integration Tests[2m > [22mOrphan Detection[2m > [22mshould handle orphan detection with new emails added simultaneously
+[31m[1mAssertionError[22m: expected false to be true // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- true[39m
+[31m+ false[39m
+
+[36m [2m❯[22m electron/tests/sync.integration.test.js:[2m1192:37[22m[39m
+    [90m1190| [39m            [90m// First sync - all 3 emails should be saved locally[39m
+    [90m1191| [39m            [35mconst[39m result1 [33m=[39m [35mawait[39m imap[33m.[39m[34msyncAccount[39m(account)[33m;[39m
+    [90m1192| [39m            [34mexpect[39m(result1[33m.[39msuccess)[33m.[39m[34mtoBe[39m([35mtrue[39m)[33m;[39m
+    [90m   | [39m                                    [31m^[39m
+    [90m1193| [39m            [34mexpect[39m(result1[33m.[39mcount)[33m.[39m[34mtoBe[39m([34m3[39m)[33m;[39m
+    [90m1194| [39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[15/37]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m electron/tests/sync.integration.test.js[2m > [22mIMAP Sync Integration Tests[2m > [22mOrphan Detection[2m > [22mshould handle orphan detection with batch processing for large mailboxes
+[31m[1mAssertionError[22m: expected false to be true // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- true[39m
+[31m+ false[39m
+
+[36m [2m❯[22m electron/tests/sync.integration.test.js:[2m1283:37[22m[39m
+    [90m1281| [39m            [90m// First sync - all 100 emails should be saved locally[39m
+    [90m1282| [39m            [35mconst[39m result1 [33m=[39m [35mawait[39m imap[33m.[39m[34msyncAccount[39m(account)[33m;[39m
+    [90m1283| [39m            [34mexpect[39m(result1[33m.[39msuccess)[33m.[39m[34mtoBe[39m([35mtrue[39m)[33m;[39m
+    [90m   | [39m                                    [31m^[39m
+    [90m1284| [39m            [34mexpect[39m(result1[33m.[39mcount)[33m.[39m[34mtoBe[39m([34m100[39m)[33m;[39m
+    [90m1285| [39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[16/37]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m electron/tests/sync.integration.test.js[2m > [22mIMAP Sync Integration Tests[2m > [22mError Handling[2m > [22mshould handle connection failures gracefully
+[31m[1mAssertionError[22m: expected 'getaddrinfo ENOTFOUND imap.test.com' to contain 'Connection failed'[39m
+
+Expected: [32m"Connection failed"[39m
+Received: [31m"getaddrinfo ENOTFOUND imap.test.com"[39m
+
+[36m [2m❯[22m electron/tests/sync.integration.test.js:[2m1330:34[22m[39m
+    [90m1328| [39m            [34mexpect[39m(result[33m.[39msuccess)[33m.[39m[34mtoBe[39m([35mfalse[39m)[33m;[39m
+    [90m1329| [39m            [34mexpect[39m(result[33m.[39merror)[33m.[39m[34mtoBeDefined[39m()[33m;[39m
+    [90m1330| [39m            [34mexpect[39m(result[33m.[39merror)[33m.[39m[34mtoContain[39m([32m'Connection failed'[39m)[33m;[39m
+    [90m   | [39m                                 [31m^[39m
+    [90m1331| [39m
+    [90m1332| [39m            [35mconst[39m emails [33m=[39m db[33m.[39m[34mgetEmails[39m(account[33m.[39mid)[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[17/37]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m electron/tests/sync.integration.test.js[2m > [22mIMAP Sync Integration Tests[2m > [22mError Handling[2m > [22mshould handle parse errors for individual emails
+[31m[1mAssertionError[22m: expected false to be true // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- true[39m
+[31m+ false[39m
+
+[36m [2m❯[22m electron/tests/sync.integration.test.js:[2m1388:36[22m[39m
+    [90m1386| [39m            [35mconst[39m result [33m=[39m [35mawait[39m imap[33m.[39m[34msyncAccount[39m(account)[33m;[39m
+    [90m1387| [39m
+    [90m1388| [39m            [34mexpect[39m(result[33m.[39msuccess)[33m.[39m[34mtoBe[39m([35mtrue[39m)[33m;[39m
+    [90m   | [39m                                   [31m^[39m
+    [90m1389| [39m            // Count only includes successfully parsed emails, not err…
+    [90m1390| [39m            [34mexpect[39m(result[33m.[39mcount)[33m.[39m[34mtoBe[39m([34m2[39m)[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[18/37]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m electron/tests/sync.integration.test.js[2m > [22mIMAP Sync Integration Tests[2m > [22mError Handling[2m > [22mshould handle multiple parse errors in a batch
+[31m[1mAssertionError[22m: expected false to be true // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- true[39m
+[31m+ false[39m
+
+[36m [2m❯[22m electron/tests/sync.integration.test.js:[2m1443:36[22m[39m
+    [90m1441| [39m            [35mconst[39m result [33m=[39m [35mawait[39m imap[33m.[39m[34msyncAccount[39m(account)[33m;[39m
+    [90m1442| [39m
+    [90m1443| [39m            [34mexpect[39m(result[33m.[39msuccess)[33m.[39m[34mtoBe[39m([35mtrue[39m)[33m;[39m
+    [90m   | [39m                                   [31m^[39m
+    [90m1444| [39m            // Count only includes successfully parsed emails (7), not…
+    [90m1445| [39m            [34mexpect[39m(result[33m.[39mcount)[33m.[39m[34mtoBe[39m([34m7[39m)[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[19/37]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m electron/tests/sync.integration.test.js[2m > [22mIMAP Sync Integration Tests[2m > [22mError Handling[2m > [22mshould handle emails with missing body parts
+[31m[1mAssertionError[22m: expected false to be true // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- true[39m
+[31m+ false[39m
+
+[36m [2m❯[22m electron/tests/sync.integration.test.js:[2m1515:36[22m[39m
+    [90m1513| [39m            [35mconst[39m result [33m=[39m [35mawait[39m imap[33m.[39m[34msyncAccount[39m(account)[33m;[39m
+    [90m1514| [39m
+    [90m1515| [39m            [34mexpect[39m(result[33m.[39msuccess)[33m.[39m[34mtoBe[39m([35mtrue[39m)[33m;[39m
+    [90m   | [39m                                   [31m^[39m
+    [90m1516| [39m            // Count only includes successfully parsed emails (2), not…
+    [90m1517| [39m            [34mexpect[39m(result[33m.[39mcount)[33m.[39m[34mtoBe[39m([34m2[39m)[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[20/37]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m electron/tests/sync.integration.test.js[2m > [22mIMAP Sync Integration Tests[2m > [22mError Handling[2m > [22mshould handle partial fetch failures
+[31m[1mAssertionError[22m: expected false to be true // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- true[39m
+[31m+ false[39m
+
+[36m [2m❯[22m electron/tests/sync.integration.test.js:[2m1572:36[22m[39m
+    [90m1570| [39m            // Sync should complete successfully but save 0 emails due…
+    [90m1571| [39m            // The implementation is fault-tolerant and logs errors bu…
+    [90m1572| [39m            [34mexpect[39m(result[33m.[39msuccess)[33m.[39m[34mtoBe[39m([35mtrue[39m)[33m;[39m
+    [90m   | [39m                                   [31m^[39m
+    [90m1573| [39m            [34mexpect[39m(result[33m.[39mcount)[33m.[39m[34mtoBe[39m([34m0[39m)[33m;[39m
+    [90m1574| [39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[21/37]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m electron/tests/sync.integration.test.js[2m > [22mIMAP Sync Integration Tests[2m > [22mError Handling[2m > [22mshould continue processing after parse errors
+[31m[1mAssertionError[22m: expected false to be true // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- true[39m
+[31m+ false[39m
+
+[36m [2m❯[22m electron/tests/sync.integration.test.js:[2m1607:36[22m[39m
+    [90m1605| [39m            [35mconst[39m result [33m=[39m [35mawait[39m imap[33m.[39m[34msyncAccount[39m(account)[33m;[39m
+    [90m1606| [39m
+    [90m1607| [39m            [34mexpect[39m(result[33m.[39msuccess)[33m.[39m[34mtoBe[39m([35mtrue[39m)[33m;[39m
+    [90m   | [39m                                   [31m^[39m
+    [90m1608| [39m            // Count only includes successfully parsed emails (17), no…
+    [90m1609| [39m            [34mexpect[39m(result[33m.[39mcount)[33m.[39m[34mtoBe[39m([34m17[39m)[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[22/37]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m electron/tests/sync.integration.test.js[2m > [22mIMAP Sync Integration Tests[2m > [22mError Handling[2m > [22mshould handle mixed errors (parse + missing body)
+[31m[1mAssertionError[22m: expected false to be true // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- true[39m
+[31m+ false[39m
+
+[36m [2m❯[22m electron/tests/sync.integration.test.js:[2m1648:36[22m[39m
+    [90m1646| [39m            [35mconst[39m result [33m=[39m [35mawait[39m imap[33m.[39m[34msyncAccount[39m(account)[33m;[39m
+    [90m1647| [39m
+    [90m1648| [39m            [34mexpect[39m(result[33m.[39msuccess)[33m.[39m[34mtoBe[39m([35mtrue[39m)[33m;[39m
+    [90m   | [39m                                   [31m^[39m
+    [90m1649| [39m            // Count only includes successfully parsed emails (7), not…
+    [90m1650| [39m            [34mexpect[39m(result[33m.[39mcount)[33m.[39m[34mtoBe[39m([34m7[39m)[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[23/37]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m electron/tests/sync.integration.test.js[2m > [22mIMAP Sync Integration Tests[2m > [22mError Handling[2m > [22mshould handle error placeholders in incremental sync
+[31m[1mAssertionError[22m: expected false to be true // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- true[39m
+[31m+ false[39m
+
+[36m [2m❯[22m electron/tests/sync.integration.test.js:[2m1693:37[22m[39m
+    [90m1691| [39m
+    [90m1692| [39m            [35mconst[39m result1 [33m=[39m [35mawait[39m imap[33m.[39m[34msyncAccount[39m(account)[33m;[39m
+    [90m1693| [39m            [34mexpect[39m(result1[33m.[39msuccess)[33m.[39m[34mtoBe[39m([35mtrue[39m)[33m;[39m
+    [90m   | [39m                                    [31m^[39m
+    [90m1694| [39m            [34mexpect[39m(result1[33m.[39mcount)[33m.[39m[34mtoBe[39m([34m1[39m)[33m;[39m
+    [90m1695| [39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[24/37]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m electron/tests/sync.integration.test.js[2m > [22mIMAP Sync Integration Tests[2m > [22mFlag Operations[2m > [22mshould set read flag (\Seen) on an email
+[31m[1mAssertionError[22m: expected false to be true // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- true[39m
+[31m+ false[39m
+
+[36m [2m❯[22m electron/tests/sync.integration.test.js:[2m1768:36[22m[39m
+    [90m1766| [39m
+    [90m1767| [39m            [35mconst[39m result [33m=[39m [35mawait[39m imap[33m.[39m[34msyncAccount[39m(account)[33m;[39m
+    [90m1768| [39m            [34mexpect[39m(result[33m.[39msuccess)[33m.[39m[34mtoBe[39m([35mtrue[39m)[33m;[39m
+    [90m   | [39m                                   [31m^[39m
+    [90m1769| [39m            [34mexpect[39m(result[33m.[39mcount)[33m.[39m[34mtoBe[39m([34m1[39m)[33m;[39m
+    [90m1770| [39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[25/37]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m electron/tests/sync.integration.test.js[2m > [22mIMAP Sync Integration Tests[2m > [22mFlag Operations[2m > [22mshould unset read flag (\Seen) on an email
+[31m[1mAssertionError[22m: expected false to be true // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- true[39m
+[31m+ false[39m
+
+[36m [2m❯[22m electron/tests/sync.integration.test.js:[2m1808:36[22m[39m
+    [90m1806| [39m
+    [90m1807| [39m            [35mconst[39m result [33m=[39m [35mawait[39m imap[33m.[39m[34msyncAccount[39m(account)[33m;[39m
+    [90m1808| [39m            [34mexpect[39m(result[33m.[39msuccess)[33m.[39m[34mtoBe[39m([35mtrue[39m)[33m;[39m
+    [90m   | [39m                                   [31m^[39m
+    [90m1809| [39m            [34mexpect[39m(result[33m.[39mcount)[33m.[39m[34mtoBe[39m([34m1[39m)[33m;[39m
+    [90m1810| [39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[26/37]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m electron/tests/sync.integration.test.js[2m > [22mIMAP Sync Integration Tests[2m > [22mFlag Operations[2m > [22mshould set flagged flag (\Flagged) on an email
+[31m[1mAssertionError[22m: expected false to be true // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- true[39m
+[31m+ false[39m
+
+[36m [2m❯[22m electron/tests/sync.integration.test.js:[2m1848:36[22m[39m
+    [90m1846| [39m
+    [90m1847| [39m            [35mconst[39m result [33m=[39m [35mawait[39m imap[33m.[39m[34msyncAccount[39m(account)[33m;[39m
+    [90m1848| [39m            [34mexpect[39m(result[33m.[39msuccess)[33m.[39m[34mtoBe[39m([35mtrue[39m)[33m;[39m
+    [90m   | [39m                                   [31m^[39m
+    [90m1849| [39m            [34mexpect[39m(result[33m.[39mcount)[33m.[39m[34mtoBe[39m([34m1[39m)[33m;[39m
+    [90m1850| [39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[27/37]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m electron/tests/sync.integration.test.js[2m > [22mIMAP Sync Integration Tests[2m > [22mFlag Operations[2m > [22mshould unset flagged flag (\Flagged) on an email
+[31m[1mAssertionError[22m: expected false to be true // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- true[39m
+[31m+ false[39m
+
+[36m [2m❯[22m electron/tests/sync.integration.test.js:[2m1888:36[22m[39m
+    [90m1886| [39m
+    [90m1887| [39m            [35mconst[39m result [33m=[39m [35mawait[39m imap[33m.[39m[34msyncAccount[39m(account)[33m;[39m
+    [90m1888| [39m            [34mexpect[39m(result[33m.[39msuccess)[33m.[39m[34mtoBe[39m([35mtrue[39m)[33m;[39m
+    [90m   | [39m                                   [31m^[39m
+    [90m1889| [39m            [34mexpect[39m(result[33m.[39mcount)[33m.[39m[34mtoBe[39m([34m1[39m)[33m;[39m
+    [90m1890| [39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[28/37]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m electron/tests/sync.integration.test.js[2m > [22mIMAP Sync Integration Tests[2m > [22mFlag Operations[2m > [22mshould persist flag changes on server
+[31m[1mAssertionError[22m: expected false to be true // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- true[39m
+[31m+ false[39m
+
+[36m [2m❯[22m electron/tests/sync.integration.test.js:[2m1928:37[22m[39m
+    [90m1926| [39m
+    [90m1927| [39m            [35mconst[39m result1 [33m=[39m [35mawait[39m imap[33m.[39m[34msyncAccount[39m(account)[33m;[39m
+    [90m1928| [39m            [34mexpect[39m(result1[33m.[39msuccess)[33m.[39m[34mtoBe[39m([35mtrue[39m)[33m;[39m
+    [90m   | [39m                                    [31m^[39m
+    [90m1929| [39m            [34mexpect[39m(result1[33m.[39mcount)[33m.[39m[34mtoBe[39m([34m1[39m)[33m;[39m
+    [90m1930| [39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[29/37]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m electron/tests/sync.integration.test.js[2m > [22mIMAP Sync Integration Tests[2m > [22mFlag Operations[2m > [22mshould handle flag operations on multiple emails
+[31m[1mAssertionError[22m: expected false to be true // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- true[39m
+[31m+ false[39m
+
+[36m [2m❯[22m electron/tests/sync.integration.test.js:[2m1993:36[22m[39m
+    [90m1991| [39m
+    [90m1992| [39m            [35mconst[39m result [33m=[39m [35mawait[39m imap[33m.[39m[34msyncAccount[39m(account)[33m;[39m
+    [90m1993| [39m            [34mexpect[39m(result[33m.[39msuccess)[33m.[39m[34mtoBe[39m([35mtrue[39m)[33m;[39m
+    [90m   | [39m                                   [31m^[39m
+    [90m1994| [39m            [34mexpect[39m(result[33m.[39mcount)[33m.[39m[34mtoBe[39m([34m3[39m)[33m;[39m
+    [90m1995| [39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[30/37]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m electron/tests/sync.integration.test.js[2m > [22mIMAP Sync Integration Tests[2m > [22mFlag Operations[2m > [22mshould correctly sync emails with mixed flag states
+[31m[1mAssertionError[22m: expected false to be true // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- true[39m
+[31m+ false[39m
+
+[36m [2m❯[22m electron/tests/sync.integration.test.js:[2m2089:36[22m[39m
+    [90m2087| [39m
+    [90m2088| [39m            [35mconst[39m result [33m=[39m [35mawait[39m imap[33m.[39m[34msyncAccount[39m(account)[33m;[39m
+    [90m2089| [39m            [34mexpect[39m(result[33m.[39msuccess)[33m.[39m[34mtoBe[39m([35mtrue[39m)[33m;[39m
+    [90m   | [39m                                   [31m^[39m
+    [90m2090| [39m            [34mexpect[39m(result[33m.[39mcount)[33m.[39m[34mtoBe[39m([34m4[39m)[33m;[39m
+    [90m2091| [39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[31/37]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m electron/tests/sync.integration.test.js[2m > [22mIMAP Sync Integration Tests[2m > [22mFlag Operations[2m > [22mshould sync 50+ emails with mixed flag states
+[31m[1mAssertionError[22m: expected false to be true // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- true[39m
+[31m+ false[39m
+
+[36m [2m❯[22m electron/tests/sync.integration.test.js:[2m2155:36[22m[39m
+    [90m2153| [39m            [35mconst[39m result [33m=[39m [35mawait[39m imap[33m.[39m[34msyncAccount[39m(account)[33m;[39m
+    [90m2154| [39m
+    [90m2155| [39m            [34mexpect[39m(result[33m.[39msuccess)[33m.[39m[34mtoBe[39m([35mtrue[39m)[33m;[39m
+    [90m   | [39m                                   [31m^[39m
+    [90m2156| [39m            [34mexpect[39m(result[33m.[39mcount)[33m.[39m[34mtoBe[39m([34m60[39m)[33m;[39m
+    [90m2157| [39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[32/37]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m electron/tests/sync.integration.test.mjs[2m > [22mIMAP Sync Integration Tests[2m > [22mBasic Sync Flow[2m > [22mshould successfully sync an empty mailbox
+[31m[1mAssertionError[22m: expected false to be true // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- true[39m
+[31m+ false[39m
+
+[36m [2m❯[22m electron/tests/sync.integration.test.mjs:[2m358:36[22m[39m
+    [90m356| [39m            }
+    [90m357| [39m
+    [90m358| [39m            [34mexpect[39m(result[33m.[39msuccess)[33m.[39m[34mtoBe[39m([35mtrue[39m)[33m;[39m
+    [90m   | [39m                                   [31m^[39m
+    [90m359| [39m            [34mexpect[39m(result[33m.[39mcount)[33m.[39m[34mtoBe[39m([34m0[39m)[33m;[39m
+    [90m360| [39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[33/37]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m electron/tests/sync.integration.test.mjs[2m > [22mIMAP Sync Integration Tests[2m > [22mBasic Sync Flow[2m > [22mshould sync a single email correctly
+[31m[1mAssertionError[22m: expected false to be true // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- true[39m
+[31m+ false[39m
+
+[36m [2m❯[22m electron/tests/sync.integration.test.mjs:[2m390:36[22m[39m
+    [90m388| [39m            [35mconst[39m result [33m=[39m [35mawait[39m imap[33m.[39m[34msyncAccount[39m(account)[33m;[39m
+    [90m389| [39m
+    [90m390| [39m            [34mexpect[39m(result[33m.[39msuccess)[33m.[39m[34mtoBe[39m([35mtrue[39m)[33m;[39m
+    [90m   | [39m                                   [31m^[39m
+    [90m391| [39m            [34mexpect[39m(result[33m.[39mcount)[33m.[39m[34mtoBe[39m([34m1[39m)[33m;[39m
+    [90m392| [39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[34/37]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m electron/tests/sync.integration.test.mjs[2m > [22mIMAP Sync Integration Tests[2m > [22mBasic Sync Flow[2m > [22mshould sync multiple emails correctly
+[31m[1mAssertionError[22m: expected false to be true // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- true[39m
+[31m+ false[39m
+
+[36m [2m❯[22m electron/tests/sync.integration.test.mjs:[2m455:36[22m[39m
+    [90m453| [39m            [35mconst[39m result [33m=[39m [35mawait[39m imap[33m.[39m[34msyncAccount[39m(account)[33m;[39m
+    [90m454| [39m
+    [90m455| [39m            [34mexpect[39m(result[33m.[39msuccess)[33m.[39m[34mtoBe[39m([35mtrue[39m)[33m;[39m
+    [90m   | [39m                                   [31m^[39m
+    [90m456| [39m            [34mexpect[39m(result[33m.[39mcount)[33m.[39m[34mtoBe[39m([34m3[39m)[33m;[39m
+    [90m457| [39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[35/37]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m electron/tests/sync.integration.test.mjs[2m > [22mIMAP Sync Integration Tests[2m > [22mBasic Sync Flow[2m > [22mshould preserve existing emails and only sync new ones
+[31m[1mAssertionError[22m: expected undefined to be 2 // Object.is equality[39m
+
+[32m- Expected:[39m 
+2
+
+[31m+ Received:[39m 
+undefined
+
+[36m [2m❯[22m electron/tests/sync.integration.test.mjs:[2m517:35[22m[39m
+    [90m515| [39m
+    [90m516| [39m            [35mconst[39m result1 [33m=[39m [35mawait[39m imap[33m.[39m[34msyncAccount[39m(account)[33m;[39m
+    [90m517| [39m            [34mexpect[39m(result1[33m.[39mcount)[33m.[39m[34mtoBe[39m([34m2[39m)[33m;[39m
+    [90m   | [39m                                  [31m^[39m
+    [90m518| [39m
+    [90m519| [39m            [34msetServerEmails[39m([
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[36/37]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m electron/tests/sync.integration.test.mjs[2m > [22mIMAP Sync Integration Tests[2m > [22mBasic Sync Flow[2m > [22mshould sync 50+ emails with mixed flag states
+[31m[1mAssertionError[22m: expected false to be true // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- true[39m
+[31m+ false[39m
+
+[36m [2m❯[22m electron/tests/sync.integration.test.mjs:[2m614:36[22m[39m
+    [90m612| [39m            [35mconst[39m result [33m=[39m [35mawait[39m imap[33m.[39m[34msyncAccount[39m(account)[33m;[39m
+    [90m613| [39m
+    [90m614| [39m            [34mexpect[39m(result[33m.[39msuccess)[33m.[39m[34mtoBe[39m([35mtrue[39m)[33m;[39m
+    [90m   | [39m                                   [31m^[39m
+    [90m615| [39m            [34mexpect[39m(result[33m.[39mcount)[33m.[39m[34mtoBe[39m([34m60[39m)[33m;[39m
+    [90m616| [39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[37/37]⎯[22m[39m
+
+
+[2m Test Files [22m [1m[31m2 failed[39m[22m[2m | [22m[1m[32m4 passed[39m[22m[90m (6)[39m
+[2m      Tests [22m [1m[31m37 failed[39m[22m[2m | [22m[1m[32m50 passed[39m[22m[90m (87)[39m
+[2m   Start at [22m 07:57:11
+[2m   Duration [22m 546ms[2m (transform 223ms, setup 0ms, import 606ms, tests 424ms, environment 0ms)[22m
+

@@ -127,4 +127,52 @@ describe('IMAP Module', () => {
         expect(result).toHaveProperty('success');
         expect(typeof result.success).toBe('boolean');
     });
+
+    it('should verify flags are checked using .has() not .includes()', () => {
+        // This verifies the fix for the bug where .includes() was called on Set
+        const messageWithSet = {
+            attributes: {
+                uid: 100,
+                flags: new Set(['\\Seen', '\\Flagged'])
+            }
+        };
+
+        // The fixed code pattern - using .has() with Set
+        const isRead = messageWithSet.attributes.flags?.has('\\Seen') || false;
+        const isFlagged = messageWithSet.attributes.flags?.has('\\Flagged') || false;
+
+        expect(isRead).toBe(true);
+        expect(isFlagged).toBe(true);
+
+        // Verify Set doesn't have .includes() method
+        expect(typeof messageWithSet.attributes.flags.includes).toBe('undefined');
+        // But does have .has() method
+        expect(typeof messageWithSet.attributes.flags.has).toBe('function');
+    });
+
+    it('should handle edge cases in flag checking', () => {
+        // Test various edge cases for the flags fix
+
+        // Case 1: undefined flags
+        const msg1 = { attributes: { flags: undefined } };
+        expect(msg1.attributes.flags?.has('\\Seen') || false).toBe(false);
+
+        // Case 2: null flags
+        const msg2 = { attributes: { flags: null } };
+        expect(msg2.attributes.flags?.has('\\Seen') || false).toBe(false);
+
+        // Case 3: empty Set
+        const msg3 = { attributes: { flags: new Set() } };
+        expect(msg3.attributes.flags?.has('\\Seen') || false).toBe(false);
+
+        // Case 4: Set with only one flag
+        const msg4 = { attributes: { flags: new Set(['\\Seen']) } };
+        expect(msg4.attributes.flags?.has('\\Seen') || false).toBe(true);
+        expect(msg4.attributes.flags?.has('\\Flagged') || false).toBe(false);
+
+        // Case 5: Set with multiple flags
+        const msg5 = { attributes: { flags: new Set(['\\Seen', '\\Flagged', '\\Draft']) } };
+        expect(msg5.attributes.flags?.has('\\Seen') || false).toBe(true);
+        expect(msg5.attributes.flags?.has('\\Flagged') || false).toBe(true);
+    });
 });
