@@ -49,6 +49,16 @@ const EmailView: React.FC<EmailViewProps> = ({ email }) => {
   // Toggle availability
   const hasHtml = !!email.bodyHtml;
 
+  // Handle clicks on links in email HTML content to open in external browser
+  const handleLinkClick = (e: React.MouseEvent) => {
+    const target = e.target as HTMLElement;
+    const anchor = target.closest('a');
+    if (anchor && anchor.href && window.electron?.openExternal) {
+      e.preventDefault();
+      window.electron.openExternal(anchor.href);
+    }
+  };
+
   return (
     <div className="flex-1 bg-slate-50 flex flex-col h-full overflow-hidden">
       {/* Header */}
@@ -139,6 +149,7 @@ const EmailView: React.FC<EmailViewProps> = ({ email }) => {
           {showHtml && email.bodyHtml ? (
             <div
               className="prose prose-slate max-w-none font-sans text-slate-800"
+              onClick={handleLinkClick}
               dangerouslySetInnerHTML={{ __html: email.bodyHtml }}
             />
           ) : (
