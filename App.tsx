@@ -37,22 +37,39 @@ const App: React.FC = () => {
     if (!activeAccountId || !window.electron) return;
     const email = currentEmails.find(e => e.id === id);
     if (email && email.body === undefined && email.bodyHtml === undefined) {
-      const content = await window.electron.getEmailContent(id);
-      updateActiveAccountData(prev => ({
-        ...prev,
-        emails: prev.emails.map(e => e.id === id ? { ...e, body: content?.body ?? "", bodyHtml: content?.bodyHtml ?? "" } : e)
-      }));
+      try {
+        const content = await window.electron.getEmailContent(id);
+        updateActiveAccountData(prev => ({
+          ...prev,
+          emails: prev.emails.map(e => e.id === id ? { ...e, body: content?.body ?? "", bodyHtml: content?.bodyHtml ?? "" } : e)
+        }));
+      } catch (error) {
+        console.error('Failed to load email content:', error);
+      }
     }
   };
 
   const handleDeleteEmail = async (id: string) => {
+    const emailToDelete = currentEmails.find(e => e.id === id);
     updateActiveAccountData(prev => ({ ...prev, emails: prev.emails.filter(e => e.id !== id) }));
     if (selectedEmailId === id) setSelectedEmailId(null);
     if (!window.electron || !activeAccountId) return;
-    const email = currentEmails.find(e => e.id === id);
     const account = accounts.find(a => a.id === activeAccountId);
-    if (email?.uid && account) {
-      await window.electron.deleteEmail({ account, emailId: id, uid: email.uid, folder: email.folder });
+    if (emailToDelete?.uid && account) {
+      try {
+        await window.electron.deleteEmail({ account, emailId: id, uid: emailToDelete.uid, folder: emailToDelete.folder });
+      } catch (error) {
+        console.error('Failed to delete email:', error);
+        // Rollback: restore email to state
+        if (emailToDelete) {
+          updateActiveAccountData(prev => ({
+            ...prev,
+            emails: [...prev.emails, emailToDelete].sort((a, b) =>
+              new Date(b.date).getTime() - new Date(a.date).getTime()
+            )
+          }));
+        }
+      }
     }
   };
 
@@ -104,10 +121,16 @@ const App: React.FC = () => {
   useEffect(() => {
     (async () => {
       if (!activeAccountId || !window.electron) return;
-      const emails = await window.electron.getEmails(activeAccountId);
-      await autoDiscoverFolders(emails);
-      const finalCategories = await window.electron.getCategories();
-      setData(prev => ({ ...prev, [activeAccountId]: { emails, categories: finalCategories } }));
+      try {
+        const emails = await window.electron.getEmails(activeAccountId);
+        const categories = await window.electron.getCategories();
+        await autoDiscoverFolders(emails, categories);
+        const finalCategories = await window.electron.getCategories();
+        setData(prev => ({ ...prev, [activeAccountId]: { emails, categories: finalCategories } }));
+      } catch (error) {
+        console.error('Failed to switch account:', error);
+        alert('Fehler beim Laden des Kontos');
+      }
     })();
   }, [activeAccountId]);
 
@@ -142,11 +165,18 @@ const App: React.FC = () => {
   const handleToggleRead = async (id: string) => {
     const email = currentEmails.find(e => e.id === id);
     if (!email) return;
+    const previousReadState = email.isRead;
     updateActiveAccountData(prev => ({ ...prev, emails: prev.emails.map(e => e.id === id ? { ...e, isRead: !e.isRead } : e) }));
     if (window.electron && activeAccountId) {
       const account = accounts.find(a => a.id === activeAccountId);
       if (email.uid && account) {
-        await window.electron.updateEmailRead({ account, emailId: id, uid: email.uid, isRead: !email.isRead, folder: email.folder });
+        try {
+          await window.electron.updateEmailRead({ account, emailId: id, uid: email.uid, isRead: !previousReadState, folder: email.folder });
+        } catch (error) {
+          console.error('Failed to update read status:', error);
+          // Rollback optimistic update
+          updateActiveAccountData(prev => ({ ...prev, emails: prev.emails.map(e => e.id === id ? { ...e, isRead: previousReadState } : e) }));
+        }
       }
     }
   };
@@ -154,11 +184,18 @@ const App: React.FC = () => {
   const handleToggleFlag = async (id: string) => {
     const email = currentEmails.find(e => e.id === id);
     if (!email) return;
+    const previousFlagState = email.isFlagged;
     updateActiveAccountData(prev => ({ ...prev, emails: prev.emails.map(e => e.id === id ? { ...e, isFlagged: !e.isFlagged } : e) }));
     if (window.electron && activeAccountId) {
       const account = accounts.find(a => a.id === activeAccountId);
       if (email.uid && account) {
-        await window.electron.updateEmailFlag({ account, emailId: id, uid: email.uid, isFlagged: !email.isFlagged, folder: email.folder });
+        try {
+          await window.electron.updateEmailFlag({ account, emailId: id, uid: email.uid, isFlagged: !previousFlagState, folder: email.folder });
+        } catch (error) {
+          console.error('Failed to update flag status:', error);
+          // Rollback optimistic update
+          updateActiveAccountData(prev => ({ ...prev, emails: prev.emails.map(e => e.id === id ? { ...e, isFlagged: previousFlagState } : e) }));
+        }
       }
     }
   };
