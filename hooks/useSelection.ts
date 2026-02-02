@@ -10,7 +10,7 @@ interface UseSelectionReturn {
   selectedIds: Set<string>;
   handleSelection: (id: string, multi: boolean, range: boolean) => void;
   handleRowClick: (id: string, e: React.MouseEvent) => void;
-  handleToggleSelection: (id: string) => void;
+  handleToggleSelection: (id: string, shiftKey?: boolean) => void;
   handleSelectAll: (e: React.ChangeEvent<HTMLInputElement>) => void;
   clearSelection: () => void;
 }
@@ -64,8 +64,8 @@ export const useSelection = ({ filteredEmails, onSelectEmail }: UseSelectionProp
     }
   };
 
-  const handleToggleSelection = (id: string) => {
-    handleSelection(id, false, false);
+  const handleToggleSelection = (id: string, shiftKey: boolean = false) => {
+    handleSelection(id, false, shiftKey);
   };
 
   const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {

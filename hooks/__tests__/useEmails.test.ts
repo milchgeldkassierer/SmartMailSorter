@@ -105,11 +105,6 @@ describe('useEmails', () => {
             expect(result.current.selectedEmailId).toBe(null);
         });
 
-        it('should initialize with empty selected ids set', () => {
-            const { result } = renderHook(() => useEmails(defaultParams));
-            expect(result.current.selectedIds).toEqual(new Set());
-        });
-
         it('should initialize with empty search term', () => {
             const { result } = renderHook(() => useEmails(defaultParams));
             expect(result.current.searchTerm).toBe('');
@@ -128,16 +123,6 @@ describe('useEmails', () => {
         it('should initialize with showUnsortedOnly as false', () => {
             const { result } = renderHook(() => useEmails(defaultParams));
             expect(result.current.showUnsortedOnly).toBe(false);
-        });
-
-        it('should initialize with visibleCount as 100', () => {
-            const { result } = renderHook(() => useEmails(defaultParams));
-            expect(result.current.visibleCount).toBe(100);
-        });
-
-        it('should initialize with null lastClickedId', () => {
-            const { result } = renderHook(() => useEmails(defaultParams));
-            expect(result.current.lastClickedId).toBe(null);
         });
     });
 
@@ -540,13 +525,13 @@ describe('useEmails', () => {
                 result.current.loadMoreEmails();
             });
 
-            expect(result.current.visibleCount).toBe(200);
+            expect(result.current.displayedEmails).toHaveLength(200);
 
             act(() => {
                 result.current.resetPagination();
             });
 
-            expect(result.current.visibleCount).toBe(100);
+            expect(result.current.displayedEmails).toHaveLength(100);
         });
 
         it('should reset pagination when category changes', () => {
@@ -566,13 +551,13 @@ describe('useEmails', () => {
                 result.current.loadMoreEmails();
             });
 
-            expect(result.current.visibleCount).toBe(200);
+            expect(result.current.displayedEmails).toHaveLength(200);
 
             act(() => {
                 result.current.setSelectedCategory('Gesendet');
             });
 
-            expect(result.current.visibleCount).toBe(100);
+            expect(result.current.displayedEmails).toHaveLength(100);
         });
 
         it('should reset pagination when search term changes', () => {
@@ -596,7 +581,7 @@ describe('useEmails', () => {
                 result.current.setSearchTerm('test');
             });
 
-            expect(result.current.visibleCount).toBe(100);
+            expect(result.current.displayedEmails).toHaveLength(100);
         });
     });
 
@@ -738,11 +723,11 @@ describe('useEmails', () => {
                 result.current.loadMoreEmails();
             });
 
-            expect(result.current.visibleCount).toBe(200);
+            expect(result.current.displayedEmails).toHaveLength(200);
 
             rerender({ activeAccountId: 'account-2' });
 
-            expect(result.current.visibleCount).toBe(100);
+            expect(result.current.displayedEmails).toHaveLength(100);
         });
     });
 });
