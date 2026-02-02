@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Email, AISettings, DefaultEmailCategory, ImapAccount } from '../types';
+import { Email, AISettings, DefaultEmailCategory, ImapAccount, SortResult } from '../types';
 import { categorizeBatchWithAI } from '../services/geminiService';
 
 interface UseBatchOperationsProps {
@@ -22,13 +22,6 @@ interface UseBatchOperationsReturn {
   canSmartSort: boolean;
   handleBatchDelete: () => Promise<void>;
   handleBatchSmartSort: () => Promise<void>;
-}
-
-interface SortResult {
-  categoryId: string;
-  summary: string;
-  reasoning: string;
-  confidence: number;
 }
 
 export const useBatchOperations = ({
@@ -85,10 +78,10 @@ export const useBatchOperations = ({
         const chunk = emailsToSort.slice(i, i + chunkSize);
 
         const enrichedChunk = await Promise.all(chunk.map(async (e) => {
-          if ((e.body === undefined && e.bodyHtml === undefined) && window.electron) {
+          if ((e.body === undefined || e.body === '') && window.electron) {
             const content = await window.electron.getEmailContent(e.id);
             if (content) {
-              return { ...e, body: content.body, bodyHtml: content.bodyHtml };
+              return { ...e, body: content.body || '', bodyHtml: content.bodyHtml };
             }
           }
           return e;

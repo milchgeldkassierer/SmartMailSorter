@@ -161,7 +161,7 @@ export const categorizeBatchWithAI = async (
     id: e.id,
     sender: e.sender,
     subject: e.subject,
-    body_preview: e.body.substring(0, 1500) // 1500 chars limit per email
+    body_preview: (e.body || '').substring(0, 1500) // 1500 chars limit per email
   }));
 
   const prompt = `

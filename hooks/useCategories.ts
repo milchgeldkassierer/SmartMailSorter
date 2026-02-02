@@ -34,10 +34,7 @@ export const useCategories = (): UseCategoriesReturn => {
 
   // Add a new category
   const addCategory = useCallback(async (name: string, type: string = 'custom') => {
-    // Check if category already exists
-    const exists = categories.some(c => c.name === name);
-    if (exists) return;
-
+    // Note: Duplicate check should be done by the caller
     // Optimistic UI update
     setCategories(prev => [...prev, { name, type }]);
 
@@ -51,7 +48,7 @@ export const useCategories = (): UseCategoriesReturn => {
         setCategories(prev => prev.filter(c => c.name !== name));
       }
     }
-  }, [categories]);
+  }, []);
 
   // Update category type
   const updateCategoryType = useCallback(async (name: string, type: string) => {

@@ -1,36 +1,39 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import BatchActionBar from '../BatchActionBar';
-import { Email, AISettings } from '../../types';
+import { Email, AISettings, LLMProvider } from '../../types';
 
 describe('BatchActionBar', () => {
     const mockEmail1: Email = {
         id: '1',
         sender: 'test1@example.com',
+        senderEmail: 'test1@example.com',
         subject: 'Test 1',
         body: 'Body 1',
         date: '2024-01-01T10:00:00Z',
-        hasAttachment: false,
-        category: 'inbox',
-        isSorted: false
+        folder: 'Posteingang',
+        isRead: false,
+        isFlagged: false,
+        hasAttachments: false
     };
 
     const mockEmail2: Email = {
         id: '2',
         sender: 'test2@example.com',
+        senderEmail: 'test2@example.com',
         subject: 'Test 2',
         body: 'Body 2',
         date: '2024-01-02T10:00:00Z',
-        hasAttachment: false,
-        category: 'inbox',
-        isSorted: false
+        folder: 'Posteingang',
+        isRead: false,
+        isFlagged: false,
+        hasAttachments: false
     };
 
     const defaultAISettings: AISettings = {
-        apiKey: '',
-        model: 'gpt-4',
-        sortAutomatically: false,
-        categories: []
+        provider: LLMProvider.GEMINI,
+        model: 'gemini-3-flash-preview',
+        apiKey: ''
     };
 
     const defaultProps = {

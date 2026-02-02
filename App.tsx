@@ -175,7 +175,7 @@ const App: React.FC = () => {
           if (cat === DefaultEmailCategory.INBOX) setShowUnsortedOnly(false);
         }}
         onAddCategory={async (newCategory) => {
-          if (!currentCategories.some((c: any) => c.name === newCategory)) {
+          if (!currentCategories.some(c => c.name === newCategory)) {
             updateActiveAccountData(prev => ({ ...prev, categories: [...prev.categories, { name: newCategory, type: 'custom' }] }));
             await addCategory(newCategory, 'custom');
           }
