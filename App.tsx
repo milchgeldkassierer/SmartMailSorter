@@ -7,6 +7,10 @@ import SettingsModal from './components/SettingsModal';
 import SearchBar, { SearchConfig } from './components/SearchBar';
 import { generateDemoEmails, categorizeEmailWithAI, categorizeBatchWithAI } from './services/geminiService';
 import { RefreshCw, BrainCircuit, Search, Trash2, Filter } from './components/Icon';
+import { useAuth } from './hooks/useAuth';
+import { useAccounts } from './hooks/useAccounts';
+import TopBar from './components/TopBar';
+import BatchActionBar from './components/BatchActionBar';
 
 // Structure to hold data per account
 interface AccountData {
@@ -15,8 +19,24 @@ interface AccountData {
 }
 
 const App: React.FC = () => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isConnecting, setIsConnecting] = useState(false);
+  // Custom Hooks
+  const {
+    isAuthenticated,
+    isConnecting,
+    setIsAuthenticated,
+    setIsConnecting
+  } = useAuth();
+
+  const {
+    accounts,
+    activeAccountId,
+    activeAccount,
+    setAccounts,
+    setActiveAccountId,
+    addAccount,
+    removeAccount,
+    switchAccount
+  } = useAccounts();
 
   // AI Settings State (Default to Gemini)
   const [aiSettings, setAiSettings] = useState<AISettings>(() => {
@@ -40,9 +60,6 @@ const App: React.FC = () => {
     localStorage.setItem('smartmail_ai_settings', JSON.stringify(aiSettings));
   }, [aiSettings]);
 
-  // Account State
-  const [accounts, setAccounts] = useState<ImapAccount[]>([]);
-  const [activeAccountId, setActiveAccountId] = useState<string>('');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   // Data State - stored by account ID
@@ -284,7 +301,7 @@ const App: React.FC = () => {
   };
 
   const handleSwitchAccount = (id: string) => {
-    setActiveAccountId(id);
+    switchAccount(id);
     setSelectedCategory(DefaultEmailCategory.INBOX);
     setSelectedEmailId(null);
     setSelectedIds(new Set()); // Clear selection
@@ -297,8 +314,8 @@ const App: React.FC = () => {
       setIsConnecting(true);
       try {
         await window.electron.addAccount(newAccount);
-        setAccounts(prev => [...prev, newAccount]);
-        setActiveAccountId(newAccount.id);
+        addAccount(newAccount);
+        switchAccount(newAccount.id);
 
         // Sync immediately
         const emails = await window.electron.getEmails(newAccount.id);
@@ -315,7 +332,7 @@ const App: React.FC = () => {
       }
     } else {
       // Fallback for browser dev mode
-      setAccounts(prev => [...prev, newAccount]);
+      addAccount(newAccount);
       setData(prev => ({
         ...prev,
         [newAccount.id]: { emails: [], categories: Object.values(DefaultEmailCategory).map(c => ({ name: c, type: 'system' })) }
@@ -333,25 +350,24 @@ const App: React.FC = () => {
   };
 
   const handleRemoveAccount = async (id: string) => {
-    // Remove from UI immediately
-    setAccounts(prev => prev.filter(a => a.id !== id));
+    // Remove from UI immediately using hook
+    removeAccount(id);
+
+    // Clean up data state
     setData(prev => {
       const next = { ...prev };
       delete next[id];
       return next;
     });
+
     // Remove from Backend
     if (window.electron) {
       await window.electron.deleteAccount(id);
     }
-    if (activeAccountId === id) {
-      const otherAccount = accounts.find(a => a.id !== id);
-      if (otherAccount) {
-        handleSwitchAccount(otherAccount.id);
-      } else {
-        setActiveAccountId('');
-        setIsAuthenticated(false);
-      }
+
+    // If no accounts left, set unauthenticated
+    if (accounts.length === 1) {
+      setIsAuthenticated(false);
     }
   };
 
@@ -813,101 +829,29 @@ const App: React.FC = () => {
 
       <div className="flex-1 flex flex-col min-w-0">
         {/* Top Bar */}
-        <div className="h-16 border-b border-slate-200 bg-white flex items-center justify-between px-6 flex-shrink-0">
-          <div className="flex items-center gap-4 flex-1">
-            {!searchTerm ? (
-              <div className="flex items-center gap-4">
-                <h2 className="text-xl font-semibold text-slate-800 flex items-center gap-2 min-w-[150px]">
-                  {selectedCategory}
-                  <span className="ml-2 text-sm font-normal text-slate-500">
-                    ({filteredEmails.length})
-                  </span>
-                </h2>
-
-                {/* Unsorted Filter Toggle (Only in Inbox) */}
-                {selectedCategory === DefaultEmailCategory.INBOX && (
-                  <button
-                    onClick={() => setShowUnsortedOnly(!showUnsortedOnly)}
-                    className={`text-xs px-3 py-1.5 rounded-full border transition-colors flex items-center gap-1.5 ${showUnsortedOnly
-                      ? 'bg-blue-100 text-blue-700 border-blue-200 font-medium'
-                      : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'
-                      }`}
-                  >
-                    <Filter className="w-3 h-3" />
-                    <span>Nur unsortierte</span>
-                  </button>
-                )}
-              </div>
-            ) : (
-              <h2 className="text-xl font-semibold text-blue-600 flex items-center gap-2 min-w-[150px]">
-                <Search className="w-5 h-5" />
-                Suchergebnisse
-              </h2>
-            )}
-
-            <SearchBar
-              searchTerm={searchTerm}
-              onSearchChange={setSearchTerm}
-              config={searchConfig}
-              onConfigChange={setSearchConfig}
-            />
-          </div>
-
-          <div className="flex items-center gap-3">
-            <button
-              onClick={handleSync}
-              disabled={isSorting}
-              className="text-sm text-slate-500 hover:text-blue-600 flex items-center gap-1 px-3 py-1.5 rounded-md hover:bg-slate-50 transition-colors"
-              title="Emails abrufen"
-            >
-              <RefreshCw className={`w-3 h-3 ${isSorting ? 'animate-spin' : ''}`} />
-            </button>
-          </div>
-        </div>
+        <TopBar
+          selectedCategory={selectedCategory}
+          filteredEmailsCount={filteredEmails.length}
+          searchTerm={searchTerm}
+          onSearchChange={setSearchTerm}
+          searchConfig={searchConfig}
+          onSearchConfigChange={setSearchConfig}
+          showUnsortedOnly={showUnsortedOnly}
+          onToggleUnsorted={() => setShowUnsortedOnly(!showUnsortedOnly)}
+          onSync={handleSync}
+          isSorting={isSorting}
+        />
 
         {/* Batch Action Bar */}
-        <div className="h-10 border-b border-slate-200 bg-slate-50 flex items-center px-6 gap-4">
-          <div className="flex items-center gap-3 pl-2">
-            <input
-              type="checkbox"
-              className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
-              checked={filteredEmails.length > 0 && selectedIds.size === filteredEmails.length}
-              onChange={handleSelectAll}
-            />
-
-            {selectedIds.size > 0 && (
-              <span className="text-sm font-medium text-slate-700 fade-in">
-                {selectedIds.size} ausgewählt
-              </span>
-            )}
-          </div>
-
-          {selectedIds.size > 0 && (
-            <div className="flex items-center gap-2 ml-4 animate-in fade-in slide-in-from-left-2 duration-200">
-              <button
-                onClick={handleBatchDelete}
-                className="flex items-center gap-1.5 px-3 py-1 bg-white border border-slate-200 text-slate-700 text-sm rounded hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors"
-              >
-                <Trash2 className="w-4 h-4" />
-                <span>Löschen</span>
-              </button>
-
-              {/* Smart Sort Button */}
-              <button
-                onClick={handleBatchSmartSort}
-                disabled={!canSmartSort}
-                className={`flex items-center gap-1.5 px-3 py-1 border text-sm rounded transition-colors ${canSmartSort
-                  ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white border-transparent hover:shadow-md hover:from-blue-700 hover:to-indigo-700'
-                  : 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed'
-                  }`}
-                title={!aiSettings.apiKey ? "Bitte API Key in Einstellungen hinterlegen" : "Ausgewählte Mails mit AI sortieren"}
-              >
-                <BrainCircuit className="w-3.5 h-3.5" />
-                <span>Smart Sortieren</span>
-              </button>
-            </div>
-          )}
-        </div>
+        <BatchActionBar
+          filteredEmails={filteredEmails}
+          selectedIds={selectedIds}
+          onSelectAll={handleSelectAll}
+          onBatchDelete={handleBatchDelete}
+          onBatchSmartSort={handleBatchSmartSort}
+          canSmartSort={canSmartSort}
+          aiSettings={aiSettings}
+        />
 
         {/* Progress Bar (if sorting) */}
         {isSorting && (
