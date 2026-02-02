@@ -79,7 +79,7 @@ const App: React.FC = () => {
   });
 
   const { isSorting, sortProgress, canSmartSort, handleBatchDelete, handleBatchSmartSort } = useBatchOperations({
-    selectedIds, currentEmails, currentCategories, aiSettings, activeAccountId, accounts,
+    selectedIds, currentEmails, currentCategories, aiSettings,
     onDeleteEmail: handleDeleteEmail,
     onClearSelection: clearSelection,
     onUpdateEmails: (updateFn) => updateActiveAccountData(prev => ({ ...prev, emails: updateFn(prev.emails) })),

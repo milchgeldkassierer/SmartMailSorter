@@ -11,13 +11,10 @@ interface UseEmailsReturn {
   // State
   data: Record<string, AccountData>;
   selectedEmailId: string | null;
-  selectedIds: Set<string>;
   selectedCategory: string;
   searchTerm: string;
   searchConfig: SearchConfig;
   showUnsortedOnly: boolean;
-  visibleCount: number;
-  lastClickedId: string | null;
 
   // Computed
   currentEmails: Email[];
@@ -31,13 +28,10 @@ interface UseEmailsReturn {
   // Setters
   setData: (data: Record<string, AccountData>) => void;
   setSelectedEmailId: (id: string | null) => void;
-  setSelectedIds: (ids: Set<string>) => void;
   setSelectedCategory: (category: string) => void;
   setSearchTerm: (term: string) => void;
   setSearchConfig: (config: SearchConfig) => void;
   setShowUnsortedOnly: (value: boolean) => void;
-  setVisibleCount: (count: number | ((prev: number) => number)) => void;
-  setLastClickedId: (id: string | null) => void;
 
   // Helper Functions
   updateActiveAccountData: (updateFn: (prev: AccountData) => AccountData) => void;
@@ -52,8 +46,6 @@ export const useEmails = ({ activeAccountId, accounts }: UseEmailsParams): UseEm
   // UI Selection State
   const [selectedCategory, setSelectedCategory] = useState<string>(DefaultEmailCategory.INBOX);
   const [selectedEmailId, setSelectedEmailId] = useState<string | null>(null);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [lastClickedId, setLastClickedId] = useState<string | null>(null);
 
   // Search State
   const [searchTerm, setSearchTerm] = useState('');
@@ -188,13 +180,10 @@ export const useEmails = ({ activeAccountId, accounts }: UseEmailsParams): UseEm
     // State
     data,
     selectedEmailId,
-    selectedIds,
     selectedCategory,
     searchTerm,
     searchConfig,
     showUnsortedOnly,
-    visibleCount,
-    lastClickedId,
 
     // Computed
     currentEmails,
@@ -208,13 +197,10 @@ export const useEmails = ({ activeAccountId, accounts }: UseEmailsParams): UseEm
     // Setters
     setData,
     setSelectedEmailId,
-    setSelectedIds,
     setSelectedCategory,
     setSearchTerm,
     setSearchConfig,
     setShowUnsortedOnly,
-    setVisibleCount,
-    setLastClickedId,
 
     // Helper Functions
     updateActiveAccountData,

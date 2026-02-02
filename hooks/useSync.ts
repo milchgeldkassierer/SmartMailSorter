@@ -50,6 +50,7 @@ export const useSync = ({
       }
     } catch (error) {
       console.error('Failed to sync account:', error);
+      alert('Synchronisierung fehlgeschlagen. Bitte versuchen Sie es erneut.');
     } finally {
       setIsSyncing(false);
     }

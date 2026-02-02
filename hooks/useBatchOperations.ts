@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Email, AISettings, DefaultEmailCategory, ImapAccount, SortResult } from '../types';
+import { Email, AISettings, DefaultEmailCategory, SortResult } from '../types';
 import { categorizeBatchWithAI } from '../services/geminiService';
 
 interface UseBatchOperationsProps {
@@ -7,8 +7,6 @@ interface UseBatchOperationsProps {
   currentEmails: Email[];
   currentCategories: { name: string; type: string }[];
   aiSettings: AISettings;
-  activeAccountId: string;
-  accounts: ImapAccount[];
   onDeleteEmail: (id: string) => Promise<void>;
   onClearSelection: () => void;
   onUpdateEmails: (updateFn: (emails: Email[]) => Email[]) => void;
@@ -29,8 +27,6 @@ export const useBatchOperations = ({
   currentEmails,
   currentCategories,
   aiSettings,
-  activeAccountId,
-  accounts,
   onDeleteEmail,
   onClearSelection,
   onUpdateEmails,
