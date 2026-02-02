@@ -1,12 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Email, DefaultEmailCategory, ImapAccount } from '../types';
+import { Email, DefaultEmailCategory, ImapAccount, AccountData } from '../types';
 import { SearchConfig } from '../components/SearchBar';
-
-// Structure to hold data per account
-interface AccountData {
-  emails: Email[];
-  categories: { name: string, type: string }[];
-}
 
 interface UseEmailsParams {
   activeAccountId: string;

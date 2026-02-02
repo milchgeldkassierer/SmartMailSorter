@@ -181,5 +181,3 @@ export const useCategories = (): UseCategoriesReturn => {
     autoDiscoverFolders
   };
 };
-
-export default useCategories;

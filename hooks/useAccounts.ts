@@ -38,7 +38,7 @@ export const useAccounts = (): UseAccountsReturn => {
       const filtered = prev.filter(a => a.id !== id);
       // If removing the active account, switch to another
       if (activeAccountId === id) {
-        const otherAccount = filtered.find(a => a.id !== id);
+        const otherAccount = filtered[0];
         if (otherAccount) {
           setActiveAccountId(otherAccount.id);
         } else {

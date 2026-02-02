@@ -43,6 +43,11 @@ export interface Email {
   confidence?: number;
 }
 
+export interface AccountData {
+  emails: Email[];
+  categories: { name: string; type: string }[];
+}
+
 export interface SortResult {
   categoryId: string;
   summary: string;
