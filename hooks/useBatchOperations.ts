@@ -12,6 +12,8 @@ interface UseBatchOperationsProps {
   onUpdateEmails: (updateFn: (emails: Email[]) => Email[]) => void;
   onUpdateCategories: (categories: { name: string; type: string }[]) => void;
   onOpenSettings: () => void;
+  onConfirmDelete?: (count: number) => Promise<boolean>;
+  onConfirmNewCategories?: (categories: string[]) => Promise<boolean>;
 }
 
 interface UseBatchOperationsReturn {
@@ -31,14 +33,108 @@ export const useBatchOperations = ({
   onClearSelection,
   onUpdateEmails,
   onUpdateCategories,
-  onOpenSettings
+  onOpenSettings,
+  onConfirmDelete,
+  onConfirmNewCategories
 }: UseBatchOperationsProps): UseBatchOperationsReturn => {
   const [isSorting, setIsSorting] = useState(false);
   const [sortProgress, setSortProgress] = useState(0);
 
+  // Helper: Enrich emails with missing content
+  const enrichEmailsWithContent = async (emails: Email[]): Promise<Email[]> => {
+    return Promise.all(emails.map(async (e) => {
+      if ((e.body === undefined || e.body === '') && window.electron) {
+        const content = await window.electron.getEmailContent(e.id);
+        if (content) {
+          return { ...e, body: content.body || '', bodyHtml: content.bodyHtml };
+        }
+      }
+      return e;
+    }));
+  };
+
+  // Helper: Process emails in chunks with AI categorization
+  const processEmailsInChunks = async (
+    emailsToSort: Email[],
+    onProgress: (progress: number) => void
+  ): Promise<{ emailResults: Map<string, SortResult>; newCategories: Set<string> }> => {
+    const newCategoriesFound = new Set<string>();
+    const emailResults = new Map<string, SortResult>();
+    let processed = 0;
+    const chunkSize = 5;
+
+    for (let i = 0; i < emailsToSort.length; i += chunkSize) {
+      const chunk = emailsToSort.slice(i, i + chunkSize);
+      const enrichedChunk = await enrichEmailsWithContent(chunk);
+
+      const categoryNames = currentCategories.map(c => c.name);
+      const batchResults = await categorizeBatchWithAI(enrichedChunk, categoryNames, aiSettings);
+
+      enrichedChunk.forEach((email, index) => {
+        const sortResult = batchResults[index];
+        if (sortResult.confidence > 0) {
+          emailResults.set(email.id, sortResult);
+          const cat = sortResult.categoryId;
+          const exists = currentCategories.some(c => c.name === cat);
+          if (!exists && !Object.values(DefaultEmailCategory).includes(cat as any)) {
+            newCategoriesFound.add(cat);
+          }
+        }
+      });
+
+      processed += chunk.length;
+      onProgress(5 + (processed / emailsToSort.length) * 85);
+    }
+
+    return { emailResults, newCategories: newCategoriesFound };
+  };
+
+  // Helper: Apply categorization updates to backend and state
+  const applyCategorizationUpdates = async (
+    emailResults: Map<string, SortResult>,
+    newCategoriesFound: Set<string>,
+    allowedNewCategories: Set<string>
+  ): Promise<{ emailId: string; category: string; summary: string; reasoning: string; confidence: number }[]> => {
+    const updates: { emailId: string; category: string; summary: string; reasoning: string; confidence: number }[] = [];
+
+    for (const [emailId, result] of emailResults.entries()) {
+      let finalCategory = result.categoryId;
+
+      if (newCategoriesFound.has(finalCategory) && !allowedNewCategories.has(finalCategory)) {
+        finalCategory = DefaultEmailCategory.OTHER;
+      }
+
+      updates.push({
+        emailId,
+        category: finalCategory,
+        summary: result.summary,
+        reasoning: result.reasoning,
+        confidence: result.confidence
+      });
+
+      if (window.electron) {
+        await window.electron.updateEmailSmartCategory({
+          emailId,
+          category: finalCategory,
+          summary: result.summary,
+          reasoning: result.reasoning,
+          confidence: result.confidence
+        });
+      }
+    }
+
+    return updates;
+  };
+
   const handleBatchDelete = async () => {
     if (selectedIds.size === 0) return;
-    if (!confirm(`${selectedIds.size} Emails wirklich löschen?`)) return;
+
+    // Use callback if provided, otherwise fallback to native confirm
+    const confirmed = onConfirmDelete
+      ? await onConfirmDelete(selectedIds.size)
+      : confirm(`${selectedIds.size} Emails wirklich löschen?`);
+
+    if (!confirmed) return;
 
     const ids = Array.from(selectedIds);
     try {
@@ -64,96 +160,35 @@ export const useBatchOperations = ({
     try {
       const emailsToSort = currentEmails.filter(e => selectedIds.has(e.id));
 
-      const newCategoriesFound = new Set<string>();
-      const emailResults = new Map<string, SortResult>();
+      // Process emails in chunks with AI
+      const { emailResults, newCategories } = await processEmailsInChunks(
+        emailsToSort,
+        setSortProgress
+      );
 
-      let processed = 0;
-      const chunkSize = 5;
-
-      for (let i = 0; i < emailsToSort.length; i += chunkSize) {
-        const chunk = emailsToSort.slice(i, i + chunkSize);
-
-        const enrichedChunk = await Promise.all(chunk.map(async (e) => {
-          if ((e.body === undefined || e.body === '') && window.electron) {
-            const content = await window.electron.getEmailContent(e.id);
-            if (content) {
-              return { ...e, body: content.body || '', bodyHtml: content.bodyHtml };
-            }
-          }
-          return e;
-        }));
-
-        const categoryNames = currentCategories.map(c => c.name);
-        const batchResults = await categorizeBatchWithAI(enrichedChunk, categoryNames, aiSettings);
-
-        const results = enrichedChunk.map((email, index) => {
-          const sortResult = batchResults[index];
-          return { id: email.id, sortResult };
-        });
-
-        results.forEach(r => {
-          if (r.sortResult.confidence > 0) {
-            emailResults.set(r.id, r.sortResult);
-            const cat = r.sortResult.categoryId;
-            const exists = currentCategories.some(c => c.name === cat);
-            if (!exists && !Object.values(DefaultEmailCategory).includes(cat as any)) {
-              newCategoriesFound.add(cat);
-            }
-          }
-        });
-
-        processed += chunk.length;
-        setSortProgress(5 + (processed / emailsToSort.length) * 85);
-      }
-
+      // Confirm new categories with user
       let allowedNewCategories = new Set<string>();
-
-      if (newCategoriesFound.size > 0) {
-        const newArr = Array.from(newCategoriesFound);
-        const confirmed = confirm(
-          `Die KI schlägt folgende neue Ordner vor:\n\n${newArr.join(', ')}\n\nSollen diese angelegt werden?\n(Bei 'Abbrechen' werden die Mails in 'Sonstiges' verschoben)`
-        );
+      if (newCategories.size > 0) {
+        const newArr = Array.from(newCategories);
+        const confirmed = onConfirmNewCategories
+          ? await onConfirmNewCategories(newArr)
+          : confirm(
+              `Die KI schlägt folgende neue Ordner vor:\n\n${newArr.join(', ')}\n\nSollen diese angelegt werden?\n(Bei 'Abbrechen' werden die Mails in 'Sonstiges' verschoben)`
+            );
 
         if (confirmed) {
-          allowedNewCategories = newCategoriesFound;
+          allowedNewCategories = newCategories;
         }
       }
 
-      interface EmailUpdate {
-        emailId: string;
-        category: string;
-        summary: string;
-        reasoning: string;
-        confidence: number;
-      }
-      const updates: EmailUpdate[] = [];
+      // Apply updates to backend and collect update records
+      const updates = await applyCategorizationUpdates(
+        emailResults,
+        newCategories,
+        allowedNewCategories
+      );
 
-      for (const [emailId, result] of emailResults.entries()) {
-        let finalCategory = result.categoryId;
-
-        if (newCategoriesFound.has(finalCategory) && !allowedNewCategories.has(finalCategory)) {
-          finalCategory = DefaultEmailCategory.OTHER;
-        }
-
-        updates.push({
-          emailId,
-          category: finalCategory,
-          summary: result.summary,
-          reasoning: result.reasoning,
-          confidence: result.confidence
-        });
-
-        if (window.electron) {
-          await window.electron.updateEmailSmartCategory({
-            emailId,
-            category: finalCategory,
-            summary: result.summary,
-            reasoning: result.reasoning,
-            confidence: result.confidence
-          });
-        }
-      }
-
+      // Update email state
       onUpdateEmails((emails) =>
         emails.map(email => {
           const update = updates.find(u => u.emailId === email.id);
@@ -170,6 +205,7 @@ export const useBatchOperations = ({
         })
       );
 
+      // Add new categories
       let newCats = [...currentCategories];
       allowedNewCategories.forEach(catName => {
         const exists = newCats.some(c => c.name === catName);
