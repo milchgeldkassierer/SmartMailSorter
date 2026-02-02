@@ -23,25 +23,30 @@ export const useAccounts = (): UseAccountsReturn => {
 
   // Add a new account to the list
   const addAccount = (account: ImapAccount) => {
-    setAccounts(prev => [...prev, account]);
-    // If this is the first account, make it active
-    if (accounts.length === 0) {
-      setActiveAccountId(account.id);
-    }
+    setAccounts(prev => {
+      // If this is the first account, make it active
+      if (prev.length === 0) {
+        setActiveAccountId(account.id);
+      }
+      return [...prev, account];
+    });
   };
 
   // Remove an account and switch to another if needed
   const removeAccount = (id: string) => {
-    setAccounts(prev => prev.filter(a => a.id !== id));
-    // If removing the active account, switch to another
-    if (activeAccountId === id) {
-      const otherAccount = accounts.find(a => a.id !== id);
-      if (otherAccount) {
-        setActiveAccountId(otherAccount.id);
-      } else {
-        setActiveAccountId('');
+    setAccounts(prev => {
+      const filtered = prev.filter(a => a.id !== id);
+      // If removing the active account, switch to another
+      if (activeAccountId === id) {
+        const otherAccount = filtered.find(a => a.id !== id);
+        if (otherAccount) {
+          setActiveAccountId(otherAccount.id);
+        } else {
+          setActiveAccountId('');
+        }
       }
-    }
+      return filtered;
+    });
   };
 
   // Switch to a different account

@@ -123,7 +123,7 @@ export const useEmails = ({ activeAccountId, accounts }: UseEmailsParams): UseEm
             email.senderEmail.toLowerCase().includes(term)
           );
           const inSubject = searchConfig.searchSubject && email.subject.toLowerCase().includes(term);
-          const inBody = searchConfig.searchBody && email.body.toLowerCase().includes(term);
+          const inBody = searchConfig.searchBody && email.body?.toLowerCase().includes(term);
           return inSender || inSubject || inBody;
         };
         return searchConfig.logic === 'AND' ? terms.every(checkTerm) : terms.some(checkTerm);
