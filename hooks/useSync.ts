@@ -1,12 +1,6 @@
 import { useState, useCallback } from 'react';
 import { ImapAccount, Email } from '../types';
 
-// Structure to hold data per account
-interface AccountData {
-  emails: Email[];
-  categories: { name: string, type: string }[];
-}
-
 interface UseSyncParams {
   activeAccountId: string;
   accounts: ImapAccount[];
