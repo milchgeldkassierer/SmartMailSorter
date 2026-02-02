@@ -16,6 +16,21 @@ interface UseBatchOperationsProps {
   onOpenSettings: () => void;
 }
 
+interface UseBatchOperationsReturn {
+  isSorting: boolean;
+  sortProgress: number;
+  canSmartSort: boolean;
+  handleBatchDelete: () => Promise<void>;
+  handleBatchSmartSort: () => Promise<void>;
+}
+
+interface SortResult {
+  categoryId: string;
+  summary: string;
+  reasoning: string;
+  confidence: number;
+}
+
 export const useBatchOperations = ({
   selectedIds,
   currentEmails,
@@ -28,7 +43,7 @@ export const useBatchOperations = ({
   onUpdateEmails,
   onUpdateCategories,
   onOpenSettings
-}: UseBatchOperationsProps) => {
+}: UseBatchOperationsProps): UseBatchOperationsReturn => {
   const [isSorting, setIsSorting] = useState(false);
   const [sortProgress, setSortProgress] = useState(0);
 
@@ -37,8 +52,13 @@ export const useBatchOperations = ({
     if (!confirm(`${selectedIds.size} Emails wirklich löschen?`)) return;
 
     const ids = Array.from(selectedIds);
-    await Promise.all(ids.map(id => onDeleteEmail(id)));
-    onClearSelection();
+    try {
+      await Promise.all(ids.map(id => onDeleteEmail(id)));
+      onClearSelection();
+    } catch (error) {
+      console.error('Failed to delete emails:', error);
+      alert('Einige Emails konnten nicht gelöscht werden');
+    }
   };
 
   const handleBatchSmartSort = async () => {
@@ -56,7 +76,7 @@ export const useBatchOperations = ({
       const emailsToSort = currentEmails.filter(e => selectedIds.has(e.id));
 
       const newCategoriesFound = new Set<string>();
-      const emailResults = new Map<string, any>();
+      const emailResults = new Map<string, SortResult>();
 
       let processed = 0;
       const chunkSize = 5;
@@ -74,7 +94,7 @@ export const useBatchOperations = ({
           return e;
         }));
 
-        const categoryNames = currentCategories.map((c: any) => c.name);
+        const categoryNames = currentCategories.map(c => c.name);
         const batchResults = await categorizeBatchWithAI(enrichedChunk, categoryNames, aiSettings);
 
         const results = enrichedChunk.map((email, index) => {
@@ -86,7 +106,7 @@ export const useBatchOperations = ({
           if (r.sortResult.confidence > 0) {
             emailResults.set(r.id, r.sortResult);
             const cat = r.sortResult.categoryId;
-            const exists = currentCategories.some((c: any) => c.name === cat);
+            const exists = currentCategories.some(c => c.name === cat);
             if (!exists && !Object.values(DefaultEmailCategory).includes(cat as any)) {
               newCategoriesFound.add(cat);
             }
@@ -110,7 +130,14 @@ export const useBatchOperations = ({
         }
       }
 
-      const updates: any[] = [];
+      interface EmailUpdate {
+        emailId: string;
+        category: string;
+        summary: string;
+        reasoning: string;
+        confidence: number;
+      }
+      const updates: EmailUpdate[] = [];
 
       for (const [emailId, result] of emailResults.entries()) {
         let finalCategory = result.categoryId;
@@ -156,7 +183,7 @@ export const useBatchOperations = ({
 
       let newCats = [...currentCategories];
       allowedNewCategories.forEach(catName => {
-        const exists = newCats.some((c: any) => c.name === catName);
+        const exists = newCats.some(c => c.name === catName);
         if (!exists) {
           newCats.push({ name: catName, type: 'custom' });
           if (window.electron) window.electron.addCategory(catName, 'custom');
@@ -168,7 +195,8 @@ export const useBatchOperations = ({
       await new Promise(r => setTimeout(r, 500));
 
     } catch (e) {
-      alert("Ein Fehler ist beim Sortieren aufgetreten. Bitte Konsole öffnen für Details.");
+      console.error('Smart Sort Error:', e);
+      alert(`Ein Fehler ist beim Sortieren aufgetreten: ${e instanceof Error ? e.message : 'Unbekannter Fehler'}`);
     } finally {
       setIsSorting(false);
       setSortProgress(0);

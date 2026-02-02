@@ -6,7 +6,16 @@ interface UseSelectionProps {
   onSelectEmail: (id: string) => void;
 }
 
-export const useSelection = ({ filteredEmails, onSelectEmail }: UseSelectionProps) => {
+interface UseSelectionReturn {
+  selectedIds: Set<string>;
+  handleSelection: (id: string, multi: boolean, range: boolean) => void;
+  handleRowClick: (id: string, e: React.MouseEvent) => void;
+  handleToggleSelection: (id: string) => void;
+  handleSelectAll: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  clearSelection: () => void;
+}
+
+export const useSelection = ({ filteredEmails, onSelectEmail }: UseSelectionProps): UseSelectionReturn => {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [lastClickedId, setLastClickedId] = useState<string | null>(null);
 

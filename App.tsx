@@ -80,17 +80,22 @@ const App: React.FC = () => {
   useEffect(() => {
     (async () => {
       if (!window.electron) return;
-      const loadedAccounts = await window.electron.getAccounts();
-      const savedCategories = await window.electron.getCategories();
-      if (loadedAccounts.length > 0) {
-        setAccounts(loadedAccounts);
-        setActiveAccountId(loadedAccounts[0].id);
-        setIsAuthenticated(true);
-        const emails = await window.electron.getEmails(loadedAccounts[0].id);
-        setData({ [loadedAccounts[0].id]: { emails, categories: savedCategories } });
-      } else {
-        setIsAuthenticated(true);
-        setIsSettingsOpen(true);
+      try {
+        const loadedAccounts = await window.electron.getAccounts();
+        const savedCategories = await window.electron.getCategories();
+        if (loadedAccounts.length > 0) {
+          setAccounts(loadedAccounts);
+          setActiveAccountId(loadedAccounts[0].id);
+          setIsAuthenticated(true);
+          const emails = await window.electron.getEmails(loadedAccounts[0].id);
+          setData({ [loadedAccounts[0].id]: { emails, categories: savedCategories } });
+        } else {
+          setIsAuthenticated(true);
+          setIsSettingsOpen(true);
+        }
+      } catch (error) {
+        console.error('Failed to initialize app:', error);
+        alert('Fehler beim Laden der Daten');
       }
     })();
   }, []);

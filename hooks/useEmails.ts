@@ -97,7 +97,7 @@ export const useEmails = ({ activeAccountId, accounts }: UseEmailsParams): UseEm
       result = result.filter(e => e.folder === selectedCategory);
     } else {
       // Check if it's a known physical folder
-      const catInfo = currentCategories.find((c: any) => c.name === selectedCategory);
+      const catInfo = currentCategories.find(c => c.name === selectedCategory);
 
       if (catInfo && catInfo.type === 'folder') {
         // Physical Folder Logic
@@ -153,7 +153,7 @@ export const useEmails = ({ activeAccountId, accounts }: UseEmailsParams): UseEm
     counts['Papierkorb'] = currentEmails.filter(e => (e.folder === 'Papierkorb' || e.folder === 'Gelöscht' || e.folder === 'Trash') && !e.isRead).length;
 
     // 2. Calculate Categories & Physical Folders
-    currentCategories.forEach((cat: any) => {
+    currentCategories.forEach(cat => {
       const catName = cat.name;
       if (standard.includes(catName)) return; // Skip if already handled
 

@@ -23,8 +23,12 @@ export const useCategories = (): UseCategoriesReturn => {
   // Load categories from backend
   const loadCategories = useCallback(async () => {
     if (window.electron) {
-      const savedCategories = await window.electron.getCategories();
-      setCategories(savedCategories);
+      try {
+        const savedCategories = await window.electron.getCategories();
+        setCategories(savedCategories);
+      } catch (error) {
+        console.error('Failed to load categories:', error);
+      }
     }
   }, []);
 
@@ -39,12 +43,21 @@ export const useCategories = (): UseCategoriesReturn => {
 
     // Persist to backend
     if (window.electron) {
-      await window.electron.addCategory(name, type);
+      try {
+        await window.electron.addCategory(name, type);
+      } catch (error) {
+        console.error('Failed to add category:', error);
+        // Revert optimistic update
+        setCategories(prev => prev.filter(c => c.name !== name));
+      }
     }
   }, [categories]);
 
   // Update category type
   const updateCategoryType = useCallback(async (name: string, type: string) => {
+    // Store old type for rollback
+    const oldCategory = categories.find(c => c.name === name);
+
     // Optimistic UI update
     setCategories(prev =>
       prev.map(c => c.name === name ? { ...c, type } : c)
@@ -52,20 +65,41 @@ export const useCategories = (): UseCategoriesReturn => {
 
     // Persist to backend
     if (window.electron) {
-      await window.electron.updateCategoryType(name, type);
+      try {
+        await window.electron.updateCategoryType(name, type);
+      } catch (error) {
+        console.error('Failed to update category type:', error);
+        // Revert optimistic update
+        if (oldCategory) {
+          setCategories(prev =>
+            prev.map(c => c.name === name ? oldCategory : c)
+          );
+        }
+      }
     }
-  }, []);
+  }, [categories]);
 
   // Delete a category
   const deleteCategory = useCallback(async (name: string) => {
+    // Store old category for rollback
+    const oldCategory = categories.find(c => c.name === name);
+
     // Optimistic UI update
     setCategories(prev => prev.filter(c => c.name !== name));
 
     // Persist to backend
     if (window.electron) {
-      await window.electron.deleteSmartCategory(name);
+      try {
+        await window.electron.deleteSmartCategory(name);
+      } catch (error) {
+        console.error('Failed to delete category:', error);
+        // Revert optimistic update
+        if (oldCategory) {
+          setCategories(prev => [...prev, oldCategory]);
+        }
+      }
     }
-  }, []);
+  }, [categories]);
 
   // Rename a category
   const renameCategory = useCallback(async (oldName: string, newName: string) => {
@@ -76,7 +110,15 @@ export const useCategories = (): UseCategoriesReturn => {
 
     // Persist to backend
     if (window.electron) {
-      await window.electron.renameSmartCategory({ oldName, newName });
+      try {
+        await window.electron.renameSmartCategory({ oldName, newName });
+      } catch (error) {
+        console.error('Failed to rename category:', error);
+        // Revert optimistic update
+        setCategories(prev =>
+          prev.map(c => c.name === newName ? { ...c, name: oldName } : c)
+        );
+      }
     }
   }, []);
 
