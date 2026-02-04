@@ -7,20 +7,24 @@ const db = new Database(dbPath);
 
 console.log('Checking unread counts per folder...');
 
-const rows = db.prepare(`
+const rows = db
+  .prepare(
+    `
     SELECT folder, count(*) as c 
     FROM emails 
     WHERE isRead = 0 
     GROUP BY folder
-`).all();
+`
+  )
+  .all();
 
 console.log('Unread Counts per Folder:');
-rows.forEach(r => console.log(`${r.folder}: ${r.c}`));
+rows.forEach((r) => console.log(`${r.folder}: ${r.c}`));
 
 // Check specifically Posteingang
-const inbox = rows.find(r => r.folder === 'Posteingang');
+const inbox = rows.find((r) => r.folder === 'Posteingang');
 if (!inbox) {
-    console.log('Posteingang has 0 unread emails.');
+  console.log('Posteingang has 0 unread emails.');
 } else {
-    console.log('Posteingang has ' + inbox.c + ' unread emails.');
+  console.log('Posteingang has ' + inbox.c + ' unread emails.');
 }

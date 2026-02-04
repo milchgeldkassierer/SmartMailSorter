@@ -12,13 +12,16 @@ interface RequireCache {
 }
 
 // Mock Electron app.getPath for db initialization
-const electronPath = path.resolve(path.dirname(new URL(import.meta.url).pathname), '../../node_modules/electron/index.js');
+const electronPath = path.resolve(
+  path.dirname(new URL(import.meta.url).pathname),
+  '../../node_modules/electron/index.js'
+);
 (require.cache as RequireCache)[electronPath] = {
   exports: {
     app: {
-      getPath: () => './test-data'
-    }
-  }
+      getPath: () => './test-data',
+    },
+  },
 } as NodeModule;
 
 // Define interfaces
@@ -87,21 +90,26 @@ describe('Attachment Filename Security Tests', () => {
       password: 'password',
       imapHost: 'imap.test.com',
       imapPort: 993,
-      color: '#0000FF'
+      color: '#0000FF',
     };
     db.addAccount(account);
     return account;
   };
 
   // Helper to create a test email with attachment
-  const createTestEmail = (id: string, accountId: string, attachmentFilename: string, attachmentId: string = 'attach1') => {
+  const createTestEmail = (
+    id: string,
+    accountId: string,
+    attachmentFilename: string,
+    attachmentId: string = 'attach1'
+  ) => {
     const attachment = {
       id: attachmentId,
       emailId: id,
       filename: attachmentFilename,
       contentType: 'application/octet-stream',
       size: 100,
-      data: Buffer.from('test data')
+      data: Buffer.from('test data'),
     };
 
     const email = {
@@ -117,7 +125,7 @@ describe('Attachment Filename Security Tests', () => {
       isFlagged: false,
       hasAttachments: true,
       uid: 100,
-      attachments: [attachment]
+      attachments: [attachment],
     };
     db.saveEmail(email);
     return email;
@@ -151,10 +159,10 @@ describe('Attachment Filename Security Tests', () => {
         '../../../etc/passwd',
         '../../.bashrc',
         '../../../home/user/.ssh/id_rsa',
-        '../../../../etc/shadow'
+        '../../../../etc/shadow',
       ];
 
-      maliciousFilenames.forEach(filename => {
+      maliciousFilenames.forEach((filename) => {
         verifySafeInTempDir(filename);
         const sanitized = sanitizeFilename(filename);
         // Critical: no path separators (basename + removal ensures this)
@@ -169,10 +177,10 @@ describe('Attachment Filename Security Tests', () => {
       const maliciousFilenames = [
         '..\\..\\..\\Windows\\System32\\config',
         '..\\..\\..\\Windows\\System32\\drivers\\etc\\hosts',
-        '..\\..\\Users\\Admin\\AppData'
+        '..\\..\\Users\\Admin\\AppData',
       ];
 
-      maliciousFilenames.forEach(filename => {
+      maliciousFilenames.forEach((filename) => {
         verifySafeInTempDir(filename);
         const sanitized = sanitizeFilename(filename);
         // Critical: no path separators
@@ -184,13 +192,9 @@ describe('Attachment Filename Security Tests', () => {
     });
 
     it('should sanitize mixed path separator traversal attempts', () => {
-      const maliciousFilenames = [
-        '../../../etc/passwd',
-        '..\\..\\..\\etc\\passwd',
-        '../..\\../etc/passwd'
-      ];
+      const maliciousFilenames = ['../../../etc/passwd', '..\\..\\..\\etc\\passwd', '../..\\../etc/passwd'];
 
-      maliciousFilenames.forEach(filename => {
+      maliciousFilenames.forEach((filename) => {
         verifySafeInTempDir(filename);
         const sanitized = sanitizeFilename(filename);
         // Critical: no path separators regardless of style
@@ -204,14 +208,9 @@ describe('Attachment Filename Security Tests', () => {
 
   describe('Absolute Path Protection', () => {
     it('should sanitize Unix absolute paths', () => {
-      const absolutePaths = [
-        '/etc/passwd',
-        '/home/user/.bashrc',
-        '/root/.ssh/id_rsa',
-        '/var/log/system.log'
-      ];
+      const absolutePaths = ['/etc/passwd', '/home/user/.bashrc', '/root/.ssh/id_rsa', '/var/log/system.log'];
 
-      absolutePaths.forEach(filename => {
+      absolutePaths.forEach((filename) => {
         verifySafeInTempDir(filename);
         const sanitized = sanitizeFilename(filename);
         expect(sanitized).not.toContain('/');
@@ -224,10 +223,10 @@ describe('Attachment Filename Security Tests', () => {
       const absolutePaths = [
         'C:\\Windows\\System32\\config',
         'D:\\Users\\Admin\\Documents',
-        'C:\\Program Files\\App\\config.ini'
+        'C:\\Program Files\\App\\config.ini',
       ];
 
-      absolutePaths.forEach(filename => {
+      absolutePaths.forEach((filename) => {
         verifySafeInTempDir(filename);
         const sanitized = sanitizeFilename(filename);
         expect(sanitized).not.toContain('\\');
@@ -238,13 +237,9 @@ describe('Attachment Filename Security Tests', () => {
 
   describe('Null Byte Injection Protection', () => {
     it('should remove null bytes from filenames', () => {
-      const maliciousFilenames = [
-        'file.txt\0.exe',
-        'document\0.pdf',
-        'safe.pdf\0../../etc/passwd'
-      ];
+      const maliciousFilenames = ['file.txt\0.exe', 'document\0.pdf', 'safe.pdf\0../../etc/passwd'];
 
-      maliciousFilenames.forEach(filename => {
+      maliciousFilenames.forEach((filename) => {
         const sanitized = sanitizeFilename(filename);
         expect(sanitized).not.toContain('\0');
         verifySafeInTempDir(filename);
@@ -265,7 +260,7 @@ describe('Attachment Filename Security Tests', () => {
         { input: '.bashrc', expected: 'bashrc' },
         { input: '.ssh', expected: 'ssh' },
         { input: '.env', expected: 'env' },
-        { input: '.gitignore', expected: 'gitignore' }
+        { input: '.gitignore', expected: 'gitignore' },
       ];
 
       testCases.forEach(({ input, expected }) => {
@@ -277,14 +272,9 @@ describe('Attachment Filename Security Tests', () => {
     });
 
     it('should reject dangerous special filenames', () => {
-      const dangerousNames = [
-        '.',
-        '..',
-        '...',
-        '....'
-      ];
+      const dangerousNames = ['.', '..', '...', '....'];
 
-      dangerousNames.forEach(filename => {
+      dangerousNames.forEach((filename) => {
         const sanitized = sanitizeFilename(filename);
         expect(sanitized).toBe('attachment');
         verifySafeInTempDir(filename);
@@ -292,16 +282,9 @@ describe('Attachment Filename Security Tests', () => {
     });
 
     it('should handle empty or invalid filenames', () => {
-      const invalidFilenames: unknown[] = [
-        '',
-        '   ',
-        '\t\n',
-        null,
-        undefined,
-        123
-      ];
+      const invalidFilenames: unknown[] = ['', '   ', '\t\n', null, undefined, 123];
 
-      invalidFilenames.forEach(filename => {
+      invalidFilenames.forEach((filename) => {
         const sanitized = sanitizeFilename(filename as string);
         expect(sanitized).toBe('attachment');
       });
@@ -333,21 +316,16 @@ describe('Attachment Filename Security Tests', () => {
     it('should block basic Windows reserved device names', () => {
       const reservedNames = ['CON', 'PRN', 'AUX', 'NUL'];
 
-      reservedNames.forEach(name => {
+      reservedNames.forEach((name) => {
         const sanitized = sanitizeFilename(name);
         expect(sanitized).toBe('attachment');
       });
     });
 
     it('should block Windows reserved device names with extensions', () => {
-      const reservedWithExtensions = [
-        'CON.txt',
-        'PRN.pdf',
-        'AUX.doc',
-        'NUL.exe'
-      ];
+      const reservedWithExtensions = ['CON.txt', 'PRN.pdf', 'AUX.doc', 'NUL.exe'];
 
-      reservedWithExtensions.forEach(filename => {
+      reservedWithExtensions.forEach((filename) => {
         const sanitized = sanitizeFilename(filename);
         expect(sanitized).toBe('attachment');
       });
@@ -355,25 +333,36 @@ describe('Attachment Filename Security Tests', () => {
 
     it('should block COM1-9 and LPT1-9 device names', () => {
       const comLptNames = [
-        'COM1', 'COM2', 'COM3', 'COM4', 'COM5', 'COM6', 'COM7', 'COM8', 'COM9',
-        'LPT1', 'LPT2', 'LPT3', 'LPT4', 'LPT5', 'LPT6', 'LPT7', 'LPT8', 'LPT9'
+        'COM1',
+        'COM2',
+        'COM3',
+        'COM4',
+        'COM5',
+        'COM6',
+        'COM7',
+        'COM8',
+        'COM9',
+        'LPT1',
+        'LPT2',
+        'LPT3',
+        'LPT4',
+        'LPT5',
+        'LPT6',
+        'LPT7',
+        'LPT8',
+        'LPT9',
       ];
 
-      comLptNames.forEach(name => {
+      comLptNames.forEach((name) => {
         const sanitized = sanitizeFilename(name);
         expect(sanitized).toBe('attachment');
       });
     });
 
     it('should block COM/LPT device names with extensions', () => {
-      const comLptWithExtensions = [
-        'COM1.txt',
-        'COM5.pdf',
-        'LPT1.doc',
-        'LPT9.xlsx'
-      ];
+      const comLptWithExtensions = ['COM1.txt', 'COM5.pdf', 'LPT1.doc', 'LPT9.xlsx'];
 
-      comLptWithExtensions.forEach(filename => {
+      comLptWithExtensions.forEach((filename) => {
         const sanitized = sanitizeFilename(filename);
         expect(sanitized).toBe('attachment');
       });
@@ -381,15 +370,28 @@ describe('Attachment Filename Security Tests', () => {
 
     it('should handle case-insensitive reserved names', () => {
       const caseVariations = [
-        'con', 'Con', 'CON', 'cOn',
-        'prn', 'Prn', 'PRN',
-        'aux', 'Aux', 'AUX',
-        'nul', 'Nul', 'NUL',
-        'com1', 'Com1', 'COM1',
-        'lpt1', 'Lpt1', 'LPT1'
+        'con',
+        'Con',
+        'CON',
+        'cOn',
+        'prn',
+        'Prn',
+        'PRN',
+        'aux',
+        'Aux',
+        'AUX',
+        'nul',
+        'Nul',
+        'NUL',
+        'com1',
+        'Com1',
+        'COM1',
+        'lpt1',
+        'Lpt1',
+        'LPT1',
       ];
 
-      caseVariations.forEach(name => {
+      caseVariations.forEach((name) => {
         const sanitized = sanitizeFilename(name);
         expect(sanitized).toBe('attachment');
       });
@@ -397,18 +399,18 @@ describe('Attachment Filename Security Tests', () => {
 
     it('should allow filenames that contain but are not reserved names', () => {
       const validFilenames = [
-        'config.txt',      // contains 'con' but not reserved
-        'context.pdf',     // contains 'con' but not reserved
-        'printer.doc',     // contains 'prn' but not reserved
-        'auxiliary.txt',   // contains 'aux' but not reserved
-        'nullable.js',     // contains 'nul' but not reserved
-        'COM10.txt',       // COM10 is not reserved (only COM1-9)
-        'LPT0.txt',        // LPT0 is not reserved (only LPT1-9)
-        'COMMAND.exe',     // contains 'COM' but not reserved
-        'laptop.pdf'       // contains 'lpt' but not reserved
+        'config.txt', // contains 'con' but not reserved
+        'context.pdf', // contains 'con' but not reserved
+        'printer.doc', // contains 'prn' but not reserved
+        'auxiliary.txt', // contains 'aux' but not reserved
+        'nullable.js', // contains 'nul' but not reserved
+        'COM10.txt', // COM10 is not reserved (only COM1-9)
+        'LPT0.txt', // LPT0 is not reserved (only LPT1-9)
+        'COMMAND.exe', // contains 'COM' but not reserved
+        'laptop.pdf', // contains 'lpt' but not reserved
       ];
 
-      validFilenames.forEach(filename => {
+      validFilenames.forEach((filename) => {
         const sanitized = sanitizeFilename(filename);
         expect(sanitized).toBe(filename);
         expect(sanitized).not.toBe('attachment');
@@ -487,15 +489,9 @@ describe('Attachment Filename Security Tests', () => {
 
   describe('Valid Filenames', () => {
     it('should preserve valid simple filenames', () => {
-      const validFilenames = [
-        'document.pdf',
-        'report-2024.xlsx',
-        'image_001.png',
-        'notes.txt',
-        'data.json'
-      ];
+      const validFilenames = ['document.pdf', 'report-2024.xlsx', 'image_001.png', 'notes.txt', 'data.json'];
 
-      validFilenames.forEach(filename => {
+      validFilenames.forEach((filename) => {
         const sanitized = sanitizeFilename(filename);
         expect(sanitized).toBe(filename);
         verifySafeInTempDir(filename);
@@ -571,13 +567,9 @@ describe('Attachment Filename Security Tests', () => {
 
   describe('Edge Cases and Corner Cases', () => {
     it('should handle filenames with leading/trailing dots', () => {
-      const filenames = [
-        '...filename.txt',
-        'filename.txt...',
-        '..filename..txt..'
-      ];
+      const filenames = ['...filename.txt', 'filename.txt...', '..filename..txt..'];
 
-      filenames.forEach(filename => {
+      filenames.forEach((filename) => {
         const sanitized = sanitizeFilename(filename);
         // Leading/trailing dots are trimmed
         expect(sanitized).not.toMatch(/^\./);
@@ -600,14 +592,9 @@ describe('Attachment Filename Security Tests', () => {
     });
 
     it('should handle Unicode filenames safely', () => {
-      const unicodeFilenames = [
-        'документ.pdf',
-        '文档.txt',
-        'ملف.docx',
-        'αρχείο.xlsx'
-      ];
+      const unicodeFilenames = ['документ.pdf', '文档.txt', 'ملف.docx', 'αρχείο.xlsx'];
 
-      unicodeFilenames.forEach(filename => {
+      unicodeFilenames.forEach((filename) => {
         const sanitized = sanitizeFilename(filename);
         expect(sanitized.length).toBeGreaterThan(0);
         expect(sanitized).not.toBe('attachment'); // Unicode should be preserved
@@ -636,10 +623,10 @@ describe('Attachment Filename Security Tests', () => {
         '../../../etc/passwd\0.exe',
         '..\\..\\Windows\\<system>.dll',
         '/etc/../../../root/.ssh/id_rsa\0',
-        'C:\\..\\..\\..\\Windows\\|evil|.exe'
+        'C:\\..\\..\\..\\Windows\\|evil|.exe',
       ];
 
-      complexAttacks.forEach(filename => {
+      complexAttacks.forEach((filename) => {
         const sanitized = sanitizeFilename(filename);
         // Critical security checks: no path separators or null bytes
         expect(sanitized).not.toContain('/');

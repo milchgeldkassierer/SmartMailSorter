@@ -28,7 +28,7 @@ export const useSync = ({
     setIsSyncing(true);
 
     try {
-      const account = accounts.find(a => a.id === activeAccountId);
+      const account = accounts.find((a) => a.id === activeAccountId);
       if (!account) return;
 
       // Trigger backend sync

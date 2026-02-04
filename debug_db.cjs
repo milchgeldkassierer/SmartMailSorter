@@ -7,24 +7,25 @@ const dbPath = path.join(os.homedir(), 'AppData', 'Roaming', 'smartmail-ai-sorte
 console.log('Target DB Path:', dbPath);
 
 if (!fs.existsSync(dbPath)) {
-    console.error('ERROR: Database file does not exist at path!');
+  console.error('ERROR: Database file does not exist at path!');
 } else {
+  try {
+    const db = new Database(dbPath, { verbose: null, fileMustExist: true });
+
+    console.log('\n--- CATEGORIES TABLE ---');
     try {
-        const db = new Database(dbPath, { verbose: null, fileMustExist: true });
-
-        console.log('\n--- CATEGORIES TABLE ---');
-        try {
-            const categories = db.prepare('SELECT * FROM categories').all();
-            console.table(categories);
-        } catch (e) { console.error('Error reading categories:', e.message); }
-
-        console.log('\n--- EMAILS FOLDER DISTRIBUTION ---');
-        try {
-            const counts = db.prepare('SELECT folder, count(*) as c FROM emails GROUP BY folder').all();
-            console.table(counts);
-        } catch (e) { }
-
+      const categories = db.prepare('SELECT * FROM categories').all();
+      console.table(categories);
     } catch (e) {
-        console.error('Failed to open database:', e);
+      console.error('Error reading categories:', e.message);
     }
+
+    console.log('\n--- EMAILS FOLDER DISTRIBUTION ---');
+    try {
+      const counts = db.prepare('SELECT folder, count(*) as c FROM emails GROUP BY folder').all();
+      console.table(counts);
+    } catch (e) {}
+  } catch (e) {
+    console.error('Failed to open database:', e);
+  }
 }

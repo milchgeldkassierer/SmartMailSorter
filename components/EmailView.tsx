@@ -15,7 +15,8 @@ const EmailView: React.FC<EmailViewProps> = ({ email }) => {
   useEffect(() => {
     if (email && email.hasAttachments && window.electron) {
       setIsLoadingAttachments(true);
-      window.electron.getEmailAttachments(email.id)
+      window.electron
+        .getEmailAttachments(email.id)
         .then((atts: Attachment[]) => setAttachments(atts))
         .catch((err: unknown) => console.error(err))
         .finally(() => setIsLoadingAttachments(false));
@@ -38,7 +39,7 @@ const EmailView: React.FC<EmailViewProps> = ({ email }) => {
     return (
       <div className="flex-1 bg-slate-50 flex items-center justify-center text-slate-400">
         <div className="text-center">
-          <CategoryIcon category={"INBOX"} className="w-16 h-16 mx-auto mb-4 opacity-20" />
+          <CategoryIcon category={'INBOX'} className="w-16 h-16 mx-auto mb-4 opacity-20" />
           <p>Wähle eine Email aus, um Details zu sehen.</p>
         </div>
       </div>
@@ -82,7 +83,11 @@ const EmailView: React.FC<EmailViewProps> = ({ email }) => {
           <div className="flex items-center">
             <div className="flex-shrink-0">
               <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                <path
+                  fillRule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                  clipRule="evenodd"
+                />
               </svg>
             </div>
             <div className="ml-3">
@@ -95,7 +100,11 @@ const EmailView: React.FC<EmailViewProps> = ({ email }) => {
               >
                 <span className="sr-only">Dismiss</span>
                 <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                  <path
+                    fillRule="evenodd"
+                    d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                    clipRule="evenodd"
+                  />
                 </svg>
               </button>
             </div>
@@ -125,9 +134,7 @@ const EmailView: React.FC<EmailViewProps> = ({ email }) => {
               <div className="font-medium text-slate-900">
                 {email.sender} <span className="text-slate-500 font-normal text-sm">&lt;{email.senderEmail}&gt;</span>
               </div>
-              <div className="text-xs text-slate-500">
-                {new Date(email.date).toLocaleString()}
-              </div>
+              <div className="text-xs text-slate-500">{new Date(email.date).toLocaleString()}</div>
             </div>
           </div>
 
@@ -143,7 +150,11 @@ const EmailView: React.FC<EmailViewProps> = ({ email }) => {
         {attachments.length > 0 && (
           <div className="mt-4 flex flex-wrap gap-2">
             {attachments.map((att: Attachment) => (
-              <div key={att.id} className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 border border-slate-200 px-3 py-1.5 rounded-md text-sm text-slate-700 cursor-pointer transition-colors" title={`Size: ${(att.size / 1024).toFixed(1)} KB`}>
+              <div
+                key={att.id}
+                className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 border border-slate-200 px-3 py-1.5 rounded-md text-sm text-slate-700 cursor-pointer transition-colors"
+                title={`Size: ${(att.size / 1024).toFixed(1)} KB`}
+              >
                 <Paperclip className="w-3.5 h-3.5" />
                 <span className="truncate max-w-[200px]">{att.filename}</span>
               </div>
@@ -159,9 +170,7 @@ const EmailView: React.FC<EmailViewProps> = ({ email }) => {
             <BrainCircuit className="w-5 h-5" />
             <h3 className="font-semibold text-sm">Gemini Analyse</h3>
           </div>
-          <p className="text-sm text-slate-700 leading-relaxed">
-            {email.aiReasoning}
-          </p>
+          <p className="text-sm text-slate-700 leading-relaxed">{email.aiReasoning}</p>
         </div>
       )}
 

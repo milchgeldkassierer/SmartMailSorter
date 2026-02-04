@@ -26,8 +26,12 @@ function createSchema() {
   `);
 
   // Migration for existing users (naive column addition)
-  try { db.exec('ALTER TABLE accounts ADD COLUMN storageUsed INTEGER DEFAULT 0'); } catch (e) { }
-  try { db.exec('ALTER TABLE accounts ADD COLUMN storageTotal INTEGER DEFAULT 0'); } catch (e) { }
+  try {
+    db.exec('ALTER TABLE accounts ADD COLUMN storageUsed INTEGER DEFAULT 0');
+  } catch (e) {}
+  try {
+    db.exec('ALTER TABLE accounts ADD COLUMN storageTotal INTEGER DEFAULT 0');
+  } catch (e) {}
 
   // Create Emails Table
   db.exec(`
@@ -67,10 +71,18 @@ function createSchema() {
   `);
 
   // Migrations for existing tables
-  try { db.exec('ALTER TABLE emails ADD COLUMN bodyHtml TEXT'); } catch (e) { }
-  try { db.exec('ALTER TABLE emails ADD COLUMN hasAttachments INTEGER DEFAULT 0'); } catch (e) { }
-  try { db.exec("ALTER TABLE emails ADD COLUMN folder TEXT DEFAULT 'Posteingang'"); } catch (e) { }
-  try { db.exec("ALTER TABLE emails ADD COLUMN smartCategory TEXT"); } catch (e) { }
+  try {
+    db.exec('ALTER TABLE emails ADD COLUMN bodyHtml TEXT');
+  } catch (e) {}
+  try {
+    db.exec('ALTER TABLE emails ADD COLUMN hasAttachments INTEGER DEFAULT 0');
+  } catch (e) {}
+  try {
+    db.exec("ALTER TABLE emails ADD COLUMN folder TEXT DEFAULT 'Posteingang'");
+  } catch (e) {}
+  try {
+    db.exec('ALTER TABLE emails ADD COLUMN smartCategory TEXT');
+  } catch (e) {}
   // Create Categories Table
   db.exec(`
     CREATE TABLE IF NOT EXISTS categories (
@@ -89,23 +101,27 @@ function createSchema() {
       { name: 'Privat', type: 'system' },
       { name: 'Geschäftlich', type: 'system' },
       { name: 'Kündigungen', type: 'system' },
-      { name: 'Sonstiges', type: 'system' }
+      { name: 'Sonstiges', type: 'system' },
     ];
     const insert = db.prepare('INSERT INTO categories (name, type) VALUES (@name, @type)');
-    defaults.forEach(cat => insert.run(cat));
+    defaults.forEach((cat) => insert.run(cat));
   }
 
   // SYNC/MIGRATION: Ensure categories used in emails (custom folders) exist in the categories table
   // This restores categories that might have been created before the categories table existed.
   try {
-    const usedCategories = db.prepare('SELECT DISTINCT smartCategory FROM emails WHERE smartCategory IS NOT NULL AND smartCategory != ?').all('');
-    const insertIgnore = db.prepare("INSERT OR IGNORE INTO categories (name, type, icon) VALUES (?, 'custom', 'folder-outline')");
+    const usedCategories = db
+      .prepare('SELECT DISTINCT smartCategory FROM emails WHERE smartCategory IS NOT NULL AND smartCategory != ?')
+      .all('');
+    const insertIgnore = db.prepare(
+      "INSERT OR IGNORE INTO categories (name, type, icon) VALUES (?, 'custom', 'folder-outline')"
+    );
 
-    usedCategories.forEach(row => {
+    usedCategories.forEach((row) => {
       insertIgnore.run(row.smartCategory);
     });
   } catch (e) {
-    console.error("Failed to sync categories from emails:", e);
+    console.error('Failed to sync categories from emails:', e);
   }
 }
 
@@ -169,7 +185,9 @@ function deleteAccountDn(id) {
 // Email Methods
 function getEmails(accountId) {
   // OPTIMIZATION: Do NOT select body or bodyHtml (too large for list view)
-  const emails = db.prepare(`
+  const emails = db
+    .prepare(
+      `
     SELECT 
       id, accountId, sender, senderEmail, subject, date, 
       folder, smartCategory, isRead, isFlagged, hasAttachments, 
@@ -177,13 +195,15 @@ function getEmails(accountId) {
     FROM emails 
     WHERE accountId = ? 
     ORDER BY date DESC
-  `).all(accountId);
+  `
+    )
+    .all(accountId);
 
-  return emails.map(email => ({
+  return emails.map((email) => ({
     ...email,
     isRead: Boolean(email.isRead),
     isFlagged: Boolean(email.isFlagged),
-    hasAttachments: Boolean(email.hasAttachments)
+    hasAttachments: Boolean(email.hasAttachments),
   }));
 }
 
@@ -229,7 +249,7 @@ function saveEmail(email) {
     aiSummary: email.aiSummary || null,
     aiReasoning: email.aiReasoning || null,
     confidence: email.confidence || 0,
-    uid: email.uid || 0
+    uid: email.uid || 0,
   });
 
   // Save Attachments if present
@@ -246,7 +266,7 @@ function saveEmail(email) {
         filename: att.filename || 'unnamed',
         contentType: att.contentType || 'application/octet-stream',
         size: att.size || 0,
-        data: att.data || null // Buffer
+        data: att.data || null, // Buffer
       });
     }
   }
@@ -302,7 +322,10 @@ function resetDb() {
 // --- Category Methods ---
 
 function getCategories() {
-  return db.prepare('SELECT name FROM categories ORDER BY name ASC').all().map(c => c.name);
+  return db
+    .prepare('SELECT name FROM categories ORDER BY name ASC')
+    .all()
+    .map((c) => c.name);
 }
 
 function addCategory(name) {
@@ -339,7 +362,7 @@ function renameSmartCategory(oldName, newName) {
     // 1. Create new category
     try {
       db.prepare('INSERT INTO categories (name, type) VALUES (?, ?)').run(newName, 'custom');
-    } catch (e) { } // Exists? ignore
+    } catch (e) {} // Exists? ignore
 
     // 2. Update emails
     db.prepare('UPDATE emails SET smartCategory = ? WHERE smartCategory = ?').run(newName, oldName);
@@ -400,10 +423,10 @@ module.exports = {
   },
   getAllUidsForFolder: (accountId, folder) => {
     const stmt = db.prepare('SELECT uid FROM emails WHERE accountId = ? AND folder = ?');
-    return stmt.all(accountId, folder).map(r => r.uid);
+    return stmt.all(accountId, folder).map((r) => r.uid);
   },
   migrateFolder,
-  resetDb
+  resetDb,
 };
 
 function migrateFolder(oldName, newName) {

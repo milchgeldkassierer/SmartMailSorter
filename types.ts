@@ -6,7 +6,7 @@ export enum DefaultEmailCategory {
   PRIVATE = 'Privat',
   BUSINESS = 'Geschäftlich',
   CANCELLATION = 'Kündigungen',
-  OTHER = 'Sonstiges'
+  OTHER = 'Sonstiges',
 }
 
 export interface Category {
@@ -64,7 +64,7 @@ export interface SortResult {
 export enum LLMProvider {
   GEMINI = 'Google Gemini',
   OPENAI = 'OpenAI',
-  ANTHROPIC = 'Anthropic'
+  ANTHROPIC = 'Anthropic',
 }
 
 export interface AISettings {
@@ -76,7 +76,7 @@ export interface AISettings {
 export const AVAILABLE_MODELS: Record<LLMProvider, string[]> = {
   [LLMProvider.GEMINI]: ['gemini-3-flash-preview', 'gemini-3-pro-preview'],
   [LLMProvider.OPENAI]: ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo'],
-  [LLMProvider.ANTHROPIC]: ['claude-3-5-sonnet-20240620', 'claude-3-haiku-20240307']
+  [LLMProvider.ANTHROPIC]: ['claude-3-5-sonnet-20240620', 'claude-3-haiku-20240307'],
 };
 
 // Attachment Types

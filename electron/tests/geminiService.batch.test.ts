@@ -6,11 +6,15 @@ import { Email, DefaultEmailCategory, SortResult, AISettings, LLMProvider } from
 let mockCallLLM: any;
 
 vi.mock('../../services/geminiService', async () => {
-  const actual = await vi.importActual('../../services/geminiService') as any;
+  const actual = (await vi.importActual('../../services/geminiService')) as any;
 
   return {
     ...actual,
-    categorizeBatchWithAI: async (emails: Email[], availableCategories: string[], settings: AISettings): Promise<SortResult[]> => {
+    categorizeBatchWithAI: async (
+      emails: Email[],
+      availableCategories: string[],
+      settings: AISettings
+    ): Promise<SortResult[]> => {
       // Handle empty array case first (matches actual implementation)
       if (emails.length === 0) return [];
 
@@ -25,31 +29,31 @@ vi.mock('../../services/geminiService', async () => {
           }
 
           // Map back to original order (this is the core logic we're testing)
-          return emails.map(email => {
+          return emails.map((email) => {
             const res = resultMap.get(email.id);
             if (res) {
               return {
                 categoryId: res.category || DefaultEmailCategory.OTHER,
-                summary: res.summary || "Analysiert",
-                reasoning: res.reasoning || "Batch OK",
-                confidence: res.confidence || 0.8
+                summary: res.summary || 'Analysiert',
+                reasoning: res.reasoning || 'Batch OK',
+                confidence: res.confidence || 0.8,
               };
             }
             // Fallback for missing items
             return {
               categoryId: DefaultEmailCategory.OTHER,
-              summary: "Fehler",
-              reasoning: "AI lieferte kein Ergebnis für diese ID",
-              confidence: 0
+              summary: 'Fehler',
+              reasoning: 'AI lieferte kein Ergebnis für diese ID',
+              confidence: 0,
             };
           });
         } catch (error) {
           // Fail all gracefully (this is the error handling logic we're testing)
           return emails.map(() => ({
             categoryId: DefaultEmailCategory.OTHER,
-            summary: "Fehler",
-            reasoning: "Batch API Error: " + String(error),
-            confidence: 0
+            summary: 'Fehler',
+            reasoning: 'Batch API Error: ' + String(error),
+            confidence: 0,
           }));
         }
       }
@@ -57,16 +61,27 @@ vi.mock('../../services/geminiService', async () => {
       // Default fallback if no mock configured
       return emails.map(() => ({
         categoryId: DefaultEmailCategory.OTHER,
-        summary: "Fehler",
-        reasoning: "No mock configured",
-        confidence: 0
+        summary: 'Fehler',
+        reasoning: 'No mock configured',
+        confidence: 0,
       }));
     },
-    categorizeEmailWithAI: async (email: Email, availableCategories: string[], settings: AISettings): Promise<SortResult> => {
+    categorizeEmailWithAI: async (
+      email: Email,
+      availableCategories: string[],
+      settings: AISettings
+    ): Promise<SortResult> => {
       const { categorizeBatchWithAI } = await import('../../services/geminiService');
       const results = await categorizeBatchWithAI([email], availableCategories, settings);
-      return results[0] || { categoryId: DefaultEmailCategory.OTHER, summary: "Fehler", reasoning: "Batch Failed", confidence: 0 };
-    }
+      return (
+        results[0] || {
+          categoryId: DefaultEmailCategory.OTHER,
+          summary: 'Fehler',
+          reasoning: 'Batch Failed',
+          confidence: 0,
+        }
+      );
+    },
   };
 });
 
@@ -77,7 +92,7 @@ describe('GeminiService - Batch Categorization', () => {
   const defaultSettings: AISettings = {
     provider: LLMProvider.GEMINI,
     model: 'gemini-3-flash-preview',
-    apiKey: 'test-api-key'
+    apiKey: 'test-api-key',
   };
 
   const availableCategories = [
@@ -86,7 +101,7 @@ describe('GeminiService - Batch Categorization', () => {
     DefaultEmailCategory.INVOICE,
     DefaultEmailCategory.NEWSLETTER,
     DefaultEmailCategory.PRIVATE,
-    DefaultEmailCategory.BUSINESS
+    DefaultEmailCategory.BUSINESS,
   ];
 
   beforeEach(() => {
@@ -106,7 +121,7 @@ describe('GeminiService - Batch Categorization', () => {
       folder: 'INBOX',
       category: DefaultEmailCategory.INBOX,
       isRead: false,
-      isFlagged: false
+      isFlagged: false,
     };
   }
 
@@ -114,14 +129,14 @@ describe('GeminiService - Batch Categorization', () => {
     const emails = [
       createTestEmail('email-1', 'Invoice from Amazon', 'billing@amazon.com'),
       createTestEmail('email-2', 'Newsletter Subscription', 'newsletter@example.com'),
-      createTestEmail('email-3', 'Meeting Reminder', 'colleague@company.com')
+      createTestEmail('email-3', 'Meeting Reminder', 'colleague@company.com'),
     ];
 
     // Mock callLLM to return categorization results
     mockCallLLM = vi.fn().mockResolvedValue([
       { id: 'email-1', category: DefaultEmailCategory.INVOICE, summary: 'Rechnung von Amazon' },
       { id: 'email-2', category: DefaultEmailCategory.NEWSLETTER, summary: 'Newsletter Abo' },
-      { id: 'email-3', category: DefaultEmailCategory.BUSINESS, summary: 'Meeting Erinnerung' }
+      { id: 'email-3', category: DefaultEmailCategory.BUSINESS, summary: 'Meeting Erinnerung' },
     ]);
 
     const results = await geminiService.categorizeBatchWithAI(emails, availableCategories, defaultSettings);
@@ -147,13 +162,11 @@ describe('GeminiService - Batch Categorization', () => {
   });
 
   it('should handle single email batch', async () => {
-    const emails = [
-      createTestEmail('email-1', 'Your Invoice #12345', 'invoice@shop.com')
-    ];
+    const emails = [createTestEmail('email-1', 'Your Invoice #12345', 'invoice@shop.com')];
 
-    mockCallLLM = vi.fn().mockResolvedValue([
-      { id: 'email-1', category: DefaultEmailCategory.INVOICE, summary: 'Rechnung #12345' }
-    ]);
+    mockCallLLM = vi
+      .fn()
+      .mockResolvedValue([{ id: 'email-1', category: DefaultEmailCategory.INVOICE, summary: 'Rechnung #12345' }]);
 
     const results = await geminiService.categorizeBatchWithAI(emails, availableCategories, defaultSettings);
 
@@ -168,7 +181,7 @@ describe('GeminiService - Batch Categorization', () => {
       createTestEmail('email-3', 'Third Email'),
       createTestEmail('email-1', 'First Email'),
       createTestEmail('email-4', 'Fourth Email'),
-      createTestEmail('email-2', 'Second Email')
+      createTestEmail('email-2', 'Second Email'),
     ];
 
     // AI returns results in different order
@@ -177,7 +190,7 @@ describe('GeminiService - Batch Categorization', () => {
       { id: 'email-2', category: DefaultEmailCategory.BUSINESS, summary: 'Second' },
       { id: 'email-3', category: DefaultEmailCategory.BUSINESS, summary: 'Third' },
       { id: 'email-4', category: DefaultEmailCategory.BUSINESS, summary: 'Fourth' },
-      { id: 'email-5', category: DefaultEmailCategory.BUSINESS, summary: 'Fifth' }
+      { id: 'email-5', category: DefaultEmailCategory.BUSINESS, summary: 'Fifth' },
     ]);
 
     const results = await geminiService.categorizeBatchWithAI(emails, availableCategories, defaultSettings);
@@ -195,7 +208,7 @@ describe('GeminiService - Batch Categorization', () => {
     const emails = [
       createTestEmail('email-1', 'Test Email 1'),
       createTestEmail('email-2', 'Test Email 2'),
-      createTestEmail('email-3', 'Test Email 3')
+      createTestEmail('email-3', 'Test Email 3'),
     ];
 
     // Mock API failure
@@ -205,7 +218,7 @@ describe('GeminiService - Batch Categorization', () => {
 
     // All emails should receive fallback categorization
     expect(results).toHaveLength(3);
-    results.forEach(result => {
+    results.forEach((result) => {
       expect(result.categoryId).toBe(DefaultEmailCategory.OTHER);
       expect(result.summary).toBe('Fehler');
       expect(result.reasoning).toContain('Batch API Error');
@@ -217,13 +230,13 @@ describe('GeminiService - Batch Categorization', () => {
     const emails = [
       createTestEmail('email-1', 'Test Email 1'),
       createTestEmail('email-2', 'Test Email 2'),
-      createTestEmail('email-3', 'Test Email 3')
+      createTestEmail('email-3', 'Test Email 3'),
     ];
 
     // AI only returns results for 2 out of 3 emails
     mockCallLLM = vi.fn().mockResolvedValue([
       { id: 'email-1', category: DefaultEmailCategory.BUSINESS, summary: 'First' },
-      { id: 'email-3', category: DefaultEmailCategory.BUSINESS, summary: 'Third' }
+      { id: 'email-3', category: DefaultEmailCategory.BUSINESS, summary: 'Third' },
       // email-2 is missing
     ]);
 
@@ -243,9 +256,7 @@ describe('GeminiService - Batch Categorization', () => {
   });
 
   it('should handle AI returning non-array response', async () => {
-    const emails = [
-      createTestEmail('email-1', 'Test Email')
-    ];
+    const emails = [createTestEmail('email-1', 'Test Email')];
 
     // AI returns malformed response
     mockCallLLM = vi.fn().mockResolvedValue({ invalid: 'response' });
@@ -259,14 +270,10 @@ describe('GeminiService - Batch Categorization', () => {
   });
 
   it('should handle AI suggesting new categories not in available list', async () => {
-    const emails = [
-      createTestEmail('email-1', 'Travel Booking Confirmation', 'bookings@travel.com')
-    ];
+    const emails = [createTestEmail('email-1', 'Travel Booking Confirmation', 'bookings@travel.com')];
 
     // AI suggests a new category
-    mockCallLLM = vi.fn().mockResolvedValue([
-      { id: 'email-1', category: 'Reisen', summary: 'Reisebuchung bestätigt' }
-    ]);
+    mockCallLLM = vi.fn().mockResolvedValue([{ id: 'email-1', category: 'Reisen', summary: 'Reisebuchung bestätigt' }]);
 
     const results = await geminiService.categorizeBatchWithAI(emails, availableCategories, defaultSettings);
 
@@ -284,10 +291,10 @@ describe('GeminiService - Batch Categorization', () => {
 
     // Mock AI to return results for all emails
     mockCallLLM = vi.fn().mockResolvedValue(
-      emails.map(e => ({
+      emails.map((e) => ({
         id: e.id,
         category: DefaultEmailCategory.BUSINESS,
-        summary: `Summary for ${e.id}`
+        summary: `Summary for ${e.id}`,
       }))
     );
 
@@ -303,9 +310,9 @@ describe('GeminiService - Batch Categorization', () => {
   it('should use categorizeEmailWithAI for single email (legacy wrapper)', async () => {
     const email = createTestEmail('email-1', 'Test Email', 'test@example.com');
 
-    mockCallLLM = vi.fn().mockResolvedValue([
-      { id: 'email-1', category: DefaultEmailCategory.PRIVATE, summary: 'Private Email' }
-    ]);
+    mockCallLLM = vi
+      .fn()
+      .mockResolvedValue([{ id: 'email-1', category: DefaultEmailCategory.PRIVATE, summary: 'Private Email' }]);
 
     const result = await geminiService.categorizeEmailWithAI(email, availableCategories, defaultSettings);
 
@@ -314,9 +321,7 @@ describe('GeminiService - Batch Categorization', () => {
   });
 
   it('should handle rate limit errors (429)', async () => {
-    const emails = [
-      createTestEmail('email-1', 'Test Email')
-    ];
+    const emails = [createTestEmail('email-1', 'Test Email')];
 
     mockCallLLM = vi.fn().mockRejectedValue(new Error('AI Busy (429)'));
 
@@ -328,13 +333,11 @@ describe('GeminiService - Batch Categorization', () => {
   });
 
   it('should provide default confidence and reasoning when missing from AI response', async () => {
-    const emails = [
-      createTestEmail('email-1', 'Test Email')
-    ];
+    const emails = [createTestEmail('email-1', 'Test Email')];
 
     // AI returns minimal response without confidence or reasoning
     mockCallLLM = vi.fn().mockResolvedValue([
-      { id: 'email-1', category: DefaultEmailCategory.BUSINESS, summary: 'Business Email' }
+      { id: 'email-1', category: DefaultEmailCategory.BUSINESS, summary: 'Business Email' },
       // No confidence or reasoning provided
     ]);
 
@@ -348,16 +351,13 @@ describe('GeminiService - Batch Categorization', () => {
   });
 
   it('should handle duplicate email IDs in AI response', async () => {
-    const emails = [
-      createTestEmail('email-1', 'First Email'),
-      createTestEmail('email-2', 'Second Email')
-    ];
+    const emails = [createTestEmail('email-1', 'First Email'), createTestEmail('email-2', 'Second Email')];
 
     // AI returns duplicate result for email-1
     mockCallLLM = vi.fn().mockResolvedValue([
       { id: 'email-1', category: DefaultEmailCategory.BUSINESS, summary: 'First Result' },
       { id: 'email-1', category: DefaultEmailCategory.PRIVATE, summary: 'Duplicate Result' },
-      { id: 'email-2', category: DefaultEmailCategory.NEWSLETTER, summary: 'Second Result' }
+      { id: 'email-2', category: DefaultEmailCategory.NEWSLETTER, summary: 'Second Result' },
     ]);
 
     const results = await geminiService.categorizeBatchWithAI(emails, availableCategories, defaultSettings);
@@ -383,13 +383,11 @@ describe('GeminiService - Batch Categorization', () => {
     });
 
     it('edge: should handle single email batch', async () => {
-      const emails = [
-        createTestEmail('email-1', 'Your Invoice #12345', 'invoice@shop.com')
-      ];
+      const emails = [createTestEmail('email-1', 'Your Invoice #12345', 'invoice@shop.com')];
 
-      mockCallLLM = vi.fn().mockResolvedValue([
-        { id: 'email-1', category: DefaultEmailCategory.INVOICE, summary: 'Rechnung #12345' }
-      ]);
+      mockCallLLM = vi
+        .fn()
+        .mockResolvedValue([{ id: 'email-1', category: DefaultEmailCategory.INVOICE, summary: 'Rechnung #12345' }]);
 
       const results = await geminiService.categorizeBatchWithAI(emails, availableCategories, defaultSettings);
 
@@ -399,16 +397,13 @@ describe('GeminiService - Batch Categorization', () => {
     });
 
     it('edge: should handle duplicate email IDs in AI response', async () => {
-      const emails = [
-        createTestEmail('email-1', 'First Email'),
-        createTestEmail('email-2', 'Second Email')
-      ];
+      const emails = [createTestEmail('email-1', 'First Email'), createTestEmail('email-2', 'Second Email')];
 
       // AI returns duplicate result for email-1 (edge case: AI malfunction)
       mockCallLLM = vi.fn().mockResolvedValue([
         { id: 'email-1', category: DefaultEmailCategory.BUSINESS, summary: 'First Result' },
         { id: 'email-1', category: DefaultEmailCategory.PRIVATE, summary: 'Duplicate Result' },
-        { id: 'email-2', category: DefaultEmailCategory.NEWSLETTER, summary: 'Second Result' }
+        { id: 'email-2', category: DefaultEmailCategory.NEWSLETTER, summary: 'Second Result' },
       ]);
 
       const results = await geminiService.categorizeBatchWithAI(emails, availableCategories, defaultSettings);
@@ -425,14 +420,14 @@ describe('GeminiService - Batch Categorization', () => {
       const emails = [
         createTestEmail('email-1', 'Invoice 1', 'billing1@example.com'),
         createTestEmail('email-2', 'Invoice 2', 'billing2@example.com'),
-        createTestEmail('email-3', 'Invoice 3', 'billing3@example.com')
+        createTestEmail('email-3', 'Invoice 3', 'billing3@example.com'),
       ];
 
       // All emails get categorized to the same category (normal but edge in terms of uniformity)
       mockCallLLM = vi.fn().mockResolvedValue([
         { id: 'email-1', category: DefaultEmailCategory.INVOICE, summary: 'Rechnung 1' },
         { id: 'email-2', category: DefaultEmailCategory.INVOICE, summary: 'Rechnung 2' },
-        { id: 'email-3', category: DefaultEmailCategory.INVOICE, summary: 'Rechnung 3' }
+        { id: 'email-3', category: DefaultEmailCategory.INVOICE, summary: 'Rechnung 3' },
       ]);
 
       const results = await geminiService.categorizeBatchWithAI(emails, availableCategories, defaultSettings);
@@ -446,10 +441,7 @@ describe('GeminiService - Batch Categorization', () => {
     });
 
     it('edge: should handle empty AI response for non-empty batch', async () => {
-      const emails = [
-        createTestEmail('email-1', 'Test Email 1'),
-        createTestEmail('email-2', 'Test Email 2')
-      ];
+      const emails = [createTestEmail('email-1', 'Test Email 1'), createTestEmail('email-2', 'Test Email 2')];
 
       // AI returns empty array despite having emails (edge case: AI failure)
       mockCallLLM = vi.fn().mockResolvedValue([]);
@@ -458,7 +450,7 @@ describe('GeminiService - Batch Categorization', () => {
 
       expect(results).toHaveLength(2);
       // All emails should get fallback categorization
-      results.forEach(result => {
+      results.forEach((result) => {
         expect(result.categoryId).toBe(DefaultEmailCategory.OTHER);
         expect(result.summary).toBe('Fehler');
         expect(result.reasoning).toContain('AI lieferte kein Ergebnis');
@@ -473,13 +465,13 @@ describe('GeminiService - Batch Categorization', () => {
       const emails = [
         createTestEmail('email-1', 'First Email'),
         createTestEmail('email-2', 'Second Email'),
-        createTestEmail('email-3', 'Third Email')
+        createTestEmail('email-3', 'Third Email'),
       ];
 
       // API returns results for all except first email
       mockCallLLM = vi.fn().mockResolvedValue([
         { id: 'email-2', category: DefaultEmailCategory.NEWSLETTER, summary: 'Second' },
-        { id: 'email-3', category: DefaultEmailCategory.BUSINESS, summary: 'Third' }
+        { id: 'email-3', category: DefaultEmailCategory.BUSINESS, summary: 'Third' },
       ]);
 
       const results = await geminiService.categorizeBatchWithAI(emails, availableCategories, defaultSettings);
@@ -501,13 +493,13 @@ describe('GeminiService - Batch Categorization', () => {
       const emails = [
         createTestEmail('email-1', 'First Email'),
         createTestEmail('email-2', 'Second Email'),
-        createTestEmail('email-3', 'Third Email')
+        createTestEmail('email-3', 'Third Email'),
       ];
 
       // API returns results for all except last email
       mockCallLLM = vi.fn().mockResolvedValue([
         { id: 'email-1', category: DefaultEmailCategory.INVOICE, summary: 'First' },
-        { id: 'email-2', category: DefaultEmailCategory.NEWSLETTER, summary: 'Second' }
+        { id: 'email-2', category: DefaultEmailCategory.NEWSLETTER, summary: 'Second' },
       ]);
 
       const results = await geminiService.categorizeBatchWithAI(emails, availableCategories, defaultSettings);
@@ -530,13 +522,15 @@ describe('GeminiService - Batch Categorization', () => {
         createTestEmail('email-2', 'Second Email'),
         createTestEmail('email-3', 'Third Email'),
         createTestEmail('email-4', 'Fourth Email'),
-        createTestEmail('email-5', 'Fifth Email')
+        createTestEmail('email-5', 'Fifth Email'),
       ];
 
       // API only returns result for 1 out of 5 emails
-      mockCallLLM = vi.fn().mockResolvedValue([
-        { id: 'email-3', category: DefaultEmailCategory.BUSINESS, summary: 'Only this one worked' }
-      ]);
+      mockCallLLM = vi
+        .fn()
+        .mockResolvedValue([
+          { id: 'email-3', category: DefaultEmailCategory.BUSINESS, summary: 'Only this one worked' },
+        ]);
 
       const results = await geminiService.categorizeBatchWithAI(emails, availableCategories, defaultSettings);
 
@@ -567,13 +561,13 @@ describe('GeminiService - Batch Categorization', () => {
         createTestEmail('email-1', 'First Email'),
         createTestEmail('email-2', 'Second Email'),
         createTestEmail('email-3', 'Third Email'),
-        createTestEmail('email-4', 'Fourth Email')
+        createTestEmail('email-4', 'Fourth Email'),
       ];
 
       // API returns results for alternating emails (1st and 3rd)
       mockCallLLM = vi.fn().mockResolvedValue([
         { id: 'email-1', category: DefaultEmailCategory.PRIVATE, summary: 'First' },
-        { id: 'email-3', category: DefaultEmailCategory.INVOICE, summary: 'Third' }
+        { id: 'email-3', category: DefaultEmailCategory.INVOICE, summary: 'Third' },
       ]);
 
       const results = await geminiService.categorizeBatchWithAI(emails, availableCategories, defaultSettings);
@@ -590,10 +584,7 @@ describe('GeminiService - Batch Categorization', () => {
     });
 
     it('should handle all emails missing from API response (empty array)', async () => {
-      const emails = [
-        createTestEmail('email-1', 'First Email'),
-        createTestEmail('email-2', 'Second Email')
-      ];
+      const emails = [createTestEmail('email-1', 'First Email'), createTestEmail('email-2', 'Second Email')];
 
       // API returns empty array
       mockCallLLM = vi.fn().mockResolvedValue([]);
@@ -602,7 +593,7 @@ describe('GeminiService - Batch Categorization', () => {
 
       expect(results).toHaveLength(2);
       // All emails should get fallback
-      results.forEach(result => {
+      results.forEach((result) => {
         expect(result.categoryId).toBe(DefaultEmailCategory.OTHER);
         expect(result.summary).toBe('Fehler');
         expect(result.reasoning).toContain('AI lieferte kein Ergebnis');
@@ -614,14 +605,14 @@ describe('GeminiService - Batch Categorization', () => {
       const emails = [
         createTestEmail('email-1', 'First Email'),
         createTestEmail('email-2', 'Second Email'),
-        createTestEmail('email-3', 'Third Email')
+        createTestEmail('email-3', 'Third Email'),
       ];
 
       // API returns results with some correct IDs and some wrong IDs
       mockCallLLM = vi.fn().mockResolvedValue([
         { id: 'email-1', category: DefaultEmailCategory.BUSINESS, summary: 'First' },
         { id: 'wrong-id', category: DefaultEmailCategory.SPAM, summary: 'Wrong ID' },
-        { id: 'email-3', category: DefaultEmailCategory.NEWSLETTER, summary: 'Third' }
+        { id: 'email-3', category: DefaultEmailCategory.NEWSLETTER, summary: 'Third' },
       ]);
 
       const results = await geminiService.categorizeBatchWithAI(emails, availableCategories, defaultSettings);

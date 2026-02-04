@@ -7,13 +7,16 @@ import { ImapAccount, Email } from '../../types';
 const require = createRequire(import.meta.url);
 
 // Mock Electron to provide app.getPath
-const electronPath = path.resolve(path.dirname(new URL(import.meta.url).pathname), '../../node_modules/electron/index.js');
+const electronPath = path.resolve(
+  path.dirname(new URL(import.meta.url).pathname),
+  '../../node_modules/electron/index.js'
+);
 (require.cache as any)[electronPath] = {
   exports: {
     app: {
-      getPath: () => './test-data'
-    }
-  }
+      getPath: () => './test-data',
+    },
+  },
 };
 
 // Define interface for db module methods
@@ -46,7 +49,7 @@ describe('Database Module', () => {
       password: 'password',
       imapHost: 'imap.test.com',
       imapPort: 993,
-      color: '#0000FF'
+      color: '#0000FF',
     };
 
     db.addAccount(account);
@@ -69,7 +72,7 @@ describe('Database Module', () => {
       imapPort: 993,
       username: 'test',
       password: 'pass',
-      color: '#000000'
+      color: '#000000',
     };
     db.addAccount(account);
 
@@ -84,7 +87,7 @@ describe('Database Module', () => {
       category: 'Inbox',
       isRead: false,
       isFlagged: false,
-      uid: 100
+      uid: 100,
     };
 
     db.saveEmail(email);
@@ -106,13 +109,13 @@ describe('Database Module', () => {
       imapPort: 993,
       username: 'test',
       password: 'pass',
-      color: '#000000'
+      color: '#000000',
     };
     db.addAccount(account);
 
     db.updateAccountQuota('acc3', 1000, 5000);
     const accounts = db.getAccounts();
-    const updated = accounts.find(a => a.id === 'acc3');
+    const updated = accounts.find((a) => a.id === 'acc3');
 
     expect(updated?.storageUsed).toBe(1000);
     expect(updated?.storageTotal).toBe(5000);

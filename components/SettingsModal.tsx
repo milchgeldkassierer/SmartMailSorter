@@ -1,6 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { ImapAccount, AISettings, LLMProvider, AVAILABLE_MODELS } from '../types';
-import { X, PlusCircle, Trash2, Server, Bot, Key, Cpu, Sparkles, BrainCircuit, CheckCircle, AlertCircle, RefreshCw } from './Icon';
+import {
+  X,
+  PlusCircle,
+  Trash2,
+  Server,
+  Bot,
+  Key,
+  Cpu,
+  Sparkles,
+  BrainCircuit,
+  CheckCircle,
+  AlertCircle,
+  RefreshCw,
+} from './Icon';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -20,7 +33,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   onAddAccount,
   onRemoveAccount,
   aiSettings,
-  onSaveAISettings
+  onSaveAISettings,
 }) => {
   const [activeTab, setActiveTab] = useState<'accounts' | 'smartsort' | 'general'>('accounts');
   const [isAdding, setIsAdding] = useState(false);
@@ -71,7 +84,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
         provider: newProvider,
         imapHost: newHost,
         imapPort: newPort,
-        color: 'blue'
+        color: 'blue',
       };
 
       const result = await window.electron.testConnection(tempAccount);
@@ -103,7 +116,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
         provider: newProvider,
         imapHost: newHost,
         imapPort: newPort,
-        color: randomColor
+        color: randomColor,
       });
       setIsAdding(false);
       setNewName('');
@@ -121,7 +134,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
       ...tempAISettings,
       provider,
       model: AVAILABLE_MODELS[provider][0], // Reset model to first available
-      apiKey: '' // Reset API key on provider switch for safety/clarity
+      apiKey: '', // Reset API key on provider switch for safety/clarity
     });
   };
 
@@ -141,23 +154,26 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
           <div className="w-48 bg-slate-50 border-r border-slate-100 p-4 space-y-2">
             <button
               onClick={() => setActiveTab('accounts')}
-              className={`w-full text-left px-4 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === 'accounts' ? 'bg-blue-100 text-blue-700' : 'text-slate-600 hover:bg-slate-100'
-                }`}
+              className={`w-full text-left px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                activeTab === 'accounts' ? 'bg-blue-100 text-blue-700' : 'text-slate-600 hover:bg-slate-100'
+              }`}
             >
               IMAP Konten
             </button>
             <button
               onClick={() => setActiveTab('smartsort')}
-              className={`w-full text-left px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${activeTab === 'smartsort' ? 'bg-blue-100 text-blue-700' : 'text-slate-600 hover:bg-slate-100'
-                }`}
+              className={`w-full text-left px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
+                activeTab === 'smartsort' ? 'bg-blue-100 text-blue-700' : 'text-slate-600 hover:bg-slate-100'
+              }`}
             >
               <Sparkles className="w-3 h-3" />
               Smart Sort
             </button>
             <button
               onClick={() => setActiveTab('general')}
-              className={`w-full text-left px-4 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === 'general' ? 'bg-blue-100 text-blue-700' : 'text-slate-600 hover:bg-slate-100'
-                }`}
+              className={`w-full text-left px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                activeTab === 'general' ? 'bg-blue-100 text-blue-700' : 'text-slate-600 hover:bg-slate-100'
+              }`}
             >
               Allgemein
             </button>
@@ -189,20 +205,32 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                       <div className="col-span-2">
                         <label className="block text-xs text-slate-500 mb-1">Anbieter</label>
                         <div className="flex gap-2">
-                          {['gmx', 'webde', 'gmail', 'other'].map(p => (
+                          {['gmx', 'webde', 'gmail', 'other'].map((p) => (
                             <button
                               key={p}
                               onClick={() => {
                                 setNewProvider(p);
-                                if (p === 'gmx') { setNewHost('imap.gmx.net'); setNewPort(993); }
-                                if (p === 'webde') { setNewHost('imap.web.de'); setNewPort(993); }
-                                if (p === 'gmail') { setNewHost('imap.gmail.com'); setNewPort(993); }
-                                if (p === 'other') { setNewHost(''); }
+                                if (p === 'gmx') {
+                                  setNewHost('imap.gmx.net');
+                                  setNewPort(993);
+                                }
+                                if (p === 'webde') {
+                                  setNewHost('imap.web.de');
+                                  setNewPort(993);
+                                }
+                                if (p === 'gmail') {
+                                  setNewHost('imap.gmail.com');
+                                  setNewPort(993);
+                                }
+                                if (p === 'other') {
+                                  setNewHost('');
+                                }
                               }}
-                              className={`px-3 py-2 rounded-md text-sm border ${newProvider === p
-                                ? 'bg-blue-50 border-blue-500 text-blue-700 font-medium'
-                                : 'bg-white border-slate-300 text-slate-600 hover:bg-slate-50'
-                                }`}
+                              className={`px-3 py-2 rounded-md text-sm border ${
+                                newProvider === p
+                                  ? 'bg-blue-50 border-blue-500 text-blue-700 font-medium'
+                                  : 'bg-white border-slate-300 text-slate-600 hover:bg-slate-50'
+                              }`}
                             >
                               {p === 'gmx' ? 'GMX' : p === 'webde' ? 'Web.de' : p === 'gmail' ? 'Gmail' : 'Andere'}
                             </button>
@@ -219,7 +247,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                           className="w-full bg-white border border-slate-300 rounded px-3 py-2 text-sm text-slate-900 focus:border-blue-500 outline-none placeholder-slate-400"
                           placeholder="z.B. Arbeit"
                           value={newName}
-                          onChange={e => setNewName(e.target.value)}
+                          onChange={(e) => setNewName(e.target.value)}
                         />
                       </div>
                       <div>
@@ -229,7 +257,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                           className="w-full bg-white border border-slate-300 rounded px-3 py-2 text-sm text-slate-900 focus:border-blue-500 outline-none placeholder-slate-400"
                           placeholder="name@gmx.de"
                           value={newEmail}
-                          onChange={e => setNewEmail(e.target.value)}
+                          onChange={(e) => setNewEmail(e.target.value)}
                         />
                       </div>
 
@@ -240,7 +268,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                           className="w-full bg-white border border-slate-300 rounded px-3 py-2 text-sm text-slate-900 focus:border-blue-500 outline-none placeholder-slate-400"
                           placeholder="Email Passwort"
                           value={newPassword}
-                          onChange={e => setNewPassword(e.target.value)}
+                          onChange={(e) => setNewPassword(e.target.value)}
                         />
                       </div>
 
@@ -253,7 +281,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                               className="w-full bg-white border border-slate-300 rounded px-3 py-2 text-sm text-slate-900 focus:border-blue-500 outline-none placeholder-slate-400"
                               placeholder="imap.example.com"
                               value={newHost}
-                              onChange={e => setNewHost(e.target.value)}
+                              onChange={(e) => setNewHost(e.target.value)}
                             />
                           </div>
                           <div>
@@ -263,7 +291,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                               className="w-full bg-white border border-slate-300 rounded px-3 py-2 text-sm text-slate-900 focus:border-blue-500 outline-none placeholder-slate-400"
                               placeholder="993"
                               value={newPort}
-                              onChange={e => setNewPort(parseInt(e.target.value))}
+                              onChange={(e) => setNewPort(parseInt(e.target.value))}
                             />
                           </div>
                         </>
@@ -273,8 +301,16 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           {testStatus === 'testing' && <RefreshCw className="w-4 h-4 animate-spin text-blue-600" />}
-                          {testStatus === 'success' && <div className="flex items-center gap-1 text-green-600 text-sm"><CheckCircle className="w-4 h-4" /> <span>Verbunden</span></div>}
-                          {testStatus === 'error' && <div className="flex items-center gap-1 text-red-600 text-sm"><AlertCircle className="w-4 h-4" /> <span>{testMessage}</span></div>}
+                          {testStatus === 'success' && (
+                            <div className="flex items-center gap-1 text-green-600 text-sm">
+                              <CheckCircle className="w-4 h-4" /> <span>Verbunden</span>
+                            </div>
+                          )}
+                          {testStatus === 'error' && (
+                            <div className="flex items-center gap-1 text-red-600 text-sm">
+                              <AlertCircle className="w-4 h-4" /> <span>{testMessage}</span>
+                            </div>
+                          )}
                         </div>
                         <div className="flex gap-2">
                           <button
@@ -304,10 +340,15 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                 )}
 
                 <div className="space-y-3">
-                  {accounts.map(acc => (
-                    <div key={acc.id} className="flex items-center justify-between p-4 bg-white border border-slate-200 rounded-lg hover:border-blue-200 transition-colors">
+                  {accounts.map((acc) => (
+                    <div
+                      key={acc.id}
+                      className="flex items-center justify-between p-4 bg-white border border-slate-200 rounded-lg hover:border-blue-200 transition-colors"
+                    >
                       <div className="flex items-center gap-4">
-                        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold bg-${acc.color}-500`}>
+                        <div
+                          className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold bg-${acc.color}-500`}
+                        >
                           {acc.name.charAt(0)}
                         </div>
                         <div>
@@ -358,8 +399,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                       value={tempAISettings.provider}
                       onChange={(e) => handleProviderChange(e.target.value as LLMProvider)}
                     >
-                      {Object.values(LLMProvider).map(p => (
-                        <option key={p} value={p}>{p}</option>
+                      {Object.values(LLMProvider).map((p) => (
+                        <option key={p} value={p}>
+                          {p}
+                        </option>
                       ))}
                     </select>
                   </div>
@@ -375,8 +418,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                       value={tempAISettings.model}
                       onChange={(e) => setTempAISettings({ ...tempAISettings, model: e.target.value })}
                     >
-                      {AVAILABLE_MODELS[tempAISettings.provider].map(m => (
-                        <option key={m} value={m}>{m}</option>
+                      {AVAILABLE_MODELS[tempAISettings.provider].map((m) => (
+                        <option key={m} value={m}>
+                          {m}
+                        </option>
                       ))}
                     </select>
                   </div>
@@ -390,14 +435,16 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                     <input
                       type="password"
                       className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-900 focus:border-blue-500 outline-none placeholder-slate-400"
-                      placeholder={tempAISettings.provider === LLMProvider.GEMINI ? "Optional (verwendet Standard-Key)" : "sk-..."}
+                      placeholder={
+                        tempAISettings.provider === LLMProvider.GEMINI ? 'Optional (verwendet Standard-Key)' : 'sk-...'
+                      }
                       value={tempAISettings.apiKey}
                       onChange={(e) => setTempAISettings({ ...tempAISettings, apiKey: e.target.value })}
                     />
                     <p className="text-xs text-slate-500 mt-1">
                       {tempAISettings.provider === LLMProvider.GEMINI
-                        ? "Für Google Gemini ist bereits ein Demo-Key hinterlegt. Du kannst ihn überschreiben."
-                        : "Der API Key wird nur lokal im Browser für die Simulation verwendet."}
+                        ? 'Für Google Gemini ist bereits ein Demo-Key hinterlegt. Du kannst ihn überschreiben.'
+                        : 'Der API Key wird nur lokal im Browser für die Simulation verwendet.'}
                     </p>
                   </div>
                 </div>

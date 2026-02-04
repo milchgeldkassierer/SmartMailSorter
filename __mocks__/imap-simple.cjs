@@ -19,40 +19,40 @@ const { EventEmitter } = require('events');
 
 // Global state store that can be controlled from tests
 const mockState = {
-    // Mailbox configuration
-    mailboxes: new Map(),
-    // Current mailbox being accessed
-    currentMailbox: null,
-    // UIDs present on the "server"
-    serverUids: [],
-    // Messages with their content
-    messages: new Map(), // uid -> message object
-    // Connection state
-    connected: false,
-    // Error simulation flags
-    shouldFailConnect: false,
-    shouldFailFetch: false,
-    shouldFailSearch: false,
-    // Quota information
-    quota: null,
-    // Capabilities
-    capabilities: new Set(['IMAP4', 'IMAP4rev1', 'UIDPLUS']),
+  // Mailbox configuration
+  mailboxes: new Map(),
+  // Current mailbox being accessed
+  currentMailbox: null,
+  // UIDs present on the "server"
+  serverUids: [],
+  // Messages with their content
+  messages: new Map(), // uid -> message object
+  // Connection state
+  connected: false,
+  // Error simulation flags
+  shouldFailConnect: false,
+  shouldFailFetch: false,
+  shouldFailSearch: false,
+  // Quota information
+  quota: null,
+  // Capabilities
+  capabilities: new Set(['IMAP4', 'IMAP4rev1', 'UIDPLUS']),
 };
 
 /**
  * Reset all mock state - call this in beforeEach
  */
 function resetMockState() {
-    mockState.mailboxes.clear();
-    mockState.currentMailbox = null;
-    mockState.serverUids = [];
-    mockState.messages.clear();
-    mockState.connected = false;
-    mockState.shouldFailConnect = false;
-    mockState.shouldFailFetch = false;
-    mockState.shouldFailSearch = false;
-    mockState.quota = null;
-    mockState.capabilities = new Set(['IMAP4', 'IMAP4rev1', 'UIDPLUS']);
+  mockState.mailboxes.clear();
+  mockState.currentMailbox = null;
+  mockState.serverUids = [];
+  mockState.messages.clear();
+  mockState.connected = false;
+  mockState.shouldFailConnect = false;
+  mockState.shouldFailFetch = false;
+  mockState.shouldFailSearch = false;
+  mockState.quota = null;
+  mockState.capabilities = new Set(['IMAP4', 'IMAP4rev1', 'UIDPLUS']);
 }
 
 /**
@@ -60,29 +60,29 @@ function resetMockState() {
  * @param {Array<{uid: number, subject: string, from: string, body: string, flags?: string[]}>} emails
  */
 function setServerEmails(emails) {
-    mockState.serverUids = emails.map(e => e.uid).sort((a, b) => a - b);
-    mockState.messages.clear();
+  mockState.serverUids = emails.map((e) => e.uid).sort((a, b) => a - b);
+  mockState.messages.clear();
 
-    for (const email of emails) {
-        mockState.messages.set(email.uid, {
-            uid: email.uid,
-            subject: email.subject || '(No Subject)',
-            from: email.from || 'test@example.com',
-            body: email.body || '',
-            date: email.date || new Date().toISOString(),
-            flags: email.flags || [],
-            headers: `Subject: ${email.subject || '(No Subject)'}
+  for (const email of emails) {
+    mockState.messages.set(email.uid, {
+      uid: email.uid,
+      subject: email.subject || '(No Subject)',
+      from: email.from || 'test@example.com',
+      body: email.body || '',
+      date: email.date || new Date().toISOString(),
+      flags: email.flags || [],
+      headers: `Subject: ${email.subject || '(No Subject)'}
 From: ${email.from || 'test@example.com'}
 Date: ${email.date || new Date().toISOString()}
-Message-ID: <${email.uid}@test.example.com>`
-        });
-    }
+Message-ID: <${email.uid}@test.example.com>`,
+    });
+  }
 
-    // Update mailbox exists count
-    mockState.currentMailbox = {
-        exists: emails.length,
-        path: 'INBOX'
-    };
+  // Update mailbox exists count
+  mockState.currentMailbox = {
+    exists: emails.length,
+    path: 'INBOX',
+  };
 }
 
 /**
@@ -90,7 +90,7 @@ Message-ID: <${email.uid}@test.example.com>`
  * @param {boolean} shouldFail
  */
 function setConnectFailure(shouldFail) {
-    mockState.shouldFailConnect = shouldFail;
+  mockState.shouldFailConnect = shouldFail;
 }
 
 /**
@@ -98,7 +98,7 @@ function setConnectFailure(shouldFail) {
  * @param {boolean} shouldFail
  */
 function setFetchFailure(shouldFail) {
-    mockState.shouldFailFetch = shouldFail;
+  mockState.shouldFailFetch = shouldFail;
 }
 
 /**
@@ -106,7 +106,7 @@ function setFetchFailure(shouldFail) {
  * @param {boolean} shouldFail
  */
 function setSearchFailure(shouldFail) {
-    mockState.shouldFailSearch = shouldFail;
+  mockState.shouldFailSearch = shouldFail;
 }
 
 /**
@@ -115,367 +115,370 @@ function setSearchFailure(shouldFail) {
  * @param {number} total - Total storage in KB
  */
 function setQuota(used, total) {
-    mockState.quota = { used, total };
+  mockState.quota = { used, total };
 }
 
 /**
  * Mock fetch stream that emits data events
  */
 class MockFetchStream extends EventEmitter {
-    constructor(content) {
-        super();
-        this.content = content;
-    }
+  constructor(content) {
+    super();
+    this.content = content;
+  }
 
-    simulate() {
-        // Simulate async data chunks
-        setTimeout(() => {
-            const chunks = Buffer.from(this.content);
-            this.emit('data', chunks);
-        }, 0);
+  simulate() {
+    // Simulate async data chunks
+    setTimeout(() => {
+      const chunks = Buffer.from(this.content);
+      this.emit('data', chunks);
+    }, 0);
 
-        setTimeout(() => {
-            this.emit('end');
-        }, 0);
-    }
+    setTimeout(() => {
+      this.emit('end');
+    }, 0);
+  }
 }
 
 /**
  * Mock IMAP message during fetch
  */
 class MockMessage extends EventEmitter {
-    constructor(messageData) {
-        super();
-        this.data = messageData;
-        this.attributes = {
-            uid: messageData.uid,
-            flags: messageData.flags || []
-        };
-    }
+  constructor(messageData) {
+    super();
+    this.data = messageData;
+    this.attributes = {
+      uid: messageData.uid,
+      flags: messageData.flags || [],
+    };
+  }
 
-    simulate() {
-        // Emit body stream
-        const bodyStream = new MockFetchStream(this.data.body);
+  simulate() {
+    // Emit body stream
+    const bodyStream = new MockFetchStream(this.data.body);
 
-        setTimeout(() => {
-            this.emit('body', bodyStream, { which: '' });
-            bodyStream.simulate();
-        }, 0);
+    setTimeout(() => {
+      this.emit('body', bodyStream, { which: '' });
+      bodyStream.simulate();
+    }, 0);
 
-        // Emit attributes
-        setTimeout(() => {
-            this.emit('attributes', this.attributes);
-        }, 0);
+    // Emit attributes
+    setTimeout(() => {
+      this.emit('attributes', this.attributes);
+    }, 0);
 
-        // Emit end
-        setTimeout(() => {
-            this.emit('end');
-        }, 0);
-    }
+    // Emit end
+    setTimeout(() => {
+      this.emit('end');
+    }, 0);
+  }
 }
 
 /**
  * Mock sequence fetch result (for UID-only fetch)
  */
 class MockSeqFetch extends EventEmitter {
-    constructor(uids) {
-        super();
-        this.uids = uids;
-    }
+  constructor(uids) {
+    super();
+    this.uids = uids;
+  }
 
-    simulate() {
-        setTimeout(() => {
-            for (const uid of this.uids) {
-                const message = mockState.messages.get(uid);
-                if (message) {
-                    // Simulate minimal header fetch returning just UID in attributes
-                    this.emit('message', {
-                        on: (event, cb) => {
-                            if (event === 'attributes') {
-                                cb({ uid: message.uid });
-                            }
-                        }
-                    });
-                }
-            }
-        }, 0);
+  simulate() {
+    setTimeout(() => {
+      for (const uid of this.uids) {
+        const message = mockState.messages.get(uid);
+        if (message) {
+          // Simulate minimal header fetch returning just UID in attributes
+          this.emit('message', {
+            on: (event, cb) => {
+              if (event === 'attributes') {
+                cb({ uid: message.uid });
+              }
+            },
+          });
+        }
+      }
+    }, 0);
 
-        setTimeout(() => {
-            this.emit('end');
-        }, 0);
-    }
+    setTimeout(() => {
+      this.emit('end');
+    }, 0);
+  }
 }
 
 /**
  * Mock raw IMAP fetch (UID-based full fetch)
  */
 class MockUidFetch extends EventEmitter {
-    constructor(uids) {
-        super();
-        this.uids = uids;
-    }
+  constructor(uids) {
+    super();
+    this.uids = uids;
+  }
 
-    simulate() {
-        setTimeout(() => {
-            for (const uid of this.uids) {
-                const messageData = mockState.messages.get(uid);
-                if (messageData) {
-                    const msg = new MockMessage(messageData);
-                    this.emit('message', msg);
-                    msg.simulate();
-                }
-            }
-        }, 0);
+  simulate() {
+    setTimeout(() => {
+      for (const uid of this.uids) {
+        const messageData = mockState.messages.get(uid);
+        if (messageData) {
+          const msg = new MockMessage(messageData);
+          this.emit('message', msg);
+          msg.simulate();
+        }
+      }
+    }, 0);
 
-        setTimeout(() => {
-            this.emit('end');
-        }, 0);
-    }
+    setTimeout(() => {
+      this.emit('end');
+    }, 0);
+  }
 }
 
 /**
  * Mock IMAP client connection
  */
 class MockImapConnection {
-    constructor(config) {
-        this.config = config;
-        this.mailbox = null;
+  constructor(config) {
+    this.config = config;
+    this.mailbox = null;
+  }
+
+  async connect() {
+    if (mockState.shouldFailConnect) {
+      throw new Error('Connection failed: Network error');
+    }
+    mockState.connected = true;
+  }
+
+  async logout() {
+    mockState.connected = false;
+  }
+
+  async list() {
+    return [
+      { name: 'INBOX', path: 'INBOX', specialUse: null },
+      { name: 'Sent', path: 'Sent', specialUse: '\\Sent' },
+      { name: 'Trash', path: 'Trash', specialUse: '\\Trash' },
+      { name: 'Junk', path: 'Junk', specialUse: '\\Junk' },
+    ];
+  }
+
+  async getMailboxLock(path) {
+    mockState.currentMailbox = {
+      exists: mockState.serverUids.length,
+      path: path,
+    };
+
+    return {
+      release: () => {
+        mockState.currentMailbox = null;
+      },
+    };
+  }
+
+  async search(criteria) {
+    if (mockState.shouldFailSearch) {
+      throw new Error('Search failed');
+    }
+    // Return all UIDs (simple implementation)
+    return mockState.serverUids;
+  }
+
+  async fetchOne(uid, options) {
+    const message = mockState.messages.get(uid);
+    if (!message) return null;
+
+    return {
+      uid: message.uid,
+      subject: message.subject,
+      from: message.from,
+      body: message.body,
+    };
+  }
+
+  async fetch(range, options) {
+    if (mockState.shouldFailFetch) {
+      throw new Error('Fetch failed');
     }
 
-    async connect() {
-        if (mockState.shouldFailConnect) {
-            throw new Error('Connection failed: Network error');
+    const results = [];
+    for (const uid of mockState.serverUids) {
+      const msg = mockState.messages.get(uid);
+      if (msg) {
+        results.push({
+          uid: msg.uid,
+          subject: msg.subject,
+          from: msg.from,
+          body: msg.body,
+        });
+      }
+    }
+    return results;
+  }
+
+  async messageFlagsAdd(uid, flags) {
+    const message = mockState.messages.get(uid);
+    if (message) {
+      for (const flag of flags) {
+        if (!message.flags.includes(flag)) {
+          message.flags.push(flag);
         }
-        mockState.connected = true;
+      }
     }
+  }
 
-    async logout() {
-        mockState.connected = false;
+  async messageFlagsRemove(uid, flags) {
+    const message = mockState.messages.get(uid);
+    if (message) {
+      message.flags = message.flags.filter((f) => !flags.includes(f));
     }
+  }
 
-    async list() {
-        return [
-            { name: 'INBOX', path: 'INBOX', specialUse: null },
-            { name: 'Sent', path: 'Sent', specialUse: '\\Sent' },
-            { name: 'Trash', path: 'Trash', specialUse: '\\Trash' },
-            { name: 'Junk', path: 'Junk', specialUse: '\\Junk' }
-        ];
-    }
+  // Raw IMAP interface (node-imap compatible)
+  get imap() {
+    return {
+      seq: {
+        fetch: (range, options) => {
+          if (mockState.shouldFailFetch) {
+            const errEmitter = new EventEmitter();
+            setTimeout(() => errEmitter.emit('error', new Error('Fetch failed')), 0);
+            return errEmitter;
+          }
 
-    async getMailboxLock(path) {
-        mockState.currentMailbox = {
-            exists: mockState.serverUids.length,
-            path: path
-        };
-
-        return {
-            release: () => {
-                mockState.currentMailbox = null;
+          // Parse range like "1:5000" or "1:*"
+          let uids = [];
+          if (range === '1:*' || range.includes(':')) {
+            const [start, end] = range.split(':');
+            const startNum = parseInt(start) || 1;
+            const endNum = end === '*' ? mockState.serverUids.length : parseInt(end);
+            // Return UIDs corresponding to sequence numbers
+            for (let i = startNum - 1; i < Math.min(endNum, mockState.serverUids.length); i++) {
+              uids.push(mockState.serverUids[i]);
             }
-        };
-    }
+          } else if (Array.isArray(range)) {
+            uids = range.map((seq) => mockState.serverUids[seq - 1]).filter(Boolean);
+          } else {
+            const seq = parseInt(range);
+            if (seq > 0 && seq <= mockState.serverUids.length) {
+              uids = [mockState.serverUids[seq - 1]];
+            }
+          }
 
-    async search(criteria) {
-        if (mockState.shouldFailSearch) {
-            throw new Error('Search failed');
-        }
-        // Return all UIDs (simple implementation)
-        return mockState.serverUids;
-    }
+          const fetcher = new MockSeqFetch(uids);
+          setTimeout(() => fetcher.simulate(), 0);
+          return fetcher;
+        },
+      },
 
-    async fetchOne(uid, options) {
-        const message = mockState.messages.get(uid);
-        if (!message) return null;
-
-        return {
-            uid: message.uid,
-            subject: message.subject,
-            from: message.from,
-            body: message.body
-        };
-    }
-
-    async fetch(range, options) {
+      fetch: (uids, options) => {
         if (mockState.shouldFailFetch) {
-            throw new Error('Fetch failed');
+          const errEmitter = new EventEmitter();
+          setTimeout(() => errEmitter.emit('error', new Error('Fetch failed')), 0);
+          return errEmitter;
         }
 
-        const results = [];
-        for (const uid of mockState.serverUids) {
-            const msg = mockState.messages.get(uid);
-            if (msg) {
-                results.push({
-                    uid: msg.uid,
-                    subject: msg.subject,
-                    from: msg.from,
-                    body: msg.body
-                });
-            }
+        // Handle array of UIDs or comma-separated string
+        let uidList;
+        if (Array.isArray(uids)) {
+          uidList = uids;
+        } else if (typeof uids === 'string') {
+          uidList = uids
+            .split(',')
+            .map((u) => parseInt(u.trim()))
+            .filter(Boolean);
+        } else {
+          uidList = [uids];
         }
-        return results;
-    }
 
-    async messageFlagsAdd(uid, flags) {
-        const message = mockState.messages.get(uid);
-        if (message) {
-            for (const flag of flags) {
-                if (!message.flags.includes(flag)) {
-                    message.flags.push(flag);
-                }
-            }
-        }
-    }
+        const fetcher = new MockUidFetch(uidList);
+        setTimeout(() => fetcher.simulate(), 0);
+        return fetcher;
+      },
 
-    async messageFlagsRemove(uid, flags) {
-        const message = mockState.messages.get(uid);
-        if (message) {
-            message.flags = message.flags.filter(f => !flags.includes(f));
-        }
-    }
+      getQuotaRoot: (inbox, callback) => {
+        setTimeout(() => {
+          if (mockState.quota) {
+            callback(null, {
+              '': {
+                storage: [mockState.quota.used, mockState.quota.total],
+              },
+            });
+          } else {
+            callback(null, null);
+          }
+        }, 0);
+      },
 
-    // Raw IMAP interface (node-imap compatible)
-    get imap() {
-        return {
-            seq: {
-                fetch: (range, options) => {
-                    if (mockState.shouldFailFetch) {
-                        const errEmitter = new EventEmitter();
-                        setTimeout(() => errEmitter.emit('error', new Error('Fetch failed')), 0);
-                        return errEmitter;
-                    }
+      expunge: (uid) => {
+        return Promise.resolve();
+      },
+    };
+  }
 
-                    // Parse range like "1:5000" or "1:*"
-                    let uids = [];
-                    if (range === '1:*' || range.includes(':')) {
-                        const [start, end] = range.split(':');
-                        const startNum = parseInt(start) || 1;
-                        const endNum = end === '*' ? mockState.serverUids.length : parseInt(end);
-                        // Return UIDs corresponding to sequence numbers
-                        for (let i = startNum - 1; i < Math.min(endNum, mockState.serverUids.length); i++) {
-                            uids.push(mockState.serverUids[i]);
-                        }
-                    } else if (Array.isArray(range)) {
-                        uids = range.map(seq => mockState.serverUids[seq - 1]).filter(Boolean);
-                    } else {
-                        const seq = parseInt(range);
-                        if (seq > 0 && seq <= mockState.serverUids.length) {
-                            uids = [mockState.serverUids[seq - 1]];
-                        }
-                    }
+  get capabilities() {
+    return mockState.capabilities;
+  }
 
-                    const fetcher = new MockSeqFetch(uids);
-                    setTimeout(() => fetcher.simulate(), 0);
-                    return fetcher;
-                }
-            },
-
-            fetch: (uids, options) => {
-                if (mockState.shouldFailFetch) {
-                    const errEmitter = new EventEmitter();
-                    setTimeout(() => errEmitter.emit('error', new Error('Fetch failed')), 0);
-                    return errEmitter;
-                }
-
-                // Handle array of UIDs or comma-separated string
-                let uidList;
-                if (Array.isArray(uids)) {
-                    uidList = uids;
-                } else if (typeof uids === 'string') {
-                    uidList = uids.split(',').map(u => parseInt(u.trim())).filter(Boolean);
-                } else {
-                    uidList = [uids];
-                }
-
-                const fetcher = new MockUidFetch(uidList);
-                setTimeout(() => fetcher.simulate(), 0);
-                return fetcher;
-            },
-
-            getQuotaRoot: (inbox, callback) => {
-                setTimeout(() => {
-                    if (mockState.quota) {
-                        callback(null, {
-                            '': {
-                                storage: [mockState.quota.used, mockState.quota.total]
-                            }
-                        });
-                    } else {
-                        callback(null, null);
-                    }
-                }, 0);
-            },
-
-            expunge: (uid) => {
-                return Promise.resolve();
-            }
-        };
-    }
-
-    get capabilities() {
-        return mockState.capabilities;
-    }
-
-    get mailbox() {
-        return mockState.currentMailbox || { exists: 0 };
-    }
+  get mailbox() {
+    return mockState.currentMailbox || { exists: 0 };
+  }
 }
 
 /**
  * Mock ImapFlow class
  */
 class ImapFlow {
-    constructor(config) {
-        this._connection = new MockImapConnection(config);
-        this._mockConfig = config;
-    }
+  constructor(config) {
+    this._connection = new MockImapConnection(config);
+    this._mockConfig = config;
+  }
 
-    async connect() {
-        return this._connection.connect();
-    }
+  async connect() {
+    return this._connection.connect();
+  }
 
-    async logout() {
-        return this._connection.logout();
-    }
+  async logout() {
+    return this._connection.logout();
+  }
 
-    async list() {
-        return this._connection.list();
-    }
+  async list() {
+    return this._connection.list();
+  }
 
-    async getMailboxLock(path) {
-        return this._connection.getMailboxLock(path);
-    }
+  async getMailboxLock(path) {
+    return this._connection.getMailboxLock(path);
+  }
 
-    async search(criteria, options) {
-        return this._connection.search(criteria);
-    }
+  async search(criteria, options) {
+    return this._connection.search(criteria);
+  }
 
-    async fetchOne(uid, options) {
-        return this._connection.fetchOne(uid, options);
-    }
+  async fetchOne(uid, options) {
+    return this._connection.fetchOne(uid, options);
+  }
 
-    async fetch(range, options) {
-        return this._connection.fetch(range, options);
-    }
+  async fetch(range, options) {
+    return this._connection.fetch(range, options);
+  }
 
-    async messageFlagsAdd(uid, flags) {
-        return this._connection.messageFlagsAdd(uid, flags);
-    }
+  async messageFlagsAdd(uid, flags) {
+    return this._connection.messageFlagsAdd(uid, flags);
+  }
 
-    async messageFlagsRemove(uid, flags) {
-        return this._connection.messageFlagsRemove(uid, flags);
-    }
+  async messageFlagsRemove(uid, flags) {
+    return this._connection.messageFlagsRemove(uid, flags);
+  }
 
-    get imap() {
-        return this._connection.imap;
-    }
+  get imap() {
+    return this._connection.imap;
+  }
 
-    get capabilities() {
-        return this._connection.capabilities;
-    }
+  get capabilities() {
+    return this._connection.capabilities;
+  }
 
-    get mailbox() {
-        return this._connection.mailbox;
-    }
+  get mailbox() {
+    return this._connection.mailbox;
+  }
 }
 
 /**
@@ -486,9 +489,9 @@ class ImapFlow {
  * Connect to IMAP server (imap-simple API)
  */
 async function connect(config) {
-    const connection = new MockImapConnection(config);
-    await connection.connect();
-    return connection;
+  const connection = new MockImapConnection(config);
+  await connection.connect();
+  return connection;
 }
 
 /**
@@ -498,18 +501,18 @@ async function connect(config) {
  * @param {MockImapConnection} connection - Connection object
  */
 async function openBox(boxName, openReadOnly, connection) {
-    if (!connection) {
-        throw new Error('Connection required');
-    }
-    const lock = await connection.getMailboxLock(boxName);
-    return {
-        name: boxName,
-        messages: {
-            total: mockState.serverUids.length,
-            new: 0
-        },
-        release: lock.release
-    };
+  if (!connection) {
+    throw new Error('Connection required');
+  }
+  const lock = await connection.getMailboxLock(boxName);
+  return {
+    name: boxName,
+    messages: {
+      total: mockState.serverUids.length,
+      new: 0,
+    },
+    release: lock.release,
+  };
 }
 
 /**
@@ -517,19 +520,19 @@ async function openBox(boxName, openReadOnly, connection) {
  * @param {MockImapConnection} connection - Connection object
  */
 async function getBoxes(connection) {
-    if (!connection) {
-        throw new Error('Connection required');
-    }
-    const boxes = await connection.list();
-    const result = {};
-    for (const box of boxes) {
-        result[box.name] = {
-            attribs: box.specialUse ? [box.specialUse] : [],
-            delimiter: '/',
-            children: null
-        };
-    }
-    return result;
+  if (!connection) {
+    throw new Error('Connection required');
+  }
+  const boxes = await connection.list();
+  const result = {};
+  for (const box of boxes) {
+    result[box.name] = {
+      attribs: box.specialUse ? [box.specialUse] : [],
+      delimiter: '/',
+      children: null,
+    };
+  }
+  return result;
 }
 
 /**
@@ -538,10 +541,10 @@ async function getBoxes(connection) {
  * @param {MockImapConnection} connection - Connection object
  */
 async function search(criteria, connection) {
-    if (!connection) {
-        throw new Error('Connection required');
-    }
-    return connection.search(criteria);
+  if (!connection) {
+    throw new Error('Connection required');
+  }
+  return connection.search(criteria);
 }
 
 /**
@@ -551,45 +554,45 @@ async function search(criteria, connection) {
  * @param {MockImapConnection} connection - Connection object
  */
 async function fetch(source, options, connection) {
-    if (!connection) {
-        throw new Error('Connection required');
-    }
+  if (!connection) {
+    throw new Error('Connection required');
+  }
 
-    const results = [];
-    const fetchStream = connection.imap.fetch([source], options);
+  const results = [];
+  const fetchStream = connection.imap.fetch([source], options);
 
-    return new Promise((resolve, reject) => {
-        fetchStream.on('message', (msg) => {
-            const msgData = {
-                attributes: null,
-                parts: []
-            };
+  return new Promise((resolve, reject) => {
+    fetchStream.on('message', (msg) => {
+      const msgData = {
+        attributes: null,
+        parts: [],
+      };
 
-            msg.on('attributes', (attrs) => {
-                msgData.attributes = attrs;
-            });
+      msg.on('attributes', (attrs) => {
+        msgData.attributes = attrs;
+      });
 
-            msg.on('body', (stream, info) => {
-                let body = '';
-                stream.on('data', (chunk) => {
-                    body += chunk.toString();
-                });
-                stream.on('end', () => {
-                    msgData.parts.push({
-                        which: info.which,
-                        body: body
-                    });
-                });
-            });
-
-            msg.on('end', () => {
-                results.push(msgData);
-            });
+      msg.on('body', (stream, info) => {
+        let body = '';
+        stream.on('data', (chunk) => {
+          body += chunk.toString();
         });
+        stream.on('end', () => {
+          msgData.parts.push({
+            which: info.which,
+            body: body,
+          });
+        });
+      });
 
-        fetchStream.on('error', reject);
-        fetchStream.on('end', () => resolve(results));
+      msg.on('end', () => {
+        results.push(msgData);
+      });
     });
+
+    fetchStream.on('error', reject);
+    fetchStream.on('end', () => resolve(results));
+  });
 }
 
 /**
@@ -599,13 +602,13 @@ async function fetch(source, options, connection) {
  * @param {MockImapConnection} connection - Connection object
  */
 async function addFlags(source, flags, connection) {
-    if (!connection) {
-        throw new Error('Connection required');
-    }
-    const uid = parseInt(source);
-    if (!isNaN(uid)) {
-        await connection.messageFlagsAdd(uid, flags);
-    }
+  if (!connection) {
+    throw new Error('Connection required');
+  }
+  const uid = parseInt(source);
+  if (!isNaN(uid)) {
+    await connection.messageFlagsAdd(uid, flags);
+  }
 }
 
 /**
@@ -615,13 +618,13 @@ async function addFlags(source, flags, connection) {
  * @param {MockImapConnection} connection - Connection object
  */
 async function delFlags(source, flags, connection) {
-    if (!connection) {
-        throw new Error('Connection required');
-    }
-    const uid = parseInt(source);
-    if (!isNaN(uid)) {
-        await connection.messageFlagsRemove(uid, flags);
-    }
+  if (!connection) {
+    throw new Error('Connection required');
+  }
+  const uid = parseInt(source);
+  if (!isNaN(uid)) {
+    await connection.messageFlagsRemove(uid, flags);
+  }
 }
 
 /**
@@ -629,60 +632,60 @@ async function delFlags(source, flags, connection) {
  * @param {MockImapConnection} connection - Connection object
  */
 async function expunge(connection) {
-    if (!connection) {
-        throw new Error('Connection required');
+  if (!connection) {
+    throw new Error('Connection required');
+  }
+  // Remove messages with \Deleted flag
+  for (const [uid, message] of mockState.messages) {
+    if (message.flags.includes('\\Deleted')) {
+      mockState.messages.delete(uid);
     }
-    // Remove messages with \Deleted flag
-    for (const [uid, message] of mockState.messages) {
-        if (message.flags.includes('\\Deleted')) {
-            mockState.messages.delete(uid);
-        }
-    }
-    mockState.serverUids = mockState.serverUids.filter(uid => mockState.messages.has(uid));
-    if (mockState.currentMailbox) {
-        mockState.currentMailbox.exists = mockState.serverUids.length;
-    }
+  }
+  mockState.serverUids = mockState.serverUids.filter((uid) => mockState.messages.has(uid));
+  if (mockState.currentMailbox) {
+    mockState.currentMailbox.exists = mockState.serverUids.length;
+  }
 }
 
 /**
  * Get server emails for verification in tests
  */
 function getServerUids() {
-    return [...mockState.serverUids];
+  return [...mockState.serverUids];
 }
 
 /**
  * Get message by UID
  */
 function getMessage(uid) {
-    return mockState.messages.get(uid);
+  return mockState.messages.get(uid);
 }
 
 /**
  * Check if connected
  */
 function isConnected() {
-    return mockState.connected;
+  return mockState.connected;
 }
 
 module.exports = {
-    connect,
-    openBox,
-    getBoxes,
-    search,
-    fetch,
-    addFlags,
-    delFlags,
-    expunge,
-    getServerUids,
-    getMessage,
-    isConnected,
-    resetMockState,
-    setServerEmails,
-    setConnectFailure,
-    setFetchFailure,
-    setSearchFailure,
-    setQuota,
-    ImapFlow,
-    MockImapConnection
+  connect,
+  openBox,
+  getBoxes,
+  search,
+  fetch,
+  addFlags,
+  delFlags,
+  expunge,
+  getServerUids,
+  getMessage,
+  isConnected,
+  resetMockState,
+  setServerEmails,
+  setConnectFailure,
+  setFetchFailure,
+  setSearchFailure,
+  setQuota,
+  ImapFlow,
+  MockImapConnection,
 };

@@ -40,35 +40,50 @@ import {
   Filter,
   Folder,
   FolderOpen,
-  AlertOctagon
+  AlertOctagon,
 } from 'lucide-react';
 import { DefaultEmailCategory } from '../types';
 
-export const CategoryIcon: React.FC<{ category: string, className?: string }> = ({ category, className }) => {
+export const CategoryIcon: React.FC<{ category: string; className?: string }> = ({ category, className }) => {
   switch (category) {
-    case DefaultEmailCategory.INBOX: return <Inbox className={className} />;
-    case DefaultEmailCategory.SPAM: return <ShieldAlert className={className} />;
-    case DefaultEmailCategory.INVOICE: return <FileText className={className} />;
-    case DefaultEmailCategory.NEWSLETTER: return <Mail className={className} />;
-    case DefaultEmailCategory.PRIVATE: return <User className={className} />;
-    case DefaultEmailCategory.BUSINESS: return <Briefcase className={className} />;
-    case DefaultEmailCategory.CANCELLATION: return <XOctagon className={className} />;
-    case DefaultEmailCategory.OTHER: return <Archive className={className} />;
+    case DefaultEmailCategory.INBOX:
+      return <Inbox className={className} />;
+    case DefaultEmailCategory.SPAM:
+      return <ShieldAlert className={className} />;
+    case DefaultEmailCategory.INVOICE:
+      return <FileText className={className} />;
+    case DefaultEmailCategory.NEWSLETTER:
+      return <Mail className={className} />;
+    case DefaultEmailCategory.PRIVATE:
+      return <User className={className} />;
+    case DefaultEmailCategory.BUSINESS:
+      return <Briefcase className={className} />;
+    case DefaultEmailCategory.CANCELLATION:
+      return <XOctagon className={className} />;
+    case DefaultEmailCategory.OTHER:
+      return <Archive className={className} />;
 
-    case 'Gesendet': return <Send className={className} />;
-    case 'Papierkorb': return <Trash2 className={className} />;
-    case 'Spam': return <ShieldAlert className={className} />;
+    case 'Gesendet':
+      return <Send className={className} />;
+    case 'Papierkorb':
+      return <Trash2 className={className} />;
+    case 'Spam':
+      return <ShieldAlert className={className} />;
 
     // Dynamic mapping for common generated categories
     case 'Reise':
-    case 'Reisen': return <Plane className={className} />;
+    case 'Reisen':
+      return <Plane className={className} />;
     case 'Schule':
-    case 'Bildung': return <GraduationCap className={className} />;
+    case 'Bildung':
+      return <GraduationCap className={className} />;
     case 'Bestellungen':
-    case 'Shopping': return <ShoppingBag className={className} />;
+    case 'Shopping':
+      return <ShoppingBag className={className} />;
 
     // Fallback for completely new dynamic categories
-    default: return <FolderPlus className={className} />;
+    default:
+      return <FolderPlus className={className} />;
   }
 };
 
@@ -105,5 +120,5 @@ export {
   Send,
   Inbox,
   AlertOctagon,
-  Trash2
+  Trash2,
 };

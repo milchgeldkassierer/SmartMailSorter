@@ -35,22 +35,24 @@ export const useBatchOperations = ({
   onUpdateCategories,
   onOpenSettings,
   onConfirmDelete,
-  onConfirmNewCategories
+  onConfirmNewCategories,
 }: UseBatchOperationsProps): UseBatchOperationsReturn => {
   const [isSorting, setIsSorting] = useState(false);
   const [sortProgress, setSortProgress] = useState(0);
 
   // Helper: Enrich emails with missing content
   const enrichEmailsWithContent = async (emails: Email[]): Promise<Email[]> => {
-    return Promise.all(emails.map(async (e) => {
-      if ((e.body === undefined || e.body === '') && window.electron) {
-        const content = await window.electron.getEmailContent(e.id);
-        if (content) {
-          return { ...e, body: content.body || '', bodyHtml: content.bodyHtml ?? undefined };
+    return Promise.all(
+      emails.map(async (e) => {
+        if ((e.body === undefined || e.body === '') && window.electron) {
+          const content = await window.electron.getEmailContent(e.id);
+          if (content) {
+            return { ...e, body: content.body || '', bodyHtml: content.bodyHtml ?? undefined };
+          }
         }
-      }
-      return e;
-    }));
+        return e;
+      })
+    );
   };
 
   // Helper: Process emails in chunks with AI categorization
@@ -67,7 +69,7 @@ export const useBatchOperations = ({
       const chunk = emailsToSort.slice(i, i + chunkSize);
       const enrichedChunk = await enrichEmailsWithContent(chunk);
 
-      const categoryNames = currentCategories.map(c => c.name);
+      const categoryNames = currentCategories.map((c) => c.name);
       const batchResults = await categorizeBatchWithAI(enrichedChunk, categoryNames, aiSettings);
 
       enrichedChunk.forEach((email, index) => {
@@ -75,7 +77,7 @@ export const useBatchOperations = ({
         if (sortResult.confidence > 0) {
           emailResults.set(email.id, sortResult);
           const cat = sortResult.categoryId;
-          const exists = currentCategories.some(c => c.name === cat);
+          const exists = currentCategories.some((c) => c.name === cat);
           const categoryValues = Object.values(DefaultEmailCategory) as string[];
           if (!exists && !categoryValues.includes(cat)) {
             newCategoriesFound.add(cat);
@@ -110,7 +112,7 @@ export const useBatchOperations = ({
         category: finalCategory,
         summary: result.summary,
         reasoning: result.reasoning,
-        confidence: result.confidence
+        confidence: result.confidence,
       });
 
       if (window.electron) {
@@ -119,7 +121,7 @@ export const useBatchOperations = ({
           category: finalCategory,
           summary: result.summary,
           reasoning: result.reasoning,
-          confidence: result.confidence
+          confidence: result.confidence,
         });
       }
     }
@@ -139,7 +141,7 @@ export const useBatchOperations = ({
 
     const ids = Array.from(selectedIds);
     try {
-      await Promise.all(ids.map(id => onDeleteEmail(id)));
+      await Promise.all(ids.map((id) => onDeleteEmail(id)));
       onClearSelection();
     } catch (error) {
       console.error('Failed to delete emails:', error);
@@ -150,7 +152,7 @@ export const useBatchOperations = ({
   const handleBatchSmartSort = async () => {
     if (selectedIds.size === 0) return;
     if (!aiSettings.apiKey) {
-      alert("Bitte AI Settings (API Key) konfigurieren!");
+      alert('Bitte AI Settings (API Key) konfigurieren!');
       onOpenSettings();
       return;
     }
@@ -159,13 +161,10 @@ export const useBatchOperations = ({
     setSortProgress(5);
 
     try {
-      const emailsToSort = currentEmails.filter(e => selectedIds.has(e.id));
+      const emailsToSort = currentEmails.filter((e) => selectedIds.has(e.id));
 
       // Process emails in chunks with AI
-      const { emailResults, newCategories } = await processEmailsInChunks(
-        emailsToSort,
-        setSortProgress
-      );
+      const { emailResults, newCategories } = await processEmailsInChunks(emailsToSort, setSortProgress);
 
       // Confirm new categories with user
       let allowedNewCategories = new Set<string>();
@@ -183,23 +182,19 @@ export const useBatchOperations = ({
       }
 
       // Apply updates to backend and collect update records
-      const updates = await applyCategorizationUpdates(
-        emailResults,
-        newCategories,
-        allowedNewCategories
-      );
+      const updates = await applyCategorizationUpdates(emailResults, newCategories, allowedNewCategories);
 
       // Update email state
       onUpdateEmails((emails) =>
-        emails.map(email => {
-          const update = updates.find(u => u.emailId === email.id);
+        emails.map((email) => {
+          const update = updates.find((u) => u.emailId === email.id);
           if (update) {
             return {
               ...email,
               smartCategory: update.category,
               aiSummary: update.summary,
               aiReasoning: update.reasoning,
-              confidence: update.confidence
+              confidence: update.confidence,
             };
           }
           return email;
@@ -208,8 +203,8 @@ export const useBatchOperations = ({
 
       // Add new categories
       let newCats = [...currentCategories];
-      allowedNewCategories.forEach(catName => {
-        const exists = newCats.some(c => c.name === catName);
+      allowedNewCategories.forEach((catName) => {
+        const exists = newCats.some((c) => c.name === catName);
         if (!exists) {
           newCats.push({ name: catName, type: 'custom' });
           if (window.electron) window.electron.addCategory(catName, 'custom');
@@ -218,8 +213,7 @@ export const useBatchOperations = ({
       onUpdateCategories(newCats);
 
       setSortProgress(100);
-      await new Promise(r => setTimeout(r, 500));
-
+      await new Promise((r) => setTimeout(r, 500));
     } catch (e) {
       console.error('Smart Sort Error:', e);
       alert(`Ein Fehler ist beim Sortieren aufgetreten: ${e instanceof Error ? e.message : 'Unbekannter Fehler'}`);
@@ -237,6 +231,6 @@ export const useBatchOperations = ({
     sortProgress,
     canSmartSort,
     handleBatchDelete,
-    handleBatchSmartSort
+    handleBatchSmartSort,
   };
 };

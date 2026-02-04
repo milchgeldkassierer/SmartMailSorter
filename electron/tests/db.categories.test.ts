@@ -6,13 +6,16 @@ import path from 'path';
 const require = createRequire(import.meta.url);
 
 // Mock Electron to provide app.getPath
-const electronPath = path.resolve(path.dirname(new URL(import.meta.url).pathname), '../../node_modules/electron/index.js');
+const electronPath = path.resolve(
+  path.dirname(new URL(import.meta.url).pathname),
+  '../../node_modules/electron/index.js'
+);
 (require.cache as any)[electronPath] = {
   exports: {
     app: {
-      getPath: () => './test-data'
-    }
-  }
+      getPath: () => './test-data',
+    },
+  },
 };
 
 // Define interface for category-related db module methods
@@ -28,8 +31,30 @@ interface DbModule {
   updateCategoryType: (name: string, newType: string) => { changes: number };
   deleteSmartCategory: (categoryName: string) => { changes: number };
   renameSmartCategory: (oldName: string, newName: string) => { success: boolean };
-  addAccount: (account: { id: string; name: string; email: string; provider: string; imapHost: string; imapPort: number; username: string; password: string; color: string }) => void;
-  saveEmail: (email: { id: string; accountId: string; sender?: string; senderEmail?: string; subject?: string; body?: string; date?: string; smartCategory?: string; isRead?: boolean; isFlagged?: boolean; uid?: number }) => void;
+  addAccount: (account: {
+    id: string;
+    name: string;
+    email: string;
+    provider: string;
+    imapHost: string;
+    imapPort: number;
+    username: string;
+    password: string;
+    color: string;
+  }) => void;
+  saveEmail: (email: {
+    id: string;
+    accountId: string;
+    sender?: string;
+    senderEmail?: string;
+    subject?: string;
+    body?: string;
+    date?: string;
+    smartCategory?: string;
+    isRead?: boolean;
+    isFlagged?: boolean;
+    uid?: number;
+  }) => void;
   getEmails: (accountId: string) => Array<{ id: string; smartCategory: string | null }>;
 }
 
@@ -50,7 +75,7 @@ describe('Database Categories Module', () => {
       // Verify we have the default system categories
       expect(categories.length).toBeGreaterThanOrEqual(6);
 
-      const categoryNames = categories.map(c => c.name);
+      const categoryNames = categories.map((c) => c.name);
       expect(categoryNames).toContain('Rechnungen');
       expect(categoryNames).toContain('Newsletter');
       expect(categoryNames).toContain('Privat');
@@ -63,7 +88,7 @@ describe('Database Categories Module', () => {
       const categories = db.getCategories();
 
       expect(categories.length).toBeGreaterThan(0);
-      categories.forEach(cat => {
+      categories.forEach((cat) => {
         expect(cat).toHaveProperty('name');
         expect(cat).toHaveProperty('type');
         expect(typeof cat.name).toBe('string');
@@ -74,7 +99,7 @@ describe('Database Categories Module', () => {
     it('should have system type for default categories', () => {
       const categories = db.getCategories();
 
-      const systemCategory = categories.find(c => c.name === 'Rechnungen');
+      const systemCategory = categories.find((c) => c.name === 'Rechnungen');
       expect(systemCategory?.type).toBe('system');
     });
   });
@@ -86,7 +111,7 @@ describe('Database Categories Module', () => {
       expect(result.changes).toBe(1);
 
       const categories = db.getCategories();
-      const myCategory = categories.find(c => c.name === 'MyCategory');
+      const myCategory = categories.find((c) => c.name === 'MyCategory');
       expect(myCategory).toBeDefined();
       expect(myCategory?.type).toBe('custom');
     });
@@ -97,7 +122,7 @@ describe('Database Categories Module', () => {
       expect(result.changes).toBe(1);
 
       const categories = db.getCategories();
-      const systemCat = categories.find(c => c.name === 'SystemCat');
+      const systemCat = categories.find((c) => c.name === 'SystemCat');
       expect(systemCat).toBeDefined();
       expect(systemCat?.type).toBe('system');
     });
@@ -111,7 +136,7 @@ describe('Database Categories Module', () => {
         db.addCategory('Duplicate');
         // If it doesn't throw, verify no duplicates
         const categories = db.getCategories();
-        const dupCount = categories.filter(c => c.name === 'Duplicate').length;
+        const dupCount = categories.filter((c) => c.name === 'Duplicate').length;
         expect(dupCount).toBe(1);
       } catch (err: unknown) {
         // Expected: Primary key violation for duplicate names
@@ -126,7 +151,7 @@ describe('Database Categories Module', () => {
         db.addCategory('Rechnungen');
         // If it doesn't throw, verify count
         const categories = db.getCategories();
-        const rechnungenCount = categories.filter(c => c.name === 'Rechnungen').length;
+        const rechnungenCount = categories.filter((c) => c.name === 'Rechnungen').length;
         expect(rechnungenCount).toBe(1);
       } catch (err: unknown) {
         expect((err as { code: string }).code).toBe('SQLITE_CONSTRAINT_PRIMARYKEY');
@@ -145,7 +170,7 @@ describe('Database Categories Module', () => {
       expect(result.changes).toBe(1);
 
       const categories = db.getCategories();
-      const updated = categories.find(c => c.name === 'TestCategory');
+      const updated = categories.find((c) => c.name === 'TestCategory');
       expect(updated?.type).toBe('system');
     });
 
@@ -156,7 +181,7 @@ describe('Database Categories Module', () => {
       expect(result.changes).toBe(1);
 
       const categories = db.getCategories();
-      const privat = categories.find(c => c.name === 'Privat');
+      const privat = categories.find((c) => c.name === 'Privat');
       expect(privat?.type).toBe('custom');
     });
 
@@ -174,14 +199,14 @@ describe('Database Categories Module', () => {
 
       // Verify it exists
       let categories = db.getCategories();
-      expect(categories.find(c => c.name === 'ToDelete')).toBeDefined();
+      expect(categories.find((c) => c.name === 'ToDelete')).toBeDefined();
 
       // Delete it
       db.deleteSmartCategory('ToDelete');
 
       // Verify it's gone
       categories = db.getCategories();
-      expect(categories.find(c => c.name === 'ToDelete')).toBeUndefined();
+      expect(categories.find((c) => c.name === 'ToDelete')).toBeUndefined();
     });
 
     it('should untag emails when deleting category', () => {
@@ -195,7 +220,7 @@ describe('Database Categories Module', () => {
         imapPort: 993,
         username: 'test',
         password: 'pass',
-        color: '#000000'
+        color: '#000000',
       };
       db.addAccount(account);
 
@@ -212,7 +237,7 @@ describe('Database Categories Module', () => {
         smartCategory: 'TempCategory',
         isRead: false,
         isFlagged: false,
-        uid: 1
+        uid: 1,
       });
 
       // Delete the category
@@ -242,7 +267,7 @@ describe('Database Categories Module', () => {
 
       // Category should be gone
       const categories = db.getCategories();
-      expect(categories.find(c => c.name === 'EmptyCategory')).toBeUndefined();
+      expect(categories.find((c) => c.name === 'EmptyCategory')).toBeUndefined();
     });
   });
 
@@ -255,8 +280,8 @@ describe('Database Categories Module', () => {
       expect(result.success).toBe(true);
 
       const categories = db.getCategories();
-      expect(categories.find(c => c.name === 'OldName')).toBeUndefined();
-      expect(categories.find(c => c.name === 'NewName')).toBeDefined();
+      expect(categories.find((c) => c.name === 'OldName')).toBeUndefined();
+      expect(categories.find((c) => c.name === 'NewName')).toBeDefined();
     });
 
     it('should update emails when renaming category', () => {
@@ -270,7 +295,7 @@ describe('Database Categories Module', () => {
         imapPort: 993,
         username: 'test',
         password: 'pass',
-        color: '#000000'
+        color: '#000000',
       };
       db.addAccount(account);
 
@@ -286,7 +311,7 @@ describe('Database Categories Module', () => {
         smartCategory: 'OldCategory',
         isRead: false,
         isFlagged: false,
-        uid: 1
+        uid: 1,
       });
 
       // Rename the category
@@ -308,8 +333,8 @@ describe('Database Categories Module', () => {
 
       // A should be gone, B should exist
       const categories = db.getCategories();
-      expect(categories.find(c => c.name === 'CategoryA')).toBeUndefined();
-      expect(categories.find(c => c.name === 'CategoryB')).toBeDefined();
+      expect(categories.find((c) => c.name === 'CategoryA')).toBeUndefined();
+      expect(categories.find((c) => c.name === 'CategoryB')).toBeDefined();
     });
 
     it('should handle renaming non-existent category', () => {
@@ -325,7 +350,7 @@ describe('Database Categories Module', () => {
       db.renameSmartCategory('SourceCat', 'TargetCat');
 
       const categories = db.getCategories();
-      const target = categories.find(c => c.name === 'TargetCat');
+      const target = categories.find((c) => c.name === 'TargetCat');
       expect(target).toBeDefined();
       expect(target?.type).toBe('custom');
     });
