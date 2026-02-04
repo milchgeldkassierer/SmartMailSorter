@@ -227,4 +227,284 @@ describe('IMAP Module', () => {
       expect(folderMap['INBOX.Amazon']).toBe('Posteingang/Amazon');
     });
   });
+
+  describe('checkAccountQuota helper', () => {
+    it('should be exported as a function', () => {
+      expect(typeof imap.checkAccountQuota).toBe('function');
+    });
+
+    it('should parse quota response and return quota info', async () => {
+      const { setQuotaResponse } = await import('./vitest-setup.js');
+
+      // Set mock quota response
+      setQuotaResponse({
+        storage: {
+          used: 1024000,  // 1000 KB in bytes
+          limit: 10240000, // 10000 KB in bytes
+        },
+      });
+
+      const account = {
+        id: 'test-quota-account',
+        email: 'quota@test.com',
+        password: 'pass',
+        imapHost: 'imap.test.com',
+        imapPort: 993,
+      };
+
+      db.addAccount({
+        id: account.id,
+        email: account.email,
+        name: account.email,
+        provider: 'test',
+        imapHost: account.imapHost,
+        imapPort: account.imapPort,
+        username: account.email,
+        password: account.password,
+        color: '#000000',
+      });
+
+      // Create mock client
+      const mockClient = {
+        capabilities: new Set(['IMAP4rev1', 'QUOTA']),
+        async getQuota(_mailbox) {
+          return {
+            storage: {
+              used: 1024000,
+              limit: 10240000,
+            },
+          };
+        },
+      };
+
+      const result = await imap.checkAccountQuota(mockClient, account.id);
+
+      expect(result).not.toBeNull();
+      expect(result.usedKB).toBe(1000);
+      expect(result.totalKB).toBe(10000);
+    });
+
+    it('should return null when quota has no storage property', async () => {
+      const mockClient = {
+        capabilities: new Set(['IMAP4rev1', 'QUOTA']),
+        async getQuota(_mailbox) {
+          return { foo: 'bar' };
+        },
+      };
+
+      const result = await imap.checkAccountQuota(mockClient, 'test-account');
+
+      expect(result).toBeNull();
+    });
+
+    it('should return null when quota storage has no valid limit', async () => {
+      const mockClient = {
+        capabilities: new Set(['IMAP4rev1', 'QUOTA']),
+        async getQuota(_mailbox) {
+          return {
+            storage: {
+              used: 1024000,
+              limit: 0,
+            },
+          };
+        },
+      };
+
+      const result = await imap.checkAccountQuota(mockClient, 'test-account');
+
+      expect(result).toBeNull();
+    });
+
+    it('should return null when getQuota returns null', async () => {
+      const mockClient = {
+        capabilities: new Set(['IMAP4rev1']),
+        async getQuota(_mailbox) {
+          return null;
+        },
+      };
+
+      const result = await imap.checkAccountQuota(mockClient, 'test-account');
+
+      expect(result).toBeNull();
+    });
+
+    it('should handle getQuota errors gracefully', async () => {
+      const mockClient = {
+        capabilities: new Set(['IMAP4rev1', 'QUOTA']),
+        async getQuota(_mailbox) {
+          throw new Error('Quota not supported');
+        },
+      };
+
+      const result = await imap.checkAccountQuota(mockClient, 'test-account');
+
+      expect(result).toBeNull();
+    });
+
+    it('should round bytes to KB correctly', async () => {
+      const mockClient = {
+        capabilities: new Set(['IMAP4rev1', 'QUOTA']),
+        async getQuota(_mailbox) {
+          return {
+            storage: {
+              used: 1536,  // 1.5 KB = 1536 bytes
+              limit: 2560, // 2.5 KB = 2560 bytes
+            },
+          };
+        },
+      };
+
+      const result = await imap.checkAccountQuota(mockClient, 'test-account');
+
+      expect(result).not.toBeNull();
+      expect(result.usedKB).toBe(2);  // Math.round(1536/1024) = 2
+      expect(result.totalKB).toBe(3); // Math.round(2560/1024) = 3
+    });
+  });
+
+  describe('buildFolderMap helper', () => {
+    it('should be exported as a function', () => {
+      expect(typeof imap.buildFolderMap).toBe('function');
+    });
+
+    it('should build folder map with INBOX as default', () => {
+      const mailboxes = [];
+      const folderMap = imap.buildFolderMap(mailboxes);
+
+      expect(folderMap).toHaveProperty('INBOX');
+      expect(folderMap.INBOX).toBe('Posteingang');
+    });
+
+    it('should map special folders correctly', () => {
+      const mailboxes = [
+        { name: 'INBOX', path: 'INBOX', delimiter: '.', specialUse: null },
+        { name: 'Sent', path: 'Sent', delimiter: '.', specialUse: '\\Sent' },
+        { name: 'Trash', path: 'Trash', delimiter: '.', specialUse: '\\Trash' },
+        { name: 'Junk', path: 'Junk', delimiter: '.', specialUse: '\\Junk' },
+      ];
+
+      const folderMap = imap.buildFolderMap(mailboxes);
+
+      expect(folderMap.INBOX).toBe('Posteingang');
+      expect(folderMap.Sent).toBe('Gesendet');
+      expect(folderMap.Trash).toBe('Papierkorb');
+      expect(folderMap.Junk).toBe('Spam');
+    });
+
+    it('should map INBOX subfolders correctly', () => {
+      const mailboxes = [
+        { name: 'INBOX', path: 'INBOX', delimiter: '.', specialUse: null },
+        { name: 'Amazon', path: 'INBOX.Amazon', delimiter: '.', specialUse: null },
+        { name: 'Paypal', path: 'INBOX.Paypal', delimiter: '.', specialUse: null },
+      ];
+
+      const folderMap = imap.buildFolderMap(mailboxes);
+
+      expect(folderMap['INBOX.Amazon']).toBe('Posteingang/Amazon');
+      expect(folderMap['INBOX.Paypal']).toBe('Posteingang/Paypal');
+    });
+
+    it('should handle folders with / delimiter', () => {
+      const mailboxes = [
+        { name: 'INBOX', path: 'INBOX', delimiter: '/', specialUse: null },
+        { name: 'Work', path: 'INBOX/Work', delimiter: '/', specialUse: null },
+      ];
+
+      const folderMap = imap.buildFolderMap(mailboxes);
+
+      expect(folderMap['INBOX/Work']).toBe('Posteingang/Work');
+    });
+
+    it('should handle nested folders', () => {
+      const mailboxes = [
+        { name: 'INBOX', path: 'INBOX', delimiter: '.', specialUse: null },
+        { name: 'Deep', path: 'INBOX.Parent.Deep', delimiter: '.', specialUse: null },
+      ];
+
+      const folderMap = imap.buildFolderMap(mailboxes);
+
+      expect(folderMap['INBOX.Parent.Deep']).toBe('Posteingang/Parent/Deep');
+    });
+
+    it('should handle mixed special and regular folders', () => {
+      const mailboxes = [
+        { name: 'INBOX', path: 'INBOX', delimiter: '.', specialUse: null },
+        { name: 'Sent', path: 'INBOX.Sent', delimiter: '.', specialUse: '\\Sent' },
+        { name: 'Archive', path: 'INBOX.Archive', delimiter: '.', specialUse: null },
+      ];
+
+      const folderMap = imap.buildFolderMap(mailboxes);
+
+      expect(folderMap['INBOX.Sent']).toBe('Gesendet');
+      expect(folderMap['INBOX.Archive']).toBe('Posteingang/Archive');
+    });
+
+    it('should handle empty mailbox list', () => {
+      const mailboxes = [];
+      const folderMap = imap.buildFolderMap(mailboxes);
+
+      expect(Object.keys(folderMap)).toHaveLength(1);
+      expect(folderMap.INBOX).toBe('Posteingang');
+    });
+  });
+
+  describe('migrateFolders helper', () => {
+    beforeEach(() => {
+      db.init(':memory:');
+    });
+
+    it('should be exported as a function', () => {
+      expect(typeof imap.migrateFolders).toBe('function');
+    });
+
+    it('should not throw when given empty folder map', () => {
+      const folderMap = {};
+      expect(() => imap.migrateFolders(folderMap)).not.toThrow();
+    });
+
+    it('should not throw when given only INBOX', () => {
+      const folderMap = { INBOX: 'Posteingang' };
+      expect(() => imap.migrateFolders(folderMap)).not.toThrow();
+    });
+
+    it('should handle folder map with subfolders', () => {
+      const folderMap = {
+        INBOX: 'Posteingang',
+        'INBOX.Amazon': 'Posteingang/Amazon',
+        'INBOX.Paypal': 'Posteingang/Paypal',
+      };
+
+      expect(() => imap.migrateFolders(folderMap)).not.toThrow();
+    });
+
+    it('should handle folder map with special folders', () => {
+      const folderMap = {
+        INBOX: 'Posteingang',
+        Sent: 'Gesendet',
+        Trash: 'Papierkorb',
+        Junk: 'Spam',
+      };
+
+      expect(() => imap.migrateFolders(folderMap)).not.toThrow();
+    });
+
+    it('should handle folder map with nested folders', () => {
+      const folderMap = {
+        INBOX: 'Posteingang',
+        'INBOX.Work.Projects': 'Posteingang/Work/Projects',
+      };
+
+      expect(() => imap.migrateFolders(folderMap)).not.toThrow();
+    });
+
+    it('should handle folder map with various delimiters', () => {
+      const folderMap = {
+        INBOX: 'Posteingang',
+        'INBOX.Folder1': 'Posteingang/Folder1',
+        'INBOX/Folder2': 'Posteingang/Folder2',
+      };
+
+      expect(() => imap.migrateFolders(folderMap)).not.toThrow();
+    });
+  });
 });
