@@ -150,7 +150,12 @@ async function findServerFolderForDbName(client, dbFolder) {
 }
 
 /**
- * Helper to process a batch of fetch results and save them to DB
+ * Processes a batch of fetched messages and saves them to the database
+ * @param {ImapFlow} client - Connected IMAP client
+ * @param {Array} messages - Array of message objects from IMAP fetch
+ * @param {Object} account - Account configuration object
+ * @param {string} targetCategory - Target folder/category for saving messages
+ * @returns {Promise<number>} Number of messages successfully saved
  */
 async function processMessages(client, messages, account, targetCategory) {
   let savedCount = 0;
