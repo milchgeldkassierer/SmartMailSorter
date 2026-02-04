@@ -287,6 +287,23 @@ async function checkAccountQuota(client, accountId) {
   }
 }
 
+/**
+ * Builds a folder map from IMAP mailboxes
+ * @param {Array} mailboxes - Array of mailbox objects from IMAP server
+ * @returns {Object} Folder map with server paths as keys and DB folder names as values
+ */
+function buildFolderMap(mailboxes) {
+  const folderMap = { INBOX: INBOX_FOLDER };
+
+  for (const box of mailboxes) {
+    const serverPath = box.path;
+    const mappedName = mapServerFolderToDbName(box);
+    folderMap[serverPath] = mappedName;
+  }
+
+  return folderMap;
+}
+
 async function syncAccount(account) {
   console.log(`Starting sync for account: ${account.email}`);
 
@@ -624,4 +641,5 @@ module.exports = {
   mapServerFolderToDbName,
   findServerFolderForDbName,
   checkAccountQuota,
+  buildFolderMap,
 };
