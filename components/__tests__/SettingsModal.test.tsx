@@ -359,7 +359,7 @@ describe('SettingsModal - Integration Tests', () => {
     });
 
     it('should render tab icon in Smart Sort tab button', () => {
-      const { container } = render(<SettingsModal {...defaultProps} />);
+      render(<SettingsModal {...defaultProps} />);
 
       const smartSortButton = screen.getByText('Smart Sort').parentElement;
       // Should have Sparkles icon

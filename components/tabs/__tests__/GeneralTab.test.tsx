@@ -17,19 +17,24 @@ describe('GeneralTab', () => {
     // Mock window.location.reload
     reloadMock = vi.fn();
     originalLocation = window.location;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     delete (window as any).location;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (window as any).location = { ...originalLocation, reload: reloadMock };
 
     // Mock window.electron (create fresh mock each time, after clearAllMocks)
     mockElectron = {
       resetDb: vi.fn().mockResolvedValue(undefined),
     };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (window as any).electron = mockElectron;
   });
 
   afterEach(() => {
     confirmSpy.mockRestore();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (window as any).location = originalLocation;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     delete (window as any).electron;
   });
 
@@ -82,9 +87,7 @@ describe('GeneralTab', () => {
       fireEvent.click(resetButton);
 
       expect(confirmSpy).toHaveBeenCalledTimes(1);
-      expect(confirmSpy).toHaveBeenCalledWith(
-        'Achtung: Dies löscht alle gespeicherten Emails und Konten! Fortfahren?'
-      );
+      expect(confirmSpy).toHaveBeenCalledWith('Achtung: Dies löscht alle gespeicherten Emails und Konten! Fortfahren?');
     });
 
     it('should not reset database when user cancels confirmation', async () => {
@@ -127,6 +130,7 @@ describe('GeneralTab', () => {
 
     it('should handle case when electron is not available', async () => {
       confirmSpy.mockReturnValue(true);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       delete (window as any).electron;
       render(<GeneralTab />);
 
@@ -165,6 +169,7 @@ describe('GeneralTab', () => {
   describe('Electron API Integration', () => {
     it('should work in browser environment without electron', async () => {
       confirmSpy.mockReturnValue(true);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       delete (window as any).electron;
 
       render(<GeneralTab />);
@@ -212,7 +217,6 @@ describe('GeneralTab', () => {
       expect(resetButton).toHaveClass('hover:bg-red-100');
     });
   });
-
 
   describe('Accessibility', () => {
     it('should render button as button element', () => {

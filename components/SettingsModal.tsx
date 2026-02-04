@@ -73,16 +73,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
           {/* Content */}
           <div className="flex-1 p-6 overflow-y-auto">
             {activeTab === 'accounts' && (
-              <AccountsTab
-                accounts={accounts}
-                onAddAccount={onAddAccount}
-                onRemoveAccount={onRemoveAccount}
-              />
+              <AccountsTab accounts={accounts} onAddAccount={onAddAccount} onRemoveAccount={onRemoveAccount} />
             )}
 
-            {activeTab === 'smartsort' && (
-              <SmartSortTab aiSettings={aiSettings} onSave={onSaveAISettings} />
-            )}
+            {activeTab === 'smartsort' && <SmartSortTab aiSettings={aiSettings} onSave={onSaveAISettings} />}
 
             {activeTab === 'general' && <GeneralTab />}
           </div>

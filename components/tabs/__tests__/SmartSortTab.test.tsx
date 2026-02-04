@@ -398,9 +398,7 @@ describe('SmartSortTab', () => {
       const saveButton = screen.getByText('Einstellungen speichern');
       fireEvent.click(saveButton);
 
-      expect(defaultProps.onSave).toHaveBeenCalledWith(
-        expect.objectContaining({ apiKey: '' })
-      );
+      expect(defaultProps.onSave).toHaveBeenCalledWith(expect.objectContaining({ apiKey: '' }));
     });
 
     it('should handle rapid provider switches', () => {
@@ -427,9 +425,7 @@ describe('SmartSortTab', () => {
       const saveButton = screen.getByText('Einstellungen speichern');
       fireEvent.click(saveButton);
 
-      expect(onSave).toHaveBeenCalledWith(
-        expect.objectContaining({ apiKey: specialKey })
-      );
+      expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ apiKey: specialKey }));
     });
   });
 });

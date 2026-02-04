@@ -1,13 +1,6 @@
 import React, { useState } from 'react';
 import { ImapAccount } from '../../types';
-import {
-  PlusCircle,
-  Trash2,
-  Server,
-  CheckCircle,
-  AlertCircle,
-  RefreshCw,
-} from '../Icon';
+import { PlusCircle, Trash2, Server, CheckCircle, AlertCircle, RefreshCw } from '../Icon';
 
 interface AccountsTabProps {
   accounts: ImapAccount[];
@@ -15,11 +8,7 @@ interface AccountsTabProps {
   onRemoveAccount: (id: string) => void;
 }
 
-const AccountsTab: React.FC<AccountsTabProps> = ({
-  accounts,
-  onAddAccount,
-  onRemoveAccount,
-}) => {
+const AccountsTab: React.FC<AccountsTabProps> = ({ accounts, onAddAccount, onRemoveAccount }) => {
   const [isAdding, setIsAdding] = useState(false);
 
   // New Account Form State

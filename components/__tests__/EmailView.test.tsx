@@ -26,6 +26,7 @@ describe('EmailView', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     // Setup window.electron mock
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (window.electron as any) = {
       getEmailAttachments: mockGetEmailAttachments,
     };
@@ -33,6 +34,7 @@ describe('EmailView', () => {
 
   afterEach(() => {
     // Clean up window.electron mock
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     delete (window as any).electron;
   });
 
@@ -237,6 +239,7 @@ describe('EmailView', () => {
     });
 
     it('should not load attachments when window.electron is not available', () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       delete (window as any).electron;
       const email = createEmail({ hasAttachments: true });
       render(<EmailView email={email} />);
