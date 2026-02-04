@@ -57,9 +57,6 @@ interface GeminiResponse {
   text?: string | (() => string);
 }
 
-// Version marker
-console.warn('GeminiService: Loaded Version 6.0 (Batch Processing)');
-
 const getApiKey = (settings?: AISettings) => {
   if (settings?.apiKey && settings.apiKey.trim() !== '') return settings.apiKey;
   if (settings?.provider === LLMProvider.GEMINI) return process.env.API_KEY;

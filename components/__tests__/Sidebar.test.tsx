@@ -49,7 +49,6 @@ describe('Sidebar', () => {
     onAddCategory: vi.fn(),
     categories: mockCategories,
     counts: mockCounts,
-    isProcessing: false,
     onReset: vi.fn(),
     accounts: mockAccounts,
     activeAccountId: 'acc-1',
@@ -57,7 +56,6 @@ describe('Sidebar', () => {
     onOpenSettings: vi.fn(),
     onDeleteCategory: vi.fn(),
     onRenameCategory: vi.fn(),
-    onUpdateIcon: vi.fn(),
   };
 
   beforeEach(() => {

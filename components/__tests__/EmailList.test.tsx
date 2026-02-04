@@ -29,7 +29,6 @@ describe('EmailList', () => {
     emails: mockEmails,
     selectedEmailId: null,
     selectedIds: new Set<string>(),
-    onSelectEmail: vi.fn(),
     onRowClick: vi.fn(),
     onToggleSelection: vi.fn(),
     onDeleteEmail: vi.fn(),
