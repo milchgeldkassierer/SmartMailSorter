@@ -93,6 +93,47 @@ const matchesSearchTerm = (email: Email, searchTerm: string, searchConfig: Searc
   return searchConfig.logic === 'AND' ? terms.every(checkTerm) : terms.some(checkTerm);
 };
 
+// Helper function to check if a category is a standard folder
+const isStandardFolderCategory = (category: string): boolean => {
+  return (
+    category === DefaultEmailCategory.INBOX ||
+    category === 'Posteingang' ||
+    ['Gesendet', 'Spam', 'Papierkorb'].includes(category)
+  );
+};
+
+// Helper function to check if email should be shown in selected category
+const shouldShowInCategory = (
+  email: Email,
+  selectedCategory: string,
+  showUnsortedOnly: boolean,
+  categories: Category[]
+): boolean => {
+  // Handle standard folders first
+  if (isStandardFolderCategory(selectedCategory)) {
+    if (!matchesStandardFolder(email, selectedCategory)) {
+      return false;
+    }
+
+    // Apply unsorted filter only for INBOX
+    if ((selectedCategory === DefaultEmailCategory.INBOX || selectedCategory === 'Posteingang') && showUnsortedOnly) {
+      return !email.smartCategory;
+    }
+
+    return true;
+  }
+
+  // Handle physical folders and smart categories
+  const categoryInfo = categories.find((c) => c.name === selectedCategory);
+
+  if (categoryInfo && categoryInfo.type === 'folder') {
+    return matchesPhysicalFolder(email, selectedCategory);
+  }
+
+  // Default to smart category matching
+  return email.smartCategory === selectedCategory;
+};
+
 export const useEmails = ({ activeAccountId, accounts: _accounts }: UseEmailsParams): UseEmailsReturn => {
   // Data State - stored by account ID
   const [data, setData] = useState<Record<string, AccountData>>({});
@@ -123,41 +164,17 @@ export const useEmails = ({ activeAccountId, accounts: _accounts }: UseEmailsPar
 
   // --- Filtering Logic ---
   const filteredEmails = useMemo(() => {
-    let result = currentEmails;
+    // 1. Filter by category (standard folders, physical folders, or smart categories)
+    const categoryFiltered = currentEmails.filter((email) =>
+      shouldShowInCategory(email, selectedCategory, showUnsortedOnly, currentCategories)
+    );
 
-    // 1. Initial Filtering by Folder OR Smart Category
-    const isStandardFolder =
-      selectedCategory === DefaultEmailCategory.INBOX ||
-      selectedCategory === 'Posteingang' ||
-      ['Gesendet', 'Spam', 'Papierkorb'].includes(selectedCategory);
+    // 2. Apply search filter
+    const searchFiltered = categoryFiltered.filter((email) =>
+      matchesSearchTerm(email, searchTerm, searchConfig)
+    );
 
-    if (isStandardFolder) {
-      result = result.filter((e) => matchesStandardFolder(e, selectedCategory));
-
-      // Unsorted Toggle (only applies to INBOX)
-      if (
-        (selectedCategory === DefaultEmailCategory.INBOX || selectedCategory === 'Posteingang') &&
-        showUnsortedOnly
-      ) {
-        result = result.filter((e) => !e.smartCategory);
-      }
-    } else {
-      // Check if it's a known physical folder
-      const catInfo = currentCategories.find((c) => c.name === selectedCategory);
-
-      if (catInfo && catInfo.type === 'folder') {
-        // Physical Folder Logic
-        result = result.filter((e) => matchesPhysicalFolder(e, selectedCategory));
-      } else {
-        // Smart Category Logic (Virtual View)
-        result = result.filter((e) => e.smartCategory === selectedCategory);
-      }
-    }
-
-    // 2. Search Logic
-    result = result.filter((email) => matchesSearchTerm(email, searchTerm, searchConfig));
-
-    return result;
+    return searchFiltered;
   }, [currentEmails, selectedCategory, searchTerm, searchConfig, showUnsortedOnly, currentCategories]);
 
   // Pagination
