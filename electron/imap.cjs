@@ -436,6 +436,108 @@ function reconcileOrphans(localUids, allServerUids, accountId, targetCategory, b
   }
 }
 
+/**
+ * Orchestrates the sync process for a single folder
+ * @param {ImapFlow} client - Connected IMAP client
+ * @param {Object} account - Account configuration object
+ * @param {string} boxName - Server mailbox name/path
+ * @param {string} targetCategory - Target DB folder name
+ * @returns {Promise<number>} Number of new messages synced
+ */
+async function syncFolderMessages(client, account, boxName, targetCategory) {
+  let lock;
+  let newMessagesCount = 0;
+
+  try {
+    // Get mailbox lock and capture metadata
+    lock = await client.getMailboxLock(boxName);
+
+    try {
+      console.log(`[Sync] Accessing ${boxName} (Mapped: ${targetCategory})`);
+
+      // --- ROBUST LARGE DATA SYNC STRATEGY ---
+      // 1. Get total message count from client.mailbox
+      const totalMessages = client.mailbox.exists;
+
+      console.log(`[Sync] ${boxName}: Total messages on server: ${totalMessages}`);
+
+      if (totalMessages === 0) {
+        return 0; // Empty box
+      }
+
+      // Load ALL local UIDs once for efficient lookup
+      // Warning: For 100k emails, this array is large but manageable (approx 800KB-1MB RAM).
+      const localUids = db.getAllUidsForFolder(account.id, targetCategory);
+      const localUidSet = new Set(localUids);
+      console.log(`[Sync] ${boxName}: Local messages DB has: ${localUids.length}`);
+
+      // Config parameters
+      const UID_FETCH_BATCH_SIZE = 5000;
+      const MSG_FETCH_BATCH_SIZE = 50;
+
+      // --- RECONCILIATION: Track all server UIDs to detect deletions ---
+      const allServerUids = new Set();
+
+      // Loop through sequence ranges (1-based index)
+      for (let seqStart = 1; seqStart <= totalMessages; seqStart += UID_FETCH_BATCH_SIZE) {
+        const seqEnd = Math.min(seqStart + UID_FETCH_BATCH_SIZE - 1, totalMessages);
+        const range = `${seqStart}:${seqEnd}`;
+
+        console.log(`[Sync] ${boxName}: Checking range ${range} for missing UIDs...`);
+
+        try {
+          // Fetch UIDs and flags for this sequence range
+          const { uids: batchServerUids, headers } = await fetchUidBatch(client, range);
+
+          // Add to reconciliation set
+          batchServerUids.forEach((u) => allServerUids.add(u));
+
+          // Identify which ones are missing locally
+          const missingInBatch = batchServerUids.filter((uid) => !localUidSet.has(uid));
+          console.log(`[Sync Debug] Range ${range}: ${missingInBatch.length} missing locally.`);
+
+          if (missingInBatch.length > 0) {
+            console.log(`[Sync] ${boxName}: Range ${range} has ${missingInBatch.length} new messages.`);
+
+            // Download missing messages in smaller chunks
+            missingInBatch.sort((a, b) => a - b); // Process in order
+
+            for (let i = 0; i < missingInBatch.length; i += MSG_FETCH_BATCH_SIZE) {
+              const chunkUids = missingInBatch.slice(i, i + MSG_FETCH_BATCH_SIZE);
+
+              try {
+                const saved = await downloadMessageBatch(client, chunkUids, account, targetCategory);
+                newMessagesCount += saved;
+              } catch (fetchErr) {
+                console.error(`[Sync] Failed to fetch message chunk ${chunkUids.join(',')}:`, fetchErr);
+              }
+            }
+          }
+        } catch (rangeErr) {
+          console.error(`[Sync] Failed to fetch UIDs for sequence range ${range}:`, rangeErr);
+        }
+      }
+
+      // --- RECONCILIATION PHASE ---
+      reconcileOrphans(localUids, allServerUids, account.id, targetCategory, boxName);
+    } catch (err) {
+      console.error(`[Sync] Error syncing folder ${boxName}:`, err.message);
+    }
+  } catch (lockErr) {
+    // Handle folder access errors (missing, renamed, or permission issues)
+    console.warn(`[Sync] Skipping ${boxName} - cannot access folder: ${lockErr.message}`);
+    if (lockErr.mailboxMissing) {
+      console.warn(`[Sync] Folder ${boxName} no longer exists on server`);
+    }
+    // Return 0 instead of throwing to allow sync to continue with other folders
+    return 0;
+  } finally {
+    if (lock) lock.release();
+  }
+
+  return newMessagesCount;
+}
+
 async function syncAccount(account) {
   console.log(`Starting sync for account: ${account.email}`);
 
@@ -767,4 +869,5 @@ module.exports = {
   fetchUidBatch,
   downloadMessageBatch,
   reconcileOrphans,
+  syncFolderMessages,
 };
