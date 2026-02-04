@@ -42,7 +42,7 @@ import {
   FolderOpen,
   AlertOctagon,
 } from 'lucide-react';
-import { DefaultEmailCategory } from '../types';
+import { DefaultEmailCategory, SENT_FOLDER, SPAM_FOLDER, TRASH_FOLDER } from '../types';
 
 export const CategoryIcon: React.FC<{ category: string; className?: string }> = ({ category, className }) => {
   switch (category) {
@@ -63,11 +63,11 @@ export const CategoryIcon: React.FC<{ category: string; className?: string }> = 
     case DefaultEmailCategory.OTHER:
       return <Archive className={className} />;
 
-    case 'Gesendet':
+    case SENT_FOLDER:
       return <Send className={className} />;
-    case 'Papierkorb':
+    case TRASH_FOLDER:
       return <Trash2 className={className} />;
-    case 'Spam':
+    case SPAM_FOLDER:
       return <ShieldAlert className={className} />;
 
     // Dynamic mapping for common generated categories
