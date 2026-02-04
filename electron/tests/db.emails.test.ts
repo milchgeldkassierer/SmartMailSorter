@@ -22,12 +22,12 @@ interface DbModule {
   addAccount: (account: Partial<ImapAccount> & { id: string; username?: string; password?: string }) => void;
   saveEmail: (email: Partial<Email> & { id: string; accountId: string; attachments?: Array<{ id?: string; filename?: string; contentType?: string; size?: number; data?: Buffer }> }) => { changes: number };
   getEmails: (accountId: string) => Email[];
-  getEmailContent: (emailId: string) => { body: string; bodyHtml: string | null } | undefined;
+  getEmailContent: (emailId: string) => { body: string; bodyHtml: string | undefined } | undefined;
   deleteEmail: (id: string) => void;
   deleteEmailsByUid: (accountId: string, folder: string, uids: number[]) => number;
   updateEmailReadStatus: (id: string, isRead: boolean) => { changes: number };
   updateEmailFlagStatus: (id: string, isFlagged: boolean) => { changes: number };
-  updateEmailSmartCategory: (id: string, smartCategory: string | null, aiSummary: string | null, aiReasoning: string | null, confidence: number) => { changes: number };
+  updateEmailSmartCategory: (id: string, smartCategory: string | undefined, aiSummary: string | undefined, aiReasoning: string | undefined, confidence: number) => { changes: number };
   getEmailAttachments: (emailId: string) => Array<{ id: string; filename: string; contentType: string; size: number }>;
   getAttachment: (id: string) => { id: string; emailId: string; filename: string; contentType: string; size: number; data: Buffer } | undefined;
 }
@@ -62,7 +62,7 @@ function createTestEmail(id: string, accountId: string, overrides: Partial<Email
     bodyHtml: '<p>Test body content</p>',
     date: new Date().toISOString(),
     folder: 'Posteingang',
-    smartCategory: null,
+    smartCategory: undefined,
     isRead: false,
     isFlagged: false,
     hasAttachments: false,
@@ -454,7 +454,7 @@ describe('Database Email Operations', () => {
         confidence: 0.8
       }));
 
-      const result = db.updateEmailSmartCategory('email-clear-cat', null, null, null, 0);
+      const result = db.updateEmailSmartCategory('email-clear-cat', undefined, undefined, undefined, 0);
 
       expect(result.changes).toBe(1);
       const emails = db.getEmails(accountId);

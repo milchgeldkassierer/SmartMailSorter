@@ -97,6 +97,7 @@ describe('Attachment Filename Security Tests', () => {
   const createTestEmail = (id: string, accountId: string, attachmentFilename: string, attachmentId: string = 'attach1') => {
     const attachment = {
       id: attachmentId,
+      emailId: id,
       filename: attachmentFilename,
       contentType: 'application/octet-stream',
       size: 100,

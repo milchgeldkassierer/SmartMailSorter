@@ -46,7 +46,7 @@ export const useBatchOperations = ({
       if ((e.body === undefined || e.body === '') && window.electron) {
         const content = await window.electron.getEmailContent(e.id);
         if (content) {
-          return { ...e, body: content.body || '', bodyHtml: content.bodyHtml };
+          return { ...e, body: content.body || '', bodyHtml: content.bodyHtml ?? undefined };
         }
       }
       return e;

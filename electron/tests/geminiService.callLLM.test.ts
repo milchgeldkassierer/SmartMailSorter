@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach, Mock } from 'vitest';
 import { Email, DefaultEmailCategory, SortResult, AISettings, LLMProvider } from '../../types';
 
 // Store the original fetch
@@ -34,7 +34,7 @@ interface GeminiGenerateContentResponse {
 }
 
 // Mock variables for GoogleGenAI
-let mockGenerateContent: (request: GeminiGenerateContentRequest) => Promise<GeminiGenerateContentResponse>;
+let mockGenerateContent: Mock<(request: GeminiGenerateContentRequest) => Promise<GeminiGenerateContentResponse>>;
 
 // Mock @google/genai before importing geminiService
 vi.mock('@google/genai', () => {
