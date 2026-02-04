@@ -43,7 +43,6 @@ const PROVIDERS = {
  */
 function mapServerFolderToDbName(box) {
   const fullPath = box.path;
-  const key = box.path;
   const delimiter = box.delimiter || '/';
   let mappedName = null;
 
@@ -60,7 +59,7 @@ function mapServerFolderToDbName(box) {
   }
 
   // Name matching overrides (only if not already mapped)
-  const lower = key.toLowerCase();
+  const lower = fullPath.toLowerCase();
   if (!mappedName) {
     if (lower === 'sent' || lower === 'gesendet') {
       mappedName = 'Gesendet';
@@ -101,45 +100,15 @@ async function findServerFolderForDbName(client, dbFolder) {
   }
 
   const boxList = await client.list();
-  let foundPath = null;
 
   for (const box of boxList) {
-    const fullPath = box.path;
-    let mappedName = fullPath; // Default
-
-    // Check specialUse attribute (imapflow uses specialUse instead of attribs)
-    if (box.specialUse) {
-      const specialUse = box.specialUse.toLowerCase();
-      if (specialUse.includes('\\sent') || specialUse.includes('sent')) mappedName = 'Gesendet';
-      else if (specialUse.includes('\\trash') || specialUse.includes('trash')) mappedName = 'Papierkorb';
-      else if (specialUse.includes('\\junk') || specialUse.includes('junk')) mappedName = 'Spam';
-    }
-
-    // Name matching overrides
-    const lower = box.name.toLowerCase();
-    if (mappedName === fullPath) {
-      // If not mapped by attribute yet
-      if (lower === 'sent' || lower === 'gesendet') mappedName = 'Gesendet';
-      else if (lower === 'trash' || lower === 'papierkorb') mappedName = 'Papierkorb';
-      else if (lower === 'junk' || lower === 'spam') mappedName = 'Spam';
-      else if (fullPath.toUpperCase().startsWith('INBOX')) {
-        // Handle Subfolders: INBOX.Amazon -> Posteingang/Amazon
-        const sep = box.delimiter || '/';
-        const parts = fullPath.split(sep);
-        if (parts[0].toUpperCase() === 'INBOX') {
-          parts[0] = 'Posteingang';
-          mappedName = parts.join('/');
-        }
-      }
-    }
-
+    const mappedName = mapServerFolderToDbName(box);
     if (mappedName === dbFolder) {
-      foundPath = fullPath;
-      break;
+      return box.path;
     }
   }
 
-  return foundPath;
+  return null;
 }
 
 /**
