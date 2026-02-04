@@ -8,7 +8,7 @@ const require = createRequire(import.meta.url);
 
 // Mock Electron app.getPath for db initialization
 const electronPath = path.resolve(path.dirname(new URL(import.meta.url).pathname), '../../node_modules/electron/index.js');
-require.cache[electronPath] = {
+(require.cache as any)[electronPath] = {
   exports: {
     app: {
       getPath: () => './test-data'
