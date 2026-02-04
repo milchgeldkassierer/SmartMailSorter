@@ -62,6 +62,16 @@ const matchesStandardFolder = (email: Email, folderName: string): boolean => {
   return false;
 };
 
+// Helper function to check if an email matches a physical folder
+const matchesPhysicalFolder = (email: Email, folderName: string): boolean => {
+  if (!email.folder) return false;
+  return (
+    email.folder === folderName ||
+    email.folder.endsWith('/' + folderName) ||
+    folderName.endsWith('/' + email.folder)
+  );
+};
+
 export const useEmails = ({ activeAccountId, accounts: _accounts }: UseEmailsParams): UseEmailsReturn => {
   // Data State - stored by account ID
   const [data, setData] = useState<Record<string, AccountData>>({});
@@ -116,14 +126,7 @@ export const useEmails = ({ activeAccountId, accounts: _accounts }: UseEmailsPar
 
       if (catInfo && catInfo.type === 'folder') {
         // Physical Folder Logic
-        result = result.filter((e) => {
-          if (!e.folder) return false;
-          return (
-            e.folder === selectedCategory ||
-            e.folder.endsWith('/' + selectedCategory) ||
-            selectedCategory.endsWith('/' + e.folder)
-          );
-        });
+        result = result.filter((e) => matchesPhysicalFolder(e, selectedCategory));
       } else {
         // Smart Category Logic (Virtual View)
         result = result.filter((e) => e.smartCategory === selectedCategory);
