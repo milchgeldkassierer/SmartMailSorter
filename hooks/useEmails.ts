@@ -72,6 +72,27 @@ const matchesPhysicalFolder = (email: Email, folderName: string): boolean => {
   );
 };
 
+// Helper function to check if an email matches search criteria
+const matchesSearchTerm = (email: Email, searchTerm: string, searchConfig: SearchConfig): boolean => {
+  if (!searchTerm.trim()) return true;
+
+  const terms = searchTerm
+    .toLowerCase()
+    .split(' ')
+    .filter((t) => t.length > 0);
+
+  const checkTerm = (term: string) => {
+    const inSender =
+      searchConfig.searchSender &&
+      (email.sender.toLowerCase().includes(term) || email.senderEmail.toLowerCase().includes(term));
+    const inSubject = searchConfig.searchSubject && email.subject.toLowerCase().includes(term);
+    const inBody = searchConfig.searchBody && email.body?.toLowerCase().includes(term);
+    return inSender || inSubject || inBody;
+  };
+
+  return searchConfig.logic === 'AND' ? terms.every(checkTerm) : terms.some(checkTerm);
+};
+
 export const useEmails = ({ activeAccountId, accounts: _accounts }: UseEmailsParams): UseEmailsReturn => {
   // Data State - stored by account ID
   const [data, setData] = useState<Record<string, AccountData>>({});
@@ -134,23 +155,7 @@ export const useEmails = ({ activeAccountId, accounts: _accounts }: UseEmailsPar
     }
 
     // 2. Search Logic
-    if (searchTerm.trim()) {
-      const terms = searchTerm
-        .toLowerCase()
-        .split(' ')
-        .filter((t) => t.length > 0);
-      result = result.filter((email) => {
-        const checkTerm = (term: string) => {
-          const inSender =
-            searchConfig.searchSender &&
-            (email.sender.toLowerCase().includes(term) || email.senderEmail.toLowerCase().includes(term));
-          const inSubject = searchConfig.searchSubject && email.subject.toLowerCase().includes(term);
-          const inBody = searchConfig.searchBody && email.body?.toLowerCase().includes(term);
-          return inSender || inSubject || inBody;
-        };
-        return searchConfig.logic === 'AND' ? terms.every(checkTerm) : terms.some(checkTerm);
-      });
-    }
+    result = result.filter((email) => matchesSearchTerm(email, searchTerm, searchConfig));
 
     return result;
   }, [currentEmails, selectedCategory, searchTerm, searchConfig, showUnsortedOnly, currentCategories]);
