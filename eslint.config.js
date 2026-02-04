@@ -63,6 +63,9 @@ export default [
       // Prettier integration
       'prettier/prettier': 'error',
 
+      // Disable base no-unused-vars in favor of TypeScript version
+      'no-unused-vars': 'off',
+
       // TypeScript rules
       '@typescript-eslint/no-unused-vars': [
         'warn',

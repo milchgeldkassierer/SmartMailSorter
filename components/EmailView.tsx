@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Email, Attachment } from '../types';
-import { CategoryIcon, BrainCircuit, Paperclip, FileText } from './Icon';
+import { CategoryIcon, BrainCircuit, Paperclip } from './Icon';
 
 interface EmailViewProps {
   email: Email | null;
@@ -9,7 +9,7 @@ interface EmailViewProps {
 const EmailView: React.FC<EmailViewProps> = ({ email }) => {
   const [showHtml, setShowHtml] = useState(true);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
-  const [isLoadingAttachments, setIsLoadingAttachments] = useState(false);
+  const [_isLoadingAttachments, setIsLoadingAttachments] = useState(false);
   const [linkError, setLinkError] = useState<string | null>(null);
 
   useEffect(() => {

@@ -150,7 +150,7 @@ const App: React.FC = () => {
         alert('Fehler beim Laden der Daten');
       }
     })();
-  }, []);
+  }, [setAccounts, setActiveAccountId, setData, setIsAuthenticated]);
 
   // Fetch emails when switching accounts
   useEffect(() => {
@@ -170,7 +170,7 @@ const App: React.FC = () => {
         alert('Fehler beim Laden des Kontos');
       }
     })();
-  }, [activeAccountId]);
+  }, [activeAccountId, autoDiscoverFolders, setData]);
 
   const handleAddAccount = async (newAccount: ImapAccount) => {
     if (window.electron) {

@@ -6,12 +6,12 @@ interface EmailListProps {
   emails: Email[];
   selectedEmailId: string | null;
   selectedIds: Set<string>;
-  onSelectEmail: (id: string) => void;
-  onRowClick: (id: string, e: React.MouseEvent) => void;
-  onToggleSelection: (id: string, shiftKey: boolean) => void;
-  onDeleteEmail: (id: string) => void;
-  onToggleRead: (id: string) => void;
-  onToggleFlag: (id: string) => void;
+  onSelectEmail: (_id: string) => void;
+  onRowClick: (_id: string, _e: React.MouseEvent) => void;
+  onToggleSelection: (_id: string, _shiftKey: boolean) => void;
+  onDeleteEmail: (_id: string) => void;
+  onToggleRead: (_id: string) => void;
+  onToggleFlag: (_id: string) => void;
   isLoading: boolean;
   onLoadMore?: () => void;
   hasMore?: boolean;
@@ -21,7 +21,7 @@ const EmailList: React.FC<EmailListProps> = ({
   emails,
   selectedEmailId,
   selectedIds,
-  onSelectEmail,
+  onSelectEmail: _onSelectEmail,
   onRowClick,
   onToggleSelection,
   onDeleteEmail,
@@ -77,7 +77,6 @@ const EmailList: React.FC<EmailListProps> = ({
             <div
               key={email.id}
               onClick={(e) => {
-                console.log('EmailList: Clicked row', email.id);
                 onRowClick(email.id, e);
               }}
               className={`group relative p-4 pl-12 border-b border-slate-100 cursor-pointer hover:bg-slate-50 transition-colors ${
