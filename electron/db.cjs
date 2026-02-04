@@ -1,6 +1,7 @@
 const Database = require('better-sqlite3');
 const path = require('path');
 const { INBOX_FOLDER } = require('./folderConstants.cjs');
+const logger = require('./utils/logger.cjs');
 // Electron import moved to lazy usage or injection
 
 const DEFAULT_DB_NAME = 'smartmail.db';
@@ -134,7 +135,7 @@ function createSchema() {
       insertIgnore.run(row.smartCategory);
     });
   } catch (e) {
-    console.error('Failed to sync categories from emails:', e);
+    logger.error('Failed to sync categories from emails:', e);
   }
 }
 
@@ -353,7 +354,7 @@ function _addCategory(name) {
 }
 
 function deleteSmartCategory(categoryName) {
-  console.log(`[DB] Deleting category "${categoryName}"`);
+  logger.info(`[DB] Deleting category "${categoryName}"`);
 
   // 1. Remove from categories table
   const delStmt = db.prepare('DELETE FROM categories WHERE name = ?');
@@ -363,12 +364,12 @@ function deleteSmartCategory(categoryName) {
   const stmt = db.prepare('UPDATE emails SET smartCategory = NULL WHERE smartCategory = ?');
   const info = stmt.run(categoryName);
 
-  console.log(`[DB] Deleted category. Emails affected: ${info.changes}`);
+  logger.info(`[DB] Deleted category. Emails affected: ${info.changes}`);
   return { success: true, changes: info.changes };
 }
 
 function renameSmartCategory(oldName, newName) {
-  console.log(`[DB] Renaming category from "${oldName}" to "${newName}"`);
+  logger.info(`[DB] Renaming category from "${oldName}" to "${newName}"`);
 
   // Transaction to ensure consistency
   const transaction = db.transaction(() => {
@@ -451,7 +452,7 @@ function migrateFolder(oldName, newName) {
     // 1. Update emails physical folder
     const info = updateEmails.run(newName, oldName);
     if (info.changes > 0) {
-      console.log(`[DB] Migrated ${info.changes} emails from ${oldName} to ${newName}`);
+      logger.info(`[DB] Migrated ${info.changes} emails from ${oldName} to ${newName}`);
     }
 
     // 2. Update category name if present

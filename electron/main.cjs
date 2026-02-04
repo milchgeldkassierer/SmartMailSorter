@@ -1,12 +1,13 @@
 const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
+const logger = require('./utils/logger.cjs');
 
 process.on('uncaughtException', (error) => {
-  console.error('Uncaught Exception:', error);
+  logger.error('Uncaught Exception:', error);
 });
 
 process.on('unhandledRejection', (reason, promise) => {
-  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
 });
 
 const db = require('./db.cjs');
@@ -56,9 +57,9 @@ app.whenReady().then(() => {
   ipcMain.handle('get-emails', (event, accountId) => db.getEmails(accountId));
   ipcMain.handle('get-email-attachments', (event, emailId) => db.getEmailAttachments(emailId));
   ipcMain.handle('get-email-content', (event, emailId) => {
-    console.log(`[IPC] Fetching content for ${emailId}`);
+    logger.debug(`[IPC] Fetching content for ${emailId}`);
     const result = db.getEmailContent(emailId);
-    console.log(`[IPC] Found content length: Body=${result?.body?.length}, HTML=${result?.bodyHtml?.length}`);
+    logger.debug(`[IPC] Found content length: Body=${result?.body?.length}, HTML=${result?.bodyHtml?.length}`);
     return result;
   });
 
@@ -121,7 +122,7 @@ app.whenReady().then(() => {
         await shell.openExternal(url);
         return { success: true };
       } catch (error) {
-        console.error(`Failed to open ${parsed.protocol} link:`, error);
+        logger.error(`Failed to open ${parsed.protocol} link:`, error);
         return {
           success: false,
           error: 'OPEN_FAILED',
@@ -156,7 +157,7 @@ app.whenReady().then(() => {
       return new Promise((resolve) => {
         execFile('rundll32.exe', ['url.dll,FileProtocolHandler', url], (error) => {
           if (error) {
-            console.error('WSL browser open error:', error);
+            logger.error('WSL browser open error:', error);
             resolve({ success: false, error: 'WSL_OPEN_FAILED', message: 'Failed to open URL in Windows browser' });
           } else {
             resolve({ success: true });
@@ -170,7 +171,7 @@ app.whenReady().then(() => {
         await shell.openExternal(url);
         return { success: true };
       } catch (error) {
-        console.error('Failed to open external URL:', error);
+        logger.error('Failed to open external URL:', error);
         return { success: false, error: 'OPEN_FAILED', message: 'Failed to open URL' };
       }
     }
