@@ -1,14 +1,16 @@
+import { ImapAccount, SyncResult } from './types';
+
 export { };
 
 declare global {
     interface Window {
         electron: {
-            getAccounts: () => Promise<any[]>;
-            addAccount: (account: any) => Promise<any>;
+            getAccounts: () => Promise<ImapAccount[]>;
+            addAccount: (account: ImapAccount) => Promise<ImapAccount>;
             deleteAccount: (id: string) => Promise<boolean>;
             getEmails: (accountId: string) => Promise<any[]>;
-            syncAccount: (account: any) => Promise<any>;
-            testConnection: (account: any) => Promise<{ success: boolean; error?: string }>;
+            syncAccount: (account: ImapAccount) => Promise<SyncResult>;
+            testConnection: (account: ImapAccount) => Promise<{ success: boolean; error?: string }>;
             resetDb: () => Promise<boolean>;
             deleteEmail: (data: { account: any, emailId: string, uid: number }) => Promise<any>;
             updateEmailRead: (data: { account: any, emailId: string, uid: number, isRead: boolean, folder?: string }) => Promise<any>;
