@@ -9,6 +9,11 @@ export enum DefaultEmailCategory {
   OTHER = 'Sonstiges'
 }
 
+export interface Category {
+  name: string;
+  type: string;
+}
+
 export interface ImapAccount {
   id: string;
   name: string;
@@ -41,6 +46,11 @@ export interface Email {
   aiSummary?: string;
   aiReasoning?: string;
   confidence?: number;
+}
+
+export interface AccountData {
+  emails: Email[];
+  categories: Category[];
 }
 
 export interface SortResult {

@@ -1,770 +1,204 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { Email, DefaultEmailCategory, ImapAccount, AISettings, LLMProvider, AVAILABLE_MODELS } from './types';
+import React, { useState, useEffect } from 'react';
+import { DefaultEmailCategory, ImapAccount } from './types';
 import Sidebar from './components/Sidebar';
 import EmailList from './components/EmailList';
 import EmailView from './components/EmailView';
 import SettingsModal from './components/SettingsModal';
-import SearchBar, { SearchConfig } from './components/SearchBar';
-import { generateDemoEmails, categorizeEmailWithAI, categorizeBatchWithAI } from './services/geminiService';
-import { RefreshCw, BrainCircuit, Search, Trash2, Filter } from './components/Icon';
-
-// Structure to hold data per account
-interface AccountData {
-  emails: Email[];
-  categories: { name: string, type: string }[];
-}
+import { generateDemoEmails } from './services/geminiService';
+import { useAuth } from './hooks/useAuth';
+import { useAccounts } from './hooks/useAccounts';
+import { useAISettings } from './hooks/useAISettings';
+import { useEmails } from './hooks/useEmails';
+import { useCategories } from './hooks/useCategories';
+import { useSelection } from './hooks/useSelection';
+import { useBatchOperations } from './hooks/useBatchOperations';
+import { useSync } from './hooks/useSync';
+import TopBar from './components/TopBar';
+import BatchActionBar from './components/BatchActionBar';
+import ProgressBar from './components/ProgressBar';
 
 const App: React.FC = () => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isConnecting, setIsConnecting] = useState(false);
-
-  // AI Settings State (Default to Gemini)
-  const [aiSettings, setAiSettings] = useState<AISettings>(() => {
-    const saved = localStorage.getItem('smartmail_ai_settings');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        console.error("Failed to parse AI settings", e);
-      }
-    }
-    return {
-      provider: LLMProvider.GEMINI,
-      model: AVAILABLE_MODELS[LLMProvider.GEMINI][0],
-      apiKey: ''
-    };
-  });
-
-  // Persist AI Settings
-  useEffect(() => {
-    localStorage.setItem('smartmail_ai_settings', JSON.stringify(aiSettings));
-  }, [aiSettings]);
-
-  // Account State
-  const [accounts, setAccounts] = useState<ImapAccount[]>([]);
-  const [activeAccountId, setActiveAccountId] = useState<string>('');
+  const { isAuthenticated, isConnecting, setIsAuthenticated, setIsConnecting } = useAuth();
+  const { accounts, activeAccountId, setAccounts, setActiveAccountId, addAccount, removeAccount, switchAccount } = useAccounts();
+  const { aiSettings, setAiSettings } = useAISettings();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
-  // Data State - stored by account ID
-  const [data, setData] = useState<Record<string, AccountData>>({});
+  const {
+    data, setData, selectedEmailId, setSelectedEmailId, selectedCategory, setSelectedCategory,
+    searchTerm, setSearchTerm, searchConfig, setSearchConfig, showUnsortedOnly, setShowUnsortedOnly,
+    currentEmails, currentCategories, filteredEmails, displayedEmails, selectedEmail,
+    categoryCounts, canLoadMore, updateActiveAccountData, loadMoreEmails
+  } = useEmails({ activeAccountId, accounts });
 
-  // UI Selection State
-  const [selectedCategory, setSelectedCategory] = useState<string>(DefaultEmailCategory.INBOX);
-  const [selectedEmailId, setSelectedEmailId] = useState<string | null>(null);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set()); // New: Multi-select
-  const [isSorting, setIsSorting] = useState(false);
-  const [sortProgress, setSortProgress] = useState(0);
+  const { addCategory, deleteCategory, renameCategory, autoDiscoverFolders } = useCategories();
 
-  // Top Bar Filter State
-  const [showUnsortedOnly, setShowUnsortedOnly] = useState(false);
-
-  // Helper to extract unique categories from emails
-  const getCategoriesFromEmails = (emails: Email[]) => {
-    const customcats = new Set<string>();
-    emails.forEach(e => {
-      if (e.smartCategory) customcats.add(e.smartCategory);
-    });
-    // Ensure defaults are always there
-    const defaults = Object.values(DefaultEmailCategory);
-    return Array.from(new Set([...defaults, ...Array.from(customcats)]));
+  const handleSelectEmail = async (id: string) => {
+    setSelectedEmailId(id);
+    if (!activeAccountId || !window.electron) return;
+    const email = currentEmails.find(e => e.id === id);
+    if (email && email.body === undefined && email.bodyHtml === undefined) {
+      try {
+        const content = await window.electron.getEmailContent(id);
+        updateActiveAccountData(prev => ({
+          ...prev,
+          emails: prev.emails.map(e => e.id === id ? { ...e, body: content?.body ?? "", bodyHtml: content?.bodyHtml ?? "" } : e)
+        }));
+      } catch (error) {
+        console.error('Failed to load email content:', error);
+      }
+    }
   };
 
-  // Load initial data from Electron
-  useEffect(() => {
-    const loadData = async () => {
-      if (window.electron) {
-        const componentAccounts = await window.electron.getAccounts();
-
-        // Always load persistent categories from DB
-        const savedCategories = await window.electron.getCategories();
-
-        if (componentAccounts.length > 0) {
-          setAccounts(componentAccounts);
-          setActiveAccountId(componentAccounts[0].id);
-          setIsAuthenticated(true);
-
-          // Load emails for first account
-          const emails = await window.electron.getEmails(componentAccounts[0].id);
-
-          setData(prev => ({
+  const handleDeleteEmail = async (id: string) => {
+    const emailToDelete = currentEmails.find(e => e.id === id);
+    updateActiveAccountData(prev => ({ ...prev, emails: prev.emails.filter(e => e.id !== id) }));
+    if (selectedEmailId === id) setSelectedEmailId(null);
+    if (!window.electron || !activeAccountId) return;
+    const account = accounts.find(a => a.id === activeAccountId);
+    if (emailToDelete?.uid && account) {
+      try {
+        await window.electron.deleteEmail({ account, emailId: id, uid: emailToDelete.uid, folder: emailToDelete.folder });
+      } catch (error) {
+        console.error('Failed to delete email:', error);
+        // Rollback: restore email to state
+        if (emailToDelete) {
+          updateActiveAccountData(prev => ({
             ...prev,
-            [componentAccounts[0].id]: { emails, categories: savedCategories }
+            emails: [...prev.emails, emailToDelete].sort((a, b) =>
+              new Date(b.date).getTime() - new Date(a.date).getTime()
+            )
           }));
+        }
+      }
+    }
+  };
+
+  const { selectedIds, handleRowClick, handleToggleSelection, handleSelectAll, clearSelection } = useSelection({
+    filteredEmails,
+    onSelectEmail: handleSelectEmail
+  });
+
+  const { isSorting, sortProgress, canSmartSort, handleBatchDelete, handleBatchSmartSort } = useBatchOperations({
+    selectedIds, currentEmails, currentCategories, aiSettings,
+    onDeleteEmail: handleDeleteEmail,
+    onClearSelection: clearSelection,
+    onUpdateEmails: (updateFn) => updateActiveAccountData(prev => ({ ...prev, emails: updateFn(prev.emails) })),
+    onUpdateCategories: (categories) => updateActiveAccountData(prev => ({ ...prev, categories })),
+    onOpenSettings: () => setIsSettingsOpen(true)
+  });
+
+  const { isSyncing, syncAccount } = useSync({
+    activeAccountId, accounts,
+    onAccountsUpdate: setAccounts,
+    onDataUpdate: (accountId, { emails }) => setData(prev => ({ ...prev, [accountId]: { ...prev[accountId], emails } }))
+  });
+
+  // Load initial data
+  useEffect(() => {
+    (async () => {
+      if (!window.electron) return;
+      try {
+        const loadedAccounts = await window.electron.getAccounts();
+        const savedCategories = await window.electron.getCategories();
+        if (loadedAccounts.length > 0) {
+          setAccounts(loadedAccounts);
+          setActiveAccountId(loadedAccounts[0].id);
+          setIsAuthenticated(true);
+          const emails = await window.electron.getEmails(loadedAccounts[0].id);
+          setData({ [loadedAccounts[0].id]: { emails, categories: savedCategories } });
         } else {
-          // No accounts, show UI and open settings
           setIsAuthenticated(true);
           setIsSettingsOpen(true);
         }
+      } catch (error) {
+        console.error('Failed to initialize app:', error);
+        alert('Fehler beim Laden der Daten');
       }
-    };
-    loadData();
+    })();
   }, []);
 
   // Fetch emails when switching accounts
   useEffect(() => {
-    const fetchEmails = async () => {
-      if (activeAccountId && window.electron) {
+    (async () => {
+      if (!activeAccountId || !window.electron) return;
+      try {
         const emails = await window.electron.getEmails(activeAccountId);
-        const savedCategories = await window.electron.getCategories(); // DB Categories: { name, type }[]
-
-        // Dynamic Folder Discovery (Subfolders)
-        const systemFolders = Object.values(DefaultEmailCategory);
-        const mappedFolders = ['Gesendet', 'Spam', 'Papierkorb', 'Posteingang']; // German mappings
-
-        const foundFolders = new Set<string>();
-        // Map of folders needing type correction (if they exist as 'custom' but are physical)
-        const categoriesToFix = new Set<string>();
-
-        // We need a quick lookup set for existing categories
-        const existingCategoryNames = new Set(savedCategories.map((c: any) => c.name));
-        const existingCategoryTypes = new Map(savedCategories.map((c: any) => [c.name, c.type]));
-
-        emails.forEach(e => {
-          if (e.folder &&
-            !systemFolders.includes(e.folder as any) &&
-            !mappedFolders.includes(e.folder)
-          ) {
-            // It's a physical folder candidate
-            if (!existingCategoryNames.has(e.folder)) {
-              foundFolders.add(e.folder);
-            } else {
-              // It exists. Check if type matches. Default was 'custom', we want 'folder'.
-              // Optimization: Only update if it is currently 'custom' to save DB writes
-              if (existingCategoryTypes.get(e.folder) === 'custom') {
-                categoriesToFix.add(e.folder);
-              }
-            }
-          }
-        });
-
-        // 1. Add missing discovered folders
-        const newDiscovered = Array.from(foundFolders);
-        for (const folder of newDiscovered) {
-          console.log("Auto-discovering folder:", folder);
-          await window.electron.addCategory(folder, 'folder'); // Explicit type
-        }
-
-        // 2. Fix incorrect types for existing physical folders
-        const fixedCategories = Array.from(categoriesToFix);
-        for (const folder of fixedCategories) {
-          console.log("Fixing category type for:", folder);
-          await window.electron.updateCategoryType(folder, 'folder');
-        }
-
-        // Refetch if changes occurred
-        const finalCategories = (newDiscovered.length > 0 || fixedCategories.length > 0)
-          ? await window.electron.getCategories()
-          : savedCategories;
-
-        setData(prev => ({
-          ...prev,
-          [activeAccountId]: { emails, categories: finalCategories }
-        }));
+        const categories = await window.electron.getCategories();
+        await autoDiscoverFolders(emails, categories);
+        const finalCategories = await window.electron.getCategories();
+        setData(prev => ({ ...prev, [activeAccountId]: { emails, categories: finalCategories } }));
+      } catch (error) {
+        console.error('Failed to switch account:', error);
+        alert('Fehler beim Laden des Kontos');
       }
-    };
-    fetchEmails();
+    })();
   }, [activeAccountId]);
-
-  // Search State
-  const [searchTerm, setSearchTerm] = useState('');
-  const [searchConfig, setSearchConfig] = useState<SearchConfig>({
-    searchSender: true,
-    searchSubject: true,
-    searchBody: false, // Body search is slower/noisier by default
-    logic: 'AND'
-  });
-
-  // Computed properties based on Active Account
-  const activeData = data[activeAccountId] || { emails: [], categories: [] };
-  const currentEmails = activeData.emails;
-  const currentCategories = activeData.categories;
-
-  // --- Filtering Logic ---
-  const filteredEmails = useMemo(() => {
-    let result = currentEmails;
-
-    // 1. Initial Filtering by Folder OR Smart Category
-    if (selectedCategory === DefaultEmailCategory.INBOX || selectedCategory === 'Posteingang') { // Handle both just in case
-      result = result.filter(e => (!e.folder || e.folder === 'Posteingang') && e.folder !== 'Gesendet' && e.folder !== 'Spam' && e.folder !== 'Papierkorb');
-
-      // Unsorted Toggle
-      if (showUnsortedOnly) {
-        result = result.filter(e => !e.smartCategory);
-      }
-    } else if (['Gesendet', 'Spam', 'Papierkorb'].includes(selectedCategory)) {
-      result = result.filter(e => e.folder === selectedCategory);
-    } else {
-      // Check if it's a known physical folder
-      const catInfo = currentCategories.find((c: any) => c.name === selectedCategory);
-
-      console.log('Filtering debug:', { selectedCategory, catType: catInfo?.type, found: !!catInfo });
-
-      if (catInfo && catInfo.type === 'folder') {
-        // Physical Folder Logic: Handle full path (Posteingang/Crypto) vs short name (Crypto) mismatch
-        result = result.filter(e => {
-          if (!e.folder) return false;
-          return e.folder === selectedCategory ||
-            e.folder.endsWith('/' + selectedCategory) ||
-            selectedCategory.endsWith('/' + e.folder);
-        });
-      } else {
-        // Smart Category Logic (Virtual View)
-        result = result.filter(e => e.smartCategory === selectedCategory);
-      }
-    }
-
-    // 2. Search Logic
-    if (searchTerm.trim()) {
-      const terms = searchTerm.toLowerCase().split(' ').filter(t => t.length > 0);
-      result = result.filter(email => {
-        const checkTerm = (term: string) => {
-          const inSender = searchConfig.searchSender && (
-            email.sender.toLowerCase().includes(term) ||
-            email.senderEmail.toLowerCase().includes(term)
-          );
-          const inSubject = searchConfig.searchSubject && email.subject.toLowerCase().includes(term);
-          const inBody = searchConfig.searchBody && email.body.toLowerCase().includes(term);
-          return inSender || inSubject || inBody;
-        };
-        return searchConfig.logic === 'AND' ? terms.every(checkTerm) : terms.some(checkTerm);
-      });
-    }
-
-    return result;
-  }, [currentEmails, selectedCategory, searchTerm, searchConfig, showUnsortedOnly]);
-
-  // PAGINATION
-  const [visibleCount, setVisibleCount] = useState(100);
-
-  // Reset pagination when filter/category changes
-  useEffect(() => {
-    setVisibleCount(100);
-  }, [selectedCategory, searchTerm, showUnsortedOnly, activeAccountId]);
-
-  const displayedEmails = filteredEmails.slice(0, visibleCount);
-  const canLoadMore = visibleCount < filteredEmails.length;
-
-  const selectedEmail = currentEmails.find(e => e.id === selectedEmailId) || null;
-
-  // Counts Logic
-  // Counts Logic
-  // Counts Logic
-  const categoryCounts = useMemo(() => {
-    const counts: Record<string, number> = {};
-
-    // 1. Calculate Standard Folders Explicitly
-    const standard = [DefaultEmailCategory.INBOX, 'Gesendet', 'Spam', 'Papierkorb'];
-
-    counts[DefaultEmailCategory.INBOX] = currentEmails.filter(e => (!e.folder || e.folder === 'Posteingang') && !e.isRead).length;
-    counts['Gesendet'] = currentEmails.filter(e => e.folder === 'Gesendet' && !e.isRead).length;
-    counts['Spam'] = currentEmails.filter(e => (e.folder === 'Spam' || e.folder === 'Spamverdacht') && !e.isRead).length;
-    counts['Papierkorb'] = currentEmails.filter(e => (e.folder === 'Papierkorb' || e.folder === 'Gelöscht' || e.folder === 'Trash') && !e.isRead).length;
-
-    // 2. Calculate Categories & Physical Folders
-    currentCategories.forEach((cat: any) => {
-      const catName = cat.name;
-      if (standard.includes(catName)) return; // Skip if already handled
-
-      if (cat.type === 'folder') {
-        counts[catName] = currentEmails.filter(e => e.folder === catName && !e.isRead).length;
-      } else {
-        counts[catName] = currentEmails.filter(e => e.smartCategory === catName && !e.isRead).length;
-      }
-    });
-
-    return counts;
-  }, [currentCategories, currentEmails]);
-
-  // Helper to safely update data for active account
-  const updateActiveAccountData = (updateFn: (prev: AccountData) => AccountData) => {
-    setData(prev => ({
-      ...prev,
-      [activeAccountId]: updateFn(prev[activeAccountId] || { emails: [], categories: Object.values(DefaultEmailCategory) })
-    }));
-  };
-
-  const handleSwitchAccount = (id: string) => {
-    setActiveAccountId(id);
-    setSelectedCategory(DefaultEmailCategory.INBOX);
-    setSelectedEmailId(null);
-    setSelectedIds(new Set()); // Clear selection
-    setSearchTerm(''); // Reset search on account switch
-    setShowUnsortedOnly(false);
-  };
 
   const handleAddAccount = async (newAccount: ImapAccount) => {
     if (window.electron) {
       setIsConnecting(true);
       try {
         await window.electron.addAccount(newAccount);
-        setAccounts(prev => [...prev, newAccount]);
-        setActiveAccountId(newAccount.id);
-
-        // Sync immediately
+        addAccount(newAccount);
+        switchAccount(newAccount.id);
         const emails = await window.electron.getEmails(newAccount.id);
-        setData(prev => ({
-          ...prev,
-          [newAccount.id]: { emails, categories: Object.values(DefaultEmailCategory) }
-        }));
+        setData(prev => ({ ...prev, [newAccount.id]: {
+          emails,
+          categories: Object.values(DefaultEmailCategory).map(c => ({ name: c, type: 'system' }))
+        }}));
         setIsAuthenticated(true);
       } catch (error) {
-        console.error("Failed to add account:", error);
         alert("Konto konnte nicht hinzugefügt werden. Prüfe die Daten.");
       } finally {
         setIsConnecting(false);
       }
     } else {
-      // Fallback for browser dev mode
-      setAccounts(prev => [...prev, newAccount]);
-      setData(prev => ({
-        ...prev,
-        [newAccount.id]: { emails: [], categories: Object.values(DefaultEmailCategory).map(c => ({ name: c, type: 'system' })) }
-      }));
-      // Auto-generate some emails
+      addAccount(newAccount);
       const demoEmails = await generateDemoEmails(5, aiSettings);
-      setData(prev => ({
-        ...prev,
-        [newAccount.id]: {
-          emails: demoEmails.map(e => ({ ...e, id: e.id + '-' + newAccount.id })),
-          categories: Object.values(DefaultEmailCategory).map(c => ({ name: c, type: 'system' }))
-        }
-      }));
-    }
-  };
-
-  const handleRemoveAccount = async (id: string) => {
-    // Remove from UI immediately
-    setAccounts(prev => prev.filter(a => a.id !== id));
-    setData(prev => {
-      const next = { ...prev };
-      delete next[id];
-      return next;
-    });
-    // Remove from Backend
-    if (window.electron) {
-      await window.electron.deleteAccount(id);
-    }
-    if (activeAccountId === id) {
-      const otherAccount = accounts.find(a => a.id !== id);
-      if (otherAccount) {
-        handleSwitchAccount(otherAccount.id);
-      } else {
-        setActiveAccountId('');
-        setIsAuthenticated(false);
-      }
-    }
-  };
-
-  const handleAddCategory = async (newCategory: string) => {
-    if (!currentCategories.some((c: any) => c.name === newCategory)) {
-      // Optimistic UI Update
-      updateActiveAccountData(prev => ({
-        ...prev,
-        categories: [...prev.categories, { name: newCategory, type: 'custom' }]
-      }));
-      // Persist to DB
-      if (window.electron) await window.electron.addCategory(newCategory, 'custom');
-    }
-  };
-
-  // --- Email Actions ---
-
-  const handleSelectEmail = async (id: string) => {
-    setSelectedEmailId(id);
-
-    // Check if we have the content (lazy load body)
-    if (activeAccountId && window.electron) {
-      const email = activeData.emails.find(e => e.id === id);
-      // Fix: Check for undefined specifically (property missing)
-      // If it is null or empty string, it means we already tried loading it.
-      if (email && email.body === undefined && email.bodyHtml === undefined) {
-        console.log(`[LazyLoad] Triggering load for email ${id}`);
-        try {
-          const content = await window.electron.getEmailContent(id);
-          console.log(`[LazyLoad] RECV CONTENT: ${content ? "OK" : "NULL"}`, content);
-
-          // Content might be null, but we must set it to something (e.g. empty string) so we don't fetch again
-          // fallback to "" to ensure EmailView renders empty state instead of spinner
-          const newBody = content?.body ?? "";
-          const newHtml = content?.bodyHtml ?? "";
-
-          updateActiveAccountData(prev => ({
-            ...prev,
-            emails: prev.emails.map(e => e.id === id ? { ...e, body: newBody, bodyHtml: newHtml } : e)
-          }));
-          console.log(`[LazyLoad] State updated for ${id}`);
-        } catch (err) {
-          console.error(`[LazyLoad] Error loading content for ${id}:`, err);
-        }
-      } else {
-        console.log(`[LazyLoad] Skipping load for ${id}. Body present? ${email?.body !== undefined}`);
-      }
-    }
-  }
-
-
-  const handleDeleteEmail = async (id: string) => {
-    // Optimistic UI update
-    updateActiveAccountData(prev => ({
-      ...prev,
-      emails: prev.emails.filter(e => e.id !== id)
-    }));
-
-    if (selectedEmailId === id) {
-      setSelectedEmailId(null);
-    }
-
-    // Call Backend
-    if (window.electron && activeAccountId) {
-      const email = activeData.emails.find(e => e.id === id);
-      const account = accounts.find(a => a.id === activeAccountId);
-
-      if (email && email.uid && account) {
-        try {
-          await window.electron.deleteEmail({
-            account,
-            emailId: id,
-            uid: email.uid,
-            folder: email.folder
-          });
-        } catch (e) {
-          console.error("Failed to delete email", e);
-        }
-      }
+      setData(prev => ({ ...prev, [newAccount.id]: {
+        emails: demoEmails.map(e => ({ ...e, id: e.id + '-' + newAccount.id })),
+        categories: Object.values(DefaultEmailCategory).map(c => ({ name: c, type: 'system' }))
+      }}));
     }
   };
 
   const handleToggleRead = async (id: string) => {
-    const email = activeData.emails.find(e => e.id === id);
+    const email = currentEmails.find(e => e.id === id);
     if (!email) return;
-
-    // Optimistic Update
-    updateActiveAccountData(prev => ({
-      ...prev,
-      emails: prev.emails.map(e => e.id === id ? { ...e, isRead: !e.isRead } : e)
-    }));
-
-    // Call Backend
+    const previousReadState = email.isRead;
+    updateActiveAccountData(prev => ({ ...prev, emails: prev.emails.map(e => e.id === id ? { ...e, isRead: !e.isRead } : e) }));
     if (window.electron && activeAccountId) {
       const account = accounts.find(a => a.id === activeAccountId);
       if (email.uid && account) {
         try {
-          await window.electron.updateEmailRead({
-            account,
-            emailId: id,
-            uid: email.uid,
-            isRead: !email.isRead,
-            folder: email.folder
-          });
-        } catch (e) {
-          console.error("Failed to update read status", e);
+          await window.electron.updateEmailRead({ account, emailId: id, uid: email.uid, isRead: !previousReadState, folder: email.folder });
+        } catch (error) {
+          console.error('Failed to update read status:', error);
+          // Rollback optimistic update
+          updateActiveAccountData(prev => ({ ...prev, emails: prev.emails.map(e => e.id === id ? { ...e, isRead: previousReadState } : e) }));
         }
       }
     }
   };
 
   const handleToggleFlag = async (id: string) => {
-    const email = activeData.emails.find(e => e.id === id);
+    const email = currentEmails.find(e => e.id === id);
     if (!email) return;
-
-    // Optimistic Update
-    updateActiveAccountData(prev => ({
-      ...prev,
-      emails: prev.emails.map(e => e.id === id ? { ...e, isFlagged: !e.isFlagged } : e)
-    }));
-
-    // Call Backend
+    const previousFlagState = email.isFlagged;
+    updateActiveAccountData(prev => ({ ...prev, emails: prev.emails.map(e => e.id === id ? { ...e, isFlagged: !e.isFlagged } : e) }));
     if (window.electron && activeAccountId) {
       const account = accounts.find(a => a.id === activeAccountId);
       if (email.uid && account) {
         try {
-          await window.electron.updateEmailFlag({
-            account,
-            emailId: id,
-            uid: email.uid,
-            isFlagged: !email.isFlagged,
-            folder: email.folder
-          });
-        } catch (e) {
-          console.error("Failed to update flag status", e);
+          await window.electron.updateEmailFlag({ account, emailId: id, uid: email.uid, isFlagged: !previousFlagState, folder: email.folder });
+        } catch (error) {
+          console.error('Failed to update flag status:', error);
+          // Rollback optimistic update
+          updateActiveAccountData(prev => ({ ...prev, emails: prev.emails.map(e => e.id === id ? { ...e, isFlagged: previousFlagState } : e) }));
         }
       }
     }
   };
-
-  // --- Batch Actions ---
-
-  const [lastClickedId, setLastClickedId] = useState<string | null>(null);
-
-  const handleSelection = (id: string, multi: boolean, range: boolean) => {
-    let next = new Set(selectedIds);
-
-    if (range && lastClickedId && filteredEmails.length > 0) {
-      // Range Selection
-      const currentIndex = filteredEmails.findIndex(e => e.id === id);
-      const lastIndex = filteredEmails.findIndex(e => e.id === lastClickedId);
-
-      if (currentIndex !== -1 && lastIndex !== -1) {
-        const start = Math.min(currentIndex, lastIndex);
-        const end = Math.max(currentIndex, lastIndex);
-        const rangeIds = filteredEmails.slice(start, end + 1).map(e => e.id);
-        rangeIds.forEach(rid => next.add(rid));
-      }
-    } else if (multi) {
-      // Toggle Selection (Ctrl+Click)
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
-      setLastClickedId(id);
-    } else {
-      // Single Selection or toggle via checkbox
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
-      setLastClickedId(id);
-    }
-    setSelectedIds(next);
-  };
-
-  const handleRowClick = (id: string, e: React.MouseEvent) => {
-    if (e.ctrlKey || e.metaKey) {
-      handleSelection(id, true, false);
-    } else if (e.shiftKey) {
-      window.getSelection()?.removeAllRanges();
-      handleSelection(id, false, true);
-    } else {
-      handleSelectEmail(id);
-    }
-  };
-
-  // Replaces handleToggleSelection (simple version)
-  const handleToggleSelection = (id: string) => {
-    handleSelection(id, false, false);
-  };
-
-  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (selectedIds.size === filteredEmails.length && filteredEmails.length > 0) {
-      setSelectedIds(new Set());
-    } else {
-      setSelectedIds(new Set(filteredEmails.map(e => e.id)));
-    }
-  };
-
-  const handleBatchDelete = async () => {
-    if (selectedIds.size === 0) return;
-    if (!confirm(`${selectedIds.size} Emails wirklich löschen?`)) return;
-
-    const ids = Array.from(selectedIds);
-    // Process in parallel
-    await Promise.all(ids.map(id => handleDeleteEmail(id)));
-    setSelectedIds(new Set());
-  };
-
-  // --- Smart Sort ---
-
-  const handleBatchSmartSort = async () => {
-    console.log("Starting Smart Sort...");
-    if (selectedIds.size === 0) return;
-    if (!aiSettings.apiKey) {
-      alert("Bitte AI Settings (API Key) konfigurieren!");
-      setIsSettingsOpen(true);
-      return;
-    }
-
-    setIsSorting(true);
-    setSortProgress(5); // Start progress
-
-    try {
-      const emailsToSort = currentEmails.filter(e => selectedIds.has(e.id));
-      console.log(`Sorting ${emailsToSort.length} emails using ${aiSettings.provider}...`);
-
-      const newCategoriesFound = new Set<string>();
-      const emailResults = new Map<string, any>(); // Map emailId -> Result
-
-      // 1. Analyze all emails in chunks
-      let processed = 0;
-      const chunkSize = 5; // Increased chunk size for batching efficiency
-
-      for (let i = 0; i < emailsToSort.length; i += chunkSize) {
-        const chunk = emailsToSort.slice(i, i + chunkSize);
-        console.log(`Processing batch ${Math.ceil((i + 1) / chunkSize)} of ${Math.ceil(emailsToSort.length / chunkSize)}`);
-
-        // NEW: Ensure we have content for this chunk (lazy load for AI)
-        const enrichedChunk = await Promise.all(chunk.map(async (e) => {
-          if ((e.body === undefined && e.bodyHtml === undefined) && window.electron) {
-            const content = await window.electron.getEmailContent(e.id);
-            if (content) {
-              return { ...e, body: content.body, bodyHtml: content.bodyHtml };
-            }
-          }
-          return e;
-        }));
-
-        // NEW: Batch Call
-        // Map objects to strings for AI service
-        const categoryNames = currentCategories.map((c: any) => c.name);
-        const batchResults = await categorizeBatchWithAI(enrichedChunk, categoryNames, aiSettings);
-
-        // Map results back to structure
-        const results = enrichedChunk.map((email, index) => {
-          const sortResult = batchResults[index];
-          console.log(`Analyzed email ${email.id}:`, sortResult);
-          return { id: email.id, sortResult };
-        });
-
-        // Store valid results
-        results.forEach(r => {
-          if (r.sortResult.confidence > 0) { // Filter out hard errors if any
-            emailResults.set(r.id, r.sortResult);
-            // Check if unique and new
-            const cat = r.sortResult.categoryId;
-            const exists = currentCategories.some((c: any) => c.name === cat);
-            if (!exists && !Object.values(DefaultEmailCategory).includes(cat as any)) {
-              newCategoriesFound.add(cat);
-            }
-          }
-        });
-
-        processed += chunk.length;
-        setSortProgress(5 + (processed / emailsToSort.length) * 85); // 5-90% is analysis
-      }
-
-      console.log("Analysis complete. Found new categories:", Array.from(newCategoriesFound));
-
-      // 2. Popup Confirmation for New Folders
-      let allowedNewCategories = new Set<string>();
-
-      if (newCategoriesFound.size > 0) {
-        const newArr = Array.from(newCategoriesFound);
-        // Simple confirmation flow 
-        const confirmed = confirm(
-          `Die KI schlägt folgende neue Ordner vor:\n\n${newArr.join(', ')}\n\nSollen diese angelegt werden?\n(Bei 'Abbrechen' werden die Mails in 'Sonstiges' verschoben)`
-        );
-
-        if (confirmed) {
-          allowedNewCategories = newCategoriesFound;
-        } else {
-          console.log("User rejected new categories.");
-        }
-      }
-
-      // 3. Apply Updates (Backend & State)
-      const updates: any[] = [];
-
-      console.log("Applying updates to backend...");
-
-      // Updates for Backend
-      for (const [emailId, result] of emailResults.entries()) {
-        let finalCategory = result.categoryId;
-
-        // If it's a new category but user denied creation, fallback to OTHER or keep in INBOX (using OTHER here for visibility)
-        if (newCategoriesFound.has(finalCategory) && !allowedNewCategories.has(finalCategory)) {
-          finalCategory = DefaultEmailCategory.OTHER;
-        }
-
-        updates.push({
-          emailId,
-          category: finalCategory,
-          summary: result.summary,
-          reasoning: result.reasoning,
-          confidence: result.confidence
-        });
-
-        // Execute IPC Backend Update
-        if (window.electron) {
-          await window.electron.updateEmailSmartCategory({
-            emailId,
-            category: finalCategory,
-            summary: result.summary,
-            reasoning: result.reasoning,
-            confidence: result.confidence
-          });
-        }
-      }
-
-      console.log(`Updated ${updates.length} emails in backend.`);
-
-      // 4. Update Frontend State safely (once)
-      updateActiveAccountData(prev => {
-        const updatedEmails = prev.emails.map(email => {
-          const update = updates.find(u => u.emailId === email.id);
-          if (update) {
-            return {
-              ...email,
-              smartCategory: update.category, // VIRTUAL UPDATE
-              aiSummary: update.summary,
-              aiReasoning: update.reasoning,
-              confidence: update.confidence
-            };
-          }
-          return email;
-        });
-
-        // Add ONLY allowed new categories
-        let newCats = [...prev.categories];
-        allowedNewCategories.forEach(catName => {
-          // Check if exists by name (because newCats contains objects)
-          const exists = newCats.some((c: any) => c.name === catName);
-          if (!exists) {
-            // Push proper object shape
-            newCats.push({ name: catName, type: 'custom' });
-
-            // Trigger Async Persist (no await needed here to not block UI)
-            if (window.electron) window.electron.addCategory(catName, 'custom');
-          }
-        });
-
-        return {
-          emails: updatedEmails,
-          categories: newCats
-        };
-      });
-
-      console.log("Frontend state updated.");
-      setSortProgress(100);
-      await new Promise(r => setTimeout(r, 500)); // Show 100% briefly
-
-      // Success feedback if something happened
-      if (updates.length > 0) {
-        // alert(`${updates.length} Emails erfolgreich sortiert!`);
-      }
-
-    } catch (e) {
-      console.error("CRITICAL Smart Sort Error:", e);
-      alert("Ein Fehler ist beim Sortieren aufgetreten. Bitte Konsole öffnen für Details.");
-    } finally {
-      console.log("Smart Sort Finished. Cleaning up...");
-      setIsSorting(false);
-      setSortProgress(0);
-      setSelectedIds(new Set());
-    }
-  };
-
-  const handleSync = async () => {
-    if (!window.electron || !activeAccountId) return;
-    setIsSorting(true);
-    const account = accounts.find(a => a.id === activeAccountId);
-    if (account) {
-      await window.electron.syncAccount(account);
-      // Refresh Emails AND Account Info (Quota)
-      const emails = await window.electron.getEmails(activeAccountId);
-      const updatedAccounts = await window.electron.getAccounts(); // Load fresh account data
-
-      setAccounts(updatedAccounts); // Update UI with new Quota
-      setData(prev => ({
-        ...prev,
-        [activeAccountId]: { ...prev[activeAccountId], emails }
-      }));
-    }
-    setIsSorting(false);
-  };
-
-  // Determine if Smart Sort button should be enabled
-  const canSmartSort = selectedIds.size > 0 && aiSettings.provider && aiSettings.apiKey;
 
   return (
     <div className="flex h-screen bg-white overflow-hidden font-sans">
@@ -774,155 +208,74 @@ const App: React.FC = () => {
           setSelectedCategory(cat);
           setSelectedEmailId(null);
           setSearchTerm('');
-          setSelectedIds(new Set()); // Start fresh on folder change
+          clearSelection();
           if (cat === DefaultEmailCategory.INBOX) setShowUnsortedOnly(false);
         }}
-        onAddCategory={handleAddCategory}
+        onAddCategory={async (newCategory) => {
+          if (!currentCategories.some(c => c.name === newCategory)) {
+            updateActiveAccountData(prev => ({ ...prev, categories: [...prev.categories, { name: newCategory, type: 'custom' }] }));
+            await addCategory(newCategory, 'custom');
+          }
+        }}
         categories={currentCategories}
         counts={categoryCounts}
         isProcessing={isSorting}
         onReset={() => setIsAuthenticated(false)}
-
         accounts={accounts}
         activeAccountId={activeAccountId}
-        onSwitchAccount={handleSwitchAccount}
+        onSwitchAccount={(id) => {
+          switchAccount(id);
+          setSelectedCategory(DefaultEmailCategory.INBOX);
+          setSelectedEmailId(null);
+          clearSelection();
+          setSearchTerm('');
+          setShowUnsortedOnly(false);
+        }}
         onOpenSettings={() => setIsSettingsOpen(true)}
-
         onDeleteCategory={async (cat) => {
-          // Frontend Update
           updateActiveAccountData(prev => ({
             ...prev,
-            categories: prev.categories.filter(c => c !== cat),
+            categories: prev.categories.filter((c: any) => c.name !== cat),
             emails: prev.emails.map(e => e.smartCategory === cat ? { ...e, smartCategory: undefined } : e)
           }));
-          // Backend Update
-          if (window.electron) await window.electron.deleteSmartCategory(cat);
+          await deleteCategory(cat);
         }}
-
         onRenameCategory={async (oldName, newName) => {
-          // Frontend Update
           updateActiveAccountData(prev => ({
             ...prev,
-            categories: prev.categories.map(c => c === oldName ? newName : c),
+            categories: prev.categories.map((c: any) => c.name === oldName ? { ...c, name: newName } : c),
             emails: prev.emails.map(e => e.smartCategory === oldName ? { ...e, smartCategory: newName } : e)
           }));
-          // Backend Update
-          if (window.electron) await window.electron.renameSmartCategory({ oldName, newName });
+          await renameCategory(oldName, newName);
         }}
       />
 
       <div className="flex-1 flex flex-col min-w-0">
-        {/* Top Bar */}
-        <div className="h-16 border-b border-slate-200 bg-white flex items-center justify-between px-6 flex-shrink-0">
-          <div className="flex items-center gap-4 flex-1">
-            {!searchTerm ? (
-              <div className="flex items-center gap-4">
-                <h2 className="text-xl font-semibold text-slate-800 flex items-center gap-2 min-w-[150px]">
-                  {selectedCategory}
-                  <span className="ml-2 text-sm font-normal text-slate-500">
-                    ({filteredEmails.length})
-                  </span>
-                </h2>
+        <TopBar
+          selectedCategory={selectedCategory}
+          filteredEmailsCount={filteredEmails.length}
+          searchTerm={searchTerm}
+          onSearchChange={setSearchTerm}
+          searchConfig={searchConfig}
+          onSearchConfigChange={setSearchConfig}
+          showUnsortedOnly={showUnsortedOnly}
+          onToggleUnsorted={() => setShowUnsortedOnly(!showUnsortedOnly)}
+          onSync={syncAccount}
+          isSorting={isSorting || isSyncing}
+        />
 
-                {/* Unsorted Filter Toggle (Only in Inbox) */}
-                {selectedCategory === DefaultEmailCategory.INBOX && (
-                  <button
-                    onClick={() => setShowUnsortedOnly(!showUnsortedOnly)}
-                    className={`text-xs px-3 py-1.5 rounded-full border transition-colors flex items-center gap-1.5 ${showUnsortedOnly
-                      ? 'bg-blue-100 text-blue-700 border-blue-200 font-medium'
-                      : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'
-                      }`}
-                  >
-                    <Filter className="w-3 h-3" />
-                    <span>Nur unsortierte</span>
-                  </button>
-                )}
-              </div>
-            ) : (
-              <h2 className="text-xl font-semibold text-blue-600 flex items-center gap-2 min-w-[150px]">
-                <Search className="w-5 h-5" />
-                Suchergebnisse
-              </h2>
-            )}
+        <BatchActionBar
+          filteredEmails={filteredEmails}
+          selectedIds={selectedIds}
+          onSelectAll={handleSelectAll}
+          onBatchDelete={handleBatchDelete}
+          onBatchSmartSort={handleBatchSmartSort}
+          canSmartSort={canSmartSort}
+          aiSettings={aiSettings}
+        />
 
-            <SearchBar
-              searchTerm={searchTerm}
-              onSearchChange={setSearchTerm}
-              config={searchConfig}
-              onConfigChange={setSearchConfig}
-            />
-          </div>
+        {isSorting && <ProgressBar label={`AI sortiert Emails... (${aiSettings.provider})`} progress={sortProgress} />}
 
-          <div className="flex items-center gap-3">
-            <button
-              onClick={handleSync}
-              disabled={isSorting}
-              className="text-sm text-slate-500 hover:text-blue-600 flex items-center gap-1 px-3 py-1.5 rounded-md hover:bg-slate-50 transition-colors"
-              title="Emails abrufen"
-            >
-              <RefreshCw className={`w-3 h-3 ${isSorting ? 'animate-spin' : ''}`} />
-            </button>
-          </div>
-        </div>
-
-        {/* Batch Action Bar */}
-        <div className="h-10 border-b border-slate-200 bg-slate-50 flex items-center px-6 gap-4">
-          <div className="flex items-center gap-3 pl-2">
-            <input
-              type="checkbox"
-              className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
-              checked={filteredEmails.length > 0 && selectedIds.size === filteredEmails.length}
-              onChange={handleSelectAll}
-            />
-
-            {selectedIds.size > 0 && (
-              <span className="text-sm font-medium text-slate-700 fade-in">
-                {selectedIds.size} ausgewählt
-              </span>
-            )}
-          </div>
-
-          {selectedIds.size > 0 && (
-            <div className="flex items-center gap-2 ml-4 animate-in fade-in slide-in-from-left-2 duration-200">
-              <button
-                onClick={handleBatchDelete}
-                className="flex items-center gap-1.5 px-3 py-1 bg-white border border-slate-200 text-slate-700 text-sm rounded hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors"
-              >
-                <Trash2 className="w-4 h-4" />
-                <span>Löschen</span>
-              </button>
-
-              {/* Smart Sort Button */}
-              <button
-                onClick={handleBatchSmartSort}
-                disabled={!canSmartSort}
-                className={`flex items-center gap-1.5 px-3 py-1 border text-sm rounded transition-colors ${canSmartSort
-                  ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white border-transparent hover:shadow-md hover:from-blue-700 hover:to-indigo-700'
-                  : 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed'
-                  }`}
-                title={!aiSettings.apiKey ? "Bitte API Key in Einstellungen hinterlegen" : "Ausgewählte Mails mit AI sortieren"}
-              >
-                <BrainCircuit className="w-3.5 h-3.5" />
-                <span>Smart Sortieren</span>
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* Progress Bar (if sorting) */}
-        {isSorting && (
-          <div className="bg-slate-50 px-6 py-2 border-b border-slate-200 flex items-center justify-between">
-            <span className="text-xs text-blue-600 font-medium">AI sortiert Emails... ({aiSettings.provider})</span>
-            <div className="w-48 bg-slate-200 rounded-full h-1.5">
-              <div
-                className="bg-blue-600 h-1.5 rounded-full transition-all duration-300"
-                style={{ width: `${sortProgress}%` }}
-              />
-            </div>
-          </div>
-        )}
-
-        {/* Main Content Area */}
         <div className="flex-1 flex overflow-hidden">
           <EmailList
             emails={displayedEmails}
@@ -930,12 +283,12 @@ const App: React.FC = () => {
             selectedIds={selectedIds}
             onSelectEmail={handleSelectEmail}
             onRowClick={handleRowClick}
-            onToggleSelection={(id, shiftKey) => handleSelection(id, false, shiftKey)}
+            onToggleSelection={handleToggleSelection}
             onDeleteEmail={handleDeleteEmail}
             onToggleRead={handleToggleRead}
             onToggleFlag={handleToggleFlag}
             isLoading={false}
-            onLoadMore={() => setVisibleCount(prev => prev + 100)}
+            onLoadMore={loadMoreEmails}
             hasMore={canLoadMore}
           />
           <EmailView email={selectedEmail} />
@@ -946,7 +299,15 @@ const App: React.FC = () => {
           onClose={() => setIsSettingsOpen(false)}
           accounts={accounts}
           onAddAccount={handleAddAccount}
-          onRemoveAccount={handleRemoveAccount}
+          onRemoveAccount={async (id) => {
+            removeAccount(id);
+            setData(prev => {
+              const { [id]: _, ...rest } = prev;
+              return rest;
+            });
+            if (window.electron) await window.electron.deleteAccount(id);
+            if (accounts.length === 1) setIsAuthenticated(false);
+          }}
           aiSettings={aiSettings}
           onSaveAISettings={setAiSettings}
         />

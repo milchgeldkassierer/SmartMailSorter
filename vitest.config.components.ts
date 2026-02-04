@@ -6,14 +6,15 @@ export default defineConfig({
     test: {
         globals: true,
         environment: 'jsdom',
-        include: ['components/__tests__/**/*.{test,spec}.{ts,tsx}'],
+        include: ['components/__tests__/**/*.{test,spec}.{ts,tsx}', 'hooks/__tests__/**/*.{test,spec}.{ts,tsx}'],
         setupFiles: ['./components/__tests__/setup.ts'],
         coverage: {
             provider: 'v8',
             reporter: ['text', 'html', 'clover', 'json'],
-            include: ['components/**/*.{ts,tsx}'],
+            include: ['components/**/*.{ts,tsx}', 'hooks/**/*.{ts,tsx}'],
             exclude: [
                 'components/__tests__/**',
+                'hooks/__tests__/**',
                 '**/*.config.{js,ts}',
                 '**/node_modules/**',
                 '**/__mocks__/**'
