@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { renderHook, act, waitFor } from '@testing-library/react';
+import { renderHook, act } from '@testing-library/react';
 import { useSync } from '../useSync';
 import { ImapAccount, Email } from '../../types';
 
@@ -55,7 +55,7 @@ describe('useSync', () => {
     vi.clearAllMocks();
 
     // Setup window.electron mock
-    (window as any).electron = mockElectron;
+    (window as unknown as { electron: typeof mockElectron }).electron = mockElectron;
 
     // Default mock implementations
     mockElectron.syncAccount.mockResolvedValue(undefined);
@@ -168,10 +168,7 @@ describe('useSync', () => {
 
     it('should call onAccountsUpdate callback with updated accounts', async () => {
       const onAccountsUpdate = vi.fn();
-      const updatedAccounts = [
-        { ...mockAccount1, name: 'Updated Account 1' },
-        mockAccount2,
-      ];
+      const updatedAccounts = [{ ...mockAccount1, name: 'Updated Account 1' }, mockAccount2];
       mockElectron.getAccounts.mockResolvedValue(updatedAccounts);
 
       const { result } = renderHook(() =>
@@ -329,9 +326,7 @@ describe('useSync', () => {
         await result.current.syncAccount();
       });
 
-      expect(alertSpy).toHaveBeenCalledWith(
-        'Synchronisierung fehlgeschlagen. Bitte versuchen Sie es erneut.'
-      );
+      expect(alertSpy).toHaveBeenCalledWith('Synchronisierung fehlgeschlagen. Bitte versuchen Sie es erneut.');
 
       alertSpy.mockRestore();
       consoleErrorSpy.mockRestore();
@@ -388,7 +383,7 @@ describe('useSync', () => {
 
   describe('Edge Cases', () => {
     it('should do nothing if window.electron is not available', async () => {
-      (window as any).electron = undefined;
+      (window as unknown as { electron: undefined }).electron = undefined;
 
       const { result } = renderHook(() =>
         useSync({
@@ -456,15 +451,12 @@ describe('useSync', () => {
 
   describe('Hook Stability', () => {
     it('should update syncAccount when activeAccountId changes', () => {
-      const { result, rerender } = renderHook(
-        (props) => useSync(props),
-        {
-          initialProps: {
-            activeAccountId: 'account-1',
-            accounts: [mockAccount1, mockAccount2],
-          },
-        }
-      );
+      const { result, rerender } = renderHook((props) => useSync(props), {
+        initialProps: {
+          activeAccountId: 'account-1',
+          accounts: [mockAccount1, mockAccount2],
+        },
+      });
 
       const firstSyncAccount = result.current.syncAccount;
 
@@ -477,15 +469,12 @@ describe('useSync', () => {
     });
 
     it('should update syncAccount when accounts array changes', () => {
-      const { result, rerender } = renderHook(
-        (props) => useSync(props),
-        {
-          initialProps: {
-            activeAccountId: 'account-1',
-            accounts: [mockAccount1],
-          },
-        }
-      );
+      const { result, rerender } = renderHook((props) => useSync(props), {
+        initialProps: {
+          activeAccountId: 'account-1',
+          accounts: [mockAccount1],
+        },
+      });
 
       const firstSyncAccount = result.current.syncAccount;
 
@@ -501,16 +490,13 @@ describe('useSync', () => {
       const onAccountsUpdate1 = vi.fn();
       const onAccountsUpdate2 = vi.fn();
 
-      const { result, rerender } = renderHook(
-        (props) => useSync(props),
-        {
-          initialProps: {
-            activeAccountId: 'account-1',
-            accounts: [mockAccount1],
-            onAccountsUpdate: onAccountsUpdate1,
-          },
-        }
-      );
+      const { result, rerender } = renderHook((props) => useSync(props), {
+        initialProps: {
+          activeAccountId: 'account-1',
+          accounts: [mockAccount1],
+          onAccountsUpdate: onAccountsUpdate1,
+        },
+      });
 
       const firstSyncAccount = result.current.syncAccount;
 
@@ -552,15 +538,12 @@ describe('useSync', () => {
     it('should sync different account when activeAccountId changes', async () => {
       mockElectron.syncAccount.mockClear();
 
-      const { result, rerender } = renderHook(
-        (props) => useSync(props),
-        {
-          initialProps: {
-            activeAccountId: 'account-1',
-            accounts: [mockAccount1, mockAccount2],
-          },
-        }
-      );
+      const { result, rerender } = renderHook((props) => useSync(props), {
+        initialProps: {
+          activeAccountId: 'account-1',
+          accounts: [mockAccount1, mockAccount2],
+        },
+      });
 
       await act(async () => {
         await result.current.syncAccount();

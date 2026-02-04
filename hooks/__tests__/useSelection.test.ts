@@ -401,7 +401,7 @@ describe('useSelection', () => {
       const mockGetSelection = vi.fn(() => ({
         removeAllRanges: vi.fn(),
       }));
-      global.window.getSelection = mockGetSelection as any;
+      global.window.getSelection = mockGetSelection as typeof window.getSelection;
 
       // First click to establish lastClickedId
       act(() => {
@@ -431,7 +431,7 @@ describe('useSelection', () => {
       const mockGetSelection = vi.fn(() => ({
         removeAllRanges: mockRemoveAllRanges,
       }));
-      global.window.getSelection = mockGetSelection as any;
+      global.window.getSelection = mockGetSelection as typeof window.getSelection;
 
       const mockEvent = {
         ctrlKey: false,

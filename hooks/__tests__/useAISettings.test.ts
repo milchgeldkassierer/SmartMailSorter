@@ -65,10 +65,7 @@ describe('useAISettings', () => {
       expect(result.current.aiSettings.provider).toBe(LLMProvider.GEMINI);
       expect(result.current.aiSettings.model).toBe(AVAILABLE_MODELS[LLMProvider.GEMINI][0]);
       expect(result.current.aiSettings.apiKey).toBe('');
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        'Failed to parse AI settings',
-        expect.any(Error)
-      );
+      expect(consoleErrorSpy).toHaveBeenCalledWith('Failed to parse AI settings', expect.any(Error));
 
       consoleErrorSpy.mockRestore();
     });
