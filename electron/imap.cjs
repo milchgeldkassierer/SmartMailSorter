@@ -538,6 +538,11 @@ async function syncFolderMessages(client, account, boxName, targetCategory) {
   return newMessagesCount;
 }
 
+/**
+ * Synchronizes all folders for an IMAP account
+ * @param {Object} account - Account configuration object
+ * @returns {Promise<{success: boolean, count?: number, error?: string}>} Sync result
+ */
 async function syncAccount(account) {
   console.log(`Starting sync for account: ${account.email}`);
 
@@ -547,210 +552,24 @@ async function syncAccount(account) {
     await client.connect();
     console.log('IMAP Connected');
 
-    // 1. Get all mailboxes
+    // Check account quota
+    await checkAccountQuota(client, account.id);
+
+    // Get all mailboxes and build folder map
     const mailboxes = await client.list();
-    const folderMap = { INBOX: INBOX_FOLDER };
+    const folderMap = buildFolderMap(mailboxes);
 
-    try {
-      console.log('[Quota] Checking storage quota...');
-      // LOG CAPABILITIES
-      try {
-        const caps = client.capabilities || new Set();
-        console.log('[Quota Debug] Server Capabilities:', Array.from(caps));
-      } catch (_e) {}
-
-      // Use ImapFlow's getQuota() method
-      const quota = await client.getQuota('INBOX');
-      console.log('[Quota Debug] Quota response received.');
-
-      if (quota && quota.storage) {
-        console.log('[Quota Debug] Quota Object:', JSON.stringify(quota));
-        // Convert bytes to KB (ImapFlow returns bytes, DB expects KB)
-        const usedKB = Math.round((quota.storage.used || 0) / 1024);
-        const totalKB = Math.round((quota.storage.limit || 0) / 1024);
-
-        if (totalKB > 0) {
-          console.log(`[Quota] Used: ${usedKB}KB, Total: ${totalKB}KB`);
-          updateAccountQuota(account.id, usedKB, totalKB);
-        } else {
-          console.log('[Quota Debug] No valid storage limits returned.');
-        }
-      } else {
-        console.log('[Quota Debug] No quota object or storage property returned.');
-      }
-    } catch (qErr) {
-      console.warn('[Quota] Error fetching quota:', qErr);
-    }
-
-    // Build folder map using helper function
-    for (const box of mailboxes) {
-      const serverPath = box.path;
-      const mappedName = mapServerFolderToDbName(box);
-      folderMap[serverPath] = mappedName;
-    }
-
-    // Migration step for folder naming
-    for (const [fullPath, prettyName] of Object.entries(folderMap)) {
-      const parts = fullPath.split(/[./]/);
-      const oldLeafName = parts[parts.length - 1];
-      if (oldLeafName && prettyName !== oldLeafName && prettyName.startsWith(INBOX_FOLDER + '/')) {
-        db.migrateFolder(oldLeafName, prettyName);
-      }
-    }
+    // Migrate folders if needed
+    migrateFolders(folderMap);
 
     console.log('Detected Folders to Sync:', folderMap);
     let totalNew = 0;
 
+    // Sync each folder
     for (const [boxName, targetCategory] of Object.entries(folderMap)) {
-      let lock;
-      try {
-        // Get mailbox lock and capture metadata
-        lock = await client.getMailboxLock(boxName);
-
-        try {
-          console.log(`[Sync] Accessing ${boxName} (Mapped: ${targetCategory})`);
-
-          // --- ROBUST LARGE DATA SYNC STRATEGY ---
-          // 1. Get total message count from client.mailbox
-          const totalMessages = client.mailbox.exists;
-
-          console.log(`[Sync] ${boxName}: Total messages on server: ${totalMessages}`);
-
-          if (totalMessages === 0) {
-            continue; // Empty box
-          }
-
-          // Load ALL local UIDs once for efficient lookup
-          // Warning: For 100k emails, this array is large but manageable (approx 800KB-1MB RAM).
-          const localUids = db.getAllUidsForFolder(account.id, targetCategory);
-          const localUidSet = new Set(localUids);
-          console.log(`[Sync] ${boxName}: Local messages DB has: ${localUids.length}`);
-
-          // Config parameters
-          const UID_FETCH_BATCH_SIZE = 5000;
-          const MSG_FETCH_BATCH_SIZE = 50;
-
-          // --- RECONCILIATION: Track all server UIDs to detect deletions ---
-          const allServerUids = new Set();
-
-          // Loop through sequence ranges (1-based index)
-          for (let seqStart = 1; seqStart <= totalMessages; seqStart += UID_FETCH_BATCH_SIZE) {
-            const seqEnd = Math.min(seqStart + UID_FETCH_BATCH_SIZE - 1, totalMessages);
-            const range = `${seqStart}:${seqEnd}`;
-
-            console.log(`[Sync] ${boxName}: Checking range ${range} for missing UIDs...`);
-
-            try {
-              // Fetch only UIDs for this sequence range using native ImapFlow fetch()
-              const headers = [];
-              for await (const message of client.fetch(range, { uid: false, flags: true })) {
-                headers.push({
-                  attributes: {
-                    uid: message.uid,
-                    flags: message.flags || [],
-                  },
-                });
-              }
-
-              // Extract server UIDs from this batch
-              const batchServerUids = headers
-                .map((m) => (m.attributes ? m.attributes.uid : null))
-                .filter((u) => u != null);
-
-              // Add to reconciliation set
-              batchServerUids.forEach((u) => allServerUids.add(u));
-
-              console.log(
-                `[Sync Debug] Range ${range}: Fetched ${headers.length} headers, extracted ${batchServerUids.length} UIDs.`
-              );
-
-              // Identify which ones are missing locally
-              const missingInBatch = batchServerUids.filter((uid) => !localUidSet.has(uid));
-              console.log(`[Sync Debug] Range ${range}: ${missingInBatch.length} missing locally.`);
-
-              if (missingInBatch.length > 0) {
-                console.log(`[Sync] ${boxName}: Range ${range} has ${missingInBatch.length} new messages.`);
-
-                // Download missing messages in smaller chunks
-                missingInBatch.sort((a, b) => a - b); // Process in order
-
-                for (let i = 0; i < missingInBatch.length; i += MSG_FETCH_BATCH_SIZE) {
-                  const chunkUids = missingInBatch.slice(i, i + MSG_FETCH_BATCH_SIZE);
-                  console.log(
-                    `[Sync] Downloading ${chunkUids.length} messages... (UIDs ${chunkUids[0]}..${chunkUids[chunkUids.length - 1]})`
-                  );
-
-                  try {
-                    // Fetch FULL message content for these UIDs directly using native client.fetch()
-                    console.log(`[Sync Debug] Downloading chunk directly via client.fetch()...`);
-                    const messages = [];
-                    const uidRange = chunkUids.join(',');
-
-                    for await (const message of client.fetch(
-                      uidRange,
-                      {
-                        source: true, // Fetch full raw email source
-                        flags: true,
-                      },
-                      { uid: true }
-                    )) {
-                      // ImapFlow returns message with source buffer directly
-                      const msg = {
-                        parts: [],
-                        attributes: {
-                          uid: message.uid,
-                          flags: message.flags || [],
-                        },
-                      };
-
-                      // Add body part only if source exists (handles missing body parts)
-                      if (message.source) {
-                        msg.parts.push({
-                          which: '',
-                          body: message.source.toString('utf8'),
-                        });
-                      }
-
-                      messages.push(msg);
-                    }
-
-                    if (!messages || messages.length === 0) {
-                      console.error(
-                        `[Sync Error] Fetched 0 messages for UIDs ${chunkUids[0]}..${chunkUids[chunkUids.length - 1]}`
-                      );
-                    } else {
-                      console.log(`[Sync Debug] Fetched ${messages.length} raw messages. Processing...`);
-                      const saved = await processMessages(client, messages, account, targetCategory);
-                      totalNew += saved;
-                      console.log(`[Sync Debug] Saved ${saved} messages from this chunk.`);
-                    }
-                  } catch (fetchErr) {
-                    console.error(`[Sync] Failed to fetch message chunk ${chunkUids.join(',')}:`, fetchErr);
-                  }
-                }
-              }
-            } catch (rangeErr) {
-              console.error(`[Sync] Failed to fetch UIDs for sequence range ${range}:`, rangeErr);
-            }
-          }
-
-          // --- RECONCILIATION PHASE ---
-          reconcileOrphans(localUids, allServerUids, account.id, targetCategory, boxName);
-        } catch (err) {
-          console.error(`[Sync] Error syncing folder ${boxName}:`, err.message);
-        }
-      } catch (lockErr) {
-        // Handle folder access errors (missing, renamed, or permission issues)
-        console.warn(`[Sync] Skipping ${boxName} - cannot access folder: ${lockErr.message}`);
-        if (lockErr.mailboxMissing) {
-          console.warn(`[Sync] Folder ${boxName} no longer exists on server`);
-        }
-        // Continue to next folder instead of stopping entire sync
-        continue;
-      } finally {
-        if (lock) lock.release();
-      }
-    } // End box loop
+      const newMessagesCount = await syncFolderMessages(client, account, boxName, targetCategory);
+      totalNew += newMessagesCount;
+    }
 
     await client.logout();
     console.log(`Sync completed. Total new messages: ${totalNew}`);
