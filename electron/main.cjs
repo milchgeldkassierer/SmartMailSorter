@@ -63,19 +63,31 @@ app.whenReady().then(() => {
   });
 
   ipcMain.handle('open-attachment', async (event, attachmentId) => {
-    const att = db.getAttachment(attachmentId);
-    if (!att) return false;
+    try {
+      const att = db.getAttachment(attachmentId);
+      if (!att) {
+        return { success: false, message: 'Attachment not found' };
+      }
 
-    const fs = require('fs');
-    const os = require('os');
-    // Create temp file with sanitized filename to prevent path traversal
-    const safeFilename = sanitizeFilename(att.filename);
-    const tempPath = path.join(os.tmpdir(), safeFilename);
-    fs.writeFileSync(tempPath, att.data);
+      const fs = require('fs');
+      const os = require('os');
+      // Create temp file with sanitized filename to prevent path traversal
+      const safeFilename = sanitizeFilename(att.filename);
+      const tempPath = path.join(os.tmpdir(), safeFilename);
+      fs.writeFileSync(tempPath, att.data);
 
-    const { shell } = require('electron');
-    await shell.openPath(tempPath);
-    return true;
+      const { shell } = require('electron');
+      const result = await shell.openPath(tempPath);
+
+      // shell.openPath returns a string - empty string means success
+      if (result) {
+        return { success: false, message: `Failed to open: ${result}` };
+      }
+
+      return { success: true };
+    } catch (error) {
+      return { success: false, message: error.message || 'Failed to open attachment' };
+    }
   });
 
   ipcMain.handle('open-external-url', async (event, url) => {
