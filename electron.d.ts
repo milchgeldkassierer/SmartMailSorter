@@ -60,7 +60,7 @@ declare global {
       // Attachments & Content
       getEmailAttachments: (emailId: string) => Promise<Attachment[]>;
       getEmailContent: (emailId: string) => Promise<{ body: string | null; bodyHtml: string | null }>;
-      openAttachment: (attachmentId: string) => Promise<void>;
+      openAttachment: (attachmentId: string) => Promise<{ success: boolean; message?: string }>;
 
       // External links
       openExternal: (url: string) => Promise<{ success: boolean; error?: string; message?: string }>;

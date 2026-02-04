@@ -75,6 +75,19 @@ const EmailView: React.FC<EmailViewProps> = ({ email }) => {
     }
   };
 
+  // Handle clicks on attachment items to open in system default application
+  const handleAttachmentClick = async (attachmentId: string) => {
+    if (window.electron?.openAttachment) {
+      setLinkError(null);
+
+      const result = await window.electron.openAttachment(attachmentId);
+      if (!result.success) {
+        // Show user-friendly error message
+        setLinkError(result.message || 'Failed to open attachment');
+      }
+    }
+  };
+
   return (
     <div className="flex-1 bg-slate-50 flex flex-col h-full overflow-hidden">
       {/* Link Error Notification */}
@@ -152,6 +165,7 @@ const EmailView: React.FC<EmailViewProps> = ({ email }) => {
             {attachments.map((att: Attachment) => (
               <div
                 key={att.id}
+                onClick={() => handleAttachmentClick(att.id)}
                 className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 border border-slate-200 px-3 py-1.5 rounded-md text-sm text-slate-700 cursor-pointer transition-colors"
                 title={`Size: ${(att.size / 1024).toFixed(1)} KB`}
               >
