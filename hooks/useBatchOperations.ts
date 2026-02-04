@@ -8,6 +8,7 @@ interface UseBatchOperationsProps {
   currentCategories: Category[];
   aiSettings: AISettings;
   onDeleteEmail: (id: string) => Promise<void>;
+  onToggleRead: (id: string) => Promise<void>;
   onClearSelection: () => void;
   onUpdateEmails: (updateFn: (emails: Email[]) => Email[]) => void;
   onUpdateCategories: (categories: Category[]) => void;
@@ -22,6 +23,7 @@ interface UseBatchOperationsReturn {
   canSmartSort: boolean;
   handleBatchDelete: () => Promise<void>;
   handleBatchSmartSort: () => Promise<void>;
+  handleBatchMarkRead: () => Promise<void>;
 }
 
 export const useBatchOperations = ({
@@ -30,6 +32,7 @@ export const useBatchOperations = ({
   currentCategories,
   aiSettings,
   onDeleteEmail,
+  onToggleRead,
   onClearSelection,
   onUpdateEmails,
   onUpdateCategories,
@@ -149,6 +152,33 @@ export const useBatchOperations = ({
     }
   };
 
+  const handleBatchMarkRead = async () => {
+    if (selectedIds.size === 0) return;
+
+    // Determine target read state: if any selected email is unread, mark all as read; else mark all as unread
+    const selectedEmails = currentEmails.filter((e) => selectedIds.has(e.id));
+    const hasUnread = selectedEmails.some((e) => !e.isRead);
+    const targetReadState = hasUnread;
+
+    const ids = Array.from(selectedIds);
+    try {
+      // Toggle read status for each email
+      // Only toggle if the email's current state doesn't match target state
+      await Promise.all(
+        ids.map(async (id) => {
+          const email = currentEmails.find((e) => e.id === id);
+          if (email && email.isRead !== targetReadState) {
+            await onToggleRead(id);
+          }
+        })
+      );
+      onClearSelection();
+    } catch (error) {
+      console.error('Failed to update read status:', error);
+      alert('Einige Emails konnten nicht aktualisiert werden');
+    }
+  };
+
   const handleBatchSmartSort = async () => {
     if (selectedIds.size === 0) return;
     if (!aiSettings.apiKey) {
@@ -232,5 +262,6 @@ export const useBatchOperations = ({
     canSmartSort,
     handleBatchDelete,
     handleBatchSmartSort,
+    handleBatchMarkRead,
   };
 };

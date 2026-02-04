@@ -41,6 +41,7 @@ describe('BatchActionBar', () => {
     selectedIds: new Set<string>(),
     onSelectAll: vi.fn(),
     onBatchDelete: vi.fn(),
+    onBatchMarkRead: vi.fn(),
     onBatchSmartSort: vi.fn(),
     canSmartSort: false,
     aiSettings: defaultAISettings,
@@ -226,6 +227,55 @@ describe('BatchActionBar', () => {
 
       const smartSortButton = screen.getByText('Smart Sortieren').closest('button');
       expect(smartSortButton).toHaveAttribute('title', 'Ausgewählte Mails mit AI sortieren');
+    });
+  });
+
+  describe('Mark as Read/Unread Button', () => {
+    it('should not render when no items are selected', () => {
+      render(<BatchActionBar {...defaultProps} />);
+      expect(screen.queryByText('Als gelesen')).not.toBeInTheDocument();
+      expect(screen.queryByText('Als ungelesen')).not.toBeInTheDocument();
+    });
+
+    it('should render with "Als gelesen" label when unread emails are selected', () => {
+      const selectedIds = new Set(['1']); // mockEmail1 has isRead: false
+      render(<BatchActionBar {...defaultProps} selectedIds={selectedIds} />);
+      expect(screen.getByText('Als gelesen')).toBeInTheDocument();
+    });
+
+    it('should render with "Als ungelesen" label when only read emails are selected', () => {
+      const readEmail: Email = { ...mockEmail1, id: '3', isRead: true };
+      const selectedIds = new Set(['3']);
+      render(<BatchActionBar {...defaultProps} filteredEmails={[readEmail]} selectedIds={selectedIds} />);
+      expect(screen.getByText('Als ungelesen')).toBeInTheDocument();
+    });
+
+    it('should render with "Als gelesen" label when mixed read/unread emails are selected', () => {
+      const readEmail: Email = { ...mockEmail1, id: '3', isRead: true };
+      const unreadEmail: Email = { ...mockEmail2, id: '4', isRead: false };
+      const selectedIds = new Set(['3', '4']);
+      render(<BatchActionBar {...defaultProps} filteredEmails={[readEmail, unreadEmail]} selectedIds={selectedIds} />);
+      // If any email is unread, button should say "Als gelesen"
+      expect(screen.getByText('Als gelesen')).toBeInTheDocument();
+    });
+
+    it('should call onBatchMarkRead when clicked', () => {
+      const onBatchMarkRead = vi.fn();
+      const selectedIds = new Set(['1']);
+      render(<BatchActionBar {...defaultProps} selectedIds={selectedIds} onBatchMarkRead={onBatchMarkRead} />);
+
+      const markReadButton = screen.getByText('Als gelesen').closest('button');
+      fireEvent.click(markReadButton!);
+
+      expect(onBatchMarkRead).toHaveBeenCalledTimes(1);
+    });
+
+    it('should have correct styling', () => {
+      const selectedIds = new Set(['1']);
+      render(<BatchActionBar {...defaultProps} selectedIds={selectedIds} />);
+
+      const markReadButton = screen.getByText('Als gelesen').closest('button');
+      expect(markReadButton).toHaveClass('hover:bg-blue-50', 'hover:text-blue-600', 'hover:border-blue-200');
     });
   });
 
