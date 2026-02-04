@@ -55,7 +55,7 @@ class MockImapFlow {
     };
   }
 
-  async messageFlagsAdd(uid, flags, options = {}) {
+  async messageFlagsAdd(uid, flags, _options = {}) {
     const email = global.__mockState.serverEmails.find((e) => e.uid === uid);
     if (email) {
       if (!(email.flags instanceof Set)) {
@@ -65,7 +65,7 @@ class MockImapFlow {
     }
   }
 
-  async messageFlagsRemove(uid, flags, options = {}) {
+  async messageFlagsRemove(uid, flags, _options = {}) {
     const email = global.__mockState.serverEmails.find((e) => e.uid === uid);
     if (email) {
       if (!(email.flags instanceof Set)) {
@@ -115,7 +115,7 @@ class MockImapFlow {
     }
   }
 
-  async getQuota(mailbox) {
+  async getQuota(_mailbox) {
     if (global.__mockState.quotaResponse) {
       return global.__mockState.quotaResponse;
     }

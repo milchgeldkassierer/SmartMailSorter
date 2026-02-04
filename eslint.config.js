@@ -117,6 +117,22 @@ export default [
       },
       sourceType: 'commonjs',
     },
+    rules: {
+      'no-unused-vars': [
+        'error',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+          caughtErrorsIgnorePattern: '^_',
+        },
+      ],
+      'no-empty': [
+        'error',
+        {
+          allowEmptyCatch: true,
+        },
+      ],
+    },
   },
   // Configuration for ES Module files (Node.js only, no browser globals)
   {
@@ -126,6 +142,16 @@ export default [
         ...globals.node,
       },
       sourceType: 'module',
+    },
+    rules: {
+      'no-unused-vars': [
+        'error',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+          caughtErrorsIgnorePattern: '^_',
+        },
+      ],
     },
   },
   // Apply Prettier config to disable conflicting rules

@@ -28,10 +28,14 @@ function createSchema() {
   // Migration for existing users (naive column addition)
   try {
     db.exec('ALTER TABLE accounts ADD COLUMN storageUsed INTEGER DEFAULT 0');
-  } catch (e) {}
+  } catch (_e) {
+    // Column already exists
+  }
   try {
     db.exec('ALTER TABLE accounts ADD COLUMN storageTotal INTEGER DEFAULT 0');
-  } catch (e) {}
+  } catch (_e) {
+    // Column already exists
+  }
 
   // Create Emails Table
   db.exec(`
@@ -73,16 +77,24 @@ function createSchema() {
   // Migrations for existing tables
   try {
     db.exec('ALTER TABLE emails ADD COLUMN bodyHtml TEXT');
-  } catch (e) {}
+  } catch (_e) {
+    // Column already exists
+  }
   try {
     db.exec('ALTER TABLE emails ADD COLUMN hasAttachments INTEGER DEFAULT 0');
-  } catch (e) {}
+  } catch (_e) {
+    // Column already exists
+  }
   try {
     db.exec("ALTER TABLE emails ADD COLUMN folder TEXT DEFAULT 'Posteingang'");
-  } catch (e) {}
+  } catch (_e) {
+    // Column already exists
+  }
   try {
     db.exec('ALTER TABLE emails ADD COLUMN smartCategory TEXT');
-  } catch (e) {}
+  } catch (_e) {
+    // Column already exists
+  }
   // Create Categories Table
   db.exec(`
     CREATE TABLE IF NOT EXISTS categories (
@@ -130,7 +142,7 @@ function init(appOrPath) {
   if (db && typeof appOrPath === 'string' && appOrPath === ':memory:') {
     try {
       db.close();
-    } catch (e) {
+    } catch (_e) {
       // Ignore close errors
     }
     db = null;
@@ -146,7 +158,7 @@ function init(appOrPath) {
       try {
         const { app } = require('electron');
         fullPath = path.join(app.getPath('userData'), DEFAULT_DB_NAME);
-      } catch (e) {
+      } catch (_e) {
         fullPath = DEFAULT_DB_NAME;
       }
     }
@@ -321,19 +333,19 @@ function resetDb() {
 
 // --- Category Methods ---
 
-function getCategories() {
+function _getCategories() {
   return db
     .prepare('SELECT name FROM categories ORDER BY name ASC')
     .all()
     .map((c) => c.name);
 }
 
-function addCategory(name) {
+function _addCategory(name) {
   try {
     const stmt = db.prepare('INSERT INTO categories (name, type) VALUES (?, ?)');
     stmt.run(name, 'custom');
     return true;
-  } catch (e) {
+  } catch (_e) {
     // Ignore duplicates
     return false;
   }
@@ -362,7 +374,7 @@ function renameSmartCategory(oldName, newName) {
     // 1. Create new category
     try {
       db.prepare('INSERT INTO categories (name, type) VALUES (?, ?)').run(newName, 'custom');
-    } catch (e) {} // Exists? ignore
+    } catch (_e) {} // Exists? ignore
 
     // 2. Update emails
     db.prepare('UPDATE emails SET smartCategory = ? WHERE smartCategory = ?').run(newName, oldName);

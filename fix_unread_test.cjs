@@ -1,6 +1,6 @@
 const Database = require('better-sqlite3');
 const path = require('path');
-const { app } = require('electron');
+const { app: _app } = require('electron');
 
 // Hardcoded path for dev environment
 const dbPath = path.join('d:/projects/SmartMailSorter', 'smartmail.db');

@@ -39,7 +39,7 @@ interface UseEmailsReturn {
   resetPagination: () => void;
 }
 
-export const useEmails = ({ activeAccountId, accounts }: UseEmailsParams): UseEmailsReturn => {
+export const useEmails = ({ activeAccountId, accounts: _accounts }: UseEmailsParams): UseEmailsReturn => {
   // Data State - stored by account ID
   const [data, setData] = useState<Record<string, AccountData>>({});
 

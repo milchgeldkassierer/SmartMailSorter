@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Mail, ShieldAlert } from 'lucide-react';
 
 interface Props {

@@ -2,12 +2,12 @@ const { ImapFlow } = require('imapflow');
 const simpleParser = require('mailparser').simpleParser;
 const {
   saveEmail,
-  updateAccountSync,
+  updateAccountSync: _updateAccountSync,
   updateAccountQuota,
-  migrateFolder,
-  getMaxUidForFolder,
-  getAllUidsForFolder,
-  deleteEmailsByUid,
+  migrateFolder: _migrateFolder,
+  getMaxUidForFolder: _getMaxUidForFolder,
+  getAllUidsForFolder: _getAllUidsForFolder,
+  deleteEmailsByUid: _deleteEmailsByUid,
 } = require('./db.cjs');
 // Add db just for direct calls if needed, though we imported migrateFolder directly
 const db = require('./db.cjs');
@@ -157,7 +157,7 @@ async function syncAccount(account) {
       try {
         const caps = client.capabilities || new Set();
         console.log('[Quota Debug] Server Capabilities:', Array.from(caps));
-      } catch (e) {}
+      } catch (_e) {}
 
       // Use ImapFlow's getQuota() method
       const quota = await client.getQuota('INBOX');

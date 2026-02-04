@@ -58,7 +58,7 @@ interface GeminiResponse {
 }
 
 // Version marker
-console.log('GeminiService: Loaded Version 6.0 (Batch Processing)');
+console.warn('GeminiService: Loaded Version 6.0 (Batch Processing)');
 
 const getApiKey = (settings?: AISettings) => {
   if (settings?.apiKey && settings.apiKey.trim() !== '') return settings.apiKey;
@@ -66,7 +66,7 @@ const getApiKey = (settings?: AISettings) => {
   return '';
 };
 
-const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+const _wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 async function callLLM(
   prompt: string,
@@ -105,7 +105,7 @@ async function callLLM(
           try {
             text = responseText();
           } catch (e) {
-            console.debug('Gemini Strategy 1 failed:', e);
+            console.warn('Gemini Strategy 1 failed:', e);
           }
         } else if (typeof responseText === 'string') {
           text = responseText;
@@ -119,7 +119,7 @@ async function callLLM(
           try {
             text = resultText();
           } catch (e) {
-            console.debug('Gemini Strategy 2 failed:', e);
+            console.warn('Gemini Strategy 2 failed:', e);
           }
         } else if (typeof resultText === 'string') {
           text = resultText;
@@ -218,7 +218,7 @@ export const generateDemoEmails = async (count: number = 5, settings?: AISetting
           isFlagged: false,
         };
       });
-  } catch (e) {
+  } catch (_e) {
     return [];
   }
 };

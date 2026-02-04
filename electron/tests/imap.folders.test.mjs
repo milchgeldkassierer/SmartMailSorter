@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { createRequire } from 'module';
 
 // Import helpers from vitest-setup to control mock state
-import { resetMockState, setServerEmails, setConnectFailure, setFolderList, setQuotaResponse } from './vitest-setup.js';
+import { resetMockState, setServerEmails, setConnectFailure as _setConnectFailure, setFolderList, setQuotaResponse } from './vitest-setup.js';
 
 // Use CommonJS require to ensure we get the SAME module instances as imap.cjs
 const require = createRequire(import.meta.url);

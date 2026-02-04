@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { ImapAccount, Email, AccountData } from '../types';
+import { ImapAccount, Email } from '../types';
 
 interface UseSyncParams {
   activeAccountId: string;

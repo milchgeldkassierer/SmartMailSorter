@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { Email, DefaultEmailCategory, AISettings, LLMProvider } from '../../types';
+import { DefaultEmailCategory, AISettings, LLMProvider } from '../../types';
 
 // Mock variables for GoogleGenAI
 let mockGenerateContent: any;
@@ -98,7 +98,7 @@ describe('GeminiService - generateDemoEmails', () => {
         },
       });
 
-      const emails = await geminiService.generateDemoEmails(undefined as any, geminiSettings);
+      const _emails = await geminiService.generateDemoEmails(undefined as any, geminiSettings);
 
       // Verify prompt contains the default count
       expect(mockGenerateContent).toHaveBeenCalledWith(
@@ -357,7 +357,7 @@ describe('GeminiService - generateDemoEmails', () => {
     });
 
     it('should apply dateOffset when provided in AI response', async () => {
-      const beforeTest = Date.now();
+      const _beforeTest = Date.now();
 
       mockGenerateContent = vi.fn().mockResolvedValue({
         response: {
@@ -758,7 +758,7 @@ describe('GeminiService - generateDemoEmails', () => {
 
       const beforeTest = Date.now();
       const emails = await geminiService.generateDemoEmails(1, geminiSettings);
-      const afterTest = Date.now();
+      const _afterTest = Date.now();
 
       expect(emails).toHaveLength(1);
       // With negative offset, date should be in the future

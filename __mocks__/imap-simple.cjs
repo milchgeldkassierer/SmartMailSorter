@@ -275,7 +275,7 @@ class MockImapConnection {
     };
   }
 
-  async search(criteria) {
+  async search(_criteria) {
     if (mockState.shouldFailSearch) {
       throw new Error('Search failed');
     }
@@ -283,7 +283,7 @@ class MockImapConnection {
     return mockState.serverUids;
   }
 
-  async fetchOne(uid, options) {
+  async fetchOne(uid, _options) {
     const message = mockState.messages.get(uid);
     if (!message) return null;
 
@@ -295,7 +295,7 @@ class MockImapConnection {
     };
   }
 
-  async fetch(range, options) {
+  async fetch(_range, _options) {
     if (mockState.shouldFailFetch) {
       throw new Error('Fetch failed');
     }
@@ -337,7 +337,7 @@ class MockImapConnection {
   get imap() {
     return {
       seq: {
-        fetch: (range, options) => {
+        fetch: (range, _options) => {
           if (mockState.shouldFailFetch) {
             const errEmitter = new EventEmitter();
             setTimeout(() => errEmitter.emit('error', new Error('Fetch failed')), 0);
@@ -369,7 +369,7 @@ class MockImapConnection {
         },
       },
 
-      fetch: (uids, options) => {
+      fetch: (uids, _options) => {
         if (mockState.shouldFailFetch) {
           const errEmitter = new EventEmitter();
           setTimeout(() => errEmitter.emit('error', new Error('Fetch failed')), 0);
@@ -408,7 +408,7 @@ class MockImapConnection {
         }, 0);
       },
 
-      expunge: (uid) => {
+      expunge: (_uid) => {
         return Promise.resolve();
       },
     };
@@ -448,7 +448,7 @@ class ImapFlow {
     return this._connection.getMailboxLock(path);
   }
 
-  async search(criteria, options) {
+  async search(criteria, _options) {
     return this._connection.search(criteria);
   }
 

@@ -60,7 +60,7 @@ class MockImapConnection {
     };
   }
 
-  mockSeqFetch(range, options) {
+  mockSeqFetch(range, _options) {
     const [start, end] = range.split(':').map(Number);
     const events = {
       messageHandlers: [],
@@ -103,7 +103,7 @@ class MockImapConnection {
     };
   }
 
-  fetch(uids, options) {
+  fetch(uids, _options) {
     const uidArray = Array.isArray(uids) ? uids : [uids];
     const events = {
       messageHandlers: [],
@@ -126,19 +126,6 @@ class MockImapConnection {
             attributes: {
               uid: email.uid,
               flags: email.flags instanceof Set ? email.flags : new Set(email.flags || []),
-            },
-          };
-
-          // Simulate body stream
-          const bodyStream = {
-            on: (event, handler) => {
-              if (event === 'data') {
-                const chunks = Buffer.from(email.body || '');
-                handler(chunks);
-              }
-            },
-            once: (event, handler) => {
-              if (event === 'end') handler();
             },
           };
 
@@ -181,7 +168,7 @@ class MockImapConnection {
     }, 0);
   }
 
-  expunge(uid) {
+  expunge(_uid) {
     return Promise.resolve();
   }
 }
@@ -312,7 +299,7 @@ class ImapFlow {
   }
 
   // Modern ImapFlow getQuota() API
-  async getQuota(mailbox) {
+  async getQuota(_mailbox) {
     if (quotaInfo) {
       return {
         storage: {

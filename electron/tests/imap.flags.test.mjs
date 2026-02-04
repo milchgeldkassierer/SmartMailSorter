@@ -24,12 +24,12 @@ describe('IMAP Flags Bug - Reproduction Test', () => {
 
     // This is what the buggy code tries to do (lines 68, 69, 76 in imap.cjs)
     expect(() => {
-      const isRead = flags && flags.includes('\\Seen'); // This will throw!
+      const _isRead = flags && flags.includes('\\Seen'); // This will throw!
     }).toThrow(TypeError);
 
     // The error message will be: "flags.includes is not a function"
     try {
-      const isRead = flags && flags.includes('\\Seen');
+      const _isRead = flags && flags.includes('\\Seen');
     } catch (error) {
       expect(error.message).toContain('flags.includes is not a function');
     }
@@ -45,7 +45,7 @@ describe('IMAP Flags Bug - Reproduction Test', () => {
 
     // Code tries to do this and fails:
     expect(() => {
-      const hasSeenFlag = actualFlags.includes('\\Seen');
+      const _hasSeenFlag = actualFlags.includes('\\Seen');
     }).toThrow(TypeError);
 
     // Correct way with Set:
@@ -63,7 +63,7 @@ describe('IMAP Flags Bug - Reproduction Test', () => {
 
     // This is the buggy code pattern from lines 68-69 in imap.cjs:
     expect(() => {
-      const email = {
+      const _email = {
         isRead: message.attributes.flags && message.attributes.flags.includes('\\Seen'),
         isFlagged: message.attributes.flags && message.attributes.flags.includes('\\Flagged'),
       };
@@ -88,7 +88,7 @@ describe('IMAP Flags Bug - Reproduction Test', () => {
 
     // The buggy code fails even with empty Set:
     expect(() => {
-      const email = {
+      const _email = {
         isRead: message.attributes.flags && message.attributes.flags.includes('\\Seen'),
       };
     }).toThrow(TypeError);
@@ -144,8 +144,8 @@ describe('IMAP Flags Bug - Reproduction Test', () => {
 
 // Tests for the processMessages function with various flags formats
 describe('processMessages - Flags Handling', () => {
-  let mockClient;
-  let mockAccount;
+  let _mockClient;
+  let _mockAccount;
   let savedEmails;
   let parsedResults;
 
@@ -160,13 +160,13 @@ describe('processMessages - Flags Handling', () => {
     parsedResults = new Map();
 
     // Mock account
-    mockAccount = {
+    _mockAccount = {
       id: 'test-account-123',
       email: 'test@example.com',
     };
 
     // Mock client (not used in processMessages but required as parameter)
-    mockClient = {};
+    _mockClient = {};
 
     // Setup saveEmail mock to capture saved emails
     mockSaveEmail.mockImplementation((email) => {

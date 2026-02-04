@@ -24,7 +24,9 @@ if (!fs.existsSync(dbPath)) {
     try {
       const counts = db.prepare('SELECT folder, count(*) as c FROM emails GROUP BY folder').all();
       console.table(counts);
-    } catch (e) {}
+    } catch (_e) {
+      // Ignore query errors
+    }
   } catch (e) {
     console.error('Failed to open database:', e);
   }

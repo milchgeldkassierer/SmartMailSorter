@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach, Mock } from 'vitest';
-import { Email, DefaultEmailCategory, SortResult, AISettings, LLMProvider } from '../../types';
+import { Email, DefaultEmailCategory, AISettings, LLMProvider } from '../../types';
 
 // Store the original fetch
 const originalFetch = global.fetch;
@@ -1407,7 +1407,7 @@ describe('GeminiService - callLLM Function', () => {
       const results = await geminiService.categorizeBatchWithAI(emails, availableCategories, geminiSettings);
 
       expect(results).toHaveLength(5);
-      results.forEach((result, index) => {
+      results.forEach((result, _index) => {
         expect(result.categoryId).toBe(DefaultEmailCategory.OTHER);
         expect(result.summary).toBe('Fehler');
         expect(result.reasoning).toContain('Batch API Error');
