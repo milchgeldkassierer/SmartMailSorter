@@ -571,54 +571,14 @@ async function setEmailFlag(account, uid, flag, value, dbFolder) {
   try {
     await client.connect();
 
-    // Resolve Server Path from DB Folder Name (same logic as deleteEmail)
-    let serverPath = 'INBOX';
-    if (dbFolder && dbFolder !== 'Posteingang') {
-      const boxList = await client.list();
-      let foundPath = null;
+    // Resolve Server Path from DB Folder Name using helper
+    const foundPath = await findServerFolderForDbName(client, dbFolder);
+    const serverPath = foundPath || 'INBOX';
 
-      for (const box of boxList) {
-        const fullPath = box.path;
-        let mappedName = fullPath; // Default
-
-        // Check specialUse attribute (imapflow uses specialUse instead of attribs)
-        if (box.specialUse) {
-          const specialUse = box.specialUse.toLowerCase();
-          if (specialUse.includes('\\sent') || specialUse.includes('sent')) mappedName = 'Gesendet';
-          else if (specialUse.includes('\\trash') || specialUse.includes('trash')) mappedName = 'Papierkorb';
-          else if (specialUse.includes('\\junk') || specialUse.includes('junk')) mappedName = 'Spam';
-        }
-
-        // Name matching overrides
-        const lower = box.name.toLowerCase();
-        if (mappedName === fullPath) {
-          // If not mapped by attribute yet
-          if (lower === 'sent' || lower === 'gesendet') mappedName = 'Gesendet';
-          else if (lower === 'trash' || lower === 'papierkorb') mappedName = 'Papierkorb';
-          else if (lower === 'junk' || lower === 'spam') mappedName = 'Spam';
-          else if (fullPath.toUpperCase().startsWith('INBOX')) {
-            // Handle Subfolders: INBOX.Amazon -> Posteingang/Amazon
-            const sep = box.delimiter || '/';
-            const parts = fullPath.split(sep);
-            if (parts[0].toUpperCase() === 'INBOX') {
-              parts[0] = 'Posteingang';
-              mappedName = parts.join('/');
-            }
-          }
-        }
-
-        if (mappedName === dbFolder) {
-          foundPath = fullPath;
-          break;
-        }
-      }
-
-      if (foundPath) {
-        serverPath = foundPath;
-        console.log(`[Flag] Mapped DB folder '${dbFolder}' to Server folder '${serverPath}'`);
-      } else {
-        console.warn(`[Flag] Could not map '${dbFolder}' to server path. Defaulting to INBOX.`);
-      }
+    if (foundPath) {
+      console.log(`[Flag] Mapped DB folder '${dbFolder}' to Server folder '${serverPath}'`);
+    } else if (dbFolder && dbFolder !== 'Posteingang') {
+      console.warn(`[Flag] Could not map '${dbFolder}' to server path. Defaulting to INBOX.`);
     }
 
     // Get mailbox lock for the target folder
