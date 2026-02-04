@@ -304,6 +304,20 @@ function buildFolderMap(mailboxes) {
   return folderMap;
 }
 
+/**
+ * Handles folder renaming migration
+ * @param {Object} folderMap - Folder map with server paths as keys and DB folder names as values
+ */
+function migrateFolders(folderMap) {
+  for (const [fullPath, prettyName] of Object.entries(folderMap)) {
+    const parts = fullPath.split(/[./]/);
+    const oldLeafName = parts[parts.length - 1];
+    if (oldLeafName && prettyName !== oldLeafName && prettyName.startsWith(INBOX_FOLDER + '/')) {
+      db.migrateFolder(oldLeafName, prettyName);
+    }
+  }
+}
+
 async function syncAccount(account) {
   console.log(`Starting sync for account: ${account.email}`);
 
@@ -642,4 +656,5 @@ module.exports = {
   findServerFolderForDbName,
   checkAccountQuota,
   buildFolderMap,
+  migrateFolders,
 };
