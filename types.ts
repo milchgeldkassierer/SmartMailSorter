@@ -1,6 +1,8 @@
 export enum DefaultEmailCategory {
   INBOX = 'Posteingang',
+  SENT = 'Gesendet',
   SPAM = 'Spam',
+  TRASH = 'Papierkorb',
   INVOICE = 'Rechnungen',
   NEWSLETTER = 'Newsletter',
   PRIVATE = 'Privat',

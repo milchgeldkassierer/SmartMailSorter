@@ -2,6 +2,12 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Email, DefaultEmailCategory, ImapAccount, AccountData, Category } from '../types';
 import { SearchConfig } from '../components/SearchBar';
 
+// Standard folder name constants
+const SENT_FOLDER = DefaultEmailCategory.SENT;
+const SPAM_FOLDER = DefaultEmailCategory.SPAM;
+const TRASH_FOLDER = DefaultEmailCategory.TRASH;
+const STANDARD_EXCLUDED_FOLDERS = [SENT_FOLDER, SPAM_FOLDER, TRASH_FOLDER] as const;
+
 interface UseEmailsParams {
   activeAccountId: string;
   accounts: ImapAccount[];
@@ -39,6 +45,92 @@ interface UseEmailsReturn {
   resetPagination: () => void;
 }
 
+// Helper function to check if an email belongs in INBOX
+const isInboxEmail = (email: Email): boolean => {
+  return !email.folder || email.folder === DefaultEmailCategory.INBOX;
+};
+
+// Helper function to check if an email belongs to a standard folder
+const matchesStandardFolder = (email: Email, folderName: string): boolean => {
+  if (folderName === DefaultEmailCategory.INBOX) {
+    return isInboxEmail(email);
+  }
+
+  if ((STANDARD_EXCLUDED_FOLDERS as ReadonlyArray<string>).includes(folderName)) {
+    return email.folder === folderName;
+  }
+
+  return false;
+};
+
+// Helper function to check if an email matches a physical folder
+const matchesPhysicalFolder = (email: Email, folderName: string): boolean => {
+  if (!email.folder) return false;
+  return (
+    email.folder === folderName || email.folder.endsWith('/' + folderName) || folderName.endsWith('/' + email.folder)
+  );
+};
+
+// Helper function to check if an email matches search criteria
+const matchesSearchTerm = (email: Email, searchTerm: string, searchConfig: SearchConfig): boolean => {
+  if (!searchTerm.trim()) return true;
+
+  const terms = searchTerm
+    .toLowerCase()
+    .split(' ')
+    .filter((t) => t.length > 0);
+
+  const checkTerm = (term: string) => {
+    const inSender =
+      searchConfig.searchSender &&
+      (email.sender.toLowerCase().includes(term) || email.senderEmail.toLowerCase().includes(term));
+    const inSubject = searchConfig.searchSubject && email.subject.toLowerCase().includes(term);
+    const inBody = searchConfig.searchBody && email.body?.toLowerCase().includes(term);
+    return inSender || inSubject || inBody;
+  };
+
+  return searchConfig.logic === 'AND' ? terms.every(checkTerm) : terms.some(checkTerm);
+};
+
+// Helper function to check if a category is a standard folder
+const isStandardFolderCategory = (category: string): boolean => {
+  return (
+    category === DefaultEmailCategory.INBOX || (STANDARD_EXCLUDED_FOLDERS as ReadonlyArray<string>).includes(category)
+  );
+};
+
+// Helper function to check if email should be shown in selected category
+const shouldShowInCategory = (
+  email: Email,
+  selectedCategory: string,
+  showUnsortedOnly: boolean,
+  categories: Category[]
+): boolean => {
+  // Handle standard folders first
+  if (isStandardFolderCategory(selectedCategory)) {
+    if (!matchesStandardFolder(email, selectedCategory)) {
+      return false;
+    }
+
+    // Apply unsorted filter only for INBOX
+    if (selectedCategory === DefaultEmailCategory.INBOX && showUnsortedOnly) {
+      return !email.smartCategory;
+    }
+
+    return true;
+  }
+
+  // Handle physical folders and smart categories
+  const categoryInfo = categories.find((c) => c.name === selectedCategory);
+
+  if (categoryInfo && categoryInfo.type === 'folder') {
+    return matchesPhysicalFolder(email, selectedCategory);
+  }
+
+  // Default to smart category matching
+  return email.smartCategory === selectedCategory;
+};
+
 export const useEmails = ({ activeAccountId, accounts: _accounts }: UseEmailsParams): UseEmailsReturn => {
   // Data State - stored by account ID
   const [data, setData] = useState<Record<string, AccountData>>({});
@@ -69,64 +161,15 @@ export const useEmails = ({ activeAccountId, accounts: _accounts }: UseEmailsPar
 
   // --- Filtering Logic ---
   const filteredEmails = useMemo(() => {
-    let result = currentEmails;
+    // 1. Filter by category (standard folders, physical folders, or smart categories)
+    const categoryFiltered = currentEmails.filter((email) =>
+      shouldShowInCategory(email, selectedCategory, showUnsortedOnly, currentCategories)
+    );
 
-    // 1. Initial Filtering by Folder OR Smart Category
-    if (selectedCategory === DefaultEmailCategory.INBOX || selectedCategory === 'Posteingang') {
-      result = result.filter(
-        (e) =>
-          (!e.folder || e.folder === 'Posteingang') &&
-          e.folder !== 'Gesendet' &&
-          e.folder !== 'Spam' &&
-          e.folder !== 'Papierkorb'
-      );
+    // 2. Apply search filter
+    const searchFiltered = categoryFiltered.filter((email) => matchesSearchTerm(email, searchTerm, searchConfig));
 
-      // Unsorted Toggle
-      if (showUnsortedOnly) {
-        result = result.filter((e) => !e.smartCategory);
-      }
-    } else if (['Gesendet', 'Spam', 'Papierkorb'].includes(selectedCategory)) {
-      result = result.filter((e) => e.folder === selectedCategory);
-    } else {
-      // Check if it's a known physical folder
-      const catInfo = currentCategories.find((c) => c.name === selectedCategory);
-
-      if (catInfo && catInfo.type === 'folder') {
-        // Physical Folder Logic
-        result = result.filter((e) => {
-          if (!e.folder) return false;
-          return (
-            e.folder === selectedCategory ||
-            e.folder.endsWith('/' + selectedCategory) ||
-            selectedCategory.endsWith('/' + e.folder)
-          );
-        });
-      } else {
-        // Smart Category Logic (Virtual View)
-        result = result.filter((e) => e.smartCategory === selectedCategory);
-      }
-    }
-
-    // 2. Search Logic
-    if (searchTerm.trim()) {
-      const terms = searchTerm
-        .toLowerCase()
-        .split(' ')
-        .filter((t) => t.length > 0);
-      result = result.filter((email) => {
-        const checkTerm = (term: string) => {
-          const inSender =
-            searchConfig.searchSender &&
-            (email.sender.toLowerCase().includes(term) || email.senderEmail.toLowerCase().includes(term));
-          const inSubject = searchConfig.searchSubject && email.subject.toLowerCase().includes(term);
-          const inBody = searchConfig.searchBody && email.body?.toLowerCase().includes(term);
-          return inSender || inSubject || inBody;
-        };
-        return searchConfig.logic === 'AND' ? terms.every(checkTerm) : terms.some(checkTerm);
-      });
-    }
-
-    return result;
+    return searchFiltered;
   }, [currentEmails, selectedCategory, searchTerm, searchConfig, showUnsortedOnly, currentCategories]);
 
   // Pagination
@@ -141,17 +184,15 @@ export const useEmails = ({ activeAccountId, accounts: _accounts }: UseEmailsPar
     const counts: Record<string, number> = {};
 
     // 1. Calculate Standard Folders Explicitly
-    const standard = [DefaultEmailCategory.INBOX, 'Gesendet', 'Spam', 'Papierkorb'];
+    const standard: string[] = [DefaultEmailCategory.INBOX, ...STANDARD_EXCLUDED_FOLDERS];
 
-    counts[DefaultEmailCategory.INBOX] = currentEmails.filter(
-      (e) => (!e.folder || e.folder === 'Posteingang') && !e.isRead
+    counts[DefaultEmailCategory.INBOX] = currentEmails.filter((e) => isInboxEmail(e) && !e.isRead).length;
+    counts[SENT_FOLDER] = currentEmails.filter((e) => e.folder === SENT_FOLDER && !e.isRead).length;
+    counts[SPAM_FOLDER] = currentEmails.filter(
+      (e) => (e.folder === SPAM_FOLDER || e.folder === 'Spamverdacht') && !e.isRead
     ).length;
-    counts['Gesendet'] = currentEmails.filter((e) => e.folder === 'Gesendet' && !e.isRead).length;
-    counts['Spam'] = currentEmails.filter(
-      (e) => (e.folder === 'Spam' || e.folder === 'Spamverdacht') && !e.isRead
-    ).length;
-    counts['Papierkorb'] = currentEmails.filter(
-      (e) => (e.folder === 'Papierkorb' || e.folder === 'Gelöscht' || e.folder === 'Trash') && !e.isRead
+    counts[TRASH_FOLDER] = currentEmails.filter(
+      (e) => (e.folder === TRASH_FOLDER || e.folder === 'Gelöscht' || e.folder === 'Trash') && !e.isRead
     ).length;
 
     // 2. Calculate Categories & Physical Folders
