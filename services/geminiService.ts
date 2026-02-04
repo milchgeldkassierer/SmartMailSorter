@@ -30,7 +30,7 @@ interface GeminiConfig {
   responseMimeType: string;
   responseSchema: Schema;
   systemInstruction: string;
-  thinkingConfig: {
+  thinkingConfig?: {
     thinkingBudget: number;
   };
 }
@@ -47,14 +47,14 @@ interface GeminiCandidate {
   content?: GeminiContent;
 }
 
-
+// Type for the actual SDK response
 interface GeminiResponse {
   response?: {
-    text?: () => string;
+    text?: string | (() => string);
     candidates?: GeminiCandidate[];
   };
   candidates?: GeminiCandidate[];
-  text?: () => string;
+  text?: string | (() => string);
 }
 
 // Version marker
@@ -95,26 +95,36 @@ async function callLLM(
             thinkingBudget: 1024
           }
         } as GeminiConfig
-      }) as GeminiResponse;
+      }) as unknown as GeminiResponse;
 
       let text = "";
 
       // Strategy 1: result.response.text() (Standard SDK)
-      if (result.response && typeof result.response.text === 'function') {
-        try { text = result.response.text(); } catch (e) { console.debug('Gemini Strategy 1 failed:', e); }
+      if (result.response) {
+        const responseText = result.response.text;
+        if (typeof responseText === 'function') {
+          try { text = responseText(); } catch (e) { console.debug('Gemini Strategy 1 failed:', e); }
+        } else if (typeof responseText === 'string') {
+          text = responseText;
+        }
       }
 
       // Strategy 2: result.text() (Simpler SDK)
-      if (!text && typeof result.text === 'function') {
-        try { text = result.text(); } catch (e) { console.debug('Gemini Strategy 2 failed:', e); }
+      if (!text) {
+        const resultText = result.text;
+        if (typeof resultText === 'function') {
+          try { text = resultText(); } catch (e) { console.debug('Gemini Strategy 2 failed:', e); }
+        } else if (typeof resultText === 'string') {
+          text = resultText;
+        }
       }
 
       // Strategy 3: Manual Candidate Extraction (Safest backup)
       if (!text) {
         const candidates = result.candidates || result.response?.candidates;
         if (candidates && candidates.length > 0) {
-          const part = candidates[0].content?.parts?.[0];
-          if (part && part.text) text = part.text;
+          const part = candidates[0]?.content?.parts?.[0];
+          if (part?.text) text = part.text;
         }
       }
 

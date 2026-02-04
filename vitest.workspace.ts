@@ -1,6 +1,7 @@
-import { defineWorkspace } from 'vitest/config';
+import { defineConfig } from 'vitest/config';
+import type { UserWorkspaceConfig } from 'vitest/node';
 
-export default defineWorkspace([
+export default defineConfig([
     {
         extends: './vitest.config.ts',
         test: {
@@ -21,4 +22,4 @@ export default defineWorkspace([
             setupFiles: ['./components/__tests__/setup.ts'],
         }
     }
-]);
+] as UserWorkspaceConfig);

@@ -6,15 +6,20 @@ import os from 'os';
 // Create require function for CommonJS modules
 const require = createRequire(import.meta.url);
 
+// Type for Node.js require cache
+interface RequireCache {
+  [key: string]: NodeModule | undefined;
+}
+
 // Mock Electron app.getPath for db initialization
 const electronPath = path.resolve(path.dirname(new URL(import.meta.url).pathname), '../../node_modules/electron/index.js');
-require.cache[electronPath] = {
+(require.cache as RequireCache)[electronPath] = {
   exports: {
     app: {
       getPath: () => './test-data'
     }
   }
-};
+} as NodeModule;
 
 // Define interfaces
 interface Attachment {
@@ -26,10 +31,38 @@ interface Attachment {
   data?: Buffer | null;
 }
 
+interface DbAccount {
+  id: string;
+  name: string;
+  email: string;
+  provider: string;
+  username: string;
+  password: string;
+  imapHost: string;
+  imapPort: number;
+  color: string;
+}
+
+interface DbEmail {
+  id: string;
+  accountId: string;
+  sender: string;
+  senderEmail: string;
+  subject: string;
+  body: string;
+  date: string;
+  folder: string;
+  isRead: boolean;
+  isFlagged: boolean;
+  hasAttachments?: boolean;
+  uid?: number;
+  attachments?: Attachment[];
+}
+
 interface DbModule {
   init: (path: string) => void;
-  addAccount: (account: any) => void;
-  saveEmail: (email: any) => void;
+  addAccount: (account: DbAccount) => void;
+  saveEmail: (email: DbEmail) => void;
   getAttachment: (id: string) => Attachment | undefined;
 }
 
@@ -64,6 +97,7 @@ describe('Attachment Filename Security Tests', () => {
   const createTestEmail = (id: string, accountId: string, attachmentFilename: string, attachmentId: string = 'attach1') => {
     const attachment = {
       id: attachmentId,
+      emailId: id,
       filename: attachmentFilename,
       contentType: 'application/octet-stream',
       size: 100,
@@ -258,17 +292,17 @@ describe('Attachment Filename Security Tests', () => {
     });
 
     it('should handle empty or invalid filenames', () => {
-      const invalidFilenames = [
+      const invalidFilenames: unknown[] = [
         '',
         '   ',
         '\t\n',
-        null as any,
-        undefined as any,
-        123 as any
+        null,
+        undefined,
+        123
       ];
 
       invalidFilenames.forEach(filename => {
-        const sanitized = sanitizeFilename(filename);
+        const sanitized = sanitizeFilename(filename as string);
         expect(sanitized).toBe('attachment');
       });
     });
