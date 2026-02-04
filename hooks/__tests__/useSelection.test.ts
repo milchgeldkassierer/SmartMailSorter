@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useSelection } from '../useSelection';
-import { Email } from '../../types';
+import { Email, INBOX_FOLDER } from '../../types';
 
 describe('useSelection', () => {
   const mockEmail1: Email = {
@@ -11,7 +11,7 @@ describe('useSelection', () => {
     subject: 'Test Email 1',
     body: 'This is a test email body',
     date: '2024-01-01T10:00:00Z',
-    folder: 'Posteingang',
+    folder: INBOX_FOLDER,
     isRead: false,
     isFlagged: false,
   };
@@ -23,7 +23,7 @@ describe('useSelection', () => {
     subject: 'Test Email 2',
     body: 'Another test email',
     date: '2024-01-02T10:00:00Z',
-    folder: 'Posteingang',
+    folder: INBOX_FOLDER,
     isRead: false,
     isFlagged: false,
   };
@@ -35,7 +35,7 @@ describe('useSelection', () => {
     subject: 'Test Email 3',
     body: 'Third test email',
     date: '2024-01-03T10:00:00Z',
-    folder: 'Posteingang',
+    folder: INBOX_FOLDER,
     isRead: true,
     isFlagged: false,
   };
@@ -47,7 +47,7 @@ describe('useSelection', () => {
     subject: 'Test Email 4',
     body: 'Fourth test email',
     date: '2024-01-04T10:00:00Z',
-    folder: 'Posteingang',
+    folder: INBOX_FOLDER,
     isRead: true,
     isFlagged: false,
   };
@@ -59,7 +59,7 @@ describe('useSelection', () => {
     subject: 'Test Email 5',
     body: 'Fifth test email',
     date: '2024-01-05T10:00:00Z',
-    folder: 'Posteingang',
+    folder: INBOX_FOLDER,
     isRead: false,
     isFlagged: true,
   };
