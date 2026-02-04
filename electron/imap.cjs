@@ -34,6 +34,30 @@ const PROVIDERS = {
 };
 
 /**
+ * Creates an ImapFlow client instance with standardized configuration.
+ * Encapsulates the common pattern for creating IMAP clients across all operations.
+ * @param {Object} account - The account object containing connection details
+ * @param {string} account.imapHost - IMAP server hostname
+ * @param {number} account.imapPort - IMAP server port (typically 993)
+ * @param {string} account.email - User's email address (used as fallback for username)
+ * @param {string} [account.username] - IMAP username (defaults to email if not provided)
+ * @param {string} account.password - IMAP password
+ * @returns {ImapFlow} Configured ImapFlow client instance (not yet connected)
+ */
+function createImapClient(account) {
+  return new ImapFlow({
+    host: account.imapHost,
+    port: account.imapPort,
+    secure: true,
+    auth: {
+      user: account.username || account.email,
+      pass: account.password,
+    },
+    logger: false,
+  });
+}
+
+/**
  * Helper to process a batch of fetch results and save them to DB
  */
 async function processMessages(client, messages, account, targetCategory) {
@@ -132,16 +156,7 @@ async function processMessages(client, messages, account, targetCategory) {
 async function syncAccount(account) {
   console.log(`Starting sync for account: ${account.email}`);
 
-  const client = new ImapFlow({
-    host: account.imapHost,
-    port: account.imapPort,
-    secure: true,
-    auth: {
-      user: account.username || account.email,
-      pass: account.password,
-    },
-    logger: false,
-  });
+  const client = createImapClient(account);
 
   try {
     await client.connect();
@@ -410,16 +425,7 @@ async function syncAccount(account) {
 }
 
 async function testConnection(account) {
-  const client = new ImapFlow({
-    host: account.imapHost,
-    port: account.imapPort,
-    secure: true,
-    auth: {
-      user: account.username || account.email,
-      pass: account.password,
-    },
-    logger: false,
-  });
+  const client = createImapClient(account);
 
   try {
     await client.connect();
@@ -438,16 +444,7 @@ async function testConnection(account) {
 async function deleteEmail(account, uid, dbFolder) {
   if (!uid) return { success: false, error: 'No UID' };
 
-  const client = new ImapFlow({
-    host: account.imapHost,
-    port: account.imapPort,
-    secure: true,
-    auth: {
-      user: account.username || account.email,
-      pass: account.password,
-    },
-    logger: false,
-  });
+  const client = createImapClient(account);
 
   try {
     await client.connect();
@@ -524,16 +521,7 @@ async function deleteEmail(account, uid, dbFolder) {
 async function setEmailFlag(account, uid, flag, value, dbFolder) {
   if (!uid) return { success: false, error: 'No UID' };
 
-  const client = new ImapFlow({
-    host: account.imapHost,
-    port: account.imapPort,
-    secure: true,
-    auth: {
-      user: account.username || account.email,
-      pass: account.password,
-    },
-    logger: false,
-  });
+  const client = createImapClient(account);
 
   try {
     await client.connect();
