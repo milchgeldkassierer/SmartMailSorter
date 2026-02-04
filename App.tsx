@@ -18,7 +18,12 @@ import BatchActionBar from './components/BatchActionBar';
 import ProgressBar from './components/ProgressBar';
 
 const App: React.FC = () => {
-  const { isAuthenticated: _isAuthenticated, isConnecting: _isConnecting, setIsAuthenticated, setIsConnecting } = useAuth();
+  const {
+    isAuthenticated: _isAuthenticated,
+    isConnecting: _isConnecting,
+    setIsAuthenticated,
+    setIsConnecting,
+  } = useAuth();
   const { accounts, activeAccountId, setAccounts, setActiveAccountId, addAccount, removeAccount, switchAccount } =
     useAccounts();
   const { aiSettings, setAiSettings } = useAISettings();
