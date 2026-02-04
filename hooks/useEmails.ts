@@ -3,8 +3,10 @@ import { Email, DefaultEmailCategory, ImapAccount, AccountData, Category } from 
 import { SearchConfig } from '../components/SearchBar';
 
 // Standard folder name constants
-const INBOX_FOLDER = 'Posteingang';
-const STANDARD_EXCLUDED_FOLDERS = ['Gesendet', 'Spam', 'Papierkorb'] as const;
+const SENT_FOLDER = DefaultEmailCategory.SENT;
+const SPAM_FOLDER = DefaultEmailCategory.SPAM;
+const TRASH_FOLDER = DefaultEmailCategory.TRASH;
+const STANDARD_EXCLUDED_FOLDERS = [SENT_FOLDER, SPAM_FOLDER, TRASH_FOLDER] as const;
 
 interface UseEmailsParams {
   activeAccountId: string;
@@ -45,16 +47,16 @@ interface UseEmailsReturn {
 
 // Helper function to check if an email belongs in INBOX
 const isInboxEmail = (email: Email): boolean => {
-  return !email.folder || email.folder === INBOX_FOLDER;
+  return !email.folder || email.folder === DefaultEmailCategory.INBOX;
 };
 
 // Helper function to check if an email belongs to a standard folder
 const matchesStandardFolder = (email: Email, folderName: string): boolean => {
-  if (folderName === DefaultEmailCategory.INBOX || folderName === INBOX_FOLDER) {
+  if (folderName === DefaultEmailCategory.INBOX) {
     return isInboxEmail(email);
   }
 
-  if (STANDARD_EXCLUDED_FOLDERS.includes(folderName as any)) {
+  if ((STANDARD_EXCLUDED_FOLDERS as ReadonlyArray<string>).includes(folderName)) {
     return email.folder === folderName;
   }
 
@@ -93,9 +95,7 @@ const matchesSearchTerm = (email: Email, searchTerm: string, searchConfig: Searc
 // Helper function to check if a category is a standard folder
 const isStandardFolderCategory = (category: string): boolean => {
   return (
-    category === DefaultEmailCategory.INBOX ||
-    category === INBOX_FOLDER ||
-    STANDARD_EXCLUDED_FOLDERS.includes(category as any)
+    category === DefaultEmailCategory.INBOX || (STANDARD_EXCLUDED_FOLDERS as ReadonlyArray<string>).includes(category)
   );
 };
 
@@ -113,7 +113,7 @@ const shouldShowInCategory = (
     }
 
     // Apply unsorted filter only for INBOX
-    if ((selectedCategory === DefaultEmailCategory.INBOX || selectedCategory === 'Posteingang') && showUnsortedOnly) {
+    if (selectedCategory === DefaultEmailCategory.INBOX && showUnsortedOnly) {
       return !email.smartCategory;
     }
 
@@ -187,14 +187,14 @@ export const useEmails = ({ activeAccountId, accounts: _accounts }: UseEmailsPar
     const standard: string[] = [DefaultEmailCategory.INBOX, ...STANDARD_EXCLUDED_FOLDERS];
 
     counts[DefaultEmailCategory.INBOX] = currentEmails.filter(
-      (e) => (!e.folder || e.folder === INBOX_FOLDER) && !e.isRead
+      (e) => (!e.folder || e.folder === DefaultEmailCategory.INBOX) && !e.isRead
     ).length;
-    counts[STANDARD_EXCLUDED_FOLDERS[0]] = currentEmails.filter((e) => e.folder === STANDARD_EXCLUDED_FOLDERS[0] && !e.isRead).length;
-    counts[STANDARD_EXCLUDED_FOLDERS[1]] = currentEmails.filter(
-      (e) => (e.folder === STANDARD_EXCLUDED_FOLDERS[1] || e.folder === 'Spamverdacht') && !e.isRead
+    counts[SENT_FOLDER] = currentEmails.filter((e) => e.folder === SENT_FOLDER && !e.isRead).length;
+    counts[SPAM_FOLDER] = currentEmails.filter(
+      (e) => (e.folder === SPAM_FOLDER || e.folder === 'Spamverdacht') && !e.isRead
     ).length;
-    counts[STANDARD_EXCLUDED_FOLDERS[2]] = currentEmails.filter(
-      (e) => (e.folder === STANDARD_EXCLUDED_FOLDERS[2] || e.folder === 'Gelöscht' || e.folder === 'Trash') && !e.isRead
+    counts[TRASH_FOLDER] = currentEmails.filter(
+      (e) => (e.folder === TRASH_FOLDER || e.folder === 'Gelöscht' || e.folder === 'Trash') && !e.isRead
     ).length;
 
     // 2. Calculate Categories & Physical Folders
