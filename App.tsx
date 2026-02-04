@@ -345,7 +345,6 @@ const App: React.FC = () => {
             emails={displayedEmails}
             selectedEmailId={selectedEmailId}
             selectedIds={selectedIds}
-            onSelectEmail={handleSelectEmail}
             onRowClick={handleRowClick}
             onToggleSelection={handleToggleSelection}
             onDeleteEmail={handleDeleteEmail}

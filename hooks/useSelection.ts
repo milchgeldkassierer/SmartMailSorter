@@ -3,15 +3,15 @@ import { Email } from '../types';
 
 interface UseSelectionProps {
   filteredEmails: Email[];
-  onSelectEmail: (_id: string) => void;
+  onSelectEmail: (id: string) => void;
 }
 
 interface UseSelectionReturn {
   selectedIds: Set<string>;
-  handleSelection: (_id: string, _multi: boolean, _range: boolean) => void;
-  handleRowClick: (_id: string, _e: React.MouseEvent) => void;
-  handleToggleSelection: (_id: string, _shiftKey?: boolean) => void;
-  handleSelectAll: (_e: React.ChangeEvent<HTMLInputElement>) => void;
+  handleSelection: (id: string, multi: boolean, range: boolean) => void;
+  handleRowClick: (id: string, e: React.MouseEvent) => void;
+  handleToggleSelection: (id: string, shiftKey?: boolean) => void;
+  handleSelectAll: (e: React.ChangeEvent<HTMLInputElement>) => void;
   clearSelection: () => void;
 }
 
@@ -68,7 +68,7 @@ export const useSelection = ({ filteredEmails, onSelectEmail }: UseSelectionProp
     handleSelection(id, false, shiftKey);
   };
 
-  const handleSelectAll = (_e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleSelectAll = () => {
     if (selectedIds.size === filteredEmails.length && filteredEmails.length > 0) {
       setSelectedIds(new Set());
     } else {

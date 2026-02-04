@@ -16,8 +16,8 @@ import { ImapAccount, DefaultEmailCategory, Category } from '../types';
 
 interface SidebarProps {
   selectedCategory: string;
-  onSelectCategory: (_cat: string) => void;
-  onAddCategory: (_cat: string) => void;
+  onSelectCategory: (cat: string) => void;
+  onAddCategory: (cat: string) => void;
   categories: Category[];
   counts: Record<string, number>;
   onReset: () => void;
@@ -25,11 +25,11 @@ interface SidebarProps {
   // Account Props
   accounts: ImapAccount[];
   activeAccountId: string;
-  onSwitchAccount: (_id: string) => void;
+  onSwitchAccount: (id: string) => void;
   onOpenSettings: () => void;
   // Category Actions
-  onDeleteCategory: (_cat: string) => void;
-  onRenameCategory: (_oldName: string, _newName: string) => void;
+  onDeleteCategory: (cat: string) => void;
+  onRenameCategory: (oldName: string, newName: string) => void;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({

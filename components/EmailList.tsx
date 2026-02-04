@@ -6,12 +6,11 @@ interface EmailListProps {
   emails: Email[];
   selectedEmailId: string | null;
   selectedIds: Set<string>;
-  onSelectEmail: (_id: string) => void;
-  onRowClick: (_id: string, _e: React.MouseEvent) => void;
-  onToggleSelection: (_id: string, _shiftKey: boolean) => void;
-  onDeleteEmail: (_id: string) => void;
-  onToggleRead: (_id: string) => void;
-  onToggleFlag: (_id: string) => void;
+  onRowClick: (id: string, e: React.MouseEvent) => void;
+  onToggleSelection: (id: string, shiftKey: boolean) => void;
+  onDeleteEmail: (id: string) => void;
+  onToggleRead: (id: string) => void;
+  onToggleFlag: (id: string) => void;
   isLoading: boolean;
   onLoadMore?: () => void;
   hasMore?: boolean;
@@ -21,7 +20,6 @@ const EmailList: React.FC<EmailListProps> = ({
   emails,
   selectedEmailId,
   selectedIds,
-  onSelectEmail: _onSelectEmail,
   onRowClick,
   onToggleSelection,
   onDeleteEmail,
