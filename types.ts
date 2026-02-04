@@ -78,3 +78,28 @@ export const AVAILABLE_MODELS: Record<LLMProvider, string[]> = {
   [LLMProvider.OPENAI]: ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo'],
   [LLMProvider.ANTHROPIC]: ['claude-3-5-sonnet-20240620', 'claude-3-haiku-20240307']
 };
+
+// Attachment Types
+export interface Attachment {
+  id: string;
+  filename: string;
+  size: number;
+  contentType?: string;
+}
+
+// IPC Operation Result Types
+export interface SyncResult {
+  success: boolean;
+  count?: number;
+  error?: string;
+}
+
+export interface EmailOperationResult {
+  success: boolean;
+  error?: string;
+}
+
+export interface CategoryOperationResult {
+  success: boolean;
+  changes?: number;
+}

@@ -1,16 +1,16 @@
 import { useState } from 'react';
-import { Email, AISettings, DefaultEmailCategory, SortResult } from '../types';
+import { Email, AISettings, DefaultEmailCategory, SortResult, Category } from '../types';
 import { categorizeBatchWithAI } from '../services/geminiService';
 
 interface UseBatchOperationsProps {
   selectedIds: Set<string>;
   currentEmails: Email[];
-  currentCategories: { name: string; type: string }[];
+  currentCategories: Category[];
   aiSettings: AISettings;
   onDeleteEmail: (id: string) => Promise<void>;
   onClearSelection: () => void;
   onUpdateEmails: (updateFn: (emails: Email[]) => Email[]) => void;
-  onUpdateCategories: (categories: { name: string; type: string }[]) => void;
+  onUpdateCategories: (categories: Category[]) => void;
   onOpenSettings: () => void;
   onConfirmDelete?: (count: number) => Promise<boolean>;
   onConfirmNewCategories?: (categories: string[]) => Promise<boolean>;
@@ -76,7 +76,8 @@ export const useBatchOperations = ({
           emailResults.set(email.id, sortResult);
           const cat = sortResult.categoryId;
           const exists = currentCategories.some(c => c.name === cat);
-          if (!exists && !Object.values(DefaultEmailCategory).includes(cat as any)) {
+          const categoryValues = Object.values(DefaultEmailCategory) as string[];
+          if (!exists && !categoryValues.includes(cat)) {
             newCategoriesFound.add(cat);
           }
         }
@@ -229,7 +230,7 @@ export const useBatchOperations = ({
     }
   };
 
-  const canSmartSort = selectedIds.size > 0 && aiSettings.provider && aiSettings.apiKey;
+  const canSmartSort = Boolean(selectedIds.size > 0 && aiSettings.provider && aiSettings.apiKey);
 
   return {
     isSorting,

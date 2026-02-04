@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Email } from '../types';
+import { Email, Attachment } from '../types';
 import { CategoryIcon, BrainCircuit, Paperclip, FileText } from './Icon';
 
 interface EmailViewProps {
@@ -8,7 +8,7 @@ interface EmailViewProps {
 
 const EmailView: React.FC<EmailViewProps> = ({ email }) => {
   const [showHtml, setShowHtml] = useState(true);
-  const [attachments, setAttachments] = useState<any[]>([]);
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [isLoadingAttachments, setIsLoadingAttachments] = useState(false);
   const [linkError, setLinkError] = useState<string | null>(null);
 
@@ -16,8 +16,8 @@ const EmailView: React.FC<EmailViewProps> = ({ email }) => {
     if (email && email.hasAttachments && window.electron) {
       setIsLoadingAttachments(true);
       window.electron.getEmailAttachments(email.id)
-        .then((atts: any) => setAttachments(atts))
-        .catch((err: any) => console.error(err))
+        .then((atts: Attachment[]) => setAttachments(atts))
+        .catch((err: unknown) => console.error(err))
         .finally(() => setIsLoadingAttachments(false));
     } else {
       setAttachments([]);
@@ -140,7 +140,7 @@ const EmailView: React.FC<EmailViewProps> = ({ email }) => {
         {/* Attachments List */}
         {attachments.length > 0 && (
           <div className="mt-4 flex flex-wrap gap-2">
-            {attachments.map((att: any) => (
+            {attachments.map((att: Attachment) => (
               <div key={att.id} className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 border border-slate-200 px-3 py-1.5 rounded-md text-sm text-slate-700 cursor-pointer transition-colors" title={`Size: ${(att.size / 1024).toFixed(1)} KB`}>
                 <Paperclip className="w-3.5 h-3.5" />
                 <span className="truncate max-w-[200px]">{att.filename}</span>

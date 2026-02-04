@@ -61,7 +61,7 @@ export const useCategories = (): UseCategoriesReturn => {
 
   // Auto-discover physical folders from emails
   const autoDiscoverFolders = useCallback(async (emails: Email[], currentCategories: Category[]) => {
-    const systemFolders = Object.values(DefaultEmailCategory);
+    const systemFolders = Object.values(DefaultEmailCategory) as string[];
     const mappedFolders = ['Gesendet', 'Spam', 'Papierkorb', 'Posteingang'];
 
     const foundFolders = new Set<string>();
@@ -74,7 +74,7 @@ export const useCategories = (): UseCategoriesReturn => {
     // Scan emails for physical folders
     emails.forEach(e => {
       if (e.folder &&
-        !systemFolders.includes(e.folder as any) &&
+        !systemFolders.includes(e.folder) &&
         !mappedFolders.includes(e.folder)
       ) {
         // It's a physical folder candidate

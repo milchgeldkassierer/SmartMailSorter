@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { DefaultEmailCategory, ImapAccount } from './types';
+import { DefaultEmailCategory, ImapAccount, Category, AccountData } from './types';
 import Sidebar from './components/Sidebar';
 import EmailList from './components/EmailList';
 import EmailView from './components/EmailView';
@@ -90,7 +90,7 @@ const App: React.FC = () => {
   const { isSyncing, syncAccount } = useSync({
     activeAccountId, accounts,
     onAccountsUpdate: setAccounts,
-    onDataUpdate: (accountId, { emails }) => setData(prev => ({ ...prev, [accountId]: { ...prev[accountId], emails } }))
+    onDataUpdate: (accountId, { emails }) => setData((prev: Record<string, AccountData>) => ({ ...prev, [accountId]: { ...prev[accountId], emails } }))
   });
 
   // Load initial data
@@ -126,7 +126,7 @@ const App: React.FC = () => {
         const categories = await window.electron.getCategories();
         await autoDiscoverFolders(emails, categories);
         const finalCategories = await window.electron.getCategories();
-        setData(prev => ({ ...prev, [activeAccountId]: { emails, categories: finalCategories } }));
+        setData((prev: Record<string, AccountData>) => ({ ...prev, [activeAccountId]: { emails, categories: finalCategories } }));
       } catch (error) {
         console.error('Failed to switch account:', error);
         alert('Fehler beim Laden des Kontos');
@@ -142,7 +142,7 @@ const App: React.FC = () => {
         addAccount(newAccount);
         switchAccount(newAccount.id);
         const emails = await window.electron.getEmails(newAccount.id);
-        setData(prev => ({ ...prev, [newAccount.id]: {
+        setData((prev: Record<string, AccountData>) => ({ ...prev, [newAccount.id]: {
           emails,
           categories: Object.values(DefaultEmailCategory).map(c => ({ name: c, type: 'system' }))
         }}));
@@ -155,7 +155,7 @@ const App: React.FC = () => {
     } else {
       addAccount(newAccount);
       const demoEmails = await generateDemoEmails(5, aiSettings);
-      setData(prev => ({ ...prev, [newAccount.id]: {
+      setData((prev: Record<string, AccountData>) => ({ ...prev, [newAccount.id]: {
         emails: demoEmails.map(e => ({ ...e, id: e.id + '-' + newAccount.id })),
         categories: Object.values(DefaultEmailCategory).map(c => ({ name: c, type: 'system' }))
       }}));
@@ -235,7 +235,7 @@ const App: React.FC = () => {
         onDeleteCategory={async (cat) => {
           updateActiveAccountData(prev => ({
             ...prev,
-            categories: prev.categories.filter((c: any) => c.name !== cat),
+            categories: prev.categories.filter((c: Category) => c.name !== cat),
             emails: prev.emails.map(e => e.smartCategory === cat ? { ...e, smartCategory: undefined } : e)
           }));
           await deleteCategory(cat);
@@ -243,7 +243,7 @@ const App: React.FC = () => {
         onRenameCategory={async (oldName, newName) => {
           updateActiveAccountData(prev => ({
             ...prev,
-            categories: prev.categories.map((c: any) => c.name === oldName ? { ...c, name: newName } : c),
+            categories: prev.categories.map((c: Category) => c.name === oldName ? { ...c, name: newName } : c),
             emails: prev.emails.map(e => e.smartCategory === oldName ? { ...e, smartCategory: newName } : e)
           }));
           await renameCategory(oldName, newName);
@@ -301,7 +301,7 @@ const App: React.FC = () => {
           onAddAccount={handleAddAccount}
           onRemoveAccount={async (id) => {
             removeAccount(id);
-            setData(prev => {
+            setData((prev: Record<string, AccountData>) => {
               const { [id]: _, ...rest } = prev;
               return rest;
             });
