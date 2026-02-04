@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { render } from '@testing-library/react';
 import { CategoryIcon } from '../Icon';
-import { DefaultEmailCategory } from '../../types';
+import { DefaultEmailCategory, SENT_FOLDER, TRASH_FOLDER, SPAM_FOLDER } from '../../types';
 
 describe('CategoryIcon', () => {
   describe('Default Email Categories', () => {
@@ -64,21 +64,21 @@ describe('CategoryIcon', () => {
 
   describe('German Folder Names', () => {
     it('should render Send icon for Gesendet folder', () => {
-      render(<CategoryIcon category="Gesendet" />);
+      render(<CategoryIcon category={SENT_FOLDER} />);
       const svg = document.querySelector('svg');
       expect(svg).toBeInTheDocument();
       expect(svg).toHaveClass('lucide-send');
     });
 
     it('should render Trash2 icon for Papierkorb folder', () => {
-      render(<CategoryIcon category="Papierkorb" />);
+      render(<CategoryIcon category={TRASH_FOLDER} />);
       const svg = document.querySelector('svg');
       expect(svg).toBeInTheDocument();
       expect(svg).toHaveClass('lucide-trash-2');
     });
 
     it('should render ShieldAlert icon for Spam folder', () => {
-      render(<CategoryIcon category="Spam" />);
+      render(<CategoryIcon category={SPAM_FOLDER} />);
       const svg = document.querySelector('svg');
       expect(svg).toBeInTheDocument();
       expect(svg).toHaveClass('lucide-shield-alert');
@@ -181,7 +181,7 @@ describe('CategoryIcon', () => {
     });
 
     it('should apply className to German folder icons', () => {
-      render(<CategoryIcon category="Gesendet" className="icon-style" />);
+      render(<CategoryIcon category={SENT_FOLDER} className="icon-style" />);
       const svg = document.querySelector('svg');
       expect(svg).toBeInTheDocument();
       expect(svg).toHaveClass('icon-style');
@@ -205,9 +205,9 @@ describe('CategoryIcon', () => {
       { category: DefaultEmailCategory.BUSINESS, expectedClass: 'lucide-briefcase' },
       { category: DefaultEmailCategory.CANCELLATION, expectedClass: 'lucide-octagon-x' },
       { category: DefaultEmailCategory.OTHER, expectedClass: 'lucide-archive' },
-      { category: 'Gesendet', expectedClass: 'lucide-send' },
-      { category: 'Papierkorb', expectedClass: 'lucide-trash-2' },
-      { category: 'Spam', expectedClass: 'lucide-shield-alert' },
+      { category: SENT_FOLDER, expectedClass: 'lucide-send' },
+      { category: TRASH_FOLDER, expectedClass: 'lucide-trash-2' },
+      { category: SPAM_FOLDER, expectedClass: 'lucide-shield-alert' },
       { category: 'Reise', expectedClass: 'lucide-plane' },
       { category: 'Reisen', expectedClass: 'lucide-plane' },
       { category: 'Schule', expectedClass: 'lucide-graduation-cap' },

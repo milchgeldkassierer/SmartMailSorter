@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import EmailView from '../EmailView';
-import { Email } from '../../types';
+import { Email, INBOX_FOLDER } from '../../types';
 
 // Mock window.electron
 const mockGetEmailAttachments = vi.fn();
@@ -15,7 +15,7 @@ describe('EmailView', () => {
     subject: 'Test Subject',
     body: 'This is the plain text email body content.',
     date: '2024-01-15T10:30:00Z',
-    folder: 'Posteingang',
+    folder: INBOX_FOLDER,
     category: 'INBOX',
     isRead: false,
     isFlagged: false,

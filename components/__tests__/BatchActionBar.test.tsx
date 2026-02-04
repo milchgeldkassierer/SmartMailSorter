@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import BatchActionBar from '../BatchActionBar';
-import { Email, AISettings, LLMProvider } from '../../types';
+import { Email, AISettings, LLMProvider, INBOX_FOLDER } from '../../types';
 
 describe('BatchActionBar', () => {
   const mockEmail1: Email = {
@@ -11,7 +11,7 @@ describe('BatchActionBar', () => {
     subject: 'Test 1',
     body: 'Body 1',
     date: '2024-01-01T10:00:00Z',
-    folder: 'Posteingang',
+    folder: INBOX_FOLDER,
     isRead: false,
     isFlagged: false,
     hasAttachments: false,
@@ -24,7 +24,7 @@ describe('BatchActionBar', () => {
     subject: 'Test 2',
     body: 'Body 2',
     date: '2024-01-02T10:00:00Z',
-    folder: 'Posteingang',
+    folder: INBOX_FOLDER,
     isRead: false,
     isFlagged: false,
     hasAttachments: false,
