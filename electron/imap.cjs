@@ -291,47 +291,12 @@ async function syncAccount(account) {
       console.warn('[Quota] Error fetching quota:', qErr);
     }
 
-    const findSpecialFolders = (boxList, prefix = '') => {
-      for (const box of boxList) {
-        const key = box.path;
-        const fullPath = prefix + key;
-        const delimiter = box.delimiter || '/';
-
-        // Check specialUse attribute (imapflow uses specialUse instead of attribs)
-        if (box.specialUse) {
-          const specialUse = box.specialUse.toLowerCase();
-          if (specialUse.includes('\\sent') || specialUse.includes('sent')) {
-            folderMap[fullPath] = 'Gesendet';
-          } else if (specialUse.includes('\\trash') || specialUse.includes('trash')) {
-            folderMap[fullPath] = 'Papierkorb';
-          } else if (specialUse.includes('\\junk') || specialUse.includes('junk')) {
-            folderMap[fullPath] = 'Spam';
-          }
-        }
-
-        const lower = key.toLowerCase();
-        if (!folderMap[fullPath]) {
-          if (lower === 'sent' || lower === 'gesendet') folderMap[fullPath] = 'Gesendet';
-          else if (lower === 'trash' || lower === 'papierkorb') folderMap[fullPath] = 'Papierkorb';
-          else if (lower === 'junk' || lower === 'spam') folderMap[fullPath] = 'Spam';
-          else if (lower !== 'inbox') {
-            let prettyPath = fullPath;
-            if (prettyPath.toUpperCase().startsWith('INBOX')) {
-              const parts = fullPath.split(delimiter);
-              if (parts[0].toUpperCase() === 'INBOX') parts[0] = 'Posteingang';
-              prettyPath = parts.join('/');
-            } else {
-              prettyPath = fullPath.split(delimiter).join('/');
-            }
-            folderMap[fullPath] = prettyPath;
-          }
-        }
-
-        // imapflow returns flat list with path, so no children to recurse
-      }
-    };
-
-    findSpecialFolders(mailboxes);
+    // Build folder map using helper function
+    for (const box of mailboxes) {
+      const serverPath = box.path;
+      const mappedName = mapServerFolderToDbName(box);
+      folderMap[serverPath] = mappedName;
+    }
 
     // Migration step for folder naming
     for (const [fullPath, prettyName] of Object.entries(folderMap)) {
