@@ -1,4 +1,4 @@
-import React from 'react';
+import type { LucideIcon } from 'lucide-react';
 
 export enum DefaultEmailCategory {
   INBOX = 'Posteingang',
@@ -86,7 +86,7 @@ export interface Attachment {
   id: string;
   filename: string;
   size: number;
-  mimeType?: string;
+  contentType?: string;
 }
 
 // IPC Operation Result Types
@@ -104,5 +104,5 @@ export interface CategoryOperationResult {
   success: boolean;
 }
 
-// Icon Component Type (for lucide-react icons)
-export type LucideIcon = React.ComponentType<{ className?: string; size?: number; strokeWidth?: number; }>;
+// Re-export LucideIcon from lucide-react for convenience
+export type { LucideIcon };

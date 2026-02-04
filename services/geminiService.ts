@@ -95,7 +95,7 @@ async function callLLM(
             thinkingBudget: 1024
           }
         } as GeminiConfig
-      }) as unknown as GeminiResponse;
+      }) as GeminiResponse;
 
       let text = "";
 
@@ -151,6 +151,12 @@ async function callLLM(
         response_format: { type: "json_object" }
       })
     });
+
+    if (!response.ok) {
+      const errorBody = await response.text();
+      throw new Error(`OpenAI API error (${response.status}): ${errorBody}`);
+    }
+
     const data = await response.json() as OpenAIResponse;
     return JSON.parse(data.choices[0].message.content);
   }

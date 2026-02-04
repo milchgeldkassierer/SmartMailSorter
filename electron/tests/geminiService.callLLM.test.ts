@@ -289,6 +289,7 @@ describe('GeminiService - callLLM Function', () => {
     it('should successfully call OpenAI API', async () => {
       // Mock fetch for OpenAI
       global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
         json: () => Promise.resolve({
           choices: [
             {
@@ -322,6 +323,7 @@ describe('GeminiService - callLLM Function', () => {
 
     it('should pass correct model to OpenAI API', async () => {
       global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
         json: () => Promise.resolve({
           choices: [{ message: { content: JSON.stringify([{ id: 'email-1', category: 'Test', summary: 'Test' }]) } }]
         })
@@ -340,6 +342,7 @@ describe('GeminiService - callLLM Function', () => {
 
     it('should use json_object response format for OpenAI', async () => {
       global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
         json: () => Promise.resolve({
           choices: [{ message: { content: JSON.stringify([{ id: 'email-1', category: 'Test', summary: 'Test' }]) } }]
         })
@@ -392,6 +395,7 @@ describe('GeminiService - callLLM Function', () => {
 
     it('should categorize multiple emails in batch with OpenAI', async () => {
       global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
         json: () => Promise.resolve({
           choices: [
             {
@@ -424,6 +428,7 @@ describe('GeminiService - callLLM Function', () => {
     it('should preserve OpenAI email order when mapping results back', async () => {
       // OpenAI returns results in different order than input
       global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
         json: () => Promise.resolve({
           choices: [
             {
@@ -455,6 +460,7 @@ describe('GeminiService - callLLM Function', () => {
 
     it('should handle OpenAI invalid JSON response', async () => {
       global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
         json: () => Promise.resolve({
           choices: [
             {
@@ -476,6 +482,7 @@ describe('GeminiService - callLLM Function', () => {
 
     it('should handle OpenAI empty choices array', async () => {
       global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
         json: () => Promise.resolve({
           choices: []
         })
@@ -490,6 +497,7 @@ describe('GeminiService - callLLM Function', () => {
 
     it('should handle OpenAI missing message content', async () => {
       global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
         json: () => Promise.resolve({
           choices: [
             {
@@ -510,6 +518,7 @@ describe('GeminiService - callLLM Function', () => {
 
     it('should use different OpenAI models when specified', async () => {
       global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
         json: () => Promise.resolve({
           choices: [{ message: { content: JSON.stringify([{ id: 'email-1', category: 'Test', summary: 'Test' }]) } }]
         })
@@ -534,6 +543,7 @@ describe('GeminiService - callLLM Function', () => {
 
     it('should include system instruction in OpenAI request', async () => {
       global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
         json: () => Promise.resolve({
           choices: [{ message: { content: JSON.stringify([{ id: 'email-1', category: 'Test', summary: 'Test' }]) } }]
         })
@@ -553,6 +563,7 @@ describe('GeminiService - callLLM Function', () => {
 
     it('should include user prompt in OpenAI request', async () => {
       global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
         json: () => Promise.resolve({
           choices: [{ message: { content: JSON.stringify([{ id: 'email-1', category: 'Test', summary: 'Test' }]) } }]
         })
@@ -573,6 +584,7 @@ describe('GeminiService - callLLM Function', () => {
     it('should handle OpenAI partial results (missing email IDs)', async () => {
       // OpenAI returns fewer results than input emails
       global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
         json: () => Promise.resolve({
           choices: [
             {
@@ -603,6 +615,7 @@ describe('GeminiService - callLLM Function', () => {
 
     it('should handle OpenAI response with extra whitespace', async () => {
       global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
         json: () => Promise.resolve({
           choices: [
             {
@@ -623,6 +636,7 @@ describe('GeminiService - callLLM Function', () => {
 
     it('should categorize single email with OpenAI via categorizeEmailWithAI wrapper', async () => {
       global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
         json: () => Promise.resolve({
           choices: [
             {
@@ -648,9 +662,7 @@ describe('GeminiService - callLLM Function', () => {
       global.fetch = vi.fn().mockResolvedValue({
         ok: false,
         status: 500,
-        json: () => Promise.resolve({
-          error: { message: 'Internal Server Error' }
-        })
+        text: () => Promise.resolve(JSON.stringify({ error: { message: 'Internal Server Error' } }))
       });
 
       const email = createTestEmail('email-1', 'Test');
@@ -1038,9 +1050,7 @@ describe('GeminiService - callLLM Function', () => {
       global.fetch = vi.fn().mockResolvedValue({
         ok: false,
         status: 429,
-        json: () => Promise.resolve({
-          error: { message: 'Rate limit exceeded' }
-        })
+        text: () => Promise.resolve(JSON.stringify({ error: { message: 'Rate limit exceeded' } }))
       });
 
       const email = createTestEmail('email-1', 'Test Email');
@@ -1133,6 +1143,7 @@ describe('GeminiService - callLLM Function', () => {
 
     it('should handle OpenAI empty response body', async () => {
       global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
         json: () => Promise.resolve({})
       });
 
@@ -1145,6 +1156,7 @@ describe('GeminiService - callLLM Function', () => {
 
     it('should handle OpenAI null message content', async () => {
       global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
         json: () => Promise.resolve({
           choices: [{ message: { content: null } }]
         })
@@ -1159,6 +1171,7 @@ describe('GeminiService - callLLM Function', () => {
 
     it('should handle OpenAI undefined message', async () => {
       global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
         json: () => Promise.resolve({
           choices: [{ message: undefined }]
         })
@@ -1335,6 +1348,7 @@ describe('GeminiService - callLLM Function', () => {
 
     it('should handle OpenAI response json() throwing', async () => {
       global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
         json: () => Promise.reject(new Error('Invalid JSON'))
       });
 
