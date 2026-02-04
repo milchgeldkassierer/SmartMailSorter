@@ -245,6 +245,48 @@ async function processMessages(client, messages, account, targetCategory) {
   return savedCount;
 }
 
+/**
+ * Checks the account storage quota from the IMAP server
+ * @param {ImapFlow} client - Connected IMAP client
+ * @param {number} accountId - Account ID for database update
+ * @returns {Promise<Object|null>} Quota info object or null on failure
+ */
+async function checkAccountQuota(client, accountId) {
+  try {
+    console.log('[Quota] Checking storage quota...');
+    // LOG CAPABILITIES
+    try {
+      const caps = client.capabilities || new Set();
+      console.log('[Quota Debug] Server Capabilities:', Array.from(caps));
+    } catch (_e) {}
+
+    // Use ImapFlow's getQuota() method
+    const quota = await client.getQuota('INBOX');
+    console.log('[Quota Debug] Quota response received.');
+
+    if (quota && quota.storage) {
+      console.log('[Quota Debug] Quota Object:', JSON.stringify(quota));
+      // Convert bytes to KB (ImapFlow returns bytes, DB expects KB)
+      const usedKB = Math.round((quota.storage.used || 0) / 1024);
+      const totalKB = Math.round((quota.storage.limit || 0) / 1024);
+
+      if (totalKB > 0) {
+        console.log(`[Quota] Used: ${usedKB}KB, Total: ${totalKB}KB`);
+        updateAccountQuota(accountId, usedKB, totalKB);
+        return { usedKB, totalKB };
+      } else {
+        console.log('[Quota Debug] No valid storage limits returned.');
+      }
+    } else {
+      console.log('[Quota Debug] No quota object or storage property returned.');
+    }
+    return null;
+  } catch (qErr) {
+    console.warn('[Quota] Error fetching quota:', qErr);
+    return null;
+  }
+}
+
 async function syncAccount(account) {
   console.log(`Starting sync for account: ${account.email}`);
 
@@ -581,4 +623,5 @@ module.exports = {
   PROVIDERS,
   mapServerFolderToDbName,
   findServerFolderForDbName,
+  checkAccountQuota,
 };
