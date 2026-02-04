@@ -1,5 +1,5 @@
 import React from 'react';
-import { Trash2, BrainCircuit } from './Icon';
+import { Trash2, BrainCircuit, Mail, MailOpen } from './Icon';
 import { Email, AISettings } from '../types';
 
 interface BatchActionBarProps {
@@ -7,6 +7,7 @@ interface BatchActionBarProps {
   selectedIds: Set<string>;
   onSelectAll: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onBatchDelete: () => void;
+  onBatchMarkRead: () => void;
   onBatchSmartSort: () => void;
   canSmartSort: boolean;
   aiSettings: AISettings;
@@ -17,11 +18,18 @@ const BatchActionBar: React.FC<BatchActionBarProps> = ({
   selectedIds,
   onSelectAll,
   onBatchDelete,
+  onBatchMarkRead,
   onBatchSmartSort,
   canSmartSort,
   aiSettings,
 }) => {
   const allSelected = filteredEmails.length > 0 && selectedIds.size === filteredEmails.length;
+
+  // Determine if any selected email is unread
+  const selectedEmails = filteredEmails.filter((e) => selectedIds.has(e.id));
+  const hasUnread = selectedEmails.some((e) => !e.isRead);
+  const markAsReadLabel = hasUnread ? 'Als gelesen' : 'Als ungelesen';
+  const MarkAsReadIcon = hasUnread ? MailOpen : Mail;
 
   return (
     <div className="h-10 border-b border-slate-200 bg-slate-50 flex items-center px-6 gap-4">
@@ -46,6 +54,15 @@ const BatchActionBar: React.FC<BatchActionBarProps> = ({
           >
             <Trash2 className="w-4 h-4" />
             <span>Löschen</span>
+          </button>
+
+          {/* Mark as Read/Unread Button */}
+          <button
+            onClick={onBatchMarkRead}
+            className="flex items-center gap-1.5 px-3 py-1 bg-white border border-slate-200 text-slate-700 text-sm rounded hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 transition-colors"
+          >
+            <MarkAsReadIcon className="w-4 h-4" />
+            <span>{markAsReadLabel}</span>
           </button>
 
           {/* Smart Sort Button */}
