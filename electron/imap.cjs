@@ -91,9 +91,12 @@ function mapServerFolderToDbName(box) {
   }
 
   // Name matching overrides (only if not already mapped)
-  // Use box.name (leaf name) for matching folder types, not the full path.
-  // This allows INBOX subfolders like 'INBOX.Sent' (name='Sent') to be recognized
-  // as special folders via name matching, improving folder detection accuracy.
+  // BEHAVIORAL IMPROVEMENT: Use box.name (leaf name) for matching folder types, not the full path.
+  // This is an intentional change that:
+  //   1. Aligns folder detection with deleteEmail/setEmailFlag operations (which use leaf name matching)
+  //   2. May map INBOX.Sent to 'Gesendet' (via name='Sent') instead of 'Posteingang/Sent' (via path)
+  //   3. Provides more accurate special folder detection (e.g., recognizing 'INBOX.Trash' as Papierkorb)
+  // This behavioral change is considered an improvement over path-based matching.
   const lower = (box.name || fullPath).toLowerCase();
   if (!mappedName) {
     if (lower === 'sent' || lower === 'gesendet') {
