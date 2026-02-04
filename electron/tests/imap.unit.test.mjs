@@ -507,4 +507,696 @@ describe('IMAP Module', () => {
       expect(() => imap.migrateFolders(folderMap)).not.toThrow();
     });
   });
+
+  describe('fetchUidBatch helper', () => {
+    beforeEach(() => {
+      db.init(':memory:');
+      resetMockState();
+    });
+
+    it('should be exported as a function', () => {
+      expect(typeof imap.fetchUidBatch).toBe('function');
+    });
+
+    it('should fetch UIDs and flags for a sequence range', async () => {
+      setServerEmails([
+        { uid: 100, body: 'Email 1', flags: ['\\Seen'] },
+        { uid: 200, body: 'Email 2', flags: [] },
+        { uid: 300, body: 'Email 3', flags: ['\\Flagged'] },
+      ]);
+
+      const account = {
+        id: 'test-account',
+        email: 'test@test.com',
+        password: 'pass',
+        imapHost: 'imap.test.com',
+        imapPort: 993,
+      };
+
+      db.addAccount({
+        id: account.id,
+        email: account.email,
+        name: account.email,
+        provider: 'test',
+        imapHost: account.imapHost,
+        imapPort: account.imapPort,
+        username: account.email,
+        password: account.password,
+        color: '#000000',
+      });
+
+      const { ImapFlow } = require('imapflow');
+      const client = new ImapFlow({
+        host: account.imapHost,
+        port: account.imapPort,
+        auth: { user: account.email, pass: account.password },
+      });
+
+      await client.connect();
+      await client.getMailboxLock('INBOX');
+
+      const result = await imap.fetchUidBatch(client, '1:3');
+
+      expect(result).toHaveProperty('uids');
+      expect(result).toHaveProperty('headers');
+      expect(result.uids).toHaveLength(3);
+      expect(result.uids).toContain(100);
+      expect(result.uids).toContain(200);
+      expect(result.uids).toContain(300);
+      expect(result.headers).toHaveLength(3);
+
+      await client.logout();
+    });
+
+    it('should handle empty sequence range', async () => {
+      setServerEmails([]);
+
+      const account = {
+        id: 'test-account',
+        email: 'test@test.com',
+        password: 'pass',
+        imapHost: 'imap.test.com',
+        imapPort: 993,
+      };
+
+      db.addAccount({
+        id: account.id,
+        email: account.email,
+        name: account.email,
+        provider: 'test',
+        imapHost: account.imapHost,
+        imapPort: account.imapPort,
+        username: account.email,
+        password: account.password,
+        color: '#000000',
+      });
+
+      const { ImapFlow } = require('imapflow');
+      const client = new ImapFlow({
+        host: account.imapHost,
+        port: account.imapPort,
+        auth: { user: account.email, pass: account.password },
+      });
+
+      await client.connect();
+      await client.getMailboxLock('INBOX');
+
+      const result = await imap.fetchUidBatch(client, '1:10');
+
+      expect(result.uids).toHaveLength(0);
+      expect(result.headers).toHaveLength(0);
+
+      await client.logout();
+    });
+
+    it('should extract UIDs correctly from message attributes', async () => {
+      setServerEmails([
+        { uid: 42, body: 'Test email', flags: ['\\Seen'] },
+      ]);
+
+      const account = {
+        id: 'test-account',
+        email: 'test@test.com',
+        password: 'pass',
+        imapHost: 'imap.test.com',
+        imapPort: 993,
+      };
+
+      db.addAccount({
+        id: account.id,
+        email: account.email,
+        name: account.email,
+        provider: 'test',
+        imapHost: account.imapHost,
+        imapPort: account.imapPort,
+        username: account.email,
+        password: account.password,
+        color: '#000000',
+      });
+
+      const { ImapFlow } = require('imapflow');
+      const client = new ImapFlow({
+        host: account.imapHost,
+        port: account.imapPort,
+        auth: { user: account.email, pass: account.password },
+      });
+
+      await client.connect();
+      await client.getMailboxLock('INBOX');
+
+      const result = await imap.fetchUidBatch(client, '1:1');
+
+      expect(result.uids).toEqual([42]);
+      expect(result.headers[0].attributes.uid).toBe(42);
+
+      await client.logout();
+    });
+
+    it('should handle flags correctly', async () => {
+      setServerEmails([
+        { uid: 100, body: 'Email 1', flags: ['\\Seen', '\\Flagged'] },
+        { uid: 200, body: 'Email 2', flags: [] },
+      ]);
+
+      const account = {
+        id: 'test-account',
+        email: 'test@test.com',
+        password: 'pass',
+        imapHost: 'imap.test.com',
+        imapPort: 993,
+      };
+
+      db.addAccount({
+        id: account.id,
+        email: account.email,
+        name: account.email,
+        provider: 'test',
+        imapHost: account.imapHost,
+        imapPort: account.imapPort,
+        username: account.email,
+        password: account.password,
+        color: '#000000',
+      });
+
+      const { ImapFlow } = require('imapflow');
+      const client = new ImapFlow({
+        host: account.imapHost,
+        port: account.imapPort,
+        auth: { user: account.email, pass: account.password },
+      });
+
+      await client.connect();
+      await client.getMailboxLock('INBOX');
+
+      const result = await imap.fetchUidBatch(client, '1:2');
+
+      expect(result.headers[0].attributes.flags).toContain('\\Seen');
+      expect(result.headers[0].attributes.flags).toContain('\\Flagged');
+      expect(result.headers[1].attributes.flags).toHaveLength(0);
+
+      await client.logout();
+    });
+  });
+
+  describe('downloadMessageBatch helper', () => {
+    beforeEach(() => {
+      db.init(':memory:');
+      resetMockState();
+    });
+
+    it('should be exported as a function', () => {
+      expect(typeof imap.downloadMessageBatch).toBe('function');
+    });
+
+    it('should download and process messages successfully', async () => {
+      setServerEmails([
+        {
+          uid: 100,
+          body: 'From: sender@test.com\r\nTo: recipient@test.com\r\nSubject: Test Email 1\r\n\r\nBody of email 1',
+          flags: ['\\Seen'],
+        },
+        {
+          uid: 200,
+          body: 'From: sender2@test.com\r\nTo: recipient@test.com\r\nSubject: Test Email 2\r\n\r\nBody of email 2',
+          flags: [],
+        },
+      ]);
+
+      const account = {
+        id: 'test-account',
+        email: 'test@test.com',
+        password: 'pass',
+        imapHost: 'imap.test.com',
+        imapPort: 993,
+      };
+
+      db.addAccount({
+        id: account.id,
+        email: account.email,
+        name: account.email,
+        provider: 'test',
+        imapHost: account.imapHost,
+        imapPort: account.imapPort,
+        username: account.email,
+        password: account.password,
+        color: '#000000',
+      });
+
+      const { ImapFlow } = require('imapflow');
+      const client = new ImapFlow({
+        host: account.imapHost,
+        port: account.imapPort,
+        auth: { user: account.email, pass: account.password },
+      });
+
+      await client.connect();
+      await client.getMailboxLock('INBOX');
+
+      const saved = await imap.downloadMessageBatch(client, [100, 200], account, 'Posteingang');
+
+      expect(saved).toBe(2);
+
+      const emails = db.getEmails(account.id);
+      expect(emails).toHaveLength(2);
+
+      await client.logout();
+    });
+
+    it('should handle empty chunk and return 0', async () => {
+      setServerEmails([]);
+
+      const account = {
+        id: 'test-account',
+        email: 'test@test.com',
+        password: 'pass',
+        imapHost: 'imap.test.com',
+        imapPort: 993,
+      };
+
+      db.addAccount({
+        id: account.id,
+        email: account.email,
+        name: account.email,
+        provider: 'test',
+        imapHost: account.imapHost,
+        imapPort: account.imapPort,
+        username: account.email,
+        password: account.password,
+        color: '#000000',
+      });
+
+      const { ImapFlow } = require('imapflow');
+      const client = new ImapFlow({
+        host: account.imapHost,
+        port: account.imapPort,
+        auth: { user: account.email, pass: account.password },
+      });
+
+      await client.connect();
+      await client.getMailboxLock('INBOX');
+
+      const saved = await imap.downloadMessageBatch(client, [999], account, 'Posteingang');
+
+      expect(saved).toBe(0);
+
+      await client.logout();
+    });
+
+    it('should handle fetch errors gracefully', async () => {
+      const { setFetchFailure } = await import('./vitest-setup.js');
+
+      setServerEmails([
+        { uid: 100, body: 'Test email', flags: [] },
+      ]);
+
+      const account = {
+        id: 'test-account',
+        email: 'test@test.com',
+        password: 'pass',
+        imapHost: 'imap.test.com',
+        imapPort: 993,
+      };
+
+      db.addAccount({
+        id: account.id,
+        email: account.email,
+        name: account.email,
+        provider: 'test',
+        imapHost: account.imapHost,
+        imapPort: account.imapPort,
+        username: account.email,
+        password: account.password,
+        color: '#000000',
+      });
+
+      const { ImapFlow } = require('imapflow');
+      const client = new ImapFlow({
+        host: account.imapHost,
+        port: account.imapPort,
+        auth: { user: account.email, pass: account.password },
+      });
+
+      await client.connect();
+      await client.getMailboxLock('INBOX');
+
+      setFetchFailure(true);
+
+      const saved = await imap.downloadMessageBatch(client, [100], account, 'Posteingang');
+
+      expect(saved).toBe(0);
+
+      setFetchFailure(false);
+      await client.logout();
+    });
+
+    it('should process batch of different sizes', async () => {
+      const emails = [];
+      for (let i = 1; i <= 10; i++) {
+        emails.push({
+          uid: i * 10,
+          body: `From: sender${i}@test.com\r\nTo: recipient@test.com\r\nSubject: Email ${i}\r\n\r\nBody ${i}`,
+          flags: [],
+        });
+      }
+      setServerEmails(emails);
+
+      const account = {
+        id: 'test-account',
+        email: 'test@test.com',
+        password: 'pass',
+        imapHost: 'imap.test.com',
+        imapPort: 993,
+      };
+
+      db.addAccount({
+        id: account.id,
+        email: account.email,
+        name: account.email,
+        provider: 'test',
+        imapHost: account.imapHost,
+        imapPort: account.imapPort,
+        username: account.email,
+        password: account.password,
+        color: '#000000',
+      });
+
+      const { ImapFlow } = require('imapflow');
+      const client = new ImapFlow({
+        host: account.imapHost,
+        port: account.imapPort,
+        auth: { user: account.email, pass: account.password },
+      });
+
+      await client.connect();
+      await client.getMailboxLock('INBOX');
+
+      const saved = await imap.downloadMessageBatch(client, [10, 20, 30, 40, 50], account, 'Posteingang');
+
+      expect(saved).toBe(5);
+
+      const dbEmails = db.getEmails(account.id);
+      expect(dbEmails).toHaveLength(5);
+
+      await client.logout();
+    });
+
+    it('should handle messages without body source', async () => {
+      setServerEmails([
+        { uid: 100, body: '', flags: [], noSource: true },
+      ]);
+
+      const account = {
+        id: 'test-account',
+        email: 'test@test.com',
+        password: 'pass',
+        imapHost: 'imap.test.com',
+        imapPort: 993,
+      };
+
+      db.addAccount({
+        id: account.id,
+        email: account.email,
+        name: account.email,
+        provider: 'test',
+        imapHost: account.imapHost,
+        imapPort: account.imapPort,
+        username: account.email,
+        password: account.password,
+        color: '#000000',
+      });
+
+      const { ImapFlow } = require('imapflow');
+      const client = new ImapFlow({
+        host: account.imapHost,
+        port: account.imapPort,
+        auth: { user: account.email, pass: account.password },
+      });
+
+      await client.connect();
+      await client.getMailboxLock('INBOX');
+
+      const saved = await imap.downloadMessageBatch(client, [100], account, 'Posteingang');
+
+      expect(saved).toBe(0);
+
+      await client.logout();
+    });
+  });
+
+  describe('reconcileOrphans helper', () => {
+    beforeEach(() => {
+      db.init(':memory:');
+      resetMockState();
+    });
+
+    it('should be exported as a function', () => {
+      expect(typeof imap.reconcileOrphans).toBe('function');
+    });
+
+    it('should delete orphaned local emails not on server', () => {
+      const account = {
+        id: 'test-account',
+        email: 'test@test.com',
+      };
+
+      db.addAccount({
+        id: account.id,
+        email: account.email,
+        name: account.email,
+        provider: 'test',
+        imapHost: 'imap.test.com',
+        imapPort: 993,
+        username: account.email,
+        password: 'pass',
+        color: '#000000',
+      });
+
+      db.saveEmail({
+        accountId: account.id,
+        uid: 100,
+        folder: 'Posteingang',
+        sender: 'test1@test.com',
+        subject: 'Email 1',
+        timestamp: new Date().toISOString(),
+        body: 'Body 1',
+        isRead: false,
+        isFlagged: false,
+      });
+
+      db.saveEmail({
+        accountId: account.id,
+        uid: 200,
+        folder: 'Posteingang',
+        sender: 'test2@test.com',
+        subject: 'Email 2',
+        timestamp: new Date().toISOString(),
+        body: 'Body 2',
+        isRead: false,
+        isFlagged: false,
+      });
+
+      db.saveEmail({
+        accountId: account.id,
+        uid: 300,
+        folder: 'Posteingang',
+        sender: 'test3@test.com',
+        subject: 'Email 3',
+        timestamp: new Date().toISOString(),
+        body: 'Body 3',
+        isRead: false,
+        isFlagged: false,
+      });
+
+      const localUids = [100, 200, 300];
+      const serverUids = new Set([100, 300]);
+
+      const deletedCount = imap.reconcileOrphans(
+        localUids,
+        serverUids,
+        account.id,
+        'Posteingang',
+        'INBOX'
+      );
+
+      expect(deletedCount).toBe(1);
+
+      const remainingEmails = db.getEmails(account.id);
+      expect(remainingEmails).toHaveLength(2);
+      expect(remainingEmails.find((e) => e.uid === 100)).toBeDefined();
+      expect(remainingEmails.find((e) => e.uid === 300)).toBeDefined();
+      expect(remainingEmails.find((e) => e.uid === 200)).toBeUndefined();
+    });
+
+    it('should return 0 when no orphans found', () => {
+      const account = {
+        id: 'test-account',
+        email: 'test@test.com',
+      };
+
+      db.addAccount({
+        id: account.id,
+        email: account.email,
+        name: account.email,
+        provider: 'test',
+        imapHost: 'imap.test.com',
+        imapPort: 993,
+        username: account.email,
+        password: 'pass',
+        color: '#000000',
+      });
+
+      const localUids = [100, 200, 300];
+      const serverUids = new Set([100, 200, 300, 400]);
+
+      const deletedCount = imap.reconcileOrphans(
+        localUids,
+        serverUids,
+        account.id,
+        'Posteingang',
+        'INBOX'
+      );
+
+      expect(deletedCount).toBe(0);
+    });
+
+    it('should handle empty local UIDs', () => {
+      const account = {
+        id: 'test-account',
+        email: 'test@test.com',
+      };
+
+      db.addAccount({
+        id: account.id,
+        email: account.email,
+        name: account.email,
+        provider: 'test',
+        imapHost: 'imap.test.com',
+        imapPort: 993,
+        username: account.email,
+        password: 'pass',
+        color: '#000000',
+      });
+
+      const localUids = [];
+      const serverUids = new Set([100, 200, 300]);
+
+      const deletedCount = imap.reconcileOrphans(
+        localUids,
+        serverUids,
+        account.id,
+        'Posteingang',
+        'INBOX'
+      );
+
+      expect(deletedCount).toBe(0);
+    });
+
+    it('should handle empty server UIDs', () => {
+      const account = {
+        id: 'test-account',
+        email: 'test@test.com',
+      };
+
+      db.addAccount({
+        id: account.id,
+        email: account.email,
+        name: account.email,
+        provider: 'test',
+        imapHost: 'imap.test.com',
+        imapPort: 993,
+        username: account.email,
+        password: 'pass',
+        color: '#000000',
+      });
+
+      db.saveEmail({
+        accountId: account.id,
+        uid: 100,
+        folder: 'Posteingang',
+        sender: 'test1@test.com',
+        subject: 'Email 1',
+        timestamp: new Date().toISOString(),
+        body: 'Body 1',
+        isRead: false,
+        isFlagged: false,
+      });
+
+      db.saveEmail({
+        accountId: account.id,
+        uid: 200,
+        folder: 'Posteingang',
+        sender: 'test2@test.com',
+        subject: 'Email 2',
+        timestamp: new Date().toISOString(),
+        body: 'Body 2',
+        isRead: false,
+        isFlagged: false,
+      });
+
+      const localUids = [100, 200];
+      const serverUids = new Set([]);
+
+      const deletedCount = imap.reconcileOrphans(
+        localUids,
+        serverUids,
+        account.id,
+        'Posteingang',
+        'INBOX'
+      );
+
+      expect(deletedCount).toBe(2);
+
+      const remainingEmails = db.getEmails(account.id);
+      expect(remainingEmails).toHaveLength(0);
+    });
+
+    it('should handle multiple orphans', () => {
+      const account = {
+        id: 'test-account',
+        email: 'test@test.com',
+      };
+
+      db.addAccount({
+        id: account.id,
+        email: account.email,
+        name: account.email,
+        provider: 'test',
+        imapHost: 'imap.test.com',
+        imapPort: 993,
+        username: account.email,
+        password: 'pass',
+        color: '#000000',
+      });
+
+      for (let i = 1; i <= 10; i++) {
+        db.saveEmail({
+          accountId: account.id,
+          uid: i * 10,
+          folder: 'Posteingang',
+          sender: `test${i}@test.com`,
+          subject: `Email ${i}`,
+          timestamp: new Date().toISOString(),
+          body: `Body ${i}`,
+          isRead: false,
+          isFlagged: false,
+        });
+      }
+
+      const localUids = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
+      const serverUids = new Set([10, 30, 50, 70, 90]);
+
+      const deletedCount = imap.reconcileOrphans(
+        localUids,
+        serverUids,
+        account.id,
+        'Posteingang',
+        'INBOX'
+      );
+
+      expect(deletedCount).toBe(5);
+
+      const remainingEmails = db.getEmails(account.id);
+      expect(remainingEmails).toHaveLength(5);
+    });
+  });
 });
