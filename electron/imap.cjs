@@ -90,6 +90,59 @@ function mapServerFolderToDbName(box) {
 }
 
 /**
+ * Finds the server folder path that corresponds to a given DB folder name
+ * @param {ImapFlow} client - Connected IMAP client
+ * @param {string} dbFolder - The DB folder name to find
+ * @returns {Promise<string|null>} The server folder path, or null if not found
+ */
+async function findServerFolderForDbName(client, dbFolder) {
+  if (!dbFolder || dbFolder === 'Posteingang') {
+    return 'INBOX';
+  }
+
+  const boxList = await client.list();
+  let foundPath = null;
+
+  for (const box of boxList) {
+    const fullPath = box.path;
+    let mappedName = fullPath; // Default
+
+    // Check specialUse attribute (imapflow uses specialUse instead of attribs)
+    if (box.specialUse) {
+      const specialUse = box.specialUse.toLowerCase();
+      if (specialUse.includes('\\sent') || specialUse.includes('sent')) mappedName = 'Gesendet';
+      else if (specialUse.includes('\\trash') || specialUse.includes('trash')) mappedName = 'Papierkorb';
+      else if (specialUse.includes('\\junk') || specialUse.includes('junk')) mappedName = 'Spam';
+    }
+
+    // Name matching overrides
+    const lower = box.name.toLowerCase();
+    if (mappedName === fullPath) {
+      // If not mapped by attribute yet
+      if (lower === 'sent' || lower === 'gesendet') mappedName = 'Gesendet';
+      else if (lower === 'trash' || lower === 'papierkorb') mappedName = 'Papierkorb';
+      else if (lower === 'junk' || lower === 'spam') mappedName = 'Spam';
+      else if (fullPath.toUpperCase().startsWith('INBOX')) {
+        // Handle Subfolders: INBOX.Amazon -> Posteingang/Amazon
+        const sep = box.delimiter || '/';
+        const parts = fullPath.split(sep);
+        if (parts[0].toUpperCase() === 'INBOX') {
+          parts[0] = 'Posteingang';
+          mappedName = parts.join('/');
+        }
+      }
+    }
+
+    if (mappedName === dbFolder) {
+      foundPath = fullPath;
+      break;
+    }
+  }
+
+  return foundPath;
+}
+
+/**
  * Helper to process a batch of fetch results and save them to DB
  */
 async function processMessages(client, messages, account, targetCategory) {
@@ -672,4 +725,5 @@ module.exports = {
   setEmailFlag,
   PROVIDERS,
   mapServerFolderToDbName,
+  findServerFolderForDbName,
 };
