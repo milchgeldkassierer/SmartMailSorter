@@ -169,7 +169,9 @@ export const generateDemoEmails = async (count: number = 5, settings?: AISetting
   try {
     const prompt = `Generiere ${count} realistische Emails auf Deutsch. Format: JSON Array.`;
     const rawData = await callLLM(prompt, "You are a data generator.", emailSchema, settings || { provider: LLMProvider.GEMINI, model: 'gemini-3-flash-preview', apiKey: process.env.API_KEY || '' });
-    return (Array.isArray(rawData) ? rawData : []).map((item: unknown, index: number) => {
+    return (Array.isArray(rawData) ? rawData : [])
+      .filter((item: unknown): item is object => typeof item === 'object' && item !== null)
+      .map((item: unknown, index: number) => {
       const emailData = item as GeneratedEmailData;
       return {
         id: `gen-${Date.now()}-${index}`,
@@ -254,6 +256,7 @@ export const categorizeBatchWithAI = async (
     const resultMap = new Map<string, CategorizationResult>();
     if (Array.isArray(rawResults)) {
       rawResults.forEach((r: unknown) => {
+        if (typeof r !== 'object' || r === null) return;
         const result = r as CategorizationResult;
         resultMap.set(result.id, result);
       });

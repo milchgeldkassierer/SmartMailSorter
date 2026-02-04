@@ -328,7 +328,7 @@ function deleteSmartCategory(categoryName) {
   const info = stmt.run(categoryName);
 
   console.log(`[DB] Deleted category. Emails affected: ${info.changes}`);
-  return info;
+  return { success: true };
 }
 
 function renameSmartCategory(oldName, newName) {
@@ -375,19 +375,21 @@ module.exports = {
   addCategory: (name, type = 'custom') => {
     try {
       const stmt = db.prepare('INSERT INTO categories (name, type) VALUES (?, ?)');
-      return stmt.run(name, type);
+      stmt.run(name, type);
+      return { success: true };
     } catch (err) {
       if (err.code === 'SQLITE_CONSTRAINT_UNIQUE') {
-        // If it exists, we might want to ensure the type is correct? 
+        // If it exists, we might want to ensure the type is correct?
         // For now, ignore. App.tsx will call updateCategoryType if needed.
-        return { changes: 0 };
+        return { success: true };
       }
       throw err;
     }
   },
   updateCategoryType: (name, newType) => {
     const stmt = db.prepare('UPDATE categories SET type = ? WHERE name = ?');
-    return stmt.run(newType, name);
+    stmt.run(newType, name);
+    return { success: true };
   },
   deleteSmartCategory,
   renameSmartCategory,

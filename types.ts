@@ -92,8 +92,8 @@ export interface Attachment {
 // IPC Operation Result Types
 export interface SyncResult {
   success: boolean;
-  newEmails?: number;
-  errors?: string[];
+  count?: number;
+  error?: string;
 }
 
 export interface EmailOperationResult {
