@@ -19,9 +19,9 @@ interface CategorizationResult {
 }
 
 interface OpenAIResponse {
-  choices: Array<{
-    message: {
-      content: string;
+  choices?: Array<{
+    message?: {
+      content: string | null;
     };
   }>;
 }
@@ -101,12 +101,12 @@ async function callLLM(
 
       // Strategy 1: result.response.text() (Standard SDK)
       if (result.response && typeof result.response.text === 'function') {
-        try { text = result.response.text(); } catch (e) { }
+        try { text = result.response.text(); } catch (e) { console.debug('Gemini Strategy 1 failed:', e); }
       }
 
       // Strategy 2: result.text() (Simpler SDK)
       if (!text && typeof result.text === 'function') {
-        try { text = result.text(); } catch (e) { }
+        try { text = result.text(); } catch (e) { console.debug('Gemini Strategy 2 failed:', e); }
       }
 
       // Strategy 3: Manual Candidate Extraction (Safest backup)
@@ -158,7 +158,9 @@ async function callLLM(
     }
 
     const data = await response.json() as OpenAIResponse;
-    return JSON.parse(data.choices[0].message.content);
+    const content = data.choices?.[0]?.message?.content;
+    if (!content) throw new Error('OpenAI returned empty response');
+    return JSON.parse(content);
   }
 
   throw new Error("Unknown Provider");

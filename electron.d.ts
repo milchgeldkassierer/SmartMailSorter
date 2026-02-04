@@ -6,7 +6,7 @@ declare global {
     interface Window {
         electron: {
             getAccounts: () => Promise<ImapAccount[]>;
-            addAccount: (account: ImapAccount) => Promise<ImapAccount>;
+            addAccount: (account: ImapAccount) => Promise<SyncResult>;
             deleteAccount: (id: string) => Promise<boolean>;
             getEmails: (accountId: string) => Promise<Email[]>;
             syncAccount: (account: ImapAccount) => Promise<SyncResult>;

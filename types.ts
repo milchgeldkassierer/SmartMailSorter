@@ -96,8 +96,10 @@ export interface SyncResult {
 
 export interface EmailOperationResult {
   success: boolean;
+  error?: string;
 }
 
 export interface CategoryOperationResult {
   success: boolean;
+  changes?: number;
 }
