@@ -186,9 +186,7 @@ export const useEmails = ({ activeAccountId, accounts: _accounts }: UseEmailsPar
     // 1. Calculate Standard Folders Explicitly
     const standard: string[] = [DefaultEmailCategory.INBOX, ...STANDARD_EXCLUDED_FOLDERS];
 
-    counts[DefaultEmailCategory.INBOX] = currentEmails.filter(
-      (e) => (!e.folder || e.folder === DefaultEmailCategory.INBOX) && !e.isRead
-    ).length;
+    counts[DefaultEmailCategory.INBOX] = currentEmails.filter((e) => isInboxEmail(e) && !e.isRead).length;
     counts[SENT_FOLDER] = currentEmails.filter((e) => e.folder === SENT_FOLDER && !e.isRead).length;
     counts[SPAM_FOLDER] = currentEmails.filter(
       (e) => (e.folder === SPAM_FOLDER || e.folder === 'Spamverdacht') && !e.isRead
