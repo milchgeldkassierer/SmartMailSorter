@@ -411,6 +411,31 @@ async function downloadMessageBatch(client, chunkUids, account, targetCategory) 
   }
 }
 
+/**
+ * Reconciles local emails with server state by removing orphaned messages
+ * @param {number[]} localUids - Array of UIDs present in local database
+ * @param {Set<number>} allServerUids - Set of all UIDs present on server
+ * @param {number} accountId - Account ID for database operations
+ * @param {string} targetCategory - Target folder/category name
+ * @param {string} boxName - Server mailbox name (for logging)
+ * @returns {number} Number of orphaned emails deleted
+ */
+function reconcileOrphans(localUids, allServerUids, accountId, targetCategory, boxName) {
+  const localOrphans = localUids.filter((uid) => !allServerUids.has(uid));
+
+  if (localOrphans.length > 0) {
+    console.log(
+      `[Sync] Found ${localOrphans.length} orphaned emails in ${boxName} (deleted on server). removing locally...`
+    );
+    const deletedCount = db.deleteEmailsByUid(accountId, targetCategory, localOrphans);
+    console.log(`[Sync] Deleted ${deletedCount} local emails.`);
+    return deletedCount;
+  } else {
+    console.log(`[Sync] No orphans found in ${boxName}. Local DB matches server.`);
+    return 0;
+  }
+}
+
 async function syncAccount(account) {
   console.log(`Starting sync for account: ${account.email}`);
 
@@ -608,18 +633,7 @@ async function syncAccount(account) {
           }
 
           // --- RECONCILIATION PHASE ---
-          // 1. Identify local orphans (UIDs present locally but not on server)
-          const localOrphans = localUids.filter((uid) => !allServerUids.has(uid));
-
-          if (localOrphans.length > 0) {
-            console.log(
-              `[Sync] Found ${localOrphans.length} orphaned emails in ${boxName} (deleted on server). removing locally...`
-            );
-            const deletedCount = db.deleteEmailsByUid(account.id, targetCategory, localOrphans);
-            console.log(`[Sync] Deleted ${deletedCount} local emails.`);
-          } else {
-            console.log(`[Sync] No orphans found in ${boxName}. Local DB matches server.`);
-          }
+          reconcileOrphans(localUids, allServerUids, account.id, targetCategory, boxName);
         } catch (err) {
           console.error(`[Sync] Error syncing folder ${boxName}:`, err.message);
         }
@@ -752,4 +766,5 @@ module.exports = {
   migrateFolders,
   fetchUidBatch,
   downloadMessageBatch,
+  reconcileOrphans,
 };
