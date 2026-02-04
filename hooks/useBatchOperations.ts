@@ -1,16 +1,16 @@
 import { useState } from 'react';
-import { Email, AISettings, DefaultEmailCategory, SortResult } from '../types';
+import { Email, AISettings, DefaultEmailCategory, SortResult, Category } from '../types';
 import { categorizeBatchWithAI } from '../services/geminiService';
 
 interface UseBatchOperationsProps {
   selectedIds: Set<string>;
   currentEmails: Email[];
-  currentCategories: { name: string; type: string }[];
+  currentCategories: Category[];
   aiSettings: AISettings;
   onDeleteEmail: (id: string) => Promise<void>;
   onClearSelection: () => void;
   onUpdateEmails: (updateFn: (emails: Email[]) => Email[]) => void;
-  onUpdateCategories: (categories: { name: string; type: string }[]) => void;
+  onUpdateCategories: (categories: Category[]) => void;
   onOpenSettings: () => void;
   onConfirmDelete?: (count: number) => Promise<boolean>;
   onConfirmNewCategories?: (categories: string[]) => Promise<boolean>;

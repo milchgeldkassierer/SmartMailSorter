@@ -47,10 +47,6 @@ interface GeminiCandidate {
   content?: GeminiContent;
 }
 
-interface GeminiResultWithCandidates {
-  candidates?: GeminiCandidate[];
-  text?: () => string;
-}
 
 interface GeminiResponse {
   response?: {

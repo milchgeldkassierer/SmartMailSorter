@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Email, DefaultEmailCategory, ImapAccount, AccountData } from '../types';
+import { Email, DefaultEmailCategory, ImapAccount, AccountData, Category } from '../types';
 import { SearchConfig } from '../components/SearchBar';
 
 interface UseEmailsParams {
@@ -18,7 +18,7 @@ interface UseEmailsReturn {
 
   // Computed
   currentEmails: Email[];
-  currentCategories: { name: string, type: string }[];
+  currentCategories: Category[];
   filteredEmails: Email[];
   displayedEmails: Email[];
   selectedEmail: Email | null;
