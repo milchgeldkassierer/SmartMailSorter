@@ -34,27 +34,92 @@ const PROVIDERS = {
 };
 
 /**
- * Creates an ImapFlow client instance with standardized configuration.
- * Encapsulates the common pattern for creating IMAP clients across all operations.
- * @param {Object} account - The account object containing connection details
- * @param {string} account.imapHost - IMAP server hostname
- * @param {number} account.imapPort - IMAP server port (typically 993)
- * @param {string} account.email - User's email address (used as fallback for username)
- * @param {string} [account.username] - IMAP username (defaults to email if not provided)
- * @param {string} account.password - IMAP password
- * @returns {ImapFlow} Configured ImapFlow client instance (not yet connected)
+ * Maps a server folder (box) to its DB name
+ *
+ * Behavior note: Uses box.name (leaf name) for matching special folder types like
+ * 'sent', 'trash', 'junk'. This means INBOX subfolders like 'INBOX.Sent' are recognized
+ * as special folders and mapped to 'Gesendet' (via name matching on 'Sent') rather than
+ * 'Posteingang/Sent' (via INBOX subfolder handling). This behavior aligns with how
+ * deleteEmail/setEmailFlag historically worked and provides more accurate folder detection.
+ *
+ * @param {Object} box - The mailbox object from client.list()
+ * @param {string} box.path - Full path of the mailbox
+ * @param {string} [box.name] - Leaf name of the mailbox (used for type matching)
+ * @param {string} [box.specialUse] - Special use flag (e.g., '\\Sent')
+ * @param {string} [box.delimiter] - Path delimiter (default: '/')
+ * @returns {string} The mapped DB folder name
  */
-function createImapClient(account) {
-  return new ImapFlow({
-    host: account.imapHost,
-    port: account.imapPort,
-    secure: true,
-    auth: {
-      user: account.username || account.email,
-      pass: account.password,
-    },
-    logger: false,
-  });
+function mapServerFolderToDbName(box) {
+  const fullPath = box.path;
+  const delimiter = box.delimiter || '/';
+  let mappedName = null;
+
+  // Check specialUse attribute (imapflow uses specialUse instead of attribs)
+  if (box.specialUse) {
+    const specialUse = box.specialUse.toLowerCase();
+    if (specialUse.includes('\\sent') || specialUse.includes('sent')) {
+      mappedName = 'Gesendet';
+    } else if (specialUse.includes('\\trash') || specialUse.includes('trash')) {
+      mappedName = 'Papierkorb';
+    } else if (specialUse.includes('\\junk') || specialUse.includes('junk')) {
+      mappedName = 'Spam';
+    }
+  }
+
+  // Name matching overrides (only if not already mapped)
+  // Use box.name (leaf name) for matching folder types, not the full path.
+  // This allows INBOX subfolders like 'INBOX.Sent' (name='Sent') to be recognized
+  // as special folders via name matching, improving folder detection accuracy.
+  const lower = (box.name || fullPath).toLowerCase();
+  if (!mappedName) {
+    if (lower === 'sent' || lower === 'gesendet') {
+      mappedName = 'Gesendet';
+    } else if (lower === 'trash' || lower === 'papierkorb') {
+      mappedName = 'Papierkorb';
+    } else if (lower === 'junk' || lower === 'spam') {
+      mappedName = 'Spam';
+    } else if (lower === 'inbox') {
+      mappedName = 'Posteingang';
+    } else {
+      // For other folders, handle INBOX subfolders or normalize delimiters
+      let prettyPath = fullPath;
+      if (prettyPath.toUpperCase().startsWith('INBOX')) {
+        const parts = fullPath.split(delimiter);
+        if (parts[0].toUpperCase() === 'INBOX') {
+          parts[0] = 'Posteingang';
+          prettyPath = parts.join('/');
+        }
+      } else {
+        prettyPath = fullPath.split(delimiter).join('/');
+      }
+      mappedName = prettyPath;
+    }
+  }
+
+  return mappedName;
+}
+
+/**
+ * Finds the server folder path that corresponds to a given DB folder name
+ * @param {ImapFlow} client - Connected IMAP client
+ * @param {string} dbFolder - The DB folder name to find
+ * @returns {Promise<string|null>} The server folder path, or null if not found
+ */
+async function findServerFolderForDbName(client, dbFolder) {
+  if (!dbFolder || dbFolder === 'Posteingang') {
+    return 'INBOX';
+  }
+
+  const boxList = await client.list();
+
+  for (const box of boxList) {
+    const mappedName = mapServerFolderToDbName(box);
+    if (mappedName === dbFolder) {
+      return box.path;
+    }
+  }
+
+  return null;
 }
 
 /**
@@ -197,47 +262,12 @@ async function syncAccount(account) {
       console.warn('[Quota] Error fetching quota:', qErr);
     }
 
-    const findSpecialFolders = (boxList, prefix = '') => {
-      for (const box of boxList) {
-        const key = box.path;
-        const fullPath = prefix + key;
-        const delimiter = box.delimiter || '/';
-
-        // Check specialUse attribute (imapflow uses specialUse instead of attribs)
-        if (box.specialUse) {
-          const specialUse = box.specialUse.toLowerCase();
-          if (specialUse.includes('\\sent') || specialUse.includes('sent')) {
-            folderMap[fullPath] = 'Gesendet';
-          } else if (specialUse.includes('\\trash') || specialUse.includes('trash')) {
-            folderMap[fullPath] = 'Papierkorb';
-          } else if (specialUse.includes('\\junk') || specialUse.includes('junk')) {
-            folderMap[fullPath] = 'Spam';
-          }
-        }
-
-        const lower = key.toLowerCase();
-        if (!folderMap[fullPath]) {
-          if (lower === 'sent' || lower === 'gesendet') folderMap[fullPath] = 'Gesendet';
-          else if (lower === 'trash' || lower === 'papierkorb') folderMap[fullPath] = 'Papierkorb';
-          else if (lower === 'junk' || lower === 'spam') folderMap[fullPath] = 'Spam';
-          else if (lower !== 'inbox') {
-            let prettyPath = fullPath;
-            if (prettyPath.toUpperCase().startsWith('INBOX')) {
-              const parts = fullPath.split(delimiter);
-              if (parts[0].toUpperCase() === 'INBOX') parts[0] = 'Posteingang';
-              prettyPath = parts.join('/');
-            } else {
-              prettyPath = fullPath.split(delimiter).join('/');
-            }
-            folderMap[fullPath] = prettyPath;
-          }
-        }
-
-        // imapflow returns flat list with path, so no children to recurse
-      }
-    };
-
-    findSpecialFolders(mailboxes);
+    // Build folder map using helper function
+    for (const box of mailboxes) {
+      const serverPath = box.path;
+      const mappedName = mapServerFolderToDbName(box);
+      folderMap[serverPath] = mappedName;
+    }
 
     // Migration step for folder naming
     for (const [fullPath, prettyName] of Object.entries(folderMap)) {
@@ -449,55 +479,14 @@ async function deleteEmail(account, uid, dbFolder) {
   try {
     await client.connect();
 
-    // Resolve Server Path from DB Folder Name
-    let serverPath = 'INBOX';
-    if (dbFolder && dbFolder !== 'Posteingang') {
-      const boxList = await client.list();
-      let foundPath = null;
+    // Resolve Server Path from DB Folder Name using helper
+    const foundPath = await findServerFolderForDbName(client, dbFolder);
+    const serverPath = foundPath || 'INBOX';
 
-      for (const box of boxList) {
-        const fullPath = box.path;
-        let mappedName = fullPath; // Default
-
-        // Check specialUse attribute (imapflow uses specialUse instead of attribs)
-        if (box.specialUse) {
-          const specialUse = box.specialUse.toLowerCase();
-          if (specialUse.includes('\\sent') || specialUse.includes('sent')) mappedName = 'Gesendet';
-          else if (specialUse.includes('\\trash') || specialUse.includes('trash')) mappedName = 'Papierkorb';
-          else if (specialUse.includes('\\junk') || specialUse.includes('junk')) mappedName = 'Spam';
-        }
-
-        // Name matching overrides
-        const lower = box.name.toLowerCase();
-        if (mappedName === fullPath) {
-          // If not mapped by attribute yet
-          if (lower === 'sent' || lower === 'gesendet') mappedName = 'Gesendet';
-          else if (lower === 'trash' || lower === 'papierkorb') mappedName = 'Papierkorb';
-          else if (lower === 'junk' || lower === 'spam') mappedName = 'Spam';
-          else if (fullPath.toUpperCase().startsWith('INBOX')) {
-            // Handle Subfolders: INBOX.Amazon -> Posteingang/Amazon
-            const sep = box.delimiter || '/';
-            // Normalize separators to / for DB
-            const parts = fullPath.split(sep);
-            if (parts[0].toUpperCase() === 'INBOX') {
-              parts[0] = 'Posteingang';
-              mappedName = parts.join('/');
-            }
-          }
-        }
-
-        if (mappedName === dbFolder) {
-          foundPath = fullPath;
-          break;
-        }
-      }
-
-      if (foundPath) {
-        serverPath = foundPath;
-        console.log(`[Delete] Mapped DB folder '${dbFolder}' to Server folder '${serverPath}'`);
-      } else {
-        console.warn(`[Delete] Could not map '${dbFolder}' to server path. Defaulting to INBOX.`);
-      }
+    if (foundPath) {
+      console.log(`[Delete] Mapped DB folder '${dbFolder}' to Server folder '${serverPath}'`);
+    } else if (dbFolder && dbFolder !== 'Posteingang') {
+      console.warn(`[Delete] Could not map '${dbFolder}' to server path. Defaulting to INBOX.`);
     }
 
     // Get mailbox lock for the target folder
@@ -526,54 +515,14 @@ async function setEmailFlag(account, uid, flag, value, dbFolder) {
   try {
     await client.connect();
 
-    // Resolve Server Path from DB Folder Name (same logic as deleteEmail)
-    let serverPath = 'INBOX';
-    if (dbFolder && dbFolder !== 'Posteingang') {
-      const boxList = await client.list();
-      let foundPath = null;
+    // Resolve Server Path from DB Folder Name using helper
+    const foundPath = await findServerFolderForDbName(client, dbFolder);
+    const serverPath = foundPath || 'INBOX';
 
-      for (const box of boxList) {
-        const fullPath = box.path;
-        let mappedName = fullPath; // Default
-
-        // Check specialUse attribute (imapflow uses specialUse instead of attribs)
-        if (box.specialUse) {
-          const specialUse = box.specialUse.toLowerCase();
-          if (specialUse.includes('\\sent') || specialUse.includes('sent')) mappedName = 'Gesendet';
-          else if (specialUse.includes('\\trash') || specialUse.includes('trash')) mappedName = 'Papierkorb';
-          else if (specialUse.includes('\\junk') || specialUse.includes('junk')) mappedName = 'Spam';
-        }
-
-        // Name matching overrides
-        const lower = box.name.toLowerCase();
-        if (mappedName === fullPath) {
-          // If not mapped by attribute yet
-          if (lower === 'sent' || lower === 'gesendet') mappedName = 'Gesendet';
-          else if (lower === 'trash' || lower === 'papierkorb') mappedName = 'Papierkorb';
-          else if (lower === 'junk' || lower === 'spam') mappedName = 'Spam';
-          else if (fullPath.toUpperCase().startsWith('INBOX')) {
-            // Handle Subfolders: INBOX.Amazon -> Posteingang/Amazon
-            const sep = box.delimiter || '/';
-            const parts = fullPath.split(sep);
-            if (parts[0].toUpperCase() === 'INBOX') {
-              parts[0] = 'Posteingang';
-              mappedName = parts.join('/');
-            }
-          }
-        }
-
-        if (mappedName === dbFolder) {
-          foundPath = fullPath;
-          break;
-        }
-      }
-
-      if (foundPath) {
-        serverPath = foundPath;
-        console.log(`[Flag] Mapped DB folder '${dbFolder}' to Server folder '${serverPath}'`);
-      } else {
-        console.warn(`[Flag] Could not map '${dbFolder}' to server path. Defaulting to INBOX.`);
-      }
+    if (foundPath) {
+      console.log(`[Flag] Mapped DB folder '${dbFolder}' to Server folder '${serverPath}'`);
+    } else if (dbFolder && dbFolder !== 'Posteingang') {
+      console.warn(`[Flag] Could not map '${dbFolder}' to server path. Defaulting to INBOX.`);
     }
 
     // Get mailbox lock for the target folder
@@ -603,4 +552,6 @@ module.exports = {
   deleteEmail,
   setEmailFlag,
   PROVIDERS,
+  mapServerFolderToDbName,
+  findServerFolderForDbName,
 };
