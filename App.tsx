@@ -18,14 +18,14 @@ import BatchActionBar from './components/BatchActionBar';
 import ProgressBar from './components/ProgressBar';
 
 const App: React.FC = () => {
-  const { isAuthenticated, isConnecting, setIsAuthenticated, setIsConnecting } = useAuth();
+  const { isAuthenticated: _isAuthenticated, isConnecting: _isConnecting, setIsAuthenticated, setIsConnecting } = useAuth();
   const { accounts, activeAccountId, setAccounts, setActiveAccountId, addAccount, removeAccount, switchAccount } =
     useAccounts();
   const { aiSettings, setAiSettings } = useAISettings();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   const {
-    data,
+    data: _data,
     setData,
     selectedEmailId,
     setSelectedEmailId,
@@ -183,7 +183,7 @@ const App: React.FC = () => {
           },
         }));
         setIsAuthenticated(true);
-      } catch (error) {
+      } catch (_error) {
         alert('Konto konnte nicht hinzugefügt werden. Prüfe die Daten.');
       } finally {
         setIsConnecting(false);
@@ -368,7 +368,7 @@ const App: React.FC = () => {
           onRemoveAccount={async (id) => {
             removeAccount(id);
             setData((prev: Record<string, AccountData>) => {
-              const { [id]: _, ...rest } = prev;
+              const { [id]: _removed, ...rest } = prev;
               return rest;
             });
             if (window.electron) await window.electron.deleteAccount(id);
