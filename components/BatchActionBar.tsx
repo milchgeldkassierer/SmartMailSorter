@@ -19,7 +19,7 @@ const BatchActionBar: React.FC<BatchActionBarProps> = ({
   onBatchDelete,
   onBatchSmartSort,
   canSmartSort,
-  aiSettings
+  aiSettings,
 }) => {
   const allSelected = filteredEmails.length > 0 && selectedIds.size === filteredEmails.length;
 
@@ -34,9 +34,7 @@ const BatchActionBar: React.FC<BatchActionBarProps> = ({
         />
 
         {selectedIds.size > 0 && (
-          <span className="text-sm font-medium text-slate-700 fade-in">
-            {selectedIds.size} ausgewählt
-          </span>
+          <span className="text-sm font-medium text-slate-700 fade-in">{selectedIds.size} ausgewählt</span>
         )}
       </div>
 
@@ -59,7 +57,9 @@ const BatchActionBar: React.FC<BatchActionBarProps> = ({
                 ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white border-transparent hover:shadow-md hover:from-blue-700 hover:to-indigo-700'
                 : 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed'
             }`}
-            title={!aiSettings.apiKey ? "Bitte API Key in Einstellungen hinterlegen" : "Ausgewählte Mails mit AI sortieren"}
+            title={
+              !aiSettings.apiKey ? 'Bitte API Key in Einstellungen hinterlegen' : 'Ausgewählte Mails mit AI sortieren'
+            }
           >
             <BrainCircuit className="w-3.5 h-3.5" />
             <span>Smart Sortieren</span>

@@ -18,12 +18,12 @@ export const useAccounts = (): UseAccountsReturn => {
 
   // Computed property for active account
   const activeAccount = useMemo(() => {
-    return accounts.find(a => a.id === activeAccountId);
+    return accounts.find((a) => a.id === activeAccountId);
   }, [accounts, activeAccountId]);
 
   // Add a new account to the list
   const addAccount = (account: ImapAccount) => {
-    setAccounts(prev => {
+    setAccounts((prev) => {
       // If this is the first account, make it active
       if (prev.length === 0) {
         setActiveAccountId(account.id);
@@ -34,8 +34,8 @@ export const useAccounts = (): UseAccountsReturn => {
 
   // Remove an account and switch to another if needed
   const removeAccount = (id: string) => {
-    setAccounts(prev => {
-      const filtered = prev.filter(a => a.id !== id);
+    setAccounts((prev) => {
+      const filtered = prev.filter((a) => a.id !== id);
       // If removing the active account, switch to another
       if (activeAccountId === id) {
         const otherAccount = filtered[0];

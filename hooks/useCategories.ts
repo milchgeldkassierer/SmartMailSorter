@@ -60,53 +60,53 @@ export const useCategories = (): UseCategoriesReturn => {
   }, []);
 
   // Auto-discover physical folders from emails
-  const autoDiscoverFolders = useCallback(async (emails: Email[], currentCategories: Category[]) => {
-    const systemFolders = Object.values(DefaultEmailCategory) as string[];
-    const mappedFolders = ['Gesendet', 'Spam', 'Papierkorb', 'Posteingang'];
+  const autoDiscoverFolders = useCallback(
+    async (emails: Email[], currentCategories: Category[]) => {
+      const systemFolders = Object.values(DefaultEmailCategory) as string[];
+      const mappedFolders = ['Gesendet', 'Spam', 'Papierkorb', 'Posteingang'];
 
-    const foundFolders = new Set<string>();
-    const categoriesToFix = new Set<string>();
+      const foundFolders = new Set<string>();
+      const categoriesToFix = new Set<string>();
 
-    // Create quick lookup structures
-    const existingCategoryNames = new Set(currentCategories.map(c => c.name));
-    const existingCategoryTypes = new Map(currentCategories.map(c => [c.name, c.type]));
+      // Create quick lookup structures
+      const existingCategoryNames = new Set(currentCategories.map((c) => c.name));
+      const existingCategoryTypes = new Map(currentCategories.map((c) => [c.name, c.type]));
 
-    // Scan emails for physical folders
-    emails.forEach(e => {
-      if (e.folder &&
-        !systemFolders.includes(e.folder) &&
-        !mappedFolders.includes(e.folder)
-      ) {
-        // It's a physical folder candidate
-        if (!existingCategoryNames.has(e.folder)) {
-          foundFolders.add(e.folder);
-        } else {
-          // Check if type needs correction (from 'custom' to 'folder')
-          if (existingCategoryTypes.get(e.folder) === 'custom') {
-            categoriesToFix.add(e.folder);
+      // Scan emails for physical folders
+      emails.forEach((e) => {
+        if (e.folder && !systemFolders.includes(e.folder) && !mappedFolders.includes(e.folder)) {
+          // It's a physical folder candidate
+          if (!existingCategoryNames.has(e.folder)) {
+            foundFolders.add(e.folder);
+          } else {
+            // Check if type needs correction (from 'custom' to 'folder')
+            if (existingCategoryTypes.get(e.folder) === 'custom') {
+              categoriesToFix.add(e.folder);
+            }
           }
         }
+      });
+
+      // Add newly discovered folders
+      const newDiscovered = Array.from(foundFolders);
+      for (const folder of newDiscovered) {
+        await addCategory(folder, 'folder');
       }
-    });
 
-    // Add newly discovered folders
-    const newDiscovered = Array.from(foundFolders);
-    for (const folder of newDiscovered) {
-      await addCategory(folder, 'folder');
-    }
-
-    // Fix incorrect types for existing physical folders
-    const fixedCategories = Array.from(categoriesToFix);
-    for (const folder of fixedCategories) {
-      await updateCategoryType(folder, 'folder');
-    }
-  }, [addCategory, updateCategoryType]);
+      // Fix incorrect types for existing physical folders
+      const fixedCategories = Array.from(categoriesToFix);
+      for (const folder of fixedCategories) {
+        await updateCategoryType(folder, 'folder');
+      }
+    },
+    [addCategory, updateCategoryType]
+  );
 
   return {
     addCategory,
     updateCategoryType,
     deleteCategory,
     renameCategory,
-    autoDiscoverFolders
+    autoDiscoverFolders,
   };
 };

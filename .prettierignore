@@ -1,0 +1,28 @@
+# Dependencies
+node_modules
+
+# Build outputs
+dist
+dist-ssr
+coverage
+
+# Logs
+logs
+*.log
+
+# Editor directories and files
+.vscode
+.idea
+.DS_Store
+
+# Auto Claude directories
+.auto-claude/
+
+# Lock files and package manager files (don't format these)
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Generated files
+*.min.js
+*.min.css

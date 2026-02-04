@@ -11,7 +11,7 @@ const STORAGE_KEY = 'smartmail_ai_settings';
 const getDefaultSettings = (): AISettings => ({
   provider: LLMProvider.GEMINI,
   model: AVAILABLE_MODELS[LLMProvider.GEMINI][0],
-  apiKey: ''
+  apiKey: '',
 });
 
 const loadSettingsFromStorage = (): AISettings => {
@@ -20,7 +20,7 @@ const loadSettingsFromStorage = (): AISettings => {
     try {
       return JSON.parse(saved);
     } catch (e) {
-      console.error("Failed to parse AI settings", e);
+      console.error('Failed to parse AI settings', e);
     }
   }
   return getDefaultSettings();

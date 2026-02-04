@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { Email, DefaultEmailCategory, AISettings, LLMProvider } from '../../types';
+import { DefaultEmailCategory, AISettings, LLMProvider } from '../../types';
 
 // Mock variables for GoogleGenAI
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let mockGenerateContent: any;
 
 // Mock @google/genai before importing geminiService
@@ -15,7 +16,8 @@ vi.mock('@google/genai', () => {
 
     get models() {
       return {
-        generateContent: (...args: any[]) => mockGenerateContent(...args)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        generateContent: (...args: any[]) => mockGenerateContent(...args),
       };
     }
   }
@@ -26,9 +28,9 @@ vi.mock('@google/genai', () => {
       OBJECT: 'object',
       ARRAY: 'array',
       STRING: 'string',
-      NUMBER: 'number'
+      NUMBER: 'number',
     },
-    Schema: {}
+    Schema: {},
   };
 });
 
@@ -39,7 +41,7 @@ describe('GeminiService - generateDemoEmails', () => {
   const geminiSettings: AISettings = {
     provider: LLMProvider.GEMINI,
     model: 'gemini-3-flash-preview',
-    apiKey: 'test-gemini-api-key'
+    apiKey: 'test-gemini-api-key',
   };
 
   beforeEach(() => {
@@ -55,11 +57,22 @@ describe('GeminiService - generateDemoEmails', () => {
     it('should generate demo emails successfully', async () => {
       mockGenerateContent = vi.fn().mockResolvedValue({
         response: {
-          text: () => JSON.stringify([
-            { sender: 'Max Mustermann', senderEmail: 'max@example.com', subject: 'Testmail 1', body: 'Dies ist eine Testmail.' },
-            { sender: 'Anna Schmidt', senderEmail: 'anna@example.com', subject: 'Testmail 2', body: 'Noch eine Testmail.' }
-          ])
-        }
+          text: () =>
+            JSON.stringify([
+              {
+                sender: 'Max Mustermann',
+                senderEmail: 'max@example.com',
+                subject: 'Testmail 1',
+                body: 'Dies ist eine Testmail.',
+              },
+              {
+                sender: 'Anna Schmidt',
+                senderEmail: 'anna@example.com',
+                subject: 'Testmail 2',
+                body: 'Noch eine Testmail.',
+              },
+            ]),
+        },
       });
 
       const emails = await geminiService.generateDemoEmails(2, geminiSettings);
@@ -76,22 +89,24 @@ describe('GeminiService - generateDemoEmails', () => {
     it('should use default count of 5 when not specified', async () => {
       mockGenerateContent = vi.fn().mockResolvedValue({
         response: {
-          text: () => JSON.stringify([
-            { sender: 'User 1' },
-            { sender: 'User 2' },
-            { sender: 'User 3' },
-            { sender: 'User 4' },
-            { sender: 'User 5' }
-          ])
-        }
+          text: () =>
+            JSON.stringify([
+              { sender: 'User 1' },
+              { sender: 'User 2' },
+              { sender: 'User 3' },
+              { sender: 'User 4' },
+              { sender: 'User 5' },
+            ]),
+        },
       });
 
-      const emails = await geminiService.generateDemoEmails(undefined as any, geminiSettings);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const _emails = await geminiService.generateDemoEmails(undefined as any, geminiSettings);
 
       // Verify prompt contains the default count
       expect(mockGenerateContent).toHaveBeenCalledWith(
         expect.objectContaining({
-          contents: expect.stringContaining('5')
+          contents: expect.stringContaining('5'),
         })
       );
     });
@@ -99,19 +114,15 @@ describe('GeminiService - generateDemoEmails', () => {
     it('should request correct count of demo emails', async () => {
       mockGenerateContent = vi.fn().mockResolvedValue({
         response: {
-          text: () => JSON.stringify([
-            { sender: 'Test1' },
-            { sender: 'Test2' },
-            { sender: 'Test3' }
-          ])
-        }
+          text: () => JSON.stringify([{ sender: 'Test1' }, { sender: 'Test2' }, { sender: 'Test3' }]),
+        },
       });
 
       await geminiService.generateDemoEmails(3, geminiSettings);
 
       expect(mockGenerateContent).toHaveBeenCalledWith(
         expect.objectContaining({
-          contents: expect.stringContaining('3')
+          contents: expect.stringContaining('3'),
         })
       );
     });
@@ -121,13 +132,13 @@ describe('GeminiService - generateDemoEmails', () => {
         sender: `User ${i + 1}`,
         senderEmail: `user${i + 1}@example.com`,
         subject: `Email ${i + 1}`,
-        body: `Body ${i + 1}`
+        body: `Body ${i + 1}`,
       }));
 
       mockGenerateContent = vi.fn().mockResolvedValue({
         response: {
-          text: () => JSON.stringify(mockEmails)
-        }
+          text: () => JSON.stringify(mockEmails),
+        },
       });
 
       const emails = await geminiService.generateDemoEmails(10, geminiSettings);
@@ -135,7 +146,7 @@ describe('GeminiService - generateDemoEmails', () => {
       expect(emails).toHaveLength(10);
       expect(mockGenerateContent).toHaveBeenCalledWith(
         expect.objectContaining({
-          contents: expect.stringContaining('10')
+          contents: expect.stringContaining('10'),
         })
       );
     });
@@ -143,10 +154,16 @@ describe('GeminiService - generateDemoEmails', () => {
     it('should generate a single email when count is 1', async () => {
       mockGenerateContent = vi.fn().mockResolvedValue({
         response: {
-          text: () => JSON.stringify([
-            { sender: 'Single User', senderEmail: 'single@example.com', subject: 'Single Email', body: 'Only one email.' }
-          ])
-        }
+          text: () =>
+            JSON.stringify([
+              {
+                sender: 'Single User',
+                senderEmail: 'single@example.com',
+                subject: 'Single Email',
+                body: 'Only one email.',
+              },
+            ]),
+        },
       });
 
       const emails = await geminiService.generateDemoEmails(1, geminiSettings);
@@ -160,11 +177,12 @@ describe('GeminiService - generateDemoEmails', () => {
     it('should fill in default sender when missing', async () => {
       mockGenerateContent = vi.fn().mockResolvedValue({
         response: {
-          text: () => JSON.stringify([
-            { senderEmail: 'test@example.com', subject: 'Test', body: 'Body' }
-            // Missing sender
-          ])
-        }
+          text: () =>
+            JSON.stringify([
+              { senderEmail: 'test@example.com', subject: 'Test', body: 'Body' },
+              // Missing sender
+            ]),
+        },
       });
 
       const emails = await geminiService.generateDemoEmails(1, geminiSettings);
@@ -176,11 +194,12 @@ describe('GeminiService - generateDemoEmails', () => {
     it('should fill in default senderEmail when missing', async () => {
       mockGenerateContent = vi.fn().mockResolvedValue({
         response: {
-          text: () => JSON.stringify([
-            { sender: 'Test Sender', subject: 'Test', body: 'Body' }
-            // Missing senderEmail
-          ])
-        }
+          text: () =>
+            JSON.stringify([
+              { sender: 'Test Sender', subject: 'Test', body: 'Body' },
+              // Missing senderEmail
+            ]),
+        },
       });
 
       const emails = await geminiService.generateDemoEmails(1, geminiSettings);
@@ -192,11 +211,12 @@ describe('GeminiService - generateDemoEmails', () => {
     it('should fill in default subject when missing', async () => {
       mockGenerateContent = vi.fn().mockResolvedValue({
         response: {
-          text: () => JSON.stringify([
-            { sender: 'Test Sender', senderEmail: 'test@example.com', body: 'Body' }
-            // Missing subject
-          ])
-        }
+          text: () =>
+            JSON.stringify([
+              { sender: 'Test Sender', senderEmail: 'test@example.com', body: 'Body' },
+              // Missing subject
+            ]),
+        },
       });
 
       const emails = await geminiService.generateDemoEmails(1, geminiSettings);
@@ -208,11 +228,12 @@ describe('GeminiService - generateDemoEmails', () => {
     it('should fill in default body when missing', async () => {
       mockGenerateContent = vi.fn().mockResolvedValue({
         response: {
-          text: () => JSON.stringify([
-            { sender: 'Test Sender', senderEmail: 'test@example.com', subject: 'Test Subject' }
-            // Missing body
-          ])
-        }
+          text: () =>
+            JSON.stringify([
+              { sender: 'Test Sender', senderEmail: 'test@example.com', subject: 'Test Subject' },
+              // Missing body
+            ]),
+        },
       });
 
       const emails = await geminiService.generateDemoEmails(1, geminiSettings);
@@ -224,10 +245,11 @@ describe('GeminiService - generateDemoEmails', () => {
     it('should fill in all default values for minimal data', async () => {
       mockGenerateContent = vi.fn().mockResolvedValue({
         response: {
-          text: () => JSON.stringify([
-            {} // Empty object - no properties at all
-          ])
-        }
+          text: () =>
+            JSON.stringify([
+              {}, // Empty object - no properties at all
+            ]),
+        },
       });
 
       const emails = await geminiService.generateDemoEmails(1, geminiSettings);
@@ -244,17 +266,13 @@ describe('GeminiService - generateDemoEmails', () => {
     it('should set category to INBOX for all generated emails', async () => {
       mockGenerateContent = vi.fn().mockResolvedValue({
         response: {
-          text: () => JSON.stringify([
-            { sender: 'User 1' },
-            { sender: 'User 2' },
-            { sender: 'User 3' }
-          ])
-        }
+          text: () => JSON.stringify([{ sender: 'User 1' }, { sender: 'User 2' }, { sender: 'User 3' }]),
+        },
       });
 
       const emails = await geminiService.generateDemoEmails(3, geminiSettings);
 
-      emails.forEach(email => {
+      emails.forEach((email) => {
         expect(email.category).toBe(DefaultEmailCategory.INBOX);
       });
     });
@@ -262,16 +280,13 @@ describe('GeminiService - generateDemoEmails', () => {
     it('should set folder to Posteingang for all generated emails', async () => {
       mockGenerateContent = vi.fn().mockResolvedValue({
         response: {
-          text: () => JSON.stringify([
-            { sender: 'User 1' },
-            { sender: 'User 2' }
-          ])
-        }
+          text: () => JSON.stringify([{ sender: 'User 1' }, { sender: 'User 2' }]),
+        },
       });
 
       const emails = await geminiService.generateDemoEmails(2, geminiSettings);
 
-      emails.forEach(email => {
+      emails.forEach((email) => {
         expect(email.folder).toBe('Posteingang');
       });
     });
@@ -279,16 +294,13 @@ describe('GeminiService - generateDemoEmails', () => {
     it('should set isRead to false for all generated emails', async () => {
       mockGenerateContent = vi.fn().mockResolvedValue({
         response: {
-          text: () => JSON.stringify([
-            { sender: 'User 1' },
-            { sender: 'User 2' }
-          ])
-        }
+          text: () => JSON.stringify([{ sender: 'User 1' }, { sender: 'User 2' }]),
+        },
       });
 
       const emails = await geminiService.generateDemoEmails(2, geminiSettings);
 
-      emails.forEach(email => {
+      emails.forEach((email) => {
         expect(email.isRead).toBe(false);
       });
     });
@@ -296,16 +308,13 @@ describe('GeminiService - generateDemoEmails', () => {
     it('should set isFlagged to false for all generated emails', async () => {
       mockGenerateContent = vi.fn().mockResolvedValue({
         response: {
-          text: () => JSON.stringify([
-            { sender: 'User 1' },
-            { sender: 'User 2' }
-          ])
-        }
+          text: () => JSON.stringify([{ sender: 'User 1' }, { sender: 'User 2' }]),
+        },
       });
 
       const emails = await geminiService.generateDemoEmails(2, geminiSettings);
 
-      emails.forEach(email => {
+      emails.forEach((email) => {
         expect(email.isFlagged).toBe(false);
       });
     });
@@ -313,17 +322,13 @@ describe('GeminiService - generateDemoEmails', () => {
     it('should generate unique IDs for each email', async () => {
       mockGenerateContent = vi.fn().mockResolvedValue({
         response: {
-          text: () => JSON.stringify([
-            { sender: 'User 1' },
-            { sender: 'User 2' },
-            { sender: 'User 3' }
-          ])
-        }
+          text: () => JSON.stringify([{ sender: 'User 1' }, { sender: 'User 2' }, { sender: 'User 3' }]),
+        },
       });
 
       const emails = await geminiService.generateDemoEmails(3, geminiSettings);
 
-      const ids = emails.map(e => e.id);
+      const ids = emails.map((e) => e.id);
       const uniqueIds = new Set(ids);
       expect(uniqueIds.size).toBe(3);
     });
@@ -331,10 +336,8 @@ describe('GeminiService - generateDemoEmails', () => {
     it('should generate IDs with gen- prefix', async () => {
       mockGenerateContent = vi.fn().mockResolvedValue({
         response: {
-          text: () => JSON.stringify([
-            { sender: 'Test User' }
-          ])
-        }
+          text: () => JSON.stringify([{ sender: 'Test User' }]),
+        },
       });
 
       const emails = await geminiService.generateDemoEmails(1, geminiSettings);
@@ -345,10 +348,8 @@ describe('GeminiService - generateDemoEmails', () => {
     it('should generate valid ISO date strings', async () => {
       mockGenerateContent = vi.fn().mockResolvedValue({
         response: {
-          text: () => JSON.stringify([
-            { sender: 'Test User' }
-          ])
-        }
+          text: () => JSON.stringify([{ sender: 'Test User' }]),
+        },
       });
 
       const emails = await geminiService.generateDemoEmails(1, geminiSettings);
@@ -359,15 +360,16 @@ describe('GeminiService - generateDemoEmails', () => {
     });
 
     it('should apply dateOffset when provided in AI response', async () => {
-      const beforeTest = Date.now();
+      const _beforeTest = Date.now();
 
       mockGenerateContent = vi.fn().mockResolvedValue({
         response: {
-          text: () => JSON.stringify([
-            { sender: 'Recent User', dateOffset: 0 },
-            { sender: 'Older User', dateOffset: 24 } // 24 hours ago
-          ])
-        }
+          text: () =>
+            JSON.stringify([
+              { sender: 'Recent User', dateOffset: 0 },
+              { sender: 'Older User', dateOffset: 24 }, // 24 hours ago
+            ]),
+        },
       });
 
       const emails = await geminiService.generateDemoEmails(2, geminiSettings);
@@ -429,8 +431,8 @@ describe('GeminiService - generateDemoEmails', () => {
     it('should return empty array when response is not an array (object)', async () => {
       mockGenerateContent = vi.fn().mockResolvedValue({
         response: {
-          text: () => JSON.stringify({ not: 'an array' })
-        }
+          text: () => JSON.stringify({ not: 'an array' }),
+        },
       });
 
       const emails = await geminiService.generateDemoEmails(5, geminiSettings);
@@ -441,8 +443,8 @@ describe('GeminiService - generateDemoEmails', () => {
     it('should return empty array when response is null', async () => {
       mockGenerateContent = vi.fn().mockResolvedValue({
         response: {
-          text: () => JSON.stringify(null)
-        }
+          text: () => JSON.stringify(null),
+        },
       });
 
       const emails = await geminiService.generateDemoEmails(5, geminiSettings);
@@ -453,8 +455,8 @@ describe('GeminiService - generateDemoEmails', () => {
     it('should return empty array when response is a string', async () => {
       mockGenerateContent = vi.fn().mockResolvedValue({
         response: {
-          text: () => JSON.stringify('just a string')
-        }
+          text: () => JSON.stringify('just a string'),
+        },
       });
 
       const emails = await geminiService.generateDemoEmails(5, geminiSettings);
@@ -465,8 +467,8 @@ describe('GeminiService - generateDemoEmails', () => {
     it('should return empty array when response is a number', async () => {
       mockGenerateContent = vi.fn().mockResolvedValue({
         response: {
-          text: () => JSON.stringify(42)
-        }
+          text: () => JSON.stringify(42),
+        },
       });
 
       const emails = await geminiService.generateDemoEmails(5, geminiSettings);
@@ -477,8 +479,8 @@ describe('GeminiService - generateDemoEmails', () => {
     it('should handle empty array response', async () => {
       mockGenerateContent = vi.fn().mockResolvedValue({
         response: {
-          text: () => JSON.stringify([])
-        }
+          text: () => JSON.stringify([]),
+        },
       });
 
       const emails = await geminiService.generateDemoEmails(5, geminiSettings);
@@ -489,8 +491,8 @@ describe('GeminiService - generateDemoEmails', () => {
     it('should return empty array on invalid JSON response', async () => {
       mockGenerateContent = vi.fn().mockResolvedValue({
         response: {
-          text: () => 'not valid json'
-        }
+          text: () => 'not valid json',
+        },
       });
 
       const emails = await geminiService.generateDemoEmails(5, geminiSettings);
@@ -503,21 +505,21 @@ describe('GeminiService - generateDemoEmails', () => {
     it('should use provided settings', async () => {
       mockGenerateContent = vi.fn().mockResolvedValue({
         response: {
-          text: () => JSON.stringify([{ sender: 'Test' }])
-        }
+          text: () => JSON.stringify([{ sender: 'Test' }]),
+        },
       });
 
       const customSettings: AISettings = {
         provider: LLMProvider.GEMINI,
         model: 'gemini-3-pro-preview',
-        apiKey: 'custom-api-key'
+        apiKey: 'custom-api-key',
       };
 
       await geminiService.generateDemoEmails(1, customSettings);
 
       expect(mockGenerateContent).toHaveBeenCalledWith(
         expect.objectContaining({
-          model: 'gemini-3-pro-preview'
+          model: 'gemini-3-pro-preview',
         })
       );
     });
@@ -525,8 +527,8 @@ describe('GeminiService - generateDemoEmails', () => {
     it('should use system instruction for data generation', async () => {
       mockGenerateContent = vi.fn().mockResolvedValue({
         response: {
-          text: () => JSON.stringify([{ sender: 'Test' }])
-        }
+          text: () => JSON.stringify([{ sender: 'Test' }]),
+        },
       });
 
       await geminiService.generateDemoEmails(1, geminiSettings);
@@ -534,8 +536,8 @@ describe('GeminiService - generateDemoEmails', () => {
       expect(mockGenerateContent).toHaveBeenCalledWith(
         expect.objectContaining({
           config: expect.objectContaining({
-            systemInstruction: 'You are a data generator.'
-          })
+            systemInstruction: 'You are a data generator.',
+          }),
         })
       );
     });
@@ -543,8 +545,8 @@ describe('GeminiService - generateDemoEmails', () => {
     it('should request JSON response format', async () => {
       mockGenerateContent = vi.fn().mockResolvedValue({
         response: {
-          text: () => JSON.stringify([{ sender: 'Test' }])
-        }
+          text: () => JSON.stringify([{ sender: 'Test' }]),
+        },
       });
 
       await geminiService.generateDemoEmails(1, geminiSettings);
@@ -552,8 +554,8 @@ describe('GeminiService - generateDemoEmails', () => {
       expect(mockGenerateContent).toHaveBeenCalledWith(
         expect.objectContaining({
           config: expect.objectContaining({
-            responseMimeType: 'application/json'
-          })
+            responseMimeType: 'application/json',
+          }),
         })
       );
     });
@@ -561,15 +563,15 @@ describe('GeminiService - generateDemoEmails', () => {
     it('should include German language instruction in prompt', async () => {
       mockGenerateContent = vi.fn().mockResolvedValue({
         response: {
-          text: () => JSON.stringify([{ sender: 'Test' }])
-        }
+          text: () => JSON.stringify([{ sender: 'Test' }]),
+        },
       });
 
       await geminiService.generateDemoEmails(5, geminiSettings);
 
       expect(mockGenerateContent).toHaveBeenCalledWith(
         expect.objectContaining({
-          contents: expect.stringContaining('Deutsch')
+          contents: expect.stringContaining('Deutsch'),
         })
       );
     });
@@ -579,8 +581,8 @@ describe('GeminiService - generateDemoEmails', () => {
     it('edge: should handle zero count', async () => {
       mockGenerateContent = vi.fn().mockResolvedValue({
         response: {
-          text: () => JSON.stringify([])
-        }
+          text: () => JSON.stringify([]),
+        },
       });
 
       const emails = await geminiService.generateDemoEmails(0, geminiSettings);
@@ -590,13 +592,13 @@ describe('GeminiService - generateDemoEmails', () => {
 
     it('edge: should handle very large count', async () => {
       const mockEmails = Array.from({ length: 100 }, (_, i) => ({
-        sender: `User ${i}`
+        sender: `User ${i}`,
       }));
 
       mockGenerateContent = vi.fn().mockResolvedValue({
         response: {
-          text: () => JSON.stringify(mockEmails)
-        }
+          text: () => JSON.stringify(mockEmails),
+        },
       });
 
       const emails = await geminiService.generateDemoEmails(100, geminiSettings);
@@ -604,7 +606,7 @@ describe('GeminiService - generateDemoEmails', () => {
       expect(emails).toHaveLength(100);
       expect(mockGenerateContent).toHaveBeenCalledWith(
         expect.objectContaining({
-          contents: expect.stringContaining('100')
+          contents: expect.stringContaining('100'),
         })
       );
     });
@@ -612,8 +614,8 @@ describe('GeminiService - generateDemoEmails', () => {
     it('edge: should handle negative count (prompt still includes it)', async () => {
       mockGenerateContent = vi.fn().mockResolvedValue({
         response: {
-          text: () => JSON.stringify([])
-        }
+          text: () => JSON.stringify([]),
+        },
       });
 
       const emails = await geminiService.generateDemoEmails(-5, geminiSettings);
@@ -624,10 +626,8 @@ describe('GeminiService - generateDemoEmails', () => {
     it('edge: should handle null sender value', async () => {
       mockGenerateContent = vi.fn().mockResolvedValue({
         response: {
-          text: () => JSON.stringify([
-            { sender: null, senderEmail: 'test@example.com' }
-          ])
-        }
+          text: () => JSON.stringify([{ sender: null, senderEmail: 'test@example.com' }]),
+        },
       });
 
       const emails = await geminiService.generateDemoEmails(1, geminiSettings);
@@ -639,10 +639,8 @@ describe('GeminiService - generateDemoEmails', () => {
     it('edge: should handle empty string sender value', async () => {
       mockGenerateContent = vi.fn().mockResolvedValue({
         response: {
-          text: () => JSON.stringify([
-            { sender: '', senderEmail: 'test@example.com' }
-          ])
-        }
+          text: () => JSON.stringify([{ sender: '', senderEmail: 'test@example.com' }]),
+        },
       });
 
       const emails = await geminiService.generateDemoEmails(1, geminiSettings);
@@ -655,8 +653,8 @@ describe('GeminiService - generateDemoEmails', () => {
     it('edge: should handle markdown wrapped JSON response', async () => {
       mockGenerateContent = vi.fn().mockResolvedValue({
         response: {
-          text: () => '```json\n[{"sender": "Wrapped User"}]\n```'
-        }
+          text: () => '```json\n[{"sender": "Wrapped User"}]\n```',
+        },
       });
 
       const emails = await geminiService.generateDemoEmails(1, geminiSettings);
@@ -668,11 +666,8 @@ describe('GeminiService - generateDemoEmails', () => {
     it('edge: should handle AI returning fewer emails than requested', async () => {
       mockGenerateContent = vi.fn().mockResolvedValue({
         response: {
-          text: () => JSON.stringify([
-            { sender: 'User 1' },
-            { sender: 'User 2' }
-          ])
-        }
+          text: () => JSON.stringify([{ sender: 'User 1' }, { sender: 'User 2' }]),
+        },
       });
 
       // Request 5 but AI only returns 2
@@ -684,14 +679,15 @@ describe('GeminiService - generateDemoEmails', () => {
     it('edge: should handle AI returning more emails than requested', async () => {
       mockGenerateContent = vi.fn().mockResolvedValue({
         response: {
-          text: () => JSON.stringify([
-            { sender: 'User 1' },
-            { sender: 'User 2' },
-            { sender: 'User 3' },
-            { sender: 'User 4' },
-            { sender: 'User 5' }
-          ])
-        }
+          text: () =>
+            JSON.stringify([
+              { sender: 'User 1' },
+              { sender: 'User 2' },
+              { sender: 'User 3' },
+              { sender: 'User 4' },
+              { sender: 'User 5' },
+            ]),
+        },
       });
 
       // Request 2 but AI returns 5
@@ -704,15 +700,16 @@ describe('GeminiService - generateDemoEmails', () => {
     it('edge: should handle special characters in email content', async () => {
       mockGenerateContent = vi.fn().mockResolvedValue({
         response: {
-          text: () => JSON.stringify([
-            {
-              sender: 'Müller & Söhne GmbH',
-              senderEmail: 'müller@über.de',
-              subject: 'Änderung: Größe €100',
-              body: 'Liebe Grüße, äöüß'
-            }
-          ])
-        }
+          text: () =>
+            JSON.stringify([
+              {
+                sender: 'Müller & Söhne GmbH',
+                senderEmail: 'müller@über.de',
+                subject: 'Änderung: Größe €100',
+                body: 'Liebe Grüße, äöüß',
+              },
+            ]),
+        },
       });
 
       const emails = await geminiService.generateDemoEmails(1, geminiSettings);
@@ -726,10 +723,8 @@ describe('GeminiService - generateDemoEmails', () => {
       const longBody = 'A'.repeat(10000);
       mockGenerateContent = vi.fn().mockResolvedValue({
         response: {
-          text: () => JSON.stringify([
-            { sender: 'Long Body User', body: longBody }
-          ])
-        }
+          text: () => JSON.stringify([{ sender: 'Long Body User', body: longBody }]),
+        },
       });
 
       const emails = await geminiService.generateDemoEmails(1, geminiSettings);
@@ -741,10 +736,8 @@ describe('GeminiService - generateDemoEmails', () => {
     it('edge: should handle undefined dateOffset', async () => {
       mockGenerateContent = vi.fn().mockResolvedValue({
         response: {
-          text: () => JSON.stringify([
-            { sender: 'Test User', dateOffset: undefined }
-          ])
-        }
+          text: () => JSON.stringify([{ sender: 'Test User', dateOffset: undefined }]),
+        },
       });
 
       const emails = await geminiService.generateDemoEmails(1, geminiSettings);
@@ -759,15 +752,16 @@ describe('GeminiService - generateDemoEmails', () => {
     it('edge: should handle negative dateOffset', async () => {
       mockGenerateContent = vi.fn().mockResolvedValue({
         response: {
-          text: () => JSON.stringify([
-            { sender: 'Future User', dateOffset: -1 } // 1 hour in the future
-          ])
-        }
+          text: () =>
+            JSON.stringify([
+              { sender: 'Future User', dateOffset: -1 }, // 1 hour in the future
+            ]),
+        },
       });
 
       const beforeTest = Date.now();
       const emails = await geminiService.generateDemoEmails(1, geminiSettings);
-      const afterTest = Date.now();
+      const _afterTest = Date.now();
 
       expect(emails).toHaveLength(1);
       // With negative offset, date should be in the future
@@ -780,11 +774,11 @@ describe('GeminiService - generateDemoEmails', () => {
     it('should extract text using Strategy 2: result.text()', async () => {
       mockGenerateContent = vi.fn().mockResolvedValue({
         response: {
-          text: () => { throw new Error('Strategy 1 failed'); }
+          text: () => {
+            throw new Error('Strategy 1 failed');
+          },
         },
-        text: () => JSON.stringify([
-          { sender: 'Strategy 2 User' }
-        ])
+        text: () => JSON.stringify([{ sender: 'Strategy 2 User' }]),
       });
 
       const emails = await geminiService.generateDemoEmails(1, geminiSettings);
@@ -796,17 +790,17 @@ describe('GeminiService - generateDemoEmails', () => {
     it('should extract text using Strategy 3: manual candidate extraction', async () => {
       mockGenerateContent = vi.fn().mockResolvedValue({
         response: {
-          text: () => { throw new Error('Strategy 1 failed'); }
+          text: () => {
+            throw new Error('Strategy 1 failed');
+          },
         },
         candidates: [
           {
             content: {
-              parts: [
-                { text: JSON.stringify([{ sender: 'Strategy 3 User' }]) }
-              ]
-            }
-          }
-        ]
+              parts: [{ text: JSON.stringify([{ sender: 'Strategy 3 User' }]) }],
+            },
+          },
+        ],
       });
 
       const emails = await geminiService.generateDemoEmails(1, geminiSettings);
@@ -818,9 +812,11 @@ describe('GeminiService - generateDemoEmails', () => {
     it('should return empty array when all text extraction strategies fail', async () => {
       mockGenerateContent = vi.fn().mockResolvedValue({
         response: {
-          text: () => { throw new Error('Strategy 1 failed'); }
+          text: () => {
+            throw new Error('Strategy 1 failed');
+          },
         },
-        candidates: [] // Empty candidates - Strategy 3 fails too
+        candidates: [], // Empty candidates - Strategy 3 fails too
       });
 
       const emails = await geminiService.generateDemoEmails(1, geminiSettings);

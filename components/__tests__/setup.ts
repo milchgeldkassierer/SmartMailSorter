@@ -10,5 +10,5 @@ import '@testing-library/jest-dom/vitest';
 // Automatic cleanup after each test to prevent memory leaks
 // and ensure test isolation
 afterEach(() => {
-    cleanup();
+  cleanup();
 });

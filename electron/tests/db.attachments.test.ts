@@ -7,14 +7,19 @@ import { ImapAccount, Email } from '../../types';
 const require = createRequire(import.meta.url);
 
 // Mock Electron to provide app.getPath
-const electronPath = path.resolve(path.dirname(new URL(import.meta.url).pathname), '../../node_modules/electron/index.js');
-(require.cache as any)[electronPath] = {
-  exports: {
-    app: {
-      getPath: () => './test-data'
-    }
-  }
-};
+const electronPath = path.resolve(
+  path.dirname(new URL(import.meta.url).pathname),
+  '../../node_modules/electron/index.js'
+);
+if (require.cache) {
+  require.cache[electronPath] = {
+    exports: {
+      app: {
+        getPath: () => './test-data',
+      },
+    },
+  } as NodeModule;
+}
 
 // Define interface for attachment
 interface Attachment {
@@ -31,7 +36,9 @@ interface DbModule {
   init: (path: string) => void;
   addAccount: (account: Partial<ImapAccount> & { id: string; username?: string; password?: string }) => void;
   getAccounts: () => Array<ImapAccount & { username?: string; password?: string; lastSyncUid?: number }>;
-  saveEmail: (email: Partial<Email> & { id: string; accountId: string; attachments?: Array<Partial<Attachment>> }) => void;
+  saveEmail: (
+    email: Partial<Email> & { id: string; accountId: string; attachments?: Array<Partial<Attachment>> }
+  ) => void;
   getEmails: (accountId: string) => Email[];
   getEmailAttachments: (emailId: string) => Array<Omit<Attachment, 'data' | 'emailId'>>;
   getAttachment: (id: string) => Attachment | undefined;
@@ -52,7 +59,7 @@ describe('Database Attachments Module', () => {
       password: 'password',
       imapHost: 'imap.test.com',
       imapPort: 993,
-      color: '#0000FF'
+      color: '#0000FF',
     };
     db.addAccount(account);
     return account;
@@ -73,7 +80,7 @@ describe('Database Attachments Module', () => {
       isFlagged: false,
       hasAttachments: attachments ? attachments.length > 0 : false,
       uid: 100,
-      attachments
+      attachments,
     };
     db.saveEmail(email);
     return email;
@@ -101,7 +108,7 @@ describe('Database Attachments Module', () => {
         filename: 'document.pdf',
         contentType: 'application/pdf',
         size: 1024,
-        data: Buffer.from('PDF content')
+        data: Buffer.from('PDF content'),
       };
       createTestEmail('email2', 'acc2', [attachment]);
 
@@ -124,31 +131,31 @@ describe('Database Attachments Module', () => {
           filename: 'image.png',
           contentType: 'image/png',
           size: 2048,
-          data: Buffer.from('PNG data')
+          data: Buffer.from('PNG data'),
         },
         {
           id: 'attach3',
           filename: 'report.xlsx',
           contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
           size: 4096,
-          data: Buffer.from('Excel data')
+          data: Buffer.from('Excel data'),
         },
         {
           id: 'attach4',
           filename: 'notes.txt',
           contentType: 'text/plain',
           size: 256,
-          data: Buffer.from('Text content')
-        }
+          data: Buffer.from('Text content'),
+        },
       ];
       createTestEmail('email3', 'acc3', attachments);
 
       const result = db.getEmailAttachments('email3');
 
       expect(result).toHaveLength(3);
-      expect(result.map(a => a.filename)).toContain('image.png');
-      expect(result.map(a => a.filename)).toContain('report.xlsx');
-      expect(result.map(a => a.filename)).toContain('notes.txt');
+      expect(result.map((a) => a.filename)).toContain('image.png');
+      expect(result.map((a) => a.filename)).toContain('report.xlsx');
+      expect(result.map((a) => a.filename)).toContain('notes.txt');
     });
 
     it('should return empty array for non-existent email', () => {
@@ -161,13 +168,13 @@ describe('Database Attachments Module', () => {
   describe('getAttachment', () => {
     it('should return full attachment with data', () => {
       createTestAccount('acc4');
-      const binaryData = Buffer.from([0x00, 0x01, 0x02, 0x03, 0xFF]);
+      const binaryData = Buffer.from([0x00, 0x01, 0x02, 0x03, 0xff]);
       const attachment = {
         id: 'attach5',
         filename: 'binary.bin',
         contentType: 'application/octet-stream',
         size: 5,
-        data: binaryData
+        data: binaryData,
       };
       createTestEmail('email4', 'acc4', [attachment]);
 
@@ -194,7 +201,7 @@ describe('Database Attachments Module', () => {
         id: 'attach6',
         filename: 'empty.txt',
         contentType: 'text/plain',
-        size: 0
+        size: 0,
         // No data field
       };
       createTestEmail('email5', 'acc5', [attachment]);
@@ -215,7 +222,7 @@ describe('Database Attachments Module', () => {
         filename: 'test.txt',
         contentType: 'text/plain',
         size: 100,
-        data: Buffer.from('Test content')
+        data: Buffer.from('Test content'),
       };
 
       db.saveEmail({
@@ -230,7 +237,7 @@ describe('Database Attachments Module', () => {
         isFlagged: false,
         hasAttachments: true,
         uid: 101,
-        attachments: [attachment]
+        attachments: [attachment],
       });
 
       const emails = db.getEmails('acc6');
@@ -247,7 +254,7 @@ describe('Database Attachments Module', () => {
         filename: 'auto-id.txt',
         contentType: 'text/plain',
         size: 50,
-        data: Buffer.from('Data')
+        data: Buffer.from('Data'),
       };
       createTestEmail('email7', 'acc7', [attachment]);
 
@@ -261,7 +268,7 @@ describe('Database Attachments Module', () => {
     it('should use default values for missing attachment properties', () => {
       createTestAccount('acc8');
       const attachment = {
-        id: 'attach8'
+        id: 'attach8',
         // Missing filename, contentType, size
       };
       createTestEmail('email8', 'acc8', [attachment]);
@@ -283,7 +290,7 @@ describe('Database Attachments Module', () => {
         filename: 'original.txt',
         contentType: 'text/plain',
         size: 100,
-        data: Buffer.from('Original')
+        data: Buffer.from('Original'),
       };
       createTestEmail('email9', 'acc9', [attachment1]);
 
@@ -293,7 +300,7 @@ describe('Database Attachments Module', () => {
         filename: 'updated.txt',
         contentType: 'text/plain',
         size: 200,
-        data: Buffer.from('Updated content')
+        data: Buffer.from('Updated content'),
       };
       db.saveEmail({
         id: 'email9',
@@ -307,7 +314,7 @@ describe('Database Attachments Module', () => {
         isFlagged: false,
         hasAttachments: true,
         uid: 100,
-        attachments: [attachment2]
+        attachments: [attachment2],
       });
 
       const result = db.getAttachment('attach9');
@@ -319,13 +326,13 @@ describe('Database Attachments Module', () => {
     it('should handle large binary attachments', () => {
       createTestAccount('acc10');
       // Create a 1MB buffer
-      const largeData = Buffer.alloc(1024 * 1024, 0xAB);
+      const largeData = Buffer.alloc(1024 * 1024, 0xab);
       const attachment = {
         id: 'attach10',
         filename: 'large-file.bin',
         contentType: 'application/octet-stream',
         size: largeData.length,
-        data: largeData
+        data: largeData,
       };
       createTestEmail('email10', 'acc10', [attachment]);
 
@@ -334,7 +341,7 @@ describe('Database Attachments Module', () => {
       expect(result).toBeDefined();
       expect(result?.size).toBe(1024 * 1024);
       expect(result?.data?.length).toBe(1024 * 1024);
-      expect(result?.data?.[0]).toBe(0xAB);
+      expect(result?.data?.[0]).toBe(0xab);
     });
   });
 
@@ -344,10 +351,10 @@ describe('Database Attachments Module', () => {
 
       // Create two emails with attachments
       createTestEmail('email11a', 'acc11', [
-        { id: 'attach11a', filename: 'file-a.txt', contentType: 'text/plain', size: 10 }
+        { id: 'attach11a', filename: 'file-a.txt', contentType: 'text/plain', size: 10 },
       ]);
       createTestEmail('email11b', 'acc11', [
-        { id: 'attach11b', filename: 'file-b.txt', contentType: 'text/plain', size: 20 }
+        { id: 'attach11b', filename: 'file-b.txt', contentType: 'text/plain', size: 20 },
       ]);
 
       const attachmentsA = db.getEmailAttachments('email11a');

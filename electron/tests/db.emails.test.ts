@@ -7,29 +7,48 @@ import { ImapAccount, Email } from '../../types';
 const require = createRequire(import.meta.url);
 
 // Mock Electron to provide app.getPath
-const electronPath = path.resolve(path.dirname(new URL(import.meta.url).pathname), '../../node_modules/electron/index.js');
-(require.cache as any)[electronPath] = {
-  exports: {
-    app: {
-      getPath: () => './test-data'
-    }
-  }
-};
+const electronPath = path.resolve(
+  path.dirname(new URL(import.meta.url).pathname),
+  '../../node_modules/electron/index.js'
+);
+if (require.cache) {
+  require.cache[electronPath] = {
+    exports: {
+      app: {
+        getPath: () => './test-data',
+      },
+    },
+  } as NodeModule;
+}
 
 // Define interface for db module methods (email-focused)
 interface DbModule {
   init: (path: string) => void;
   addAccount: (account: Partial<ImapAccount> & { id: string; username?: string; password?: string }) => void;
-  saveEmail: (email: Partial<Email> & { id: string; accountId: string; attachments?: Array<{ id?: string; filename?: string; contentType?: string; size?: number; data?: Buffer }> }) => { changes: number };
+  saveEmail: (
+    email: Partial<Email> & {
+      id: string;
+      accountId: string;
+      attachments?: Array<{ id?: string; filename?: string; contentType?: string; size?: number; data?: Buffer }>;
+    }
+  ) => { changes: number };
   getEmails: (accountId: string) => Email[];
   getEmailContent: (emailId: string) => { body: string; bodyHtml: string | undefined } | undefined;
   deleteEmail: (id: string) => void;
   deleteEmailsByUid: (accountId: string, folder: string, uids: number[]) => number;
   updateEmailReadStatus: (id: string, isRead: boolean) => { changes: number };
   updateEmailFlagStatus: (id: string, isFlagged: boolean) => { changes: number };
-  updateEmailSmartCategory: (id: string, smartCategory: string | undefined, aiSummary: string | undefined, aiReasoning: string | undefined, confidence: number) => { changes: number };
+  updateEmailSmartCategory: (
+    id: string,
+    smartCategory: string | undefined,
+    aiSummary: string | undefined,
+    aiReasoning: string | undefined,
+    confidence: number
+  ) => { changes: number };
   getEmailAttachments: (emailId: string) => Array<{ id: string; filename: string; contentType: string; size: number }>;
-  getAttachment: (id: string) => { id: string; emailId: string; filename: string; contentType: string; size: number; data: Buffer } | undefined;
+  getAttachment: (
+    id: string
+  ) => { id: string; emailId: string; filename: string; contentType: string; size: number; data: Buffer } | undefined;
 }
 
 // Import the database module under test
@@ -46,7 +65,7 @@ function createTestAccount(id: string = 'test-account') {
     password: 'password',
     imapHost: 'imap.test.com',
     imapPort: 993,
-    color: '#0000FF'
+    color: '#0000FF',
   };
 }
 
@@ -67,7 +86,7 @@ function createTestEmail(id: string, accountId: string, overrides: Partial<Email
     isFlagged: false,
     hasAttachments: false,
     uid: 100,
-    ...overrides
+    ...overrides,
   };
 }
 
@@ -109,7 +128,7 @@ describe('Database Email Operations', () => {
         aiSummary: 'This is an AI summary',
         aiReasoning: 'AI reasoning explanation',
         confidence: 0.95,
-        uid: 200
+        uid: 200,
       });
 
       db.saveEmail(email);
@@ -130,7 +149,7 @@ describe('Database Email Operations', () => {
     it('should apply default values for missing fields', () => {
       const minimalEmail = {
         id: 'minimal-email',
-        accountId
+        accountId,
       };
 
       db.saveEmail(minimalEmail);
@@ -166,16 +185,16 @@ describe('Database Email Operations', () => {
             filename: 'document.pdf',
             contentType: 'application/pdf',
             size: 1024,
-            data: Buffer.from('fake pdf content')
+            data: Buffer.from('fake pdf content'),
           },
           {
             id: 'att-2',
             filename: 'image.png',
             contentType: 'image/png',
             size: 2048,
-            data: Buffer.from('fake image content')
-          }
-        ]
+            data: Buffer.from('fake image content'),
+          },
+        ],
       };
 
       db.saveEmail(emailWithAttachments);
@@ -227,11 +246,13 @@ describe('Database Email Operations', () => {
     });
 
     it('should convert boolean fields correctly', () => {
-      db.saveEmail(createTestEmail('email-bools', accountId, {
-        isRead: true,
-        isFlagged: true,
-        hasAttachments: true
-      }));
+      db.saveEmail(
+        createTestEmail('email-bools', accountId, {
+          isRead: true,
+          isFlagged: true,
+          hasAttachments: true,
+        })
+      );
 
       const emails = db.getEmails(accountId);
 
@@ -244,10 +265,12 @@ describe('Database Email Operations', () => {
     });
 
     it('should not include body/bodyHtml in results (performance optimization)', () => {
-      db.saveEmail(createTestEmail('email-no-body', accountId, {
-        body: 'Large body content',
-        bodyHtml: '<p>Large HTML content</p>'
-      }));
+      db.saveEmail(
+        createTestEmail('email-no-body', accountId, {
+          body: 'Large body content',
+          bodyHtml: '<p>Large HTML content</p>',
+        })
+      );
 
       const emails = db.getEmails(accountId);
 
@@ -259,10 +282,12 @@ describe('Database Email Operations', () => {
 
   describe('getEmailContent', () => {
     it('should return body and bodyHtml for an email', () => {
-      db.saveEmail(createTestEmail('email-content', accountId, {
-        body: 'Plain text body',
-        bodyHtml: '<p>HTML body</p>'
-      }));
+      db.saveEmail(
+        createTestEmail('email-content', accountId, {
+          body: 'Plain text body',
+          bodyHtml: '<p>HTML body</p>',
+        })
+      );
 
       const content = db.getEmailContent('email-content');
 
@@ -280,7 +305,7 @@ describe('Database Email Operations', () => {
       db.saveEmail({
         id: 'email-no-html',
         accountId,
-        body: 'Plain text only'
+        body: 'Plain text only',
       });
 
       const content = db.getEmailContent('email-no-html');
@@ -336,8 +361,8 @@ describe('Database Email Operations', () => {
       expect(deletedCount).toBe(2);
       const emails = db.getEmails(accountId);
       expect(emails).toHaveLength(2);
-      expect(emails.map(e => e.uid)).toContain(102);
-      expect(emails.map(e => e.uid)).toContain(200);
+      expect(emails.map((e) => e.uid)).toContain(102);
+      expect(emails.map((e) => e.uid)).toContain(200);
     });
 
     it('should only delete from specified folder', () => {
@@ -447,12 +472,14 @@ describe('Database Email Operations', () => {
     });
 
     it('should clear category when set to null', () => {
-      db.saveEmail(createTestEmail('email-clear-cat', accountId, {
-        smartCategory: 'Newsletter',
-        aiSummary: 'Old summary',
-        aiReasoning: 'Old reasoning',
-        confidence: 0.8
-      }));
+      db.saveEmail(
+        createTestEmail('email-clear-cat', accountId, {
+          smartCategory: 'Newsletter',
+          aiSummary: 'Old summary',
+          aiReasoning: 'Old reasoning',
+          confidence: 0.8,
+        })
+      );
 
       const result = db.updateEmailSmartCategory('email-clear-cat', undefined, undefined, undefined, 0);
 
@@ -471,8 +498,8 @@ describe('Database Email Operations', () => {
       db.updateEmailSmartCategory('email-cat-1', 'Geschäftlich', 'Business related', 'Work context', 0.9);
 
       const emails = db.getEmails(accountId);
-      const email1 = emails.find(e => e.id === 'email-cat-1');
-      const email2 = emails.find(e => e.id === 'email-cat-2');
+      const email1 = emails.find((e) => e.id === 'email-cat-1');
+      const email2 = emails.find((e) => e.id === 'email-cat-2');
 
       expect(email1?.smartCategory).toBe('Geschäftlich');
       expect(email2?.smartCategory).toBe('Privat');
@@ -496,7 +523,7 @@ describe('Database Email Operations', () => {
       expect(emails).toHaveLength(categories.length);
 
       categories.forEach((category, index) => {
-        const email = emails.find(e => e.id === `email-cat-${index}`);
+        const email = emails.find((e) => e.id === `email-cat-${index}`);
         expect(email?.smartCategory).toBe(category);
       });
     });
@@ -514,9 +541,9 @@ describe('Database Email Operations', () => {
             filename: 'testfile.txt',
             contentType: 'text/plain',
             size: attachmentData.length,
-            data: attachmentData
-          }
-        ]
+            data: attachmentData,
+          },
+        ],
       };
 
       db.saveEmail(emailWithAttachment);
@@ -547,16 +574,16 @@ describe('Database Email Operations', () => {
             filename: 'first.pdf',
             contentType: 'application/pdf',
             size: 1000,
-            data: Buffer.from('pdf content')
+            data: Buffer.from('pdf content'),
           },
           {
             id: 'attach-second',
             filename: 'second.png',
             contentType: 'image/png',
             size: 2000,
-            data: Buffer.from('png content')
-          }
-        ]
+            data: Buffer.from('png content'),
+          },
+        ],
       };
 
       db.saveEmail(emailWithMultiple);
@@ -577,8 +604,8 @@ describe('Database Email Operations', () => {
         attachments: [
           {
             // No id, filename, contentType, size, or data - should use defaults
-          }
-        ]
+          },
+        ],
       };
 
       db.saveEmail(emailWithMinimalAttachment);

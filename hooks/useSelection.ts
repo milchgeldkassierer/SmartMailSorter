@@ -24,14 +24,14 @@ export const useSelection = ({ filteredEmails, onSelectEmail }: UseSelectionProp
 
     if (range && lastClickedId && filteredEmails.length > 0) {
       // Range Selection
-      const currentIndex = filteredEmails.findIndex(e => e.id === id);
-      const lastIndex = filteredEmails.findIndex(e => e.id === lastClickedId);
+      const currentIndex = filteredEmails.findIndex((e) => e.id === id);
+      const lastIndex = filteredEmails.findIndex((e) => e.id === lastClickedId);
 
       if (currentIndex !== -1 && lastIndex !== -1) {
         const start = Math.min(currentIndex, lastIndex);
         const end = Math.max(currentIndex, lastIndex);
-        const rangeIds = filteredEmails.slice(start, end + 1).map(e => e.id);
-        rangeIds.forEach(rid => next.add(rid));
+        const rangeIds = filteredEmails.slice(start, end + 1).map((e) => e.id);
+        rangeIds.forEach((rid) => next.add(rid));
       }
     } else if (multi) {
       // Toggle Selection (Ctrl+Click)
@@ -68,11 +68,11 @@ export const useSelection = ({ filteredEmails, onSelectEmail }: UseSelectionProp
     handleSelection(id, false, shiftKey);
   };
 
-  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleSelectAll = () => {
     if (selectedIds.size === filteredEmails.length && filteredEmails.length > 0) {
       setSelectedIds(new Set());
     } else {
-      setSelectedIds(new Set(filteredEmails.map(e => e.id)));
+      setSelectedIds(new Set(filteredEmails.map((e) => e.id)));
     }
   };
 
@@ -87,6 +87,6 @@ export const useSelection = ({ filteredEmails, onSelectEmail }: UseSelectionProp
     handleRowClick,
     handleToggleSelection,
     handleSelectAll,
-    clearSelection
+    clearSelection,
   };
 };

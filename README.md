@@ -10,8 +10,7 @@ View your app in AI Studio: https://ai.studio/apps/drive/1MLJpHIpnT5wX2k-wh_Xj8o
 
 ## Run Locally
 
-**Prerequisites:**  Node.js
-
+**Prerequisites:** Node.js
 
 1. Install dependencies:
    `npm install`
@@ -48,6 +47,7 @@ Enabling strict mode provides several important advantages:
 ### Type Checking
 
 To run type checking manually:
+
 ```bash
 npx tsc --noEmit
 ```

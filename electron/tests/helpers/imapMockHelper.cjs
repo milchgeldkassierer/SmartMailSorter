@@ -26,7 +26,7 @@ const {
   getMessage,
   isConnected,
   ImapFlow,
-  MockImapConnection
+  MockImapConnection,
 } = mockImap;
 
 /**
@@ -39,7 +39,7 @@ function createMockServerState() {
   return {
     getUids: getServerUids,
     getMessage,
-    isConnected
+    isConnected,
   };
 }
 
@@ -69,7 +69,7 @@ function addMessageToServer(message) {
         from: msg.from,
         body: msg.body,
         date: msg.date,
-        flags: msg.flags || []
+        flags: msg.flags || [],
       });
     }
   }
@@ -84,7 +84,7 @@ function addMessageToServer(message) {
     from: message.from || 'test@example.com',
     body: message.body || '',
     date: message.date || new Date().toISOString(),
-    flags: message.flags || []
+    flags: message.flags || [],
   });
 
   setServerEmails(currentEmails);
@@ -114,7 +114,7 @@ function removeMessageFromServer(uid) {
           from: msg.from,
           body: msg.body,
           date: msg.date,
-          flags: msg.flags || []
+          flags: msg.flags || [],
         });
       }
     }
@@ -143,11 +143,7 @@ function clearServerState() {
  * @returns {number[]} Array of created UIDs
  */
 function setupBatchScenario(count, options = {}) {
-  const {
-    startUid = 1,
-    subjectPrefix = 'Test Email',
-    from = 'batch@example.com'
-  } = options;
+  const { startUid = 1, subjectPrefix = 'Test Email', from = 'batch@example.com' } = options;
 
   const emails = [];
   const uids = [];
@@ -161,7 +157,7 @@ function setupBatchScenario(count, options = {}) {
       from,
       body: `This is test email number ${i + 1} for batch testing.`,
       date: new Date(Date.now() - i * 86400000).toISOString(), // Spread dates
-      flags: i % 3 === 0 ? ['\\Seen'] : [] // Every 3rd email is read
+      flags: i % 3 === 0 ? ['\\Seen'] : [], // Every 3rd email is read
     });
   }
 
@@ -184,13 +180,13 @@ function setupOrphanScenario(serverUids, localUids) {
     from: 'server@example.com',
     body: `Email with UID ${uid} exists on server`,
     date: new Date().toISOString(),
-    flags: []
+    flags: [],
   }));
 
   setServerEmails(emails);
 
   // Return orphan UIDs (local only)
-  return localUids.filter(uid => !serverUids.includes(uid));
+  return localUids.filter((uid) => !serverUids.includes(uid));
 }
 
 /**
@@ -218,7 +214,7 @@ function updateMessageFlags(uid, flags) {
         from: msg.from,
         body: msg.body,
         date: msg.date,
-        flags: existingUid === uid ? flags : (msg.flags || [])
+        flags: existingUid === uid ? flags : msg.flags || [],
       });
     }
   }
@@ -237,17 +233,17 @@ function getMessageCount() {
 
 /**
  * Simulates a connection error scenario.
- * @param {string} [errorMessage] - Custom error message
+ * @param {string} [_errorMessage] - Custom error message
  */
-function simulateConnectionError(errorMessage) {
+function simulateConnectionError(_errorMessage) {
   setConnectFailure(true);
 }
 
 /**
  * Simulates a fetch error scenario.
- * @param {string} [errorMessage] - Custom error message
+ * @param {string} [_errorMessage] - Custom error message
  */
-function simulateFetchError(errorMessage) {
+function simulateFetchError(_errorMessage) {
   setFetchFailure(true);
 }
 
@@ -290,7 +286,7 @@ function createTestAccount(overrides = {}) {
     password: overrides.password || 'testpass',
     imapHost: overrides.imapHost || 'imap.test.com',
     imapPort: overrides.imapPort || 993,
-    ...overrides
+    ...overrides,
   };
 }
 
@@ -327,5 +323,5 @@ module.exports = {
 
   // Mock classes (for advanced use cases)
   ImapFlow,
-  MockImapConnection
+  MockImapConnection,
 };

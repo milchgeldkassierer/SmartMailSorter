@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach, Mock } from 'vitest';
-import { Email, DefaultEmailCategory, SortResult, AISettings, LLMProvider } from '../../types';
+import { Email, DefaultEmailCategory, AISettings, LLMProvider } from '../../types';
 
 // Store the original fetch
 const originalFetch = global.fetch;
@@ -48,7 +48,7 @@ vi.mock('@google/genai', () => {
 
     get models() {
       return {
-        generateContent: (request: GeminiGenerateContentRequest) => mockGenerateContent(request)
+        generateContent: (request: GeminiGenerateContentRequest) => mockGenerateContent(request),
       };
     }
   }
@@ -59,9 +59,9 @@ vi.mock('@google/genai', () => {
       OBJECT: 'object',
       ARRAY: 'array',
       STRING: 'string',
-      NUMBER: 'number'
+      NUMBER: 'number',
     },
-    Schema: {}
+    Schema: {},
   };
 });
 
@@ -72,13 +72,13 @@ describe('GeminiService - callLLM Function', () => {
   const geminiSettings: AISettings = {
     provider: LLMProvider.GEMINI,
     model: 'gemini-3-flash-preview',
-    apiKey: 'test-gemini-api-key'
+    apiKey: 'test-gemini-api-key',
   };
 
   const openaiSettings: AISettings = {
     provider: LLMProvider.OPENAI,
     model: 'gpt-4o',
-    apiKey: 'test-openai-api-key'
+    apiKey: 'test-openai-api-key',
   };
 
   const availableCategories = [
@@ -87,7 +87,7 @@ describe('GeminiService - callLLM Function', () => {
     DefaultEmailCategory.INVOICE,
     DefaultEmailCategory.NEWSLETTER,
     DefaultEmailCategory.PRIVATE,
-    DefaultEmailCategory.BUSINESS
+    DefaultEmailCategory.BUSINESS,
   ];
 
   // Helper to create test emails
@@ -102,7 +102,7 @@ describe('GeminiService - callLLM Function', () => {
       folder: 'INBOX',
       category: DefaultEmailCategory.INBOX,
       isRead: false,
-      isFlagged: false
+      isFlagged: false,
     };
   }
 
@@ -124,10 +124,9 @@ describe('GeminiService - callLLM Function', () => {
       // Mock successful Gemini response using Strategy 1: result.response.text()
       mockGenerateContent = vi.fn().mockResolvedValue({
         response: {
-          text: () => JSON.stringify([
-            { id: 'email-1', category: DefaultEmailCategory.BUSINESS, summary: 'Test Summary' }
-          ])
-        }
+          text: () =>
+            JSON.stringify([{ id: 'email-1', category: DefaultEmailCategory.BUSINESS, summary: 'Test Summary' }]),
+        },
       });
 
       const email = createTestEmail('email-1', 'Business Meeting');
@@ -143,11 +142,12 @@ describe('GeminiService - callLLM Function', () => {
       // Mock response using Strategy 2: result.text() (simpler SDK)
       mockGenerateContent = vi.fn().mockResolvedValue({
         response: {
-          text: () => { throw new Error('Strategy 1 failed'); }
+          text: () => {
+            throw new Error('Strategy 1 failed');
+          },
         },
-        text: () => JSON.stringify([
-          { id: 'email-1', category: DefaultEmailCategory.INVOICE, summary: 'Invoice Summary' }
-        ])
+        text: () =>
+          JSON.stringify([{ id: 'email-1', category: DefaultEmailCategory.INVOICE, summary: 'Invoice Summary' }]),
       });
 
       const email = createTestEmail('email-1', 'Invoice #12345');
@@ -162,17 +162,23 @@ describe('GeminiService - callLLM Function', () => {
       // Mock response using Strategy 3: candidates extraction
       mockGenerateContent = vi.fn().mockResolvedValue({
         response: {
-          text: () => { throw new Error('Strategy 1 failed'); }
+          text: () => {
+            throw new Error('Strategy 1 failed');
+          },
         },
         candidates: [
           {
             content: {
               parts: [
-                { text: JSON.stringify([{ id: 'email-1', category: DefaultEmailCategory.NEWSLETTER, summary: 'Newsletter' }]) }
-              ]
-            }
-          }
-        ]
+                {
+                  text: JSON.stringify([
+                    { id: 'email-1', category: DefaultEmailCategory.NEWSLETTER, summary: 'Newsletter' },
+                  ]),
+                },
+              ],
+            },
+          },
+        ],
       });
 
       const email = createTestEmail('email-1', 'Weekly Newsletter');
@@ -187,8 +193,8 @@ describe('GeminiService - callLLM Function', () => {
       // Mock response with markdown code blocks
       mockGenerateContent = vi.fn().mockResolvedValue({
         response: {
-          text: () => '```json\n[{"id": "email-1", "category": "Geschäftlich", "summary": "Clean Test"}]\n```'
-        }
+          text: () => '```json\n[{"id": "email-1", "category": "Geschäftlich", "summary": "Clean Test"}]\n```',
+        },
       });
 
       const email = createTestEmail('email-1', 'Test Email');
@@ -227,7 +233,7 @@ describe('GeminiService - callLLM Function', () => {
       const settingsWithoutKey: AISettings = {
         provider: LLMProvider.GEMINI,
         model: 'gemini-3-flash-preview',
-        apiKey: ''
+        apiKey: '',
       };
 
       const email = createTestEmail('email-1', 'Test Email');
@@ -242,9 +248,11 @@ describe('GeminiService - callLLM Function', () => {
       // Mock response where all text extraction strategies fail
       mockGenerateContent = vi.fn().mockResolvedValue({
         response: {
-          text: () => { throw new Error('Strategy 1 failed'); }
+          text: () => {
+            throw new Error('Strategy 1 failed');
+          },
         },
-        candidates: [] // Empty candidates - Strategy 3 fails too
+        candidates: [], // Empty candidates - Strategy 3 fails too
       });
 
       const email = createTestEmail('email-1', 'Test Email');
@@ -271,14 +279,14 @@ describe('GeminiService - callLLM Function', () => {
     it('should pass correct model and settings to Gemini API', async () => {
       mockGenerateContent = vi.fn().mockResolvedValue({
         response: {
-          text: () => JSON.stringify([{ id: 'email-1', category: 'Test', summary: 'Test' }])
-        }
+          text: () => JSON.stringify([{ id: 'email-1', category: 'Test', summary: 'Test' }]),
+        },
       });
 
       const customSettings: AISettings = {
         provider: LLMProvider.GEMINI,
         model: 'gemini-3-pro-preview',
-        apiKey: 'custom-key'
+        apiKey: 'custom-key',
       };
 
       const email = createTestEmail('email-1', 'Test');
@@ -286,7 +294,7 @@ describe('GeminiService - callLLM Function', () => {
 
       expect(mockGenerateContent).toHaveBeenCalledWith(
         expect.objectContaining({
-          model: 'gemini-3-pro-preview'
+          model: 'gemini-3-pro-preview',
         })
       );
     });
@@ -294,8 +302,8 @@ describe('GeminiService - callLLM Function', () => {
     it('should include thinkingConfig in Gemini request', async () => {
       mockGenerateContent = vi.fn().mockResolvedValue({
         response: {
-          text: () => JSON.stringify([{ id: 'email-1', category: 'Test', summary: 'Test' }])
-        }
+          text: () => JSON.stringify([{ id: 'email-1', category: 'Test', summary: 'Test' }]),
+        },
       });
 
       const email = createTestEmail('email-1', 'Test');
@@ -306,9 +314,9 @@ describe('GeminiService - callLLM Function', () => {
           config: expect.objectContaining({
             responseMimeType: 'application/json',
             thinkingConfig: expect.objectContaining({
-              thinkingBudget: 1024
-            })
-          })
+              thinkingBudget: 1024,
+            }),
+          }),
         })
       );
     });
@@ -319,17 +327,18 @@ describe('GeminiService - callLLM Function', () => {
       // Mock fetch for OpenAI
       global.fetch = vi.fn().mockResolvedValue({
         ok: true,
-        json: () => Promise.resolve({
-          choices: [
-            {
-              message: {
-                content: JSON.stringify([
-                  { id: 'email-1', category: DefaultEmailCategory.PRIVATE, summary: 'Private Email' }
-                ])
-              }
-            }
-          ]
-        })
+        json: () =>
+          Promise.resolve({
+            choices: [
+              {
+                message: {
+                  content: JSON.stringify([
+                    { id: 'email-1', category: DefaultEmailCategory.PRIVATE, summary: 'Private Email' },
+                  ]),
+                },
+              },
+            ],
+          }),
       });
 
       const email = createTestEmail('email-1', 'Personal Matter');
@@ -344,8 +353,8 @@ describe('GeminiService - callLLM Function', () => {
           method: 'POST',
           headers: expect.objectContaining({
             'Content-Type': 'application/json',
-            'Authorization': 'Bearer test-openai-api-key'
-          })
+            Authorization: 'Bearer test-openai-api-key',
+          }),
         })
       );
     });
@@ -353,9 +362,10 @@ describe('GeminiService - callLLM Function', () => {
     it('should pass correct model to OpenAI API', async () => {
       global.fetch = vi.fn().mockResolvedValue({
         ok: true,
-        json: () => Promise.resolve({
-          choices: [{ message: { content: JSON.stringify([{ id: 'email-1', category: 'Test', summary: 'Test' }]) } }]
-        })
+        json: () =>
+          Promise.resolve({
+            choices: [{ message: { content: JSON.stringify([{ id: 'email-1', category: 'Test', summary: 'Test' }]) } }],
+          }),
       });
 
       const email = createTestEmail('email-1', 'Test');
@@ -364,7 +374,7 @@ describe('GeminiService - callLLM Function', () => {
       expect(global.fetch).toHaveBeenCalledWith(
         expect.any(String),
         expect.objectContaining({
-          body: expect.stringContaining('"model":"gpt-4o"')
+          body: expect.stringContaining('"model":"gpt-4o"'),
         })
       );
     });
@@ -372,9 +382,10 @@ describe('GeminiService - callLLM Function', () => {
     it('should use json_object response format for OpenAI', async () => {
       global.fetch = vi.fn().mockResolvedValue({
         ok: true,
-        json: () => Promise.resolve({
-          choices: [{ message: { content: JSON.stringify([{ id: 'email-1', category: 'Test', summary: 'Test' }]) } }]
-        })
+        json: () =>
+          Promise.resolve({
+            choices: [{ message: { content: JSON.stringify([{ id: 'email-1', category: 'Test', summary: 'Test' }]) } }],
+          }),
       });
 
       const email = createTestEmail('email-1', 'Test');
@@ -383,7 +394,7 @@ describe('GeminiService - callLLM Function', () => {
       expect(global.fetch).toHaveBeenCalledWith(
         expect.any(String),
         expect.objectContaining({
-          body: expect.stringContaining('"response_format":{"type":"json_object"}')
+          body: expect.stringContaining('"response_format":{"type":"json_object"}'),
         })
       );
     });
@@ -425,25 +436,26 @@ describe('GeminiService - callLLM Function', () => {
     it('should categorize multiple emails in batch with OpenAI', async () => {
       global.fetch = vi.fn().mockResolvedValue({
         ok: true,
-        json: () => Promise.resolve({
-          choices: [
-            {
-              message: {
-                content: JSON.stringify([
-                  { id: 'email-1', category: DefaultEmailCategory.INVOICE, summary: 'Invoice from vendor' },
-                  { id: 'email-2', category: DefaultEmailCategory.NEWSLETTER, summary: 'Weekly digest' },
-                  { id: 'email-3', category: DefaultEmailCategory.SPAM, summary: 'Promotional offer' }
-                ])
-              }
-            }
-          ]
-        })
+        json: () =>
+          Promise.resolve({
+            choices: [
+              {
+                message: {
+                  content: JSON.stringify([
+                    { id: 'email-1', category: DefaultEmailCategory.INVOICE, summary: 'Invoice from vendor' },
+                    { id: 'email-2', category: DefaultEmailCategory.NEWSLETTER, summary: 'Weekly digest' },
+                    { id: 'email-3', category: DefaultEmailCategory.SPAM, summary: 'Promotional offer' },
+                  ]),
+                },
+              },
+            ],
+          }),
       });
 
       const emails = [
         createTestEmail('email-1', 'Invoice #12345', 'billing@vendor.com'),
         createTestEmail('email-2', 'Weekly Newsletter', 'news@example.com'),
-        createTestEmail('email-3', 'Special Offer!', 'spam@example.com')
+        createTestEmail('email-3', 'Special Offer!', 'spam@example.com'),
       ];
 
       const results = await geminiService.categorizeBatchWithAI(emails, availableCategories, openaiSettings);
@@ -458,25 +470,26 @@ describe('GeminiService - callLLM Function', () => {
       // OpenAI returns results in different order than input
       global.fetch = vi.fn().mockResolvedValue({
         ok: true,
-        json: () => Promise.resolve({
-          choices: [
-            {
-              message: {
-                content: JSON.stringify([
-                  { id: 'email-3', category: DefaultEmailCategory.BUSINESS, summary: 'Third' },
-                  { id: 'email-1', category: DefaultEmailCategory.PRIVATE, summary: 'First' },
-                  { id: 'email-2', category: DefaultEmailCategory.NEWSLETTER, summary: 'Second' }
-                ])
-              }
-            }
-          ]
-        })
+        json: () =>
+          Promise.resolve({
+            choices: [
+              {
+                message: {
+                  content: JSON.stringify([
+                    { id: 'email-3', category: DefaultEmailCategory.BUSINESS, summary: 'Third' },
+                    { id: 'email-1', category: DefaultEmailCategory.PRIVATE, summary: 'First' },
+                    { id: 'email-2', category: DefaultEmailCategory.NEWSLETTER, summary: 'Second' },
+                  ]),
+                },
+              },
+            ],
+          }),
       });
 
       const emails = [
         createTestEmail('email-1', 'First Email'),
         createTestEmail('email-2', 'Second Email'),
-        createTestEmail('email-3', 'Third Email')
+        createTestEmail('email-3', 'Third Email'),
       ];
 
       const results = await geminiService.categorizeBatchWithAI(emails, availableCategories, openaiSettings);
@@ -490,15 +503,16 @@ describe('GeminiService - callLLM Function', () => {
     it('should handle OpenAI invalid JSON response', async () => {
       global.fetch = vi.fn().mockResolvedValue({
         ok: true,
-        json: () => Promise.resolve({
-          choices: [
-            {
-              message: {
-                content: 'This is not valid JSON'
-              }
-            }
-          ]
-        })
+        json: () =>
+          Promise.resolve({
+            choices: [
+              {
+                message: {
+                  content: 'This is not valid JSON',
+                },
+              },
+            ],
+          }),
       });
 
       const email = createTestEmail('email-1', 'Test');
@@ -512,9 +526,10 @@ describe('GeminiService - callLLM Function', () => {
     it('should handle OpenAI empty choices array', async () => {
       global.fetch = vi.fn().mockResolvedValue({
         ok: true,
-        json: () => Promise.resolve({
-          choices: []
-        })
+        json: () =>
+          Promise.resolve({
+            choices: [],
+          }),
       });
 
       const email = createTestEmail('email-1', 'Test');
@@ -527,15 +542,16 @@ describe('GeminiService - callLLM Function', () => {
     it('should handle OpenAI missing message content', async () => {
       global.fetch = vi.fn().mockResolvedValue({
         ok: true,
-        json: () => Promise.resolve({
-          choices: [
-            {
-              message: {
-                content: null
-              }
-            }
-          ]
-        })
+        json: () =>
+          Promise.resolve({
+            choices: [
+              {
+                message: {
+                  content: null,
+                },
+              },
+            ],
+          }),
       });
 
       const email = createTestEmail('email-1', 'Test');
@@ -548,15 +564,16 @@ describe('GeminiService - callLLM Function', () => {
     it('should use different OpenAI models when specified', async () => {
       global.fetch = vi.fn().mockResolvedValue({
         ok: true,
-        json: () => Promise.resolve({
-          choices: [{ message: { content: JSON.stringify([{ id: 'email-1', category: 'Test', summary: 'Test' }]) } }]
-        })
+        json: () =>
+          Promise.resolve({
+            choices: [{ message: { content: JSON.stringify([{ id: 'email-1', category: 'Test', summary: 'Test' }]) } }],
+          }),
       });
 
       const customOpenAISettings: AISettings = {
         provider: LLMProvider.OPENAI,
         model: 'gpt-4-turbo',
-        apiKey: 'test-openai-api-key'
+        apiKey: 'test-openai-api-key',
       };
 
       const email = createTestEmail('email-1', 'Test');
@@ -565,7 +582,7 @@ describe('GeminiService - callLLM Function', () => {
       expect(global.fetch).toHaveBeenCalledWith(
         expect.any(String),
         expect.objectContaining({
-          body: expect.stringContaining('"model":"gpt-4-turbo"')
+          body: expect.stringContaining('"model":"gpt-4-turbo"'),
         })
       );
     });
@@ -573,9 +590,10 @@ describe('GeminiService - callLLM Function', () => {
     it('should include system instruction in OpenAI request', async () => {
       global.fetch = vi.fn().mockResolvedValue({
         ok: true,
-        json: () => Promise.resolve({
-          choices: [{ message: { content: JSON.stringify([{ id: 'email-1', category: 'Test', summary: 'Test' }]) } }]
-        })
+        json: () =>
+          Promise.resolve({
+            choices: [{ message: { content: JSON.stringify([{ id: 'email-1', category: 'Test', summary: 'Test' }]) } }],
+          }),
       });
 
       const email = createTestEmail('email-1', 'Test');
@@ -585,7 +603,7 @@ describe('GeminiService - callLLM Function', () => {
       expect(global.fetch).toHaveBeenCalledWith(
         expect.any(String),
         expect.objectContaining({
-          body: expect.stringContaining('"role":"system"')
+          body: expect.stringContaining('"role":"system"'),
         })
       );
     });
@@ -593,9 +611,10 @@ describe('GeminiService - callLLM Function', () => {
     it('should include user prompt in OpenAI request', async () => {
       global.fetch = vi.fn().mockResolvedValue({
         ok: true,
-        json: () => Promise.resolve({
-          choices: [{ message: { content: JSON.stringify([{ id: 'email-1', category: 'Test', summary: 'Test' }]) } }]
-        })
+        json: () =>
+          Promise.resolve({
+            choices: [{ message: { content: JSON.stringify([{ id: 'email-1', category: 'Test', summary: 'Test' }]) } }],
+          }),
       });
 
       const email = createTestEmail('email-1', 'Test');
@@ -605,7 +624,7 @@ describe('GeminiService - callLLM Function', () => {
       expect(global.fetch).toHaveBeenCalledWith(
         expect.any(String),
         expect.objectContaining({
-          body: expect.stringContaining('"role":"user"')
+          body: expect.stringContaining('"role":"user"'),
         })
       );
     });
@@ -614,24 +633,22 @@ describe('GeminiService - callLLM Function', () => {
       // OpenAI returns fewer results than input emails
       global.fetch = vi.fn().mockResolvedValue({
         ok: true,
-        json: () => Promise.resolve({
-          choices: [
-            {
-              message: {
-                content: JSON.stringify([
-                  { id: 'email-1', category: DefaultEmailCategory.INVOICE, summary: 'Invoice' }
-                  // email-2 is missing from response
-                ])
-              }
-            }
-          ]
-        })
+        json: () =>
+          Promise.resolve({
+            choices: [
+              {
+                message: {
+                  content: JSON.stringify([
+                    { id: 'email-1', category: DefaultEmailCategory.INVOICE, summary: 'Invoice' },
+                    // email-2 is missing from response
+                  ]),
+                },
+              },
+            ],
+          }),
       });
 
-      const emails = [
-        createTestEmail('email-1', 'Invoice Email'),
-        createTestEmail('email-2', 'Missing Email')
-      ];
+      const emails = [createTestEmail('email-1', 'Invoice Email'), createTestEmail('email-2', 'Missing Email')];
 
       const results = await geminiService.categorizeBatchWithAI(emails, availableCategories, openaiSettings);
 
@@ -645,15 +662,16 @@ describe('GeminiService - callLLM Function', () => {
     it('should handle OpenAI response with extra whitespace', async () => {
       global.fetch = vi.fn().mockResolvedValue({
         ok: true,
-        json: () => Promise.resolve({
-          choices: [
-            {
-              message: {
-                content: '  \n  [{"id": "email-1", "category": "Geschäftlich", "summary": "Business"}]  \n  '
-              }
-            }
-          ]
-        })
+        json: () =>
+          Promise.resolve({
+            choices: [
+              {
+                message: {
+                  content: '  \n  [{"id": "email-1", "category": "Geschäftlich", "summary": "Business"}]  \n  ',
+                },
+              },
+            ],
+          }),
       });
 
       const email = createTestEmail('email-1', 'Test');
@@ -666,17 +684,18 @@ describe('GeminiService - callLLM Function', () => {
     it('should categorize single email with OpenAI via categorizeEmailWithAI wrapper', async () => {
       global.fetch = vi.fn().mockResolvedValue({
         ok: true,
-        json: () => Promise.resolve({
-          choices: [
-            {
-              message: {
-                content: JSON.stringify([
-                  { id: 'email-1', category: DefaultEmailCategory.SPAM, summary: 'Spam detected' }
-                ])
-              }
-            }
-          ]
-        })
+        json: () =>
+          Promise.resolve({
+            choices: [
+              {
+                message: {
+                  content: JSON.stringify([
+                    { id: 'email-1', category: DefaultEmailCategory.SPAM, summary: 'Spam detected' },
+                  ]),
+                },
+              },
+            ],
+          }),
       });
 
       const email = createTestEmail('email-1', 'Win a prize!');
@@ -691,7 +710,7 @@ describe('GeminiService - callLLM Function', () => {
       global.fetch = vi.fn().mockResolvedValue({
         ok: false,
         status: 500,
-        text: () => Promise.resolve(JSON.stringify({ error: { message: 'Internal Server Error' } }))
+        text: () => Promise.resolve(JSON.stringify({ error: { message: 'Internal Server Error' } })),
       });
 
       const email = createTestEmail('email-1', 'Test');
@@ -707,7 +726,7 @@ describe('GeminiService - callLLM Function', () => {
       const unknownSettings: AISettings = {
         provider: 'Unknown Provider' as LLMProvider,
         model: 'some-model',
-        apiKey: 'some-key'
+        apiKey: 'some-key',
       };
 
       const email = createTestEmail('email-1', 'Test');
@@ -723,11 +742,12 @@ describe('GeminiService - callLLM Function', () => {
     it('should generate demo emails successfully', async () => {
       mockGenerateContent = vi.fn().mockResolvedValue({
         response: {
-          text: () => JSON.stringify([
-            { sender: 'John Doe', senderEmail: 'john@example.com', subject: 'Demo Email 1', body: 'Demo body 1' },
-            { sender: 'Jane Doe', senderEmail: 'jane@example.com', subject: 'Demo Email 2', body: 'Demo body 2' }
-          ])
-        }
+          text: () =>
+            JSON.stringify([
+              { sender: 'John Doe', senderEmail: 'john@example.com', subject: 'Demo Email 1', body: 'Demo body 1' },
+              { sender: 'Jane Doe', senderEmail: 'jane@example.com', subject: 'Demo Email 2', body: 'Demo body 2' },
+            ]),
+        },
       });
 
       const emails = await geminiService.generateDemoEmails(2, geminiSettings);
@@ -751,8 +771,8 @@ describe('GeminiService - callLLM Function', () => {
     it('should handle malformed response gracefully', async () => {
       mockGenerateContent = vi.fn().mockResolvedValue({
         response: {
-          text: () => JSON.stringify({ not: 'an array' })
-        }
+          text: () => JSON.stringify({ not: 'an array' }),
+        },
       });
 
       const emails = await geminiService.generateDemoEmails(5, geminiSettings);
@@ -763,10 +783,11 @@ describe('GeminiService - callLLM Function', () => {
     it('should fill in default values for missing properties', async () => {
       mockGenerateContent = vi.fn().mockResolvedValue({
         response: {
-          text: () => JSON.stringify([
-            { sender: 'Test Sender' } // Minimal data
-          ])
-        }
+          text: () =>
+            JSON.stringify([
+              { sender: 'Test Sender' }, // Minimal data
+            ]),
+        },
       });
 
       const emails = await geminiService.generateDemoEmails(1, geminiSettings);
@@ -790,12 +811,8 @@ describe('GeminiService - callLLM Function', () => {
     it('should request correct count of demo emails', async () => {
       mockGenerateContent = vi.fn().mockResolvedValue({
         response: {
-          text: () => JSON.stringify([
-            { sender: 'Test1' },
-            { sender: 'Test2' },
-            { sender: 'Test3' }
-          ])
-        }
+          text: () => JSON.stringify([{ sender: 'Test1' }, { sender: 'Test2' }, { sender: 'Test3' }]),
+        },
       });
 
       const emails = await geminiService.generateDemoEmails(3, geminiSettings);
@@ -804,7 +821,7 @@ describe('GeminiService - callLLM Function', () => {
       // Verify prompt contains the count
       expect(mockGenerateContent).toHaveBeenCalledWith(
         expect.objectContaining({
-          contents: expect.stringContaining('3')
+          contents: expect.stringContaining('3'),
         })
       );
     });
@@ -814,10 +831,8 @@ describe('GeminiService - callLLM Function', () => {
     it('should delegate to batch function for single email', async () => {
       mockGenerateContent = vi.fn().mockResolvedValue({
         response: {
-          text: () => JSON.stringify([
-            { id: 'email-1', category: DefaultEmailCategory.SPAM, summary: 'Spam Email' }
-          ])
-        }
+          text: () => JSON.stringify([{ id: 'email-1', category: DefaultEmailCategory.SPAM, summary: 'Spam Email' }]),
+        },
       });
 
       const email = createTestEmail('email-1', 'You won a lottery!');
@@ -830,8 +845,8 @@ describe('GeminiService - callLLM Function', () => {
     it('should return fallback when batch fails completely', async () => {
       mockGenerateContent = vi.fn().mockResolvedValue({
         response: {
-          text: () => JSON.stringify([]) // Empty result
-        }
+          text: () => JSON.stringify([]), // Empty result
+        },
       });
 
       const email = createTestEmail('email-1', 'Test');
@@ -847,17 +862,19 @@ describe('GeminiService - callLLM Function', () => {
       // Alternative path: candidates on response object instead of result
       mockGenerateContent = vi.fn().mockResolvedValue({
         response: {
-          text: () => { throw new Error('Failed'); },
+          text: () => {
+            throw new Error('Failed');
+          },
           candidates: [
             {
               content: {
                 parts: [
-                  { text: JSON.stringify([{ id: 'email-1', category: 'Test', summary: 'Via Response Candidates' }]) }
-                ]
-              }
-            }
-          ]
-        }
+                  { text: JSON.stringify([{ id: 'email-1', category: 'Test', summary: 'Via Response Candidates' }]) },
+                ],
+              },
+            },
+          ],
+        },
       });
 
       const email = createTestEmail('email-1', 'Test');
@@ -870,15 +887,17 @@ describe('GeminiService - callLLM Function', () => {
     it('edge: should handle empty parts array in candidates', async () => {
       mockGenerateContent = vi.fn().mockResolvedValue({
         response: {
-          text: () => { throw new Error('Failed'); }
+          text: () => {
+            throw new Error('Failed');
+          },
         },
         candidates: [
           {
             content: {
-              parts: [] // Empty parts
-            }
-          }
-        ]
+              parts: [], // Empty parts
+            },
+          },
+        ],
       });
 
       const email = createTestEmail('email-1', 'Test');
@@ -891,8 +910,8 @@ describe('GeminiService - callLLM Function', () => {
     it('edge: should handle invalid JSON in response', async () => {
       mockGenerateContent = vi.fn().mockResolvedValue({
         response: {
-          text: () => 'not valid json'
-        }
+          text: () => 'not valid json',
+        },
       });
 
       const email = createTestEmail('email-1', 'Test');
@@ -906,8 +925,9 @@ describe('GeminiService - callLLM Function', () => {
     it('edge: should handle multiple consecutive markdown code blocks', async () => {
       mockGenerateContent = vi.fn().mockResolvedValue({
         response: {
-          text: () => '```json\n```json\n[{"id": "email-1", "category": "Test", "summary": "Double Cleaned"}]\n```\n```'
-        }
+          text: () =>
+            '```json\n```json\n[{"id": "email-1", "category": "Test", "summary": "Double Cleaned"}]\n```\n```',
+        },
       });
 
       const email = createTestEmail('email-1', 'Test');
@@ -922,13 +942,13 @@ describe('GeminiService - callLLM Function', () => {
       const longBody = 'A'.repeat(3000);
       mockGenerateContent = vi.fn().mockResolvedValue({
         response: {
-          text: () => JSON.stringify([{ id: 'email-1', category: 'Test', summary: 'Long Body' }])
-        }
+          text: () => JSON.stringify([{ id: 'email-1', category: 'Test', summary: 'Long Body' }]),
+        },
       });
 
       const email: Email = {
         ...createTestEmail('email-1', 'Long Email'),
-        body: longBody
+        body: longBody,
       };
 
       await geminiService.categorizeBatchWithAI([email], availableCategories, geminiSettings);
@@ -943,8 +963,8 @@ describe('GeminiService - callLLM Function', () => {
     it('edge: should filter out INBOX from target categories', async () => {
       mockGenerateContent = vi.fn().mockResolvedValue({
         response: {
-          text: () => JSON.stringify([{ id: 'email-1', category: 'Test', summary: 'Test' }])
-        }
+          text: () => JSON.stringify([{ id: 'email-1', category: 'Test', summary: 'Test' }]),
+        },
       });
 
       const email = createTestEmail('email-1', 'Test');
@@ -960,11 +980,15 @@ describe('GeminiService - callLLM Function', () => {
       const settingsWithWhitespaceKey: AISettings = {
         provider: LLMProvider.GEMINI,
         model: 'gemini-3-flash-preview',
-        apiKey: '   '
+        apiKey: '   ',
       };
 
       const email = createTestEmail('email-1', 'Test');
-      const results = await geminiService.categorizeBatchWithAI([email], availableCategories, settingsWithWhitespaceKey);
+      const results = await geminiService.categorizeBatchWithAI(
+        [email],
+        availableCategories,
+        settingsWithWhitespaceKey
+      );
 
       expect(results).toHaveLength(1);
       expect(results[0].categoryId).toBe(DefaultEmailCategory.OTHER);
@@ -974,17 +998,15 @@ describe('GeminiService - callLLM Function', () => {
     it('edge: should handle null response from text()', async () => {
       mockGenerateContent = vi.fn().mockResolvedValue({
         response: {
-          text: () => null
+          text: () => null,
         },
         candidates: [
           {
             content: {
-              parts: [
-                { text: JSON.stringify([{ id: 'email-1', category: 'Fallback', summary: 'From candidates' }]) }
-              ]
-            }
-          }
-        ]
+              parts: [{ text: JSON.stringify([{ id: 'email-1', category: 'Fallback', summary: 'From candidates' }]) }],
+            },
+          },
+        ],
       });
 
       const email = createTestEmail('email-1', 'Test');
@@ -997,13 +1019,15 @@ describe('GeminiService - callLLM Function', () => {
     it('edge: should handle missing content in candidates', async () => {
       mockGenerateContent = vi.fn().mockResolvedValue({
         response: {
-          text: () => { throw new Error('Failed'); }
+          text: () => {
+            throw new Error('Failed');
+          },
         },
         candidates: [
           {
             // Missing content property
-          }
-        ]
+          },
+        ],
       });
 
       const email = createTestEmail('email-1', 'Test');
@@ -1016,9 +1040,7 @@ describe('GeminiService - callLLM Function', () => {
 
   describe('Rate Limit Edge Cases', () => {
     it('should handle rate limit with "Resource has been exhausted" message', async () => {
-      mockGenerateContent = vi.fn().mockRejectedValue(
-        new Error('Resource has been exhausted (e.g. check quota).')
-      );
+      mockGenerateContent = vi.fn().mockRejectedValue(new Error('Resource has been exhausted (e.g. check quota).'));
 
       const email = createTestEmail('email-1', 'Test Email');
       const results = await geminiService.categorizeBatchWithAI([email], availableCategories, geminiSettings);
@@ -1029,9 +1051,7 @@ describe('GeminiService - callLLM Function', () => {
     });
 
     it('should handle rate limit with lowercase "quota" in message', async () => {
-      mockGenerateContent = vi.fn().mockRejectedValue(
-        new Error('Your daily quota has been exceeded')
-      );
+      mockGenerateContent = vi.fn().mockRejectedValue(new Error('Your daily quota has been exceeded'));
 
       const email = createTestEmail('email-1', 'Test Email');
       const results = await geminiService.categorizeBatchWithAI([email], availableCategories, geminiSettings);
@@ -1042,9 +1062,7 @@ describe('GeminiService - callLLM Function', () => {
     });
 
     it('should handle rate limit with HTTP status in message', async () => {
-      mockGenerateContent = vi.fn().mockRejectedValue(
-        new Error('HTTP Error 429 Too Many Requests')
-      );
+      mockGenerateContent = vi.fn().mockRejectedValue(new Error('HTTP Error 429 Too Many Requests'));
 
       const email = createTestEmail('email-1', 'Test Email');
       const results = await geminiService.categorizeBatchWithAI([email], availableCategories, geminiSettings);
@@ -1055,20 +1073,18 @@ describe('GeminiService - callLLM Function', () => {
     });
 
     it('should fail all batch emails on rate limit error', async () => {
-      mockGenerateContent = vi.fn().mockRejectedValue(
-        new Error('Rate limit exceeded 429')
-      );
+      mockGenerateContent = vi.fn().mockRejectedValue(new Error('Rate limit exceeded 429'));
 
       const emails = [
         createTestEmail('email-1', 'First Email'),
         createTestEmail('email-2', 'Second Email'),
-        createTestEmail('email-3', 'Third Email')
+        createTestEmail('email-3', 'Third Email'),
       ];
 
       const results = await geminiService.categorizeBatchWithAI(emails, availableCategories, geminiSettings);
 
       expect(results).toHaveLength(3);
-      results.forEach(result => {
+      results.forEach((result) => {
         expect(result.categoryId).toBe(DefaultEmailCategory.OTHER);
         expect(result.reasoning).toContain('AI Busy (429)');
         expect(result.confidence).toBe(0);
@@ -1079,7 +1095,7 @@ describe('GeminiService - callLLM Function', () => {
       global.fetch = vi.fn().mockResolvedValue({
         ok: false,
         status: 429,
-        text: () => Promise.resolve(JSON.stringify({ error: { message: 'Rate limit exceeded' } }))
+        text: () => Promise.resolve(JSON.stringify({ error: { message: 'Rate limit exceeded' } })),
       });
 
       const email = createTestEmail('email-1', 'Test Email');
@@ -1094,9 +1110,9 @@ describe('GeminiService - callLLM Function', () => {
     it('should handle empty string from text() function', async () => {
       mockGenerateContent = vi.fn().mockResolvedValue({
         response: {
-          text: () => ''
+          text: () => '',
         },
-        candidates: []
+        candidates: [],
       });
 
       const email = createTestEmail('email-1', 'Test Email');
@@ -1110,9 +1126,9 @@ describe('GeminiService - callLLM Function', () => {
     it('should handle whitespace-only response from text()', async () => {
       mockGenerateContent = vi.fn().mockResolvedValue({
         response: {
-          text: () => '   \n\t  '
+          text: () => '   \n\t  ',
         },
-        candidates: []
+        candidates: [],
       });
 
       const email = createTestEmail('email-1', 'Test Email');
@@ -1125,19 +1141,16 @@ describe('GeminiService - callLLM Function', () => {
     it('should handle empty array result for batch request', async () => {
       mockGenerateContent = vi.fn().mockResolvedValue({
         response: {
-          text: () => '[]'
-        }
+          text: () => '[]',
+        },
       });
 
-      const emails = [
-        createTestEmail('email-1', 'First Email'),
-        createTestEmail('email-2', 'Second Email')
-      ];
+      const emails = [createTestEmail('email-1', 'First Email'), createTestEmail('email-2', 'Second Email')];
 
       const results = await geminiService.categorizeBatchWithAI(emails, availableCategories, geminiSettings);
 
       expect(results).toHaveLength(2);
-      results.forEach(result => {
+      results.forEach((result) => {
         expect(result.categoryId).toBe(DefaultEmailCategory.OTHER);
         expect(result.summary).toBe('Fehler');
         expect(result.reasoning).toContain('AI lieferte kein Ergebnis');
@@ -1147,7 +1160,7 @@ describe('GeminiService - callLLM Function', () => {
     it('should handle null response object', async () => {
       mockGenerateContent = vi.fn().mockResolvedValue({
         response: null,
-        candidates: []
+        candidates: [],
       });
 
       const email = createTestEmail('email-1', 'Test Email');
@@ -1160,7 +1173,7 @@ describe('GeminiService - callLLM Function', () => {
     it('should handle undefined response', async () => {
       mockGenerateContent = vi.fn().mockResolvedValue({
         response: undefined,
-        candidates: undefined
+        candidates: undefined,
       });
 
       const email = createTestEmail('email-1', 'Test Email');
@@ -1173,7 +1186,7 @@ describe('GeminiService - callLLM Function', () => {
     it('should handle OpenAI empty response body', async () => {
       global.fetch = vi.fn().mockResolvedValue({
         ok: true,
-        json: () => Promise.resolve({})
+        json: () => Promise.resolve({}),
       });
 
       const email = createTestEmail('email-1', 'Test Email');
@@ -1186,9 +1199,10 @@ describe('GeminiService - callLLM Function', () => {
     it('should handle OpenAI null message content', async () => {
       global.fetch = vi.fn().mockResolvedValue({
         ok: true,
-        json: () => Promise.resolve({
-          choices: [{ message: { content: null } }]
-        })
+        json: () =>
+          Promise.resolve({
+            choices: [{ message: { content: null } }],
+          }),
       });
 
       const email = createTestEmail('email-1', 'Test Email');
@@ -1201,9 +1215,10 @@ describe('GeminiService - callLLM Function', () => {
     it('should handle OpenAI undefined message', async () => {
       global.fetch = vi.fn().mockResolvedValue({
         ok: true,
-        json: () => Promise.resolve({
-          choices: [{ message: undefined }]
-        })
+        json: () =>
+          Promise.resolve({
+            choices: [{ message: undefined }],
+          }),
       });
 
       const email = createTestEmail('email-1', 'Test Email');
@@ -1216,9 +1231,7 @@ describe('GeminiService - callLLM Function', () => {
 
   describe('Error Handling Edge Cases', () => {
     it('should handle connection refused error', async () => {
-      mockGenerateContent = vi.fn().mockRejectedValue(
-        new Error('ECONNREFUSED: Connection refused')
-      );
+      mockGenerateContent = vi.fn().mockRejectedValue(new Error('ECONNREFUSED: Connection refused'));
 
       const email = createTestEmail('email-1', 'Test Email');
       const results = await geminiService.categorizeBatchWithAI([email], availableCategories, geminiSettings);
@@ -1230,9 +1243,7 @@ describe('GeminiService - callLLM Function', () => {
     });
 
     it('should handle connection reset error', async () => {
-      mockGenerateContent = vi.fn().mockRejectedValue(
-        new Error('ECONNRESET: Connection reset by peer')
-      );
+      mockGenerateContent = vi.fn().mockRejectedValue(new Error('ECONNRESET: Connection reset by peer'));
 
       const email = createTestEmail('email-1', 'Test Email');
       const results = await geminiService.categorizeBatchWithAI([email], availableCategories, geminiSettings);
@@ -1243,9 +1254,7 @@ describe('GeminiService - callLLM Function', () => {
     });
 
     it('should handle socket timeout error', async () => {
-      mockGenerateContent = vi.fn().mockRejectedValue(
-        new Error('ETIMEDOUT: Socket timeout')
-      );
+      mockGenerateContent = vi.fn().mockRejectedValue(new Error('ETIMEDOUT: Socket timeout'));
 
       const email = createTestEmail('email-1', 'Test Email');
       const results = await geminiService.categorizeBatchWithAI([email], availableCategories, geminiSettings);
@@ -1256,9 +1265,7 @@ describe('GeminiService - callLLM Function', () => {
     });
 
     it('should handle DNS resolution failure', async () => {
-      mockGenerateContent = vi.fn().mockRejectedValue(
-        new Error('ENOTFOUND: getaddrinfo ENOTFOUND api.google.com')
-      );
+      mockGenerateContent = vi.fn().mockRejectedValue(new Error('ENOTFOUND: getaddrinfo ENOTFOUND api.google.com'));
 
       const email = createTestEmail('email-1', 'Test Email');
       const results = await geminiService.categorizeBatchWithAI([email], availableCategories, geminiSettings);
@@ -1293,8 +1300,8 @@ describe('GeminiService - callLLM Function', () => {
     it('should handle JSON parse error with truncated response', async () => {
       mockGenerateContent = vi.fn().mockResolvedValue({
         response: {
-          text: () => '[{"id": "email-1", "category": "Test", "summa'
-        }
+          text: () => '[{"id": "email-1", "category": "Test", "summa',
+        },
       });
 
       const email = createTestEmail('email-1', 'Test Email');
@@ -1308,8 +1315,8 @@ describe('GeminiService - callLLM Function', () => {
     it('should handle JSON with invalid unicode escape', async () => {
       mockGenerateContent = vi.fn().mockResolvedValue({
         response: {
-          text: () => '[{"id": "email-1", "summary": "Test\\uXXXX"}]'
-        }
+          text: () => '[{"id": "email-1", "summary": "Test\\uXXXX"}]',
+        },
       });
 
       const email = createTestEmail('email-1', 'Test Email');
@@ -1322,8 +1329,8 @@ describe('GeminiService - callLLM Function', () => {
     it('should handle object response instead of array', async () => {
       mockGenerateContent = vi.fn().mockResolvedValue({
         response: {
-          text: () => JSON.stringify({ id: 'email-1', category: 'Test', summary: 'Not an array' })
-        }
+          text: () => JSON.stringify({ id: 'email-1', category: 'Test', summary: 'Not an array' }),
+        },
       });
 
       const email = createTestEmail('email-1', 'Test Email');
@@ -1337,8 +1344,8 @@ describe('GeminiService - callLLM Function', () => {
     it('should handle primitive value response', async () => {
       mockGenerateContent = vi.fn().mockResolvedValue({
         response: {
-          text: () => '"just a string"'
-        }
+          text: () => '"just a string"',
+        },
       });
 
       const email = createTestEmail('email-1', 'Test Email');
@@ -1351,8 +1358,8 @@ describe('GeminiService - callLLM Function', () => {
     it('should handle null JSON response', async () => {
       mockGenerateContent = vi.fn().mockResolvedValue({
         response: {
-          text: () => 'null'
-        }
+          text: () => 'null',
+        },
       });
 
       const email = createTestEmail('email-1', 'Test Email');
@@ -1363,9 +1370,7 @@ describe('GeminiService - callLLM Function', () => {
     });
 
     it('should handle OpenAI fetch throwing TypeError', async () => {
-      global.fetch = vi.fn().mockRejectedValue(
-        new TypeError('Failed to fetch')
-      );
+      global.fetch = vi.fn().mockRejectedValue(new TypeError('Failed to fetch'));
 
       const email = createTestEmail('email-1', 'Test Email');
       const results = await geminiService.categorizeBatchWithAI([email], availableCategories, openaiSettings);
@@ -1378,7 +1383,7 @@ describe('GeminiService - callLLM Function', () => {
     it('should handle OpenAI response json() throwing', async () => {
       global.fetch = vi.fn().mockResolvedValue({
         ok: true,
-        json: () => Promise.reject(new Error('Invalid JSON'))
+        json: () => Promise.reject(new Error('Invalid JSON')),
       });
 
       const email = createTestEmail('email-1', 'Test Email');
@@ -1389,22 +1394,20 @@ describe('GeminiService - callLLM Function', () => {
     });
 
     it('should handle multiple batch errors returning consistent fallbacks', async () => {
-      mockGenerateContent = vi.fn().mockRejectedValue(
-        new Error('Service Unavailable')
-      );
+      mockGenerateContent = vi.fn().mockRejectedValue(new Error('Service Unavailable'));
 
       const emails = [
         createTestEmail('email-1', 'First Email'),
         createTestEmail('email-2', 'Second Email'),
         createTestEmail('email-3', 'Third Email'),
         createTestEmail('email-4', 'Fourth Email'),
-        createTestEmail('email-5', 'Fifth Email')
+        createTestEmail('email-5', 'Fifth Email'),
       ];
 
       const results = await geminiService.categorizeBatchWithAI(emails, availableCategories, geminiSettings);
 
       expect(results).toHaveLength(5);
-      results.forEach((result, index) => {
+      results.forEach((result, _index) => {
         expect(result.categoryId).toBe(DefaultEmailCategory.OTHER);
         expect(result.summary).toBe('Fehler');
         expect(result.reasoning).toContain('Batch API Error');
@@ -1416,11 +1419,12 @@ describe('GeminiService - callLLM Function', () => {
       // API returns results but with some IDs missing
       mockGenerateContent = vi.fn().mockResolvedValue({
         response: {
-          text: () => JSON.stringify([
-            { id: 'email-2', category: DefaultEmailCategory.INVOICE, summary: 'Second worked' },
-            { id: 'email-4', category: DefaultEmailCategory.BUSINESS, summary: 'Fourth worked' }
-          ])
-        }
+          text: () =>
+            JSON.stringify([
+              { id: 'email-2', category: DefaultEmailCategory.INVOICE, summary: 'Second worked' },
+              { id: 'email-4', category: DefaultEmailCategory.BUSINESS, summary: 'Fourth worked' },
+            ]),
+        },
       });
 
       const emails = [
@@ -1428,7 +1432,7 @@ describe('GeminiService - callLLM Function', () => {
         createTestEmail('email-2', 'Second Email'),
         createTestEmail('email-3', 'Third Email'),
         createTestEmail('email-4', 'Fourth Email'),
-        createTestEmail('email-5', 'Fifth Email')
+        createTestEmail('email-5', 'Fifth Email'),
       ];
 
       const results = await geminiService.categorizeBatchWithAI(emails, availableCategories, geminiSettings);

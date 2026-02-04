@@ -1,8 +1,16 @@
 import React, { useState } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import {
-  CategoryIcon, LogOut, Plus, Settings, ChevronDown, ChevronUp, Server, PlusCircle,
-  Folder, FolderOpen, Archive, Send, Inbox, AlertOctagon, Trash2
+  CategoryIcon,
+  LogOut,
+  Settings,
+  ChevronDown,
+  ChevronUp,
+  Server,
+  PlusCircle,
+  Folder,
+  FolderOpen,
+  Archive,
 } from './Icon';
 import { ImapAccount, DefaultEmailCategory, Category } from '../types';
 
@@ -12,7 +20,6 @@ interface SidebarProps {
   onAddCategory: (cat: string) => void;
   categories: Category[];
   counts: Record<string, number>;
-  isProcessing: boolean;
   onReset: () => void;
 
   // Account Props
@@ -23,7 +30,6 @@ interface SidebarProps {
   // Category Actions
   onDeleteCategory: (cat: string) => void;
   onRenameCategory: (oldName: string, newName: string) => void;
-  onUpdateIcon?: (cat: string, icon: string) => void;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({
@@ -32,7 +38,6 @@ const Sidebar: React.FC<SidebarProps> = ({
   onAddCategory,
   categories,
   counts,
-  isProcessing,
   onReset,
   accounts,
   activeAccountId,
@@ -40,20 +45,19 @@ const Sidebar: React.FC<SidebarProps> = ({
   onOpenSettings,
   onDeleteCategory,
   onRenameCategory,
-  onUpdateIcon
 }) => {
   const [isAdding, setIsAdding] = useState(false);
-  const [newCategoryName, setNewCategoryName] = useState("");
+  const [newCategoryName, setNewCategoryName] = useState('');
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
-  const [contextMenu, setContextMenu] = useState<{ x: number, y: number, category: string } | null>(null);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; category: string } | null>(null);
 
-  const activeAccount = accounts.find(a => a.id === activeAccountId) || accounts[0];
+  const activeAccount = accounts.find((a) => a.id === activeAccountId) || accounts[0];
 
   const handleAddNewCategory = (e: React.FormEvent) => {
     e.preventDefault();
     if (newCategoryName.trim()) {
       onAddCategory(newCategoryName.trim());
-      setNewCategoryName("");
+      setNewCategoryName('');
       setIsAdding(false);
     }
   };
@@ -62,17 +66,24 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   // Sort function: Standard -> Physical -> Smart -> Other
 
-  const standardCategories = categories.filter(c => ['Posteingang', 'Gesendet', 'Spam', 'Papierkorb'].includes(c.name));
+  const standardCategories = categories.filter((c) =>
+    ['Posteingang', 'Gesendet', 'Spam', 'Papierkorb'].includes(c.name)
+  );
 
   // Physical Folders (type='folder')
   // Should NOT include system folders (which are standard)
-  const physicalFolders = categories.filter(c => c.type === 'folder' && !standardCategories.includes(c));
+  const physicalFolders = categories.filter((c) => c.type === 'folder' && !standardCategories.includes(c));
 
   // Smart Categories (type='custom' or 'system')
-  const smartCategories = categories.filter(c => (c.type === 'custom' || c.type === 'system') && !standardCategories.includes(c) && c.name !== DefaultEmailCategory.OTHER);
+  const smartCategories = categories.filter(
+    (c) =>
+      (c.type === 'custom' || c.type === 'system') &&
+      !standardCategories.includes(c) &&
+      c.name !== DefaultEmailCategory.OTHER
+  );
 
   // Subfolders (Legacy/Migration Support - if any appear as custom but start with Posteingang/)
-  // Actually, physicalFolders usually cover "Posteingang/Work". 
+  // Actually, physicalFolders usually cover "Posteingang/Work".
   // Let's rely on type='folder' primarily.
 
   // Sort by name
@@ -99,11 +110,16 @@ const Sidebar: React.FC<SidebarProps> = ({
           `}
       >
         <div className="flex items-center gap-3 overflow-hidden">
-          {React.createElement(icon, { size: 18, className: isSelected ? 'text-blue-200' : 'text-slate-500 group-hover:text-slate-300' })}
+          {React.createElement(icon, {
+            size: 18,
+            className: isSelected ? 'text-blue-200' : 'text-slate-500 group-hover:text-slate-300',
+          })}
           <span className="truncate text-sm font-medium">{displayName}</span>
         </div>
         {count > 0 && (
-          <span className={`text-xs px-2 py-0.5 rounded-full ${isSelected ? 'bg-blue-500 text-white' : 'bg-slate-800 text-slate-500'}`}>
+          <span
+            className={`text-xs px-2 py-0.5 rounded-full ${isSelected ? 'bg-blue-500 text-white' : 'bg-slate-800 text-slate-500'}`}
+          >
             {count}
           </span>
         )}
@@ -125,7 +141,6 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   return (
     <div className="w-64 bg-slate-900 text-slate-300 flex flex-col h-full border-r border-slate-700 select-none">
-
       {/* Account Switcher Header */}
       <div className="p-4 border-b border-slate-800">
         <button
@@ -135,7 +150,9 @@ const Sidebar: React.FC<SidebarProps> = ({
           <div className="flex items-center gap-3 overflow-hidden">
             {activeAccount ? (
               <>
-                <div className={`w-8 h-8 rounded-full bg-${activeAccount.color || 'blue'}-600 flex items-center justify-center text-white font-bold text-sm shadow-inner`}>
+                <div
+                  className={`w-8 h-8 rounded-full bg-${activeAccount.color || 'blue'}-600 flex items-center justify-center text-white font-bold text-sm shadow-inner`}
+                >
                   {activeAccount.name.charAt(0)}
                 </div>
                 <div className="text-left flex-1 min-w-0">
@@ -157,17 +174,20 @@ const Sidebar: React.FC<SidebarProps> = ({
         {isAccountMenuOpen && (
           <div className="absolute left-4 top-20 w-56 bg-slate-800 rounded-xl shadow-xl border border-slate-700 z-20 overflow-hidden animate-in fade-in slide-in-from-top-2">
             <div className="py-1">
-              {accounts.map(acc => (
+              {accounts.map((acc) => (
                 <button
                   key={acc.id}
                   onClick={() => {
                     onSwitchAccount(acc.id);
                     setIsAccountMenuOpen(false);
                   }}
-                  className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-slate-700 transition-colors ${activeAccountId === acc.id ? 'text-white bg-slate-700/50' : 'text-slate-300'
-                    }`}
+                  className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-slate-700 transition-colors ${
+                    activeAccountId === acc.id ? 'text-white bg-slate-700/50' : 'text-slate-300'
+                  }`}
                 >
-                  <div className={`w-6 h-6 rounded-full bg-${acc.color}-600 flex items-center justify-center text-white text-xs`}>
+                  <div
+                    className={`w-6 h-6 rounded-full bg-${acc.color}-600 flex items-center justify-center text-white text-xs`}
+                  >
                     {acc.name.charAt(0)}
                   </div>
                   <span className="truncate">{acc.name}</span>
@@ -192,14 +212,11 @@ const Sidebar: React.FC<SidebarProps> = ({
       </div>
 
       <div className="flex-1 overflow-y-auto py-4 px-3 space-y-6">
-
         {/* Standard Folders Group */}
         <div>
-          <div className="px-3 mb-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">
-            Ordner
-          </div>
+          <div className="px-3 mb-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">Ordner</div>
           <div className="space-y-1">
-            {[DefaultEmailCategory.INBOX, 'Gesendet', 'Spam', 'Papierkorb'].map(cat => {
+            {[DefaultEmailCategory.INBOX, 'Gesendet', 'Spam', 'Papierkorb'].map((cat) => {
               const isActive = selectedCategory === cat;
               const count = counts[cat] || 0;
 
@@ -207,18 +224,23 @@ const Sidebar: React.FC<SidebarProps> = ({
                 <React.Fragment key={cat}>
                   <button
                     onClick={() => onSelectCategory(cat)}
-                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-colors ${isActive
-                      ? 'bg-blue-600 text-white'
-                      : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'
-                      }`}
+                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      isActive ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'
+                    }`}
                   >
                     <div className="flex items-center gap-3">
-                      <CategoryIcon category={cat} className={`w-4 h-4 ${isActive ? 'text-blue-200' : 'text-slate-500'}`} />
+                      <CategoryIcon
+                        category={cat}
+                        className={`w-4 h-4 ${isActive ? 'text-blue-200' : 'text-slate-500'}`}
+                      />
                       <span>{cat}</span>
                     </div>
                     {count > 0 && (
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${isActive ? 'bg-blue-500 text-white' : 'bg-slate-800 text-slate-500'
-                        }`}>
+                      <span
+                        className={`text-xs px-2 py-0.5 rounded-full ${
+                          isActive ? 'bg-blue-500 text-white' : 'bg-slate-800 text-slate-500'
+                        }`}
+                      >
                         {count}
                       </span>
                     )}
@@ -227,7 +249,9 @@ const Sidebar: React.FC<SidebarProps> = ({
                   {/* Physical Folders (Nested under Inbox) */}
                   {cat === DefaultEmailCategory.INBOX && physicalFolders.length > 0 && (
                     <div className="mt-1 mb-1">
-                      {physicalFolders.map(c => renderCategoryItem(c.name, c.name.replace('Posteingang/', ''), FolderOpen, 1))}
+                      {physicalFolders.map((c) =>
+                        renderCategoryItem(c.name, c.name.replace('Posteingang/', ''), FolderOpen, 1)
+                      )}
                     </div>
                   )}
                 </React.Fragment>
@@ -242,26 +266,26 @@ const Sidebar: React.FC<SidebarProps> = ({
             <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
               Intelligentes Postfach
             </span>
-            <button onClick={setIsAddingCategory} className="text-slate-400 hover:text-blue-600 transition-colors" title="Neuen Ordner erstellen">
+            <button
+              onClick={setIsAddingCategory}
+              className="text-slate-400 hover:text-blue-600 transition-colors"
+              title="Neuen Ordner erstellen"
+            >
               <PlusCircle className="w-4 h-4" />
             </button>
           </div>
 
           <div className="space-y-1">
-
             {/* Smart Categories */}
             {smartCategories.length > 0 && (
               <div className="mb-2">
                 <div className="px-3 text-[10px] text-slate-500 font-semibold uppercase mb-1">KI Kategorien</div>
-                {smartCategories.map((category) => (
-                  renderCategoryItem(category.name, category.name, Folder)
-                ))}
+                {smartCategories.map((category) => renderCategoryItem(category.name, category.name, Folder))}
               </div>
             )}
 
             {/* Sonstiges */}
             {renderCategoryItem(DefaultEmailCategory.OTHER, 'Sonstiges', Archive)}
-
           </div>
 
           {/* Add Category Input */}
@@ -298,7 +322,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             <>
               <button
                 onClick={() => {
-                  const newName = prompt("Neuer Name:", contextMenu.category);
+                  const newName = prompt('Neuer Name:', contextMenu.category);
                   if (newName && newName.trim()) onRenameCategory(contextMenu.category, newName.trim());
                   setContextMenu(null);
                 }}
@@ -324,7 +348,7 @@ const Sidebar: React.FC<SidebarProps> = ({
 
           <button
             onClick={() => {
-              alert("Icon-Auswahl folgt bald!");
+              alert('Icon-Auswahl folgt bald!');
               setContextMenu(null);
             }}
             className="w-full text-left px-3 py-2 text-sm text-slate-300 hover:bg-slate-700 flex items-center gap-2"
@@ -342,7 +366,11 @@ const Sidebar: React.FC<SidebarProps> = ({
             <span>Speicher</span>
           </div>
           {activeAccount && activeAccount.storageTotal ? (
-            <span>{Math.round((activeAccount.storageUsed || 0) / 1024)} MB / {Math.round(activeAccount.storageTotal / 1024 / 1024 * 100) / 100} GB ({Math.round(((activeAccount.storageUsed || 0) / activeAccount.storageTotal) * 100)}%)</span>
+            <span>
+              {Math.round((activeAccount.storageUsed || 0) / 1024)} MB /{' '}
+              {Math.round((activeAccount.storageTotal / 1024 / 1024) * 100) / 100} GB (
+              {Math.round(((activeAccount.storageUsed || 0) / activeAccount.storageTotal) * 100)}%)
+            </span>
           ) : (
             <span>Unbekannt</span>
           )}
@@ -351,8 +379,10 @@ const Sidebar: React.FC<SidebarProps> = ({
         {activeAccount && activeAccount.storageTotal ? (
           <div className="w-full h-1.5 bg-slate-700 rounded-full overflow-hidden">
             <div
-              className={`h-full rounded-full transition-all duration-500 ${((activeAccount.storageUsed || 0) / activeAccount.storageTotal) > 0.9 ? 'bg-red-500' : 'bg-blue-500'}`}
-              style={{ width: `${Math.min(100, ((activeAccount.storageUsed || 0) / activeAccount.storageTotal) * 100)}%` }}
+              className={`h-full rounded-full transition-all duration-500 ${(activeAccount.storageUsed || 0) / activeAccount.storageTotal > 0.9 ? 'bg-red-500' : 'bg-blue-500'}`}
+              style={{
+                width: `${Math.min(100, ((activeAccount.storageUsed || 0) / activeAccount.storageTotal) * 100)}%`,
+              }}
             />
           </div>
         ) : (

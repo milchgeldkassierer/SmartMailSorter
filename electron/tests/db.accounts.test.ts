@@ -7,19 +7,26 @@ import { ImapAccount } from '../../types';
 const require = createRequire(import.meta.url);
 
 // Mock Electron to provide app.getPath
-const electronPath = path.resolve(path.dirname(new URL(import.meta.url).pathname), '../../node_modules/electron/index.js');
-(require.cache as any)[electronPath] = {
-  exports: {
-    app: {
-      getPath: () => './test-data'
-    }
-  }
-};
+const electronPath = path.resolve(
+  path.dirname(new URL(import.meta.url).pathname),
+  '../../node_modules/electron/index.js'
+);
+if (require.cache) {
+  require.cache[electronPath] = {
+    exports: {
+      app: {
+        getPath: () => './test-data',
+      },
+    },
+  } as NodeModule;
+}
 
 // Define interface for db module methods (account-related)
 interface DbModule {
   init: (path: string | { getPath: (key: string) => string }) => void;
-  addAccount: (account: Partial<ImapAccount> & { id: string; username?: string; password?: string }) => { changes: number };
+  addAccount: (account: Partial<ImapAccount> & { id: string; username?: string; password?: string }) => {
+    changes: number;
+  };
   getAccounts: () => Array<ImapAccount & { username?: string; password?: string; lastSyncUid?: number }>;
   updateAccountSync: (id: string, lastSyncUid: number) => { changes: number };
   updateAccountQuota: (id: string, used: number, total: number) => { changes: number };
@@ -57,7 +64,7 @@ describe('Database Account CRUD Operations', () => {
         password: 'securepassword',
         imapHost: 'imap.gmail.com',
         imapPort: 993,
-        color: '#FF5733'
+        color: '#FF5733',
       };
 
       db.addAccount(account);
@@ -85,7 +92,7 @@ describe('Database Account CRUD Operations', () => {
         imapPort: 993,
         username: 'user1',
         password: 'pass1',
-        color: '#0000FF'
+        color: '#0000FF',
       };
 
       const account2 = {
@@ -97,7 +104,7 @@ describe('Database Account CRUD Operations', () => {
         imapPort: 993,
         username: 'user2',
         password: 'pass2',
-        color: '#00FF00'
+        color: '#00FF00',
       };
 
       db.addAccount(account1);
@@ -105,8 +112,8 @@ describe('Database Account CRUD Operations', () => {
       const accounts = db.getAccounts();
 
       expect(accounts).toHaveLength(2);
-      expect(accounts.map(a => a.id)).toContain('acc-multi-1');
-      expect(accounts.map(a => a.id)).toContain('acc-multi-2');
+      expect(accounts.map((a) => a.id)).toContain('acc-multi-1');
+      expect(accounts.map((a) => a.id)).toContain('acc-multi-2');
     });
 
     it('should set default values for storage fields', () => {
@@ -119,7 +126,7 @@ describe('Database Account CRUD Operations', () => {
         imapPort: 993,
         username: 'user',
         password: 'pass',
-        color: '#123456'
+        color: '#123456',
       };
 
       db.addAccount(account);
@@ -140,7 +147,7 @@ describe('Database Account CRUD Operations', () => {
         imapPort: 993,
         username: 'user',
         password: 'pass',
-        color: '#000000'
+        color: '#000000',
       };
 
       db.addAccount(account);
@@ -154,7 +161,7 @@ describe('Database Account CRUD Operations', () => {
         imapPort: 993,
         username: 'user2',
         password: 'pass2',
-        color: '#FFFFFF'
+        color: '#FFFFFF',
       };
 
       // Should throw due to unique constraint on primary key
@@ -170,12 +177,42 @@ describe('Database Account CRUD Operations', () => {
 
     it('should return all accounts', () => {
       const accounts = [
-        { id: 'get-1', name: 'A1', email: 'a1@t.com', provider: 'test', imapHost: 'h', imapPort: 993, username: 'u', password: 'p', color: '#111' },
-        { id: 'get-2', name: 'A2', email: 'a2@t.com', provider: 'test', imapHost: 'h', imapPort: 993, username: 'u', password: 'p', color: '#222' },
-        { id: 'get-3', name: 'A3', email: 'a3@t.com', provider: 'test', imapHost: 'h', imapPort: 993, username: 'u', password: 'p', color: '#333' }
+        {
+          id: 'get-1',
+          name: 'A1',
+          email: 'a1@t.com',
+          provider: 'test',
+          imapHost: 'h',
+          imapPort: 993,
+          username: 'u',
+          password: 'p',
+          color: '#111',
+        },
+        {
+          id: 'get-2',
+          name: 'A2',
+          email: 'a2@t.com',
+          provider: 'test',
+          imapHost: 'h',
+          imapPort: 993,
+          username: 'u',
+          password: 'p',
+          color: '#222',
+        },
+        {
+          id: 'get-3',
+          name: 'A3',
+          email: 'a3@t.com',
+          provider: 'test',
+          imapHost: 'h',
+          imapPort: 993,
+          username: 'u',
+          password: 'p',
+          color: '#333',
+        },
       ];
 
-      accounts.forEach(acc => db.addAccount(acc));
+      accounts.forEach((acc) => db.addAccount(acc));
       const retrieved = db.getAccounts();
 
       expect(retrieved).toHaveLength(3);
@@ -191,7 +228,7 @@ describe('Database Account CRUD Operations', () => {
         imapPort: 143,
         username: 'fulluser',
         password: 'fullpass',
-        color: '#ABCDEF'
+        color: '#ABCDEF',
       };
 
       db.addAccount(account);
@@ -199,7 +236,7 @@ describe('Database Account CRUD Operations', () => {
       db.updateAccountQuota('get-full', 1024, 5120);
 
       const accounts = db.getAccounts();
-      const retrieved = accounts.find(a => a.id === 'get-full');
+      const retrieved = accounts.find((a) => a.id === 'get-full');
 
       expect(retrieved).toBeDefined();
       expect(retrieved?.name).toBe('Full Account');
@@ -227,7 +264,7 @@ describe('Database Account CRUD Operations', () => {
         imapPort: 993,
         username: 'user',
         password: 'pass',
-        color: '#FF0000'
+        color: '#FF0000',
       };
 
       db.addAccount(account);
@@ -252,7 +289,7 @@ describe('Database Account CRUD Operations', () => {
         imapPort: 993,
         username: 'user',
         password: 'pass',
-        color: '#00FF00'
+        color: '#00FF00',
       };
 
       db.addAccount(account);
@@ -277,7 +314,7 @@ describe('Database Account CRUD Operations', () => {
         imapPort: 993,
         username: 'u1',
         password: 'p1',
-        color: '#111'
+        color: '#111',
       };
 
       const account2 = {
@@ -289,7 +326,7 @@ describe('Database Account CRUD Operations', () => {
         imapPort: 993,
         username: 'u2',
         password: 'p2',
-        color: '#222'
+        color: '#222',
       };
 
       db.addAccount(account1);
@@ -298,8 +335,8 @@ describe('Database Account CRUD Operations', () => {
       db.updateAccountSync('sync-iso-1', 200);
 
       const accounts = db.getAccounts();
-      const acc1 = accounts.find(a => a.id === 'sync-iso-1');
-      const acc2 = accounts.find(a => a.id === 'sync-iso-2');
+      const acc1 = accounts.find((a) => a.id === 'sync-iso-1');
+      const acc2 = accounts.find((a) => a.id === 'sync-iso-2');
 
       expect(acc1?.lastSyncUid).toBe(200);
       expect(acc2?.lastSyncUid).toBe(0);
@@ -323,14 +360,14 @@ describe('Database Account CRUD Operations', () => {
         imapPort: 993,
         username: 'user',
         password: 'pass',
-        color: '#0000FF'
+        color: '#0000FF',
       };
 
       db.addAccount(account);
       db.updateAccountQuota('quota-test-1', 2048, 10240);
 
       const accounts = db.getAccounts();
-      const updated = accounts.find(a => a.id === 'quota-test-1');
+      const updated = accounts.find((a) => a.id === 'quota-test-1');
 
       expect(updated?.storageUsed).toBe(2048);
       expect(updated?.storageTotal).toBe(10240);
@@ -346,7 +383,7 @@ describe('Database Account CRUD Operations', () => {
         imapPort: 993,
         username: 'user',
         password: 'pass',
-        color: '#PURPLE'
+        color: '#PURPLE',
       };
 
       db.addAccount(account);
@@ -358,7 +395,7 @@ describe('Database Account CRUD Operations', () => {
       db.updateAccountQuota('quota-large', used, total);
 
       const accounts = db.getAccounts();
-      const updated = accounts.find(a => a.id === 'quota-large');
+      const updated = accounts.find((a) => a.id === 'quota-large');
 
       expect(updated?.storageUsed).toBe(used);
       expect(updated?.storageTotal).toBe(total);
@@ -374,23 +411,23 @@ describe('Database Account CRUD Operations', () => {
         imapPort: 993,
         username: 'user',
         password: 'pass',
-        color: '#ABC'
+        color: '#ABC',
       };
 
       db.addAccount(account);
 
       db.updateAccountQuota('quota-multi', 100, 1000);
-      let updated = db.getAccounts().find(a => a.id === 'quota-multi');
+      let updated = db.getAccounts().find((a) => a.id === 'quota-multi');
       expect(updated?.storageUsed).toBe(100);
       expect(updated?.storageTotal).toBe(1000);
 
       db.updateAccountQuota('quota-multi', 500, 1000);
-      updated = db.getAccounts().find(a => a.id === 'quota-multi');
+      updated = db.getAccounts().find((a) => a.id === 'quota-multi');
       expect(updated?.storageUsed).toBe(500);
       expect(updated?.storageTotal).toBe(1000);
 
       db.updateAccountQuota('quota-multi', 900, 2000);
-      updated = db.getAccounts().find(a => a.id === 'quota-multi');
+      updated = db.getAccounts().find((a) => a.id === 'quota-multi');
       expect(updated?.storageUsed).toBe(900);
       expect(updated?.storageTotal).toBe(2000);
     });
@@ -405,7 +442,7 @@ describe('Database Account CRUD Operations', () => {
         imapPort: 993,
         username: 'u1',
         password: 'p1',
-        color: '#111'
+        color: '#111',
       };
 
       const account2 = {
@@ -417,7 +454,7 @@ describe('Database Account CRUD Operations', () => {
         imapPort: 993,
         username: 'u2',
         password: 'p2',
-        color: '#222'
+        color: '#222',
       };
 
       db.addAccount(account1);
@@ -426,8 +463,8 @@ describe('Database Account CRUD Operations', () => {
       db.updateAccountQuota('quota-iso-1', 5000, 10000);
 
       const accounts = db.getAccounts();
-      const acc1 = accounts.find(a => a.id === 'quota-iso-1');
-      const acc2 = accounts.find(a => a.id === 'quota-iso-2');
+      const acc1 = accounts.find((a) => a.id === 'quota-iso-1');
+      const acc2 = accounts.find((a) => a.id === 'quota-iso-2');
 
       expect(acc1?.storageUsed).toBe(5000);
       expect(acc1?.storageTotal).toBe(10000);
@@ -452,7 +489,7 @@ describe('Database Account CRUD Operations', () => {
         imapPort: 993,
         username: 'user',
         password: 'pass',
-        color: '#FF0000'
+        color: '#FF0000',
       };
 
       db.addAccount(account);
@@ -472,7 +509,7 @@ describe('Database Account CRUD Operations', () => {
         imapPort: 993,
         username: 'u1',
         password: 'p1',
-        color: '#111'
+        color: '#111',
       };
 
       const account2 = {
@@ -484,7 +521,7 @@ describe('Database Account CRUD Operations', () => {
         imapPort: 993,
         username: 'u2',
         password: 'p2',
-        color: '#222'
+        color: '#222',
       };
 
       db.addAccount(account1);
@@ -509,7 +546,7 @@ describe('Database Account CRUD Operations', () => {
         imapPort: 993,
         username: 'user',
         password: 'pass',
-        color: '#CASCAD'
+        color: '#CASCAD',
       };
 
       db.addAccount(account);
@@ -522,7 +559,7 @@ describe('Database Account CRUD Operations', () => {
         senderEmail: 's1@test.com',
         subject: 'Email 1',
         body: 'Body 1',
-        date: new Date().toISOString()
+        date: new Date().toISOString(),
       });
 
       db.saveEmail({
@@ -532,7 +569,7 @@ describe('Database Account CRUD Operations', () => {
         senderEmail: 's2@test.com',
         subject: 'Email 2',
         body: 'Body 2',
-        date: new Date().toISOString()
+        date: new Date().toISOString(),
       });
 
       expect(db.getEmails('del-cascade')).toHaveLength(2);
@@ -559,7 +596,7 @@ describe('Database Account CRUD Operations', () => {
         imapPort: 993,
         username: 'user',
         password: 'pass',
-        color: '#000'
+        color: '#000',
       };
 
       db.addAccount(account);
@@ -576,7 +613,7 @@ describe('Database Account CRUD Operations', () => {
         imapPort: 993,
         username: 'newuser',
         password: 'newpass',
-        color: '#FFF'
+        color: '#FFF',
       };
 
       db.addAccount(newAccount);
@@ -600,7 +637,7 @@ describe('Database Account CRUD Operations', () => {
         imapPort: 993,
         username: 'lifeuser',
         password: 'lifepass',
-        color: '#LIFE00'
+        color: '#LIFE00',
       };
 
       db.addAccount(account);
@@ -635,12 +672,42 @@ describe('Database Account CRUD Operations', () => {
     it('should maintain data integrity with multiple accounts', () => {
       // Add 3 accounts
       const accounts = [
-        { id: 'int-1', name: 'A1', email: 'a1@t.com', provider: 'p', imapHost: 'h', imapPort: 993, username: 'u', password: 'p', color: '#1' },
-        { id: 'int-2', name: 'A2', email: 'a2@t.com', provider: 'p', imapHost: 'h', imapPort: 993, username: 'u', password: 'p', color: '#2' },
-        { id: 'int-3', name: 'A3', email: 'a3@t.com', provider: 'p', imapHost: 'h', imapPort: 993, username: 'u', password: 'p', color: '#3' }
+        {
+          id: 'int-1',
+          name: 'A1',
+          email: 'a1@t.com',
+          provider: 'p',
+          imapHost: 'h',
+          imapPort: 993,
+          username: 'u',
+          password: 'p',
+          color: '#1',
+        },
+        {
+          id: 'int-2',
+          name: 'A2',
+          email: 'a2@t.com',
+          provider: 'p',
+          imapHost: 'h',
+          imapPort: 993,
+          username: 'u',
+          password: 'p',
+          color: '#2',
+        },
+        {
+          id: 'int-3',
+          name: 'A3',
+          email: 'a3@t.com',
+          provider: 'p',
+          imapHost: 'h',
+          imapPort: 993,
+          username: 'u',
+          password: 'p',
+          color: '#3',
+        },
       ];
 
-      accounts.forEach(acc => db.addAccount(acc));
+      accounts.forEach((acc) => db.addAccount(acc));
 
       // Update different fields for different accounts
       db.updateAccountSync('int-1', 100);
@@ -650,9 +717,9 @@ describe('Database Account CRUD Operations', () => {
 
       const retrieved = db.getAccounts();
 
-      const a1 = retrieved.find(a => a.id === 'int-1');
-      const a2 = retrieved.find(a => a.id === 'int-2');
-      const a3 = retrieved.find(a => a.id === 'int-3');
+      const a1 = retrieved.find((a) => a.id === 'int-1');
+      const a2 = retrieved.find((a) => a.id === 'int-2');
+      const a3 = retrieved.find((a) => a.id === 'int-3');
 
       expect(a1?.lastSyncUid).toBe(100);
       expect(a1?.storageUsed).toBe(0);
@@ -670,9 +737,9 @@ describe('Database Account CRUD Operations', () => {
 
       const remaining = db.getAccounts();
       expect(remaining).toHaveLength(2);
-      expect(remaining.map(a => a.id)).toContain('int-1');
-      expect(remaining.map(a => a.id)).toContain('int-3');
-      expect(remaining.map(a => a.id)).not.toContain('int-2');
+      expect(remaining.map((a) => a.id)).toContain('int-1');
+      expect(remaining.map((a) => a.id)).toContain('int-3');
+      expect(remaining.map((a) => a.id)).not.toContain('int-2');
     });
   });
 
@@ -683,7 +750,7 @@ describe('Database Account CRUD Operations', () => {
         getPath: (key: string) => {
           if (key === 'userData') return ':memory:';
           return './test-data';
-        }
+        },
       };
 
       // This should exercise lines 127-128 of db.cjs
@@ -712,7 +779,7 @@ describe('Database Account CRUD Operations', () => {
         imapPort: 993,
         username: 'user',
         password: 'pass',
-        color: '#RESET'
+        color: '#RESET',
       };
       db.addAccount(account);
       db.saveEmail({
@@ -722,7 +789,7 @@ describe('Database Account CRUD Operations', () => {
         senderEmail: 's@test.com',
         subject: 'Reset Test Email',
         body: 'Body',
-        date: new Date().toISOString()
+        date: new Date().toISOString(),
       });
 
       // Verify data exists
@@ -750,7 +817,7 @@ describe('Database Account CRUD Operations', () => {
       expect(categories.length).toBeGreaterThan(0);
 
       // Should include system defaults
-      const categoryNames = categories.map(c => c.name);
+      const categoryNames = categories.map((c) => c.name);
       expect(categoryNames).toContain('Rechnungen');
       expect(categoryNames).toContain('Newsletter');
       expect(categoryNames).toContain('Privat');
@@ -762,7 +829,7 @@ describe('Database Account CRUD Operations', () => {
       expect(result.changes).toBe(1);
 
       const categories = db.getCategories();
-      const custom = categories.find(c => c.name === 'CustomCategory');
+      const custom = categories.find((c) => c.name === 'CustomCategory');
       expect(custom).toBeDefined();
       expect(custom?.type).toBe('custom');
     });
@@ -784,7 +851,7 @@ describe('Database Account CRUD Operations', () => {
 
       expect(result.changes).toBe(1);
       const categories = db.getCategories();
-      const updated = categories.find(c => c.name === 'TypeChangeTest');
+      const updated = categories.find((c) => c.name === 'TypeChangeTest');
       expect(updated?.type).toBe('system');
     });
 
@@ -800,7 +867,7 @@ describe('Database Account CRUD Operations', () => {
         imapPort: 993,
         username: 'u',
         password: 'p',
-        color: '#CAT'
+        color: '#CAT',
       });
       db.saveEmail({
         id: 'cat-delete-email',
@@ -810,7 +877,7 @@ describe('Database Account CRUD Operations', () => {
         subject: 'Test',
         body: 'Body',
         date: new Date().toISOString(),
-        smartCategory: 'ToDelete'
+        smartCategory: 'ToDelete',
       });
 
       // Delete the category
@@ -821,7 +888,7 @@ describe('Database Account CRUD Operations', () => {
 
       // Category should be gone
       const categories = db.getCategories();
-      expect(categories.find(c => c.name === 'ToDelete')).toBeUndefined();
+      expect(categories.find((c) => c.name === 'ToDelete')).toBeUndefined();
 
       // Email's smartCategory should be null
       const emails = db.getEmails('cat-delete-account');
@@ -839,7 +906,7 @@ describe('Database Account CRUD Operations', () => {
         imapPort: 993,
         username: 'u',
         password: 'p',
-        color: '#REN'
+        color: '#REN',
       });
       db.saveEmail({
         id: 'cat-rename-email',
@@ -849,7 +916,7 @@ describe('Database Account CRUD Operations', () => {
         subject: 'Test',
         body: 'Body',
         date: new Date().toISOString(),
-        smartCategory: 'OldName'
+        smartCategory: 'OldName',
       });
 
       // Rename the category
@@ -859,8 +926,8 @@ describe('Database Account CRUD Operations', () => {
 
       // Old category should be gone, new should exist
       const categories = db.getCategories();
-      expect(categories.find(c => c.name === 'OldName')).toBeUndefined();
-      expect(categories.find(c => c.name === 'NewName')).toBeDefined();
+      expect(categories.find((c) => c.name === 'OldName')).toBeUndefined();
+      expect(categories.find((c) => c.name === 'NewName')).toBeDefined();
 
       // Email should have new category
       const emails = db.getEmails('cat-rename-account');
@@ -879,7 +946,7 @@ describe('Database Account CRUD Operations', () => {
         imapPort: 993,
         username: 'u',
         password: 'p',
-        color: '#UID'
+        color: '#UID',
       });
     });
 
@@ -893,7 +960,7 @@ describe('Database Account CRUD Operations', () => {
         body: 'Body',
         date: new Date().toISOString(),
         folder: 'Posteingang',
-        uid: 100
+        uid: 100,
       });
       db.saveEmail({
         id: 'uid-email-2',
@@ -904,7 +971,7 @@ describe('Database Account CRUD Operations', () => {
         body: 'Body',
         date: new Date().toISOString(),
         folder: 'Posteingang',
-        uid: 250
+        uid: 250,
       });
       db.saveEmail({
         id: 'uid-email-3',
@@ -915,7 +982,7 @@ describe('Database Account CRUD Operations', () => {
         body: 'Body',
         date: new Date().toISOString(),
         folder: 'Posteingang',
-        uid: 150
+        uid: 150,
       });
 
       const maxUid = db.getMaxUidForFolder('uid-test-account', 'Posteingang');
@@ -937,7 +1004,7 @@ describe('Database Account CRUD Operations', () => {
         body: 'Body',
         date: new Date().toISOString(),
         folder: 'Gesendet',
-        uid: 10
+        uid: 10,
       });
       db.saveEmail({
         id: 'all-uid-2',
@@ -948,7 +1015,7 @@ describe('Database Account CRUD Operations', () => {
         body: 'Body',
         date: new Date().toISOString(),
         folder: 'Gesendet',
-        uid: 20
+        uid: 20,
       });
 
       const uids = db.getAllUidsForFolder('uid-test-account', 'Gesendet');
@@ -974,7 +1041,7 @@ describe('Database Account CRUD Operations', () => {
         imapPort: 993,
         username: 'u',
         password: 'p',
-        color: '#MIG'
+        color: '#MIG',
       });
     });
 
@@ -987,7 +1054,7 @@ describe('Database Account CRUD Operations', () => {
         subject: 'Test',
         body: 'Body',
         date: new Date().toISOString(),
-        folder: 'OldFolder'
+        folder: 'OldFolder',
       });
       db.saveEmail({
         id: 'migrate-email-2',
@@ -997,7 +1064,7 @@ describe('Database Account CRUD Operations', () => {
         subject: 'Test',
         body: 'Body',
         date: new Date().toISOString(),
-        folder: 'OldFolder'
+        folder: 'OldFolder',
       });
 
       // Migrate folder
@@ -1005,7 +1072,7 @@ describe('Database Account CRUD Operations', () => {
 
       // Check emails have new folder
       const emails = db.getEmails('migrate-account');
-      expect(emails.every(e => e.folder === 'NewFolder')).toBe(true);
+      expect(emails.every((e) => e.folder === 'NewFolder')).toBe(true);
     });
 
     it('should handle migration when old folder has category', () => {
@@ -1020,7 +1087,7 @@ describe('Database Account CRUD Operations', () => {
         subject: 'Test',
         body: 'Body',
         date: new Date().toISOString(),
-        folder: 'OldFolderCategory'
+        folder: 'OldFolderCategory',
       });
 
       // Migrate - should also update category
@@ -1042,7 +1109,7 @@ describe('Database Account CRUD Operations', () => {
         subject: 'Test',
         body: 'Body',
         date: new Date().toISOString(),
-        folder: 'SourceFolder'
+        folder: 'SourceFolder',
       });
 
       // Migrate source to target - should update emails even if target exists
