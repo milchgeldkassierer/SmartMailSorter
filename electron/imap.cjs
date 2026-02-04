@@ -347,6 +347,70 @@ async function fetchUidBatch(client, seqRange) {
   return { uids: batchServerUids, headers: headers };
 }
 
+/**
+ * Downloads and processes a batch of messages by UID
+ * @param {ImapFlow} client - Connected IMAP client with mailbox lock
+ * @param {number[]} chunkUids - Array of UIDs to download
+ * @param {Object} account - Account configuration object
+ * @param {string} targetCategory - Target folder/category for saving messages
+ * @returns {Promise<number>} Number of messages successfully saved
+ */
+async function downloadMessageBatch(client, chunkUids, account, targetCategory) {
+  console.log(
+    `[Sync] Downloading ${chunkUids.length} messages... (UIDs ${chunkUids[0]}..${chunkUids[chunkUids.length - 1]})`
+  );
+
+  try {
+    // Fetch FULL message content for these UIDs directly using native client.fetch()
+    console.log(`[Sync Debug] Downloading chunk directly via client.fetch()...`);
+    const messages = [];
+    const uidRange = chunkUids.join(',');
+
+    for await (const message of client.fetch(
+      uidRange,
+      {
+        source: true, // Fetch full raw email source
+        flags: true,
+      },
+      { uid: true }
+    )) {
+      // ImapFlow returns message with source buffer directly
+      const msg = {
+        parts: [],
+        attributes: {
+          uid: message.uid,
+          flags: message.flags || [],
+        },
+      };
+
+      // Add body part only if source exists (handles missing body parts)
+      if (message.source) {
+        msg.parts.push({
+          which: '',
+          body: message.source.toString('utf8'),
+        });
+      }
+
+      messages.push(msg);
+    }
+
+    if (!messages || messages.length === 0) {
+      console.error(
+        `[Sync Error] Fetched 0 messages for UIDs ${chunkUids[0]}..${chunkUids[chunkUids.length - 1]}`
+      );
+      return 0;
+    } else {
+      console.log(`[Sync Debug] Fetched ${messages.length} raw messages. Processing...`);
+      const saved = await processMessages(client, messages, account, targetCategory);
+      console.log(`[Sync Debug] Saved ${saved} messages from this chunk.`);
+      return saved;
+    }
+  } catch (fetchErr) {
+    console.error(`[Sync] Failed to fetch message chunk ${chunkUids.join(',')}:`, fetchErr);
+    return 0;
+  }
+}
+
 async function syncAccount(account) {
   console.log(`Starting sync for account: ${account.email}`);
 
@@ -687,4 +751,5 @@ module.exports = {
   buildFolderMap,
   migrateFolders,
   fetchUidBatch,
+  downloadMessageBatch,
 };
