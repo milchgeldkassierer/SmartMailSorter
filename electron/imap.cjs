@@ -40,6 +40,24 @@ const PROVIDERS = {
 };
 
 /**
+ * Factory function to create a configured ImapFlow client
+ * @param {Object} account - Account configuration object
+ * @returns {ImapFlow} Configured IMAP client
+ */
+function createImapClient(account) {
+  return new ImapFlow({
+    host: account.imapHost,
+    port: account.imapPort,
+    secure: true,
+    auth: {
+      user: account.username || account.email,
+      pass: account.password,
+    },
+    logger: false,
+  });
+}
+
+/**
  * Maps a server folder (box) to its DB name
  *
  * Behavior note: Uses box.name (leaf name) for matching special folder types like
