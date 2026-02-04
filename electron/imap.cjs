@@ -399,7 +399,7 @@ async function downloadMessageBatch(client, chunkUids, account, targetCategory) 
       messages.push(msg);
     }
 
-    if (!messages || messages.length === 0) {
+    if (messages.length === 0) {
       console.error(
         `[Sync Error] Fetched 0 messages for UIDs ${chunkUids[0]}..${chunkUids[chunkUids.length - 1]}`
       );
@@ -510,12 +510,8 @@ async function syncFolderMessages(client, account, boxName, targetCategory) {
             for (let i = 0; i < missingInBatch.length; i += MSG_FETCH_BATCH_SIZE) {
               const chunkUids = missingInBatch.slice(i, i + MSG_FETCH_BATCH_SIZE);
 
-              try {
-                const saved = await downloadMessageBatch(client, chunkUids, account, targetCategory);
-                newMessagesCount += saved;
-              } catch (fetchErr) {
-                console.error(`[Sync] Failed to fetch message chunk ${chunkUids.join(',')}:`, fetchErr);
-              }
+              const saved = await downloadMessageBatch(client, chunkUids, account, targetCategory);
+              newMessagesCount += saved;
             }
           }
         } catch (rangeErr) {
