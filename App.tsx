@@ -97,23 +97,86 @@ const App: React.FC = () => {
     }
   };
 
+  const handleToggleRead = async (id: string) => {
+    const email = currentEmails.find((e) => e.id === id);
+    if (!email) return;
+    const previousReadState = email.isRead;
+    updateActiveAccountData((prev) => ({
+      ...prev,
+      emails: prev.emails.map((e) => (e.id === id ? { ...e, isRead: !e.isRead } : e)),
+    }));
+    if (window.electron && activeAccountId) {
+      const account = accounts.find((a) => a.id === activeAccountId);
+      if (email.uid && account) {
+        try {
+          await window.electron.updateEmailRead({
+            account,
+            emailId: id,
+            uid: email.uid,
+            isRead: !previousReadState,
+            folder: email.folder,
+          });
+        } catch (error) {
+          console.error('Failed to update read status:', error);
+          // Rollback optimistic update
+          updateActiveAccountData((prev) => ({
+            ...prev,
+            emails: prev.emails.map((e) => (e.id === id ? { ...e, isRead: previousReadState } : e)),
+          }));
+        }
+      }
+    }
+  };
+
+  const handleToggleFlag = async (id: string) => {
+    const email = currentEmails.find((e) => e.id === id);
+    if (!email) return;
+    const previousFlagState = email.isFlagged;
+    updateActiveAccountData((prev) => ({
+      ...prev,
+      emails: prev.emails.map((e) => (e.id === id ? { ...e, isFlagged: !e.isFlagged } : e)),
+    }));
+    if (window.electron && activeAccountId) {
+      const account = accounts.find((a) => a.id === activeAccountId);
+      if (email.uid && account) {
+        try {
+          await window.electron.updateEmailFlag({
+            account,
+            emailId: id,
+            uid: email.uid,
+            isFlagged: !previousFlagState,
+            folder: email.folder,
+          });
+        } catch (error) {
+          console.error('Failed to update flag status:', error);
+          // Rollback optimistic update
+          updateActiveAccountData((prev) => ({
+            ...prev,
+            emails: prev.emails.map((e) => (e.id === id ? { ...e, isFlagged: previousFlagState } : e)),
+          }));
+        }
+      }
+    }
+  };
+
   const { selectedIds, handleRowClick, handleToggleSelection, handleSelectAll, clearSelection } = useSelection({
     filteredEmails,
     onSelectEmail: handleSelectEmail,
   });
 
-  const { isSorting, sortProgress, canSmartSort, handleBatchDelete, handleBatchSmartSort, handleBatchMarkRead } = useBatchOperations({
-    selectedIds,
-    currentEmails,
-    currentCategories,
-    aiSettings,
-    onDeleteEmail: handleDeleteEmail,
-    onToggleRead: handleToggleRead,
-    onClearSelection: clearSelection,
-    onUpdateEmails: (updateFn) => updateActiveAccountData((prev) => ({ ...prev, emails: updateFn(prev.emails) })),
-    onUpdateCategories: (categories) => updateActiveAccountData((prev) => ({ ...prev, categories })),
-    onOpenSettings: () => setIsSettingsOpen(true),
-  });
+  const { isSorting, sortProgress, canSmartSort, handleBatchDelete, handleBatchSmartSort, handleBatchMarkRead } =
+    useBatchOperations({
+      selectedIds,
+      currentEmails,
+      currentCategories,
+      aiSettings,
+      onDeleteEmail: handleDeleteEmail,
+      onToggleRead: handleToggleRead,
+      onClearSelection: clearSelection,
+      onUpdateEmails: (updateFn) => updateActiveAccountData((prev) => ({ ...prev, emails: updateFn(prev.emails) })),
+      onUpdateCategories: (categories) => updateActiveAccountData((prev) => ({ ...prev, categories })),
+      onOpenSettings: () => setIsSettingsOpen(true),
+    });
 
   const { isSyncing, syncAccount } = useSync({
     activeAccountId,
@@ -198,68 +261,6 @@ const App: React.FC = () => {
           categories: Object.values(DefaultEmailCategory).map((c) => ({ name: c, type: 'system' })),
         },
       }));
-    }
-  };
-
-  const handleToggleRead = async (id: string) => {
-    const email = currentEmails.find((e) => e.id === id);
-    if (!email) return;
-    const previousReadState = email.isRead;
-    updateActiveAccountData((prev) => ({
-      ...prev,
-      emails: prev.emails.map((e) => (e.id === id ? { ...e, isRead: !e.isRead } : e)),
-    }));
-    if (window.electron && activeAccountId) {
-      const account = accounts.find((a) => a.id === activeAccountId);
-      if (email.uid && account) {
-        try {
-          await window.electron.updateEmailRead({
-            account,
-            emailId: id,
-            uid: email.uid,
-            isRead: !previousReadState,
-            folder: email.folder,
-          });
-        } catch (error) {
-          console.error('Failed to update read status:', error);
-          // Rollback optimistic update
-          updateActiveAccountData((prev) => ({
-            ...prev,
-            emails: prev.emails.map((e) => (e.id === id ? { ...e, isRead: previousReadState } : e)),
-          }));
-        }
-      }
-    }
-  };
-
-  const handleToggleFlag = async (id: string) => {
-    const email = currentEmails.find((e) => e.id === id);
-    if (!email) return;
-    const previousFlagState = email.isFlagged;
-    updateActiveAccountData((prev) => ({
-      ...prev,
-      emails: prev.emails.map((e) => (e.id === id ? { ...e, isFlagged: !e.isFlagged } : e)),
-    }));
-    if (window.electron && activeAccountId) {
-      const account = accounts.find((a) => a.id === activeAccountId);
-      if (email.uid && account) {
-        try {
-          await window.electron.updateEmailFlag({
-            account,
-            emailId: id,
-            uid: email.uid,
-            isFlagged: !previousFlagState,
-            folder: email.folder,
-          });
-        } catch (error) {
-          console.error('Failed to update flag status:', error);
-          // Rollback optimistic update
-          updateActiveAccountData((prev) => ({
-            ...prev,
-            emails: prev.emails.map((e) => (e.id === id ? { ...e, isFlagged: previousFlagState } : e)),
-          }));
-        }
-      }
     }
   };
 

@@ -254,13 +254,7 @@ describe('BatchActionBar', () => {
       const readEmail: Email = { ...mockEmail1, id: '3', isRead: true };
       const unreadEmail: Email = { ...mockEmail2, id: '4', isRead: false };
       const selectedIds = new Set(['3', '4']);
-      render(
-        <BatchActionBar
-          {...defaultProps}
-          filteredEmails={[readEmail, unreadEmail]}
-          selectedIds={selectedIds}
-        />
-      );
+      render(<BatchActionBar {...defaultProps} filteredEmails={[readEmail, unreadEmail]} selectedIds={selectedIds} />);
       // If any email is unread, button should say "Als gelesen"
       expect(screen.getByText('Als gelesen')).toBeInTheDocument();
     });
