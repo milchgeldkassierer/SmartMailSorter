@@ -221,16 +221,7 @@ async function processMessages(client, messages, account, targetCategory) {
 async function syncAccount(account) {
   console.log(`Starting sync for account: ${account.email}`);
 
-  const client = new ImapFlow({
-    host: account.imapHost,
-    port: account.imapPort,
-    secure: true,
-    auth: {
-      user: account.username || account.email,
-      pass: account.password,
-    },
-    logger: false,
-  });
+  const client = createImapClient(account);
 
   try {
     await client.connect();
@@ -464,16 +455,7 @@ async function syncAccount(account) {
 }
 
 async function testConnection(account) {
-  const client = new ImapFlow({
-    host: account.imapHost,
-    port: account.imapPort,
-    secure: true,
-    auth: {
-      user: account.username || account.email,
-      pass: account.password,
-    },
-    logger: false,
-  });
+  const client = createImapClient(account);
 
   try {
     await client.connect();
@@ -492,16 +474,7 @@ async function testConnection(account) {
 async function deleteEmail(account, uid, dbFolder) {
   if (!uid) return { success: false, error: 'No UID' };
 
-  const client = new ImapFlow({
-    host: account.imapHost,
-    port: account.imapPort,
-    secure: true,
-    auth: {
-      user: account.username || account.email,
-      pass: account.password,
-    },
-    logger: false,
-  });
+  const client = createImapClient(account);
 
   try {
     await client.connect();
@@ -537,16 +510,7 @@ async function deleteEmail(account, uid, dbFolder) {
 async function setEmailFlag(account, uid, flag, value, dbFolder) {
   if (!uid) return { success: false, error: 'No UID' };
 
-  const client = new ImapFlow({
-    host: account.imapHost,
-    port: account.imapPort,
-    secure: true,
-    auth: {
-      user: account.username || account.email,
-      pass: account.password,
-    },
-    logger: false,
-  });
+  const client = createImapClient(account);
 
   try {
     await client.connect();
