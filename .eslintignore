@@ -1,0 +1,35 @@
+# Dependencies
+node_modules
+
+# Build outputs
+dist
+dist-ssr
+build
+
+# Test coverage
+coverage
+
+# Logs
+logs
+*.log
+
+# Auto Claude
+.auto-claude/
+
+# Editor directories
+.vscode
+.idea
+
+# Generated files
+*.d.ts
+!electron.d.ts
+!vite-env.d.ts
+
+# Database files
+*.db
+*.db-*
+
+# Temporary files
+*.local
+*.tmp
+.cache
