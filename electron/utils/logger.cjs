@@ -38,9 +38,13 @@ function configureLogger() {
 
   // Set log file location (only when app is available)
   if (app) {
-    const path = require('path');
-    const userDataPath = app.getPath('userData');
-    log.transports.file.resolvePathFn = () => path.join(userDataPath, 'logs', 'main.log');
+    try {
+      const path = require('path');
+      const userDataPath = app.getPath('userData');
+      log.transports.file.resolvePathFn = () => path.join(userDataPath, 'logs', 'main.log');
+    } catch (_e) {
+      // Let electron-log use its default path resolution
+    }
   }
 
   return log;
