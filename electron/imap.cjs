@@ -156,16 +156,7 @@ async function processMessages(client, messages, account, targetCategory) {
 async function syncAccount(account) {
   console.log(`Starting sync for account: ${account.email}`);
 
-  const client = new ImapFlow({
-    host: account.imapHost,
-    port: account.imapPort,
-    secure: true,
-    auth: {
-      user: account.username || account.email,
-      pass: account.password,
-    },
-    logger: false,
-  });
+  const client = createImapClient(account);
 
   try {
     await client.connect();
