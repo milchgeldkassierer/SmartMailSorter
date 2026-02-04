@@ -34,6 +34,30 @@ const PROVIDERS = {
 };
 
 /**
+ * Creates an ImapFlow client instance with standardized configuration.
+ * Encapsulates the common pattern for creating IMAP clients across all operations.
+ * @param {Object} account - The account object containing connection details
+ * @param {string} account.imapHost - IMAP server hostname
+ * @param {number} account.imapPort - IMAP server port (typically 993)
+ * @param {string} account.email - User's email address (used as fallback for username)
+ * @param {string} [account.username] - IMAP username (defaults to email if not provided)
+ * @param {string} account.password - IMAP password
+ * @returns {ImapFlow} Configured ImapFlow client instance (not yet connected)
+ */
+function createImapClient(account) {
+  return new ImapFlow({
+    host: account.imapHost,
+    port: account.imapPort,
+    secure: true,
+    auth: {
+      user: account.username || account.email,
+      pass: account.password,
+    },
+    logger: false,
+  });
+}
+
+/**
  * Helper to process a batch of fetch results and save them to DB
  */
 async function processMessages(client, messages, account, targetCategory) {
