@@ -4,8 +4,37 @@ import { Email, DefaultEmailCategory, SortResult, AISettings, LLMProvider } from
 // Store the original fetch
 const originalFetch = global.fetch;
 
+// Define types for Gemini API mocks
+interface GeminiGenerateContentRequest {
+  model: string;
+  contents: string;
+  config?: {
+    responseMimeType?: string;
+    thinkingConfig?: {
+      thinkingBudget?: number;
+    };
+  };
+}
+
+interface GeminiGenerateContentResponse {
+  response?: {
+    text: () => string;
+    candidates?: Array<{
+      content: {
+        parts: Array<{ text: string }>;
+      };
+    }>;
+  };
+  text?: () => string;
+  candidates?: Array<{
+    content: {
+      parts: Array<{ text: string }>;
+    };
+  }>;
+}
+
 // Mock variables for GoogleGenAI
-let mockGenerateContent: any;
+let mockGenerateContent: (request: GeminiGenerateContentRequest) => Promise<GeminiGenerateContentResponse>;
 
 // Mock @google/genai before importing geminiService
 vi.mock('@google/genai', () => {
@@ -19,7 +48,7 @@ vi.mock('@google/genai', () => {
 
     get models() {
       return {
-        generateContent: (...args: any[]) => mockGenerateContent(...args)
+        generateContent: (request: GeminiGenerateContentRequest) => mockGenerateContent(request)
       };
     }
   }
