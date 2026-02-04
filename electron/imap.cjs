@@ -492,7 +492,7 @@ async function syncFolderMessages(client, account, boxName, targetCategory) {
 
         try {
           // Fetch UIDs and flags for this sequence range
-          const { uids: batchServerUids, headers } = await fetchUidBatch(client, range);
+          const { uids: batchServerUids } = await fetchUidBatch(client, range);
 
           // Add to reconciliation set
           batchServerUids.forEach((u) => allServerUids.add(u));
