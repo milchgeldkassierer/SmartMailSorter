@@ -20,7 +20,6 @@ interface SidebarProps {
   onAddCategory: (_cat: string) => void;
   categories: Category[];
   counts: Record<string, number>;
-  isProcessing: boolean;
   onReset: () => void;
 
   // Account Props
@@ -31,7 +30,6 @@ interface SidebarProps {
   // Category Actions
   onDeleteCategory: (_cat: string) => void;
   onRenameCategory: (_oldName: string, _newName: string) => void;
-  onUpdateIcon?: (_cat: string, _icon: string) => void;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({
@@ -40,7 +38,6 @@ const Sidebar: React.FC<SidebarProps> = ({
   onAddCategory,
   categories,
   counts,
-  isProcessing: _isProcessing,
   onReset,
   accounts,
   activeAccountId,
@@ -48,7 +45,6 @@ const Sidebar: React.FC<SidebarProps> = ({
   onOpenSettings,
   onDeleteCategory,
   onRenameCategory,
-  onUpdateIcon: _onUpdateIcon,
 }) => {
   const [isAdding, setIsAdding] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');

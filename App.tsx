@@ -18,19 +18,13 @@ import BatchActionBar from './components/BatchActionBar';
 import ProgressBar from './components/ProgressBar';
 
 const App: React.FC = () => {
-  const {
-    isAuthenticated: _isAuthenticated,
-    isConnecting: _isConnecting,
-    setIsAuthenticated,
-    setIsConnecting,
-  } = useAuth();
+  const { setIsAuthenticated, setIsConnecting } = useAuth();
   const { accounts, activeAccountId, setAccounts, setActiveAccountId, addAccount, removeAccount, switchAccount } =
     useAccounts();
   const { aiSettings, setAiSettings } = useAISettings();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   const {
-    data: _data,
     setData,
     selectedEmailId,
     setSelectedEmailId,
@@ -290,7 +284,6 @@ const App: React.FC = () => {
         }}
         categories={currentCategories}
         counts={categoryCounts}
-        isProcessing={isSorting}
         onReset={() => setIsAuthenticated(false)}
         accounts={accounts}
         activeAccountId={activeAccountId}
