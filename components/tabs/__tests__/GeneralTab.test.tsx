@@ -18,7 +18,7 @@ describe('GeneralTab', () => {
     reloadMock = vi.fn();
     originalLocation = window.location;
     delete (window as any).location;
-    window.location = { ...originalLocation, reload: reloadMock } as Location;
+    (window as any).location = { ...originalLocation, reload: reloadMock };
 
     // Mock window.electron (create fresh mock each time, after clearAllMocks)
     mockElectron = {
@@ -29,7 +29,7 @@ describe('GeneralTab', () => {
 
   afterEach(() => {
     confirmSpy.mockRestore();
-    window.location = originalLocation;
+    (window as any).location = originalLocation;
     delete (window as any).electron;
   });
 

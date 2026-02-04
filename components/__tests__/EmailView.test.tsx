@@ -3,15 +3,6 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import EmailView from '../EmailView';
 import { Email } from '../../types';
 
-// Extend Window interface for tests
-declare global {
-  interface Window {
-    electron?: {
-      getEmailAttachments: typeof mockGetEmailAttachments;
-    };
-  }
-}
-
 // Mock window.electron
 const mockGetEmailAttachments = vi.fn();
 
@@ -35,14 +26,14 @@ describe('EmailView', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     // Setup window.electron mock
-    window.electron = {
+    (window.electron as any) = {
       getEmailAttachments: mockGetEmailAttachments,
     };
   });
 
   afterEach(() => {
     // Clean up window.electron mock
-    delete window.electron;
+    delete (window as any).electron;
   });
 
   describe('Empty State', () => {
@@ -246,7 +237,7 @@ describe('EmailView', () => {
     });
 
     it('should not load attachments when window.electron is not available', () => {
-      delete window.electron;
+      delete (window as any).electron;
       const email = createEmail({ hasAttachments: true });
       render(<EmailView email={email} />);
 
