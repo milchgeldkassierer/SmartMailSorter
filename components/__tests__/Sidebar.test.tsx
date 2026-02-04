@@ -1,14 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import Sidebar from '../Sidebar';
-import {
-  ImapAccount,
-  DefaultEmailCategory,
-  INBOX_FOLDER,
-  SENT_FOLDER,
-  SPAM_FOLDER,
-  TRASH_FOLDER,
-} from '../../types';
+import { ImapAccount, DefaultEmailCategory, INBOX_FOLDER, SENT_FOLDER, SPAM_FOLDER, TRASH_FOLDER } from '../../types';
 
 describe('Sidebar', () => {
   const mockAccounts: ImapAccount[] = [

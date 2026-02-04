@@ -66,9 +66,7 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   // Sort function: Standard -> Physical -> Smart -> Other
 
-  const standardCategories = categories.filter((c) =>
-    SYSTEM_FOLDERS.includes(c.name)
-  );
+  const standardCategories = categories.filter((c) => SYSTEM_FOLDERS.includes(c.name));
 
   // Physical Folders (type='folder')
   // Should NOT include system folders (which are standard)

@@ -1,5 +1,14 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Email, DefaultEmailCategory, ImapAccount, AccountData, Category, SENT_FOLDER, SPAM_FOLDER, TRASH_FOLDER } from '../types';
+import {
+  Email,
+  DefaultEmailCategory,
+  ImapAccount,
+  AccountData,
+  Category,
+  SENT_FOLDER,
+  SPAM_FOLDER,
+  TRASH_FOLDER,
+} from '../types';
 import { SearchConfig } from '../components/SearchBar';
 
 // Standard folder name constants

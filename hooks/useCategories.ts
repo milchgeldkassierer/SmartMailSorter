@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { Email, DefaultEmailCategory, Category, SYSTEM_FOLDERS } from '../types';
+import { Email, Category, SYSTEM_FOLDERS } from '../types';
 
 interface UseCategoriesReturn {
   addCategory: (name: string, type?: string) => Promise<void>;

@@ -1,6 +1,6 @@
 const Database = require('better-sqlite3');
 const path = require('path');
-const { INBOX_FOLDER, SENT_FOLDER, SPAM_FOLDER, TRASH_FOLDER, SYSTEM_FOLDERS } = require('./folderConstants.cjs');
+const { INBOX_FOLDER } = require('./folderConstants.cjs');
 // Electron import moved to lazy usage or injection
 
 const DEFAULT_DB_NAME = 'smartmail.db';
