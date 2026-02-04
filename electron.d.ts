@@ -1,4 +1,4 @@
-import { ImapAccount, SyncResult, Email, EmailOperationResult } from './types';
+import { ImapAccount, SyncResult, Email, EmailOperationResult, CategoryOperationResult, Attachment } from './types';
 
 export { };
 
@@ -21,13 +21,13 @@ declare global {
 
             // Categories
             getCategories: () => Promise<{ name: string, type: string }[]>;
-            addCategory: (name: string, type?: string) => Promise<any>;
-            updateCategoryType: (name: string, type: string) => Promise<any>;
-            deleteSmartCategory: (categoryName: string) => Promise<any>;
+            addCategory: (name: string, type?: string) => Promise<CategoryOperationResult>;
+            updateCategoryType: (name: string, type: string) => Promise<CategoryOperationResult>;
+            deleteSmartCategory: (categoryName: string) => Promise<CategoryOperationResult>;
             renameSmartCategory: (data: { oldName: string, newName: string }) => Promise<{ success: boolean }>;
 
             // Attachments & Content
-            getEmailAttachments: (emailId: string) => Promise<any[]>;
+            getEmailAttachments: (emailId: string) => Promise<Attachment[]>;
             getEmailContent: (emailId: string) => Promise<{ body: string | null, bodyHtml: string | null }>;
             openAttachment: (attachmentId: string) => Promise<void>;
 
