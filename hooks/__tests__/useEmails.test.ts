@@ -510,7 +510,7 @@ describe('useEmails', () => {
 
         it('should reset pagination when resetPagination is called', () => {
             const { result } = renderHook(() => useEmails(defaultParams));
-            const manyEmails = Array.from({ length: 150 }, (_, i) => ({
+            const manyEmails = Array.from({ length: 250 }, (_, i) => ({
                 ...mockEmail1,
                 id: `email-${i}`,
             }));
@@ -536,7 +536,7 @@ describe('useEmails', () => {
 
         it('should reset pagination when category changes', () => {
             const { result } = renderHook(() => useEmails(defaultParams));
-            const manyEmails = Array.from({ length: 150 }, (_, i) => ({
+            const manyEmails = Array.from({ length: 250 }, (_, i) => ({
                 ...mockEmail1,
                 id: `email-${i}`,
             }));
@@ -710,7 +710,7 @@ describe('useEmails', () => {
                 { initialProps: { activeAccountId: 'account-1' } }
             );
 
-            const manyEmails = Array.from({ length: 150 }, (_, i) => ({
+            const manyEmails = Array.from({ length: 250 }, (_, i) => ({
                 ...mockEmail1,
                 id: `email-${i}`,
             }));
