@@ -182,7 +182,7 @@ const App: React.FC = () => {
           },
         }));
         setIsAuthenticated(true);
-      } catch (_error) {
+      } catch {
         alert('Konto konnte nicht hinzugefügt werden. Prüfe die Daten.');
       } finally {
         setIsConnecting(false);

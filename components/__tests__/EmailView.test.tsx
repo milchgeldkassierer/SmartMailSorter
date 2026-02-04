@@ -3,6 +3,15 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import EmailView from '../EmailView';
 import { Email } from '../../types';
 
+// Extend Window interface for tests
+declare global {
+  interface Window {
+    electron?: {
+      getEmailAttachments: typeof mockGetEmailAttachments;
+    };
+  }
+}
+
 // Mock window.electron
 const mockGetEmailAttachments = vi.fn();
 
@@ -26,14 +35,14 @@ describe('EmailView', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     // Setup window.electron mock
-    (window as any).electron = {
+    window.electron = {
       getEmailAttachments: mockGetEmailAttachments,
     };
   });
 
   afterEach(() => {
     // Clean up window.electron mock
-    delete (window as any).electron;
+    delete window.electron;
   });
 
   describe('Empty State', () => {
@@ -62,7 +71,7 @@ describe('EmailView', () => {
   describe('Loading State', () => {
     it('should render loading spinner when body is undefined', () => {
       const loadingEmail = createEmail({
-        body: undefined as any,
+        body: undefined as unknown as string,
         bodyHtml: undefined,
       });
       render(<EmailView email={loadingEmail} />);
@@ -72,7 +81,7 @@ describe('EmailView', () => {
 
     it('should show loading animation when content is not loaded', () => {
       const loadingEmail = createEmail({
-        body: undefined as any,
+        body: undefined as unknown as string,
         bodyHtml: undefined,
       });
       render(<EmailView email={loadingEmail} />);
@@ -83,7 +92,7 @@ describe('EmailView', () => {
 
     it('should not show email header when loading', () => {
       const loadingEmail = createEmail({
-        body: undefined as any,
+        body: undefined as unknown as string,
         bodyHtml: undefined,
       });
       render(<EmailView email={loadingEmail} />);
@@ -237,7 +246,7 @@ describe('EmailView', () => {
     });
 
     it('should not load attachments when window.electron is not available', () => {
-      delete (window as any).electron;
+      delete window.electron;
       const email = createEmail({ hasAttachments: true });
       render(<EmailView email={email} />);
 

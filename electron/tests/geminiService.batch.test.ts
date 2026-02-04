@@ -3,9 +3,11 @@ import { Email, DefaultEmailCategory, SortResult, AISettings, LLMProvider } from
 
 // Mock the internal callLLM function before importing geminiService
 // We need to mock the entire geminiService module to intercept callLLM
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let mockCallLLM: any;
 
 vi.mock('../../services/geminiService', async () => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const actual = (await vi.importActual('../../services/geminiService')) as any;
 
   return {
@@ -23,8 +25,10 @@ vi.mock('../../services/geminiService', async () => {
         try {
           const rawResults = await mockCallLLM(emails, availableCategories, settings);
 
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const resultMap = new Map<string, any>();
           if (Array.isArray(rawResults)) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             rawResults.forEach((r: any) => resultMap.set(r.id, r));
           }
 

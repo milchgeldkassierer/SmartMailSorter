@@ -11,13 +11,15 @@ const electronPath = path.resolve(
   path.dirname(new URL(import.meta.url).pathname),
   '../../node_modules/electron/index.js'
 );
-(require.cache as any)[electronPath] = {
-  exports: {
-    app: {
-      getPath: () => './test-data',
+if (require.cache) {
+  require.cache[electronPath] = {
+    exports: {
+      app: {
+        getPath: () => './test-data',
+      },
     },
-  },
-};
+  } as NodeModule;
+}
 
 // Define interface for db module methods (account-related)
 interface DbModule {

@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { DefaultEmailCategory, AISettings, LLMProvider } from '../../types';
 
 // Mock variables for GoogleGenAI
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let mockGenerateContent: any;
 
 // Mock @google/genai before importing geminiService
@@ -15,6 +16,7 @@ vi.mock('@google/genai', () => {
 
     get models() {
       return {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         generateContent: (...args: any[]) => mockGenerateContent(...args),
       };
     }
@@ -98,6 +100,7 @@ describe('GeminiService - generateDemoEmails', () => {
         },
       });
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const _emails = await geminiService.generateDemoEmails(undefined as any, geminiSettings);
 
       // Verify prompt contains the default count

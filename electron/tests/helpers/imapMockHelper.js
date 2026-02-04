@@ -233,17 +233,17 @@ function getMessageCount() {
 
 /**
  * Simulates a connection error scenario.
- * @param {string} [errorMessage] - Custom error message
+ * @param {string} [_errorMessage] - Custom error message
  */
-function simulateConnectionError(errorMessage) {
+function simulateConnectionError(_errorMessage) {
   setConnectFailure(true);
 }
 
 /**
  * Simulates a fetch error scenario.
- * @param {string} [errorMessage] - Custom error message
+ * @param {string} [_errorMessage] - Custom error message
  */
-function simulateFetchError(errorMessage) {
+function simulateFetchError(_errorMessage) {
   setFetchFailure(true);
 }
 

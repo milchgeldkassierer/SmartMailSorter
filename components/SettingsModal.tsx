@@ -94,7 +94,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
         setTestStatus('error');
         setTestMessage(result.error || 'Verbindung fehlgeschlagen');
       }
-    } catch (_e) {
+    } catch {
       setTestStatus('error');
       setTestMessage('Fehler beim Testen');
     }

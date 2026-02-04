@@ -215,7 +215,7 @@ export const generateDemoEmails = async (count: number = 5, settings?: AISetting
           isFlagged: false,
         };
       });
-  } catch (_e) {
+  } catch {
     return [];
   }
 };
