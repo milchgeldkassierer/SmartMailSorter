@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Email, DefaultEmailCategory, ImapAccount, AccountData } from '../types';
 import { SearchConfig } from '../components/SearchBar';
 
@@ -26,7 +26,7 @@ interface UseEmailsReturn {
   canLoadMore: boolean;
 
   // Setters
-  setData: (data: Record<string, AccountData>) => void;
+  setData: React.Dispatch<React.SetStateAction<Record<string, AccountData>>>;
   setSelectedEmailId: (id: string | null) => void;
   setSelectedCategory: (category: string) => void;
   setSearchTerm: (term: string) => void;
