@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
+import type { LucideIcon } from 'lucide-react';
 import {
   CategoryIcon, LogOut, Plus, Settings, ChevronDown, ChevronUp, Server, PlusCircle,
   Folder, FolderOpen, Archive, Send, Inbox, AlertOctagon, Trash2
 } from './Icon';
-import { ImapAccount, DefaultEmailCategory, LucideIcon, Category } from '../types';
+import { ImapAccount, DefaultEmailCategory, Category } from '../types';
 
 interface SidebarProps {
   selectedCategory: string;

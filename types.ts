@@ -1,5 +1,3 @@
-import type { LucideIcon } from 'lucide-react';
-
 export enum DefaultEmailCategory {
   INBOX = 'Posteingang',
   SPAM = 'Spam',
@@ -103,6 +101,3 @@ export interface EmailOperationResult {
 export interface CategoryOperationResult {
   success: boolean;
 }
-
-// Re-export LucideIcon from lucide-react for convenience
-export type { LucideIcon };
