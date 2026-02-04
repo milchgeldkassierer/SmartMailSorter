@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { DefaultEmailCategory, AISettings, LLMProvider } from '../../types';
+import { INBOX_FOLDER } from '../folderConstants.cjs';
 
 // Mock variables for GoogleGenAI
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -287,7 +288,7 @@ describe('GeminiService - generateDemoEmails', () => {
       const emails = await geminiService.generateDemoEmails(2, geminiSettings);
 
       emails.forEach((email) => {
-        expect(email.folder).toBe('Posteingang');
+        expect(email.folder).toBe(INBOX_FOLDER);
       });
     });
 
