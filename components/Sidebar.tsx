@@ -3,7 +3,7 @@ import {
   CategoryIcon, LogOut, Plus, Settings, ChevronDown, ChevronUp, Server, PlusCircle,
   Folder, FolderOpen, Archive, Send, Inbox, AlertOctagon, Trash2
 } from './Icon';
-import { ImapAccount, DefaultEmailCategory } from '../types';
+import { ImapAccount, DefaultEmailCategory, LucideIcon } from '../types';
 
 interface SidebarProps {
   selectedCategory: string;
@@ -82,7 +82,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   // physicalFolders.sort... already done
   // otherCustom.sort... already done
 
-  const renderCategoryItem = (cat: string, displayName: string, icon: any, depth = 0) => {
+  const renderCategoryItem = (cat: string, displayName: string, icon: LucideIcon, depth = 0) => {
     const isSelected = selectedCategory === cat;
     const count = counts[cat] || 0;
 
@@ -293,7 +293,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             {contextMenu.category}
           </div>
 
-          {!Object.values(DefaultEmailCategory).includes(contextMenu.category as any) && (
+          {!Object.values(DefaultEmailCategory).includes(contextMenu.category) && (
             <>
               <button
                 onClick={() => {
