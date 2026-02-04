@@ -1,3 +1,5 @@
+import React from 'react';
+
 export enum DefaultEmailCategory {
   INBOX = 'Posteingang',
   SPAM = 'Spam',
@@ -78,3 +80,29 @@ export const AVAILABLE_MODELS: Record<LLMProvider, string[]> = {
   [LLMProvider.OPENAI]: ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo'],
   [LLMProvider.ANTHROPIC]: ['claude-3-5-sonnet-20240620', 'claude-3-haiku-20240307']
 };
+
+// Attachment Types
+export interface Attachment {
+  id: string;
+  filename: string;
+  size: number;
+  mimeType?: string;
+}
+
+// IPC Operation Result Types
+export interface SyncResult {
+  success: boolean;
+  newEmails?: number;
+  errors?: string[];
+}
+
+export interface EmailOperationResult {
+  success: boolean;
+}
+
+export interface CategoryOperationResult {
+  success: boolean;
+}
+
+// Icon Component Type (for lucide-react icons)
+export type LucideIcon = React.ComponentType<{ className?: string; size?: number; strokeWidth?: number; }>;
