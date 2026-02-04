@@ -909,4 +909,274 @@ describe('IMAP Sync Edge Cases and Error Handling', () => {
       expect(result.success).toBe(true);
     });
   });
+
+  describe('syncFolderMessages integration', () => {
+    it('should sync folder messages with complete flow', async () => {
+      const account = createTestAccount({
+        id: 'sync-folder-test',
+        email: 'syncfolder@test.com',
+      });
+
+      addAccountToDb(account);
+
+      // Set up server emails for syncing
+      setServerEmails([
+        {
+          uid: 100,
+          body: 'Subject: Test Email 1\nFrom: sender1@test.com\nTo: syncfolder@test.com\n\nBody 1',
+          flags: [],
+        },
+        {
+          uid: 200,
+          body: 'Subject: Test Email 2\nFrom: sender2@test.com\nTo: syncfolder@test.com\n\nBody 2',
+          flags: ['\\Seen'],
+        },
+        {
+          uid: 300,
+          body: 'Subject: Test Email 3\nFrom: sender3@test.com\nTo: syncfolder@test.com\n\nBody 3',
+          flags: [],
+        },
+      ]);
+
+      // Create a mock IMAP client by connecting
+      const { ImapFlow } = require('imapflow');
+      const client = new ImapFlow({
+        host: account.imapHost,
+        port: account.imapPort,
+        secure: true,
+        auth: {
+          user: account.username || account.email,
+          pass: account.password,
+        },
+      });
+
+      await client.connect();
+
+      // Call syncFolderMessages directly
+      const newMessagesCount = await imap.syncFolderMessages(client, account, 'INBOX', 'inbox');
+
+      // Verify the result
+      expect(newMessagesCount).toBe(3);
+
+      // Verify messages were saved to database
+      const savedEmails = db.getAllUidsForFolder(account.id, 'inbox');
+      expect(savedEmails).toContain(100);
+      expect(savedEmails).toContain(200);
+      expect(savedEmails).toContain(300);
+
+      await client.logout();
+    });
+
+    it('should handle empty folder', async () => {
+      const account = createTestAccount({
+        id: 'empty-folder-test',
+        email: 'emptyfolder@test.com',
+      });
+
+      addAccountToDb(account);
+
+      // Set up empty server
+      setServerEmails([]);
+
+      const { ImapFlow } = require('imapflow');
+      const client = new ImapFlow({
+        host: account.imapHost,
+        port: account.imapPort,
+        secure: true,
+        auth: {
+          user: account.username || account.email,
+          pass: account.password,
+        },
+      });
+
+      await client.connect();
+
+      const newMessagesCount = await imap.syncFolderMessages(client, account, 'INBOX', 'inbox');
+
+      expect(newMessagesCount).toBe(0);
+
+      await client.logout();
+    });
+
+    it('should reconcile orphaned emails', async () => {
+      const account = createTestAccount({
+        id: 'orphan-test',
+        email: 'orphan@test.com',
+      });
+
+      addAccountToDb(account);
+
+      // First sync with 3 emails
+      setServerEmails([
+        {
+          uid: 100,
+          body: 'Subject: Email 1\nFrom: sender@test.com\n\nBody 1',
+          flags: [],
+        },
+        {
+          uid: 200,
+          body: 'Subject: Email 2\nFrom: sender@test.com\n\nBody 2',
+          flags: [],
+        },
+        {
+          uid: 300,
+          body: 'Subject: Email 3\nFrom: sender@test.com\n\nBody 3',
+          flags: [],
+        },
+      ]);
+
+      const { ImapFlow } = require('imapflow');
+      const client = new ImapFlow({
+        host: account.imapHost,
+        port: account.imapPort,
+        secure: true,
+        auth: {
+          user: account.username || account.email,
+          pass: account.password,
+        },
+      });
+
+      await client.connect();
+
+      // First sync
+      await imap.syncFolderMessages(client, account, 'INBOX', 'inbox');
+
+      let savedEmails = db.getAllUidsForFolder(account.id, 'inbox');
+      expect(savedEmails.length).toBe(3);
+
+      // Second sync with only 2 emails (one deleted from server)
+      setServerEmails([
+        {
+          uid: 100,
+          body: 'Subject: Email 1\nFrom: sender@test.com\n\nBody 1',
+          flags: [],
+        },
+        {
+          uid: 300,
+          body: 'Subject: Email 3\nFrom: sender@test.com\n\nBody 3',
+          flags: [],
+        },
+      ]);
+
+      await imap.syncFolderMessages(client, account, 'INBOX', 'inbox');
+
+      // Verify orphaned email (UID 200) was deleted
+      savedEmails = db.getAllUidsForFolder(account.id, 'inbox');
+      expect(savedEmails.length).toBe(2);
+      expect(savedEmails).toContain(100);
+      expect(savedEmails).not.toContain(200);
+      expect(savedEmails).toContain(300);
+
+      await client.logout();
+    });
+
+    it('should handle large batch of messages', async () => {
+      const account = createTestAccount({
+        id: 'large-batch-test',
+        email: 'largebatch@test.com',
+      });
+
+      addAccountToDb(account);
+
+      // Create 150 messages to test batch processing
+      const largeEmailSet = [];
+      for (let i = 1; i <= 150; i++) {
+        largeEmailSet.push({
+          uid: i * 10,
+          body: `Subject: Email ${i}\nFrom: sender${i}@test.com\n\nBody ${i}`,
+          flags: [],
+        });
+      }
+
+      setServerEmails(largeEmailSet);
+
+      const { ImapFlow } = require('imapflow');
+      const client = new ImapFlow({
+        host: account.imapHost,
+        port: account.imapPort,
+        secure: true,
+        auth: {
+          user: account.username || account.email,
+          pass: account.password,
+        },
+      });
+
+      await client.connect();
+
+      const newMessagesCount = await imap.syncFolderMessages(client, account, 'INBOX', 'inbox');
+
+      expect(newMessagesCount).toBe(150);
+
+      const savedEmails = db.getAllUidsForFolder(account.id, 'inbox');
+      expect(savedEmails.length).toBe(150);
+
+      await client.logout();
+    });
+
+    it('should only sync missing messages on subsequent syncs', async () => {
+      const account = createTestAccount({
+        id: 'incremental-sync-test',
+        email: 'incrementalsync@test.com',
+      });
+
+      addAccountToDb(account);
+
+      // First sync with 2 emails
+      setServerEmails([
+        {
+          uid: 100,
+          body: 'Subject: Email 1\nFrom: sender@test.com\n\nBody 1',
+          flags: [],
+        },
+        {
+          uid: 200,
+          body: 'Subject: Email 2\nFrom: sender@test.com\n\nBody 2',
+          flags: [],
+        },
+      ]);
+
+      const { ImapFlow } = require('imapflow');
+      const client = new ImapFlow({
+        host: account.imapHost,
+        port: account.imapPort,
+        secure: true,
+        auth: {
+          user: account.username || account.email,
+          pass: account.password,
+        },
+      });
+
+      await client.connect();
+
+      const firstSync = await imap.syncFolderMessages(client, account, 'INBOX', 'inbox');
+      expect(firstSync).toBe(2);
+
+      // Second sync adds 1 new email
+      setServerEmails([
+        {
+          uid: 100,
+          body: 'Subject: Email 1\nFrom: sender@test.com\n\nBody 1',
+          flags: [],
+        },
+        {
+          uid: 200,
+          body: 'Subject: Email 2\nFrom: sender@test.com\n\nBody 2',
+          flags: [],
+        },
+        {
+          uid: 300,
+          body: 'Subject: Email 3\nFrom: sender@test.com\n\nBody 3',
+          flags: [],
+        },
+      ]);
+
+      const secondSync = await imap.syncFolderMessages(client, account, 'INBOX', 'inbox');
+      expect(secondSync).toBe(1); // Only 1 new message
+
+      const savedEmails = db.getAllUidsForFolder(account.id, 'inbox');
+      expect(savedEmails.length).toBe(3);
+
+      await client.logout();
+    });
+  });
 });
