@@ -49,6 +49,19 @@ const isInboxEmail = (email: Email): boolean => {
   );
 };
 
+// Helper function to check if an email belongs to a standard folder
+const matchesStandardFolder = (email: Email, folderName: string): boolean => {
+  if (folderName === DefaultEmailCategory.INBOX || folderName === 'Posteingang') {
+    return isInboxEmail(email);
+  }
+
+  if (['Gesendet', 'Spam', 'Papierkorb'].includes(folderName)) {
+    return email.folder === folderName;
+  }
+
+  return false;
+};
+
 export const useEmails = ({ activeAccountId, accounts: _accounts }: UseEmailsParams): UseEmailsReturn => {
   // Data State - stored by account ID
   const [data, setData] = useState<Record<string, AccountData>>({});
@@ -82,15 +95,21 @@ export const useEmails = ({ activeAccountId, accounts: _accounts }: UseEmailsPar
     let result = currentEmails;
 
     // 1. Initial Filtering by Folder OR Smart Category
-    if (selectedCategory === DefaultEmailCategory.INBOX || selectedCategory === 'Posteingang') {
-      result = result.filter(isInboxEmail);
+    const isStandardFolder =
+      selectedCategory === DefaultEmailCategory.INBOX ||
+      selectedCategory === 'Posteingang' ||
+      ['Gesendet', 'Spam', 'Papierkorb'].includes(selectedCategory);
 
-      // Unsorted Toggle
-      if (showUnsortedOnly) {
+    if (isStandardFolder) {
+      result = result.filter((e) => matchesStandardFolder(e, selectedCategory));
+
+      // Unsorted Toggle (only applies to INBOX)
+      if (
+        (selectedCategory === DefaultEmailCategory.INBOX || selectedCategory === 'Posteingang') &&
+        showUnsortedOnly
+      ) {
         result = result.filter((e) => !e.smartCategory);
       }
-    } else if (['Gesendet', 'Spam', 'Papierkorb'].includes(selectedCategory)) {
-      result = result.filter((e) => e.folder === selectedCategory);
     } else {
       // Check if it's a known physical folder
       const catInfo = currentCategories.find((c) => c.name === selectedCategory);
