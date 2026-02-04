@@ -1,6 +1,66 @@
 import { GoogleGenAI, Type, Schema } from "@google/genai";
 import { Email, DefaultEmailCategory, SortResult, AISettings, LLMProvider } from "../types";
 
+// Internal types for AI responses
+interface GeneratedEmailData {
+  sender?: string;
+  senderEmail?: string;
+  subject?: string;
+  body?: string;
+  dateOffset?: number;
+}
+
+interface CategorizationResult {
+  id: string;
+  category?: string;
+  summary?: string;
+  reasoning?: string;
+  confidence?: number;
+}
+
+interface OpenAIResponse {
+  choices: Array<{
+    message: {
+      content: string;
+    };
+  }>;
+}
+
+interface GeminiConfig {
+  responseMimeType: string;
+  responseSchema: Schema;
+  systemInstruction: string;
+  thinkingConfig: {
+    thinkingBudget: number;
+  };
+}
+
+interface GeminiContentPart {
+  text?: string;
+}
+
+interface GeminiContent {
+  parts?: GeminiContentPart[];
+}
+
+interface GeminiCandidate {
+  content?: GeminiContent;
+}
+
+interface GeminiResultWithCandidates {
+  candidates?: GeminiCandidate[];
+  text?: () => string;
+}
+
+interface GeminiResponse {
+  response?: {
+    text?: () => string;
+    candidates?: GeminiCandidate[];
+  };
+  candidates?: GeminiCandidate[];
+  text?: () => string;
+}
+
 // Version marker
 console.log("GeminiService: Loaded Version 6.0 (Batch Processing)");
 
@@ -15,9 +75,9 @@ const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 async function callLLM(
   prompt: string,
   systemInstruction: string,
-  jsonSchema: any,
+  jsonSchema: Schema,
   settings: AISettings
-): Promise<any> {
+): Promise<unknown> {
 
   // --- GOOGLE GEMINI ---
   if (settings.provider === LLMProvider.GEMINI) {
@@ -38,8 +98,8 @@ async function callLLM(
           thinkingConfig: {
             thinkingBudget: 1024
           }
-        } as any
-      });
+        } as GeminiConfig
+      }) as unknown as GeminiResponse;
 
       let text = "";
 
@@ -49,13 +109,13 @@ async function callLLM(
       }
 
       // Strategy 2: result.text() (Simpler SDK)
-      if (!text && typeof (result as any).text === 'function') {
-        try { text = (result as any).text(); } catch (e) { }
+      if (!text && typeof result.text === 'function') {
+        try { text = result.text(); } catch (e) { }
       }
 
       // Strategy 3: Manual Candidate Extraction (Safest backup)
       if (!text) {
-        const candidates = (result as any).candidates || result.response?.candidates;
+        const candidates = result.candidates || result.response?.candidates;
         if (candidates && candidates.length > 0) {
           const part = candidates[0].content?.parts?.[0];
           if (part && part.text) text = part.text;
@@ -72,9 +132,9 @@ async function callLLM(
 
       return JSON.parse(text);
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Handle Rate Limits silently if possible, or throw
-      const msg = error.message || String(error);
+      const msg = error instanceof Error ? error.message : String(error);
       if (msg.includes("429") || msg.includes("quota")) {
         console.warn("AI Rate limit hit");
         throw new Error("AI Busy (429)");
@@ -95,7 +155,7 @@ async function callLLM(
         response_format: { type: "json_object" }
       })
     });
-    const data = await response.json();
+    const data = await response.json() as OpenAIResponse;
     return JSON.parse(data.choices[0].message.content);
   }
 
@@ -107,15 +167,21 @@ export const generateDemoEmails = async (count: number = 5, settings?: AISetting
   try {
     const prompt = `Generiere ${count} realistische Emails auf Deutsch. Format: JSON Array.`;
     const rawData = await callLLM(prompt, "You are a data generator.", emailSchema, settings || { provider: LLMProvider.GEMINI, model: 'gemini-3-flash-preview', apiKey: process.env.API_KEY || '' });
-    return (Array.isArray(rawData) ? rawData : []).map((item: any, index: number) => ({
-      id: `gen-${Date.now()}-${index}`,
-      sender: item.sender || "Unbekannt",
-      senderEmail: item.senderEmail || "unknown@example.com",
-      subject: item.subject || "Kein Betreff",
-      body: item.body || "",
-      date: new Date(Date.now() - (item.dateOffset || 0) * 3600000).toISOString(),
-      category: DefaultEmailCategory.INBOX, folder: 'Posteingang', isRead: false, isFlagged: false
-    }));
+    return (Array.isArray(rawData) ? rawData : []).map((item: unknown, index: number) => {
+      const emailData = item as GeneratedEmailData;
+      return {
+        id: `gen-${Date.now()}-${index}`,
+        sender: emailData.sender || "Unbekannt",
+        senderEmail: emailData.senderEmail || "unknown@example.com",
+        subject: emailData.subject || "Kein Betreff",
+        body: emailData.body || "",
+        date: new Date(Date.now() - (emailData.dateOffset || 0) * 3600000).toISOString(),
+        category: DefaultEmailCategory.INBOX,
+        folder: 'Posteingang',
+        isRead: false,
+        isFlagged: false
+      };
+    });
   } catch (e) { return []; }
 };
 
@@ -183,9 +249,12 @@ export const categorizeBatchWithAI = async (
   try {
     const rawResults = await callLLM(prompt, "Batch Email Sorter. Output JSON Array.", schema, settings);
 
-    const resultMap = new Map<string, any>();
+    const resultMap = new Map<string, CategorizationResult>();
     if (Array.isArray(rawResults)) {
-      rawResults.forEach((r: any) => resultMap.set(r.id, r));
+      rawResults.forEach((r: unknown) => {
+        const result = r as CategorizationResult;
+        resultMap.set(result.id, result);
+      });
     }
 
     // Map back to original order, ensuring no missing items
