@@ -536,9 +536,10 @@ describe('useEmails', () => {
 
         it('should reset pagination when category changes', () => {
             const { result } = renderHook(() => useEmails(defaultParams));
-            const manyEmails = Array.from({ length: 250 }, (_, i) => ({
+            const manyEmails = Array.from({ length: 350 }, (_, i) => ({
                 ...mockEmail1,
                 id: `email-${i}`,
+                folder: i < 250 ? 'Posteingang' : 'Gesendet', // 250 in Posteingang, 100 in Gesendet
             }));
 
             act(() => {
@@ -710,15 +711,20 @@ describe('useEmails', () => {
                 { initialProps: { activeAccountId: 'account-1' } }
             );
 
-            const manyEmails = Array.from({ length: 250 }, (_, i) => ({
+            const manyEmailsAccount1 = Array.from({ length: 250 }, (_, i) => ({
                 ...mockEmail1,
-                id: `email-${i}`,
+                id: `email-acc1-${i}`,
+            }));
+
+            const manyEmailsAccount2 = Array.from({ length: 150 }, (_, i) => ({
+                ...mockEmail1,
+                id: `email-acc2-${i}`,
             }));
 
             act(() => {
                 result.current.setData({
-                    'account-1': { emails: manyEmails, categories: [] },
-                    'account-2': { emails: [], categories: [] },
+                    'account-1': { emails: manyEmailsAccount1, categories: [] },
+                    'account-2': { emails: manyEmailsAccount2, categories: [] },
                 });
                 result.current.loadMoreEmails();
             });
