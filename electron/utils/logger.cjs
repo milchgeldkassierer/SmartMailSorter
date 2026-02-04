@@ -7,11 +7,15 @@ const { app } = require('electron');
  * Environment-specific behavior:
  * - Development: Debug level logs to console and file
  * - Production: Info level logs to file only (console disabled for cleaner stdout)
+ *   - Debug logs are DISABLED in production (only info, warn, error are logged)
+ *   - This prevents verbose sync/debug output from appearing in production
  *
  * File rotation:
- * - Maximum file size: 10MB
- * - When limit is exceeded, current log is moved to main.log.old
+ * - Maximum file size: 10MB per file
+ * - When limit is exceeded, current log is moved to main.log.old (1 backup kept)
+ * - Rotation is automatic - electron-log handles file management
  * - Log location: {userData}/logs/main.log (accessible for bug reports)
+ * - Users can attach this log file when reporting issues
  */
 function configureLogger() {
   // Determine if running in production (packaged app) or development
