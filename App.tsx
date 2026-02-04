@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { DefaultEmailCategory, ImapAccount } from './types';
+import { DefaultEmailCategory, ImapAccount, Category } from './types';
 import Sidebar from './components/Sidebar';
 import EmailList from './components/EmailList';
 import EmailView from './components/EmailView';
@@ -235,7 +235,7 @@ const App: React.FC = () => {
         onDeleteCategory={async (cat) => {
           updateActiveAccountData(prev => ({
             ...prev,
-            categories: prev.categories.filter((c: any) => c.name !== cat),
+            categories: prev.categories.filter((c: Category) => c.name !== cat),
             emails: prev.emails.map(e => e.smartCategory === cat ? { ...e, smartCategory: undefined } : e)
           }));
           await deleteCategory(cat);
@@ -243,7 +243,7 @@ const App: React.FC = () => {
         onRenameCategory={async (oldName, newName) => {
           updateActiveAccountData(prev => ({
             ...prev,
-            categories: prev.categories.map((c: any) => c.name === oldName ? { ...c, name: newName } : c),
+            categories: prev.categories.map((c: Category) => c.name === oldName ? { ...c, name: newName } : c),
             emails: prev.emails.map(e => e.smartCategory === oldName ? { ...e, smartCategory: newName } : e)
           }));
           await renameCategory(oldName, newName);
