@@ -59,7 +59,8 @@ function mapServerFolderToDbName(box) {
   }
 
   // Name matching overrides (only if not already mapped)
-  const lower = fullPath.toLowerCase();
+  // Use box.name (leaf name) for matching folder types, not the full path
+  const lower = (box.name || fullPath).toLowerCase();
   if (!mappedName) {
     if (lower === 'sent' || lower === 'gesendet') {
       mappedName = 'Gesendet';
