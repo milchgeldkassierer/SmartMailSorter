@@ -39,6 +39,16 @@ interface UseEmailsReturn {
   resetPagination: () => void;
 }
 
+// Helper function to check if an email belongs in INBOX
+const isInboxEmail = (email: Email): boolean => {
+  return (
+    (!email.folder || email.folder === 'Posteingang') &&
+    email.folder !== 'Gesendet' &&
+    email.folder !== 'Spam' &&
+    email.folder !== 'Papierkorb'
+  );
+};
+
 export const useEmails = ({ activeAccountId, accounts: _accounts }: UseEmailsParams): UseEmailsReturn => {
   // Data State - stored by account ID
   const [data, setData] = useState<Record<string, AccountData>>({});
@@ -73,13 +83,7 @@ export const useEmails = ({ activeAccountId, accounts: _accounts }: UseEmailsPar
 
     // 1. Initial Filtering by Folder OR Smart Category
     if (selectedCategory === DefaultEmailCategory.INBOX || selectedCategory === 'Posteingang') {
-      result = result.filter(
-        (e) =>
-          (!e.folder || e.folder === 'Posteingang') &&
-          e.folder !== 'Gesendet' &&
-          e.folder !== 'Spam' &&
-          e.folder !== 'Papierkorb'
-      );
+      result = result.filter(isInboxEmail);
 
       // Unsorted Toggle
       if (showUnsortedOnly) {
