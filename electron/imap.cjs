@@ -35,8 +35,16 @@ const PROVIDERS = {
 
 /**
  * Maps a server folder (box) to its DB name
+ *
+ * Behavior note: Uses box.name (leaf name) for matching special folder types like
+ * 'sent', 'trash', 'junk'. This means INBOX subfolders like 'INBOX.Sent' are recognized
+ * as special folders and mapped to 'Gesendet' (via name matching on 'Sent') rather than
+ * 'Posteingang/Sent' (via INBOX subfolder handling). This behavior aligns with how
+ * deleteEmail/setEmailFlag historically worked and provides more accurate folder detection.
+ *
  * @param {Object} box - The mailbox object from client.list()
  * @param {string} box.path - Full path of the mailbox
+ * @param {string} [box.name] - Leaf name of the mailbox (used for type matching)
  * @param {string} [box.specialUse] - Special use flag (e.g., '\\Sent')
  * @param {string} [box.delimiter] - Path delimiter (default: '/')
  * @returns {string} The mapped DB folder name
@@ -59,7 +67,9 @@ function mapServerFolderToDbName(box) {
   }
 
   // Name matching overrides (only if not already mapped)
-  // Use box.name (leaf name) for matching folder types, not the full path
+  // Use box.name (leaf name) for matching folder types, not the full path.
+  // This allows INBOX subfolders like 'INBOX.Sent' (name='Sent') to be recognized
+  // as special folders via name matching, improving folder detection accuracy.
   const lower = (box.name || fullPath).toLowerCase();
   if (!mappedName) {
     if (lower === 'sent' || lower === 'gesendet') {
