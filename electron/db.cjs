@@ -1,5 +1,6 @@
 const Database = require('better-sqlite3');
 const path = require('path');
+const { INBOX_FOLDER } = require('./folderConstants.cjs');
 // Electron import moved to lazy usage or injection
 
 const DEFAULT_DB_NAME = 'smartmail.db';
@@ -48,7 +49,7 @@ function createSchema() {
       body TEXT,           -- Plain Text
       bodyHtml TEXT,       -- HTML Content
       date TEXT,
-      folder TEXT DEFAULT 'Posteingang',  -- Physical Folder (Posteingang, Gesendet, etc.)
+      folder TEXT DEFAULT '${INBOX_FOLDER}',  -- Physical Folder (Posteingang, Gesendet, etc.)
       smartCategory TEXT,                 -- Virtual AI Category (Rechnungen, Privat, etc.)
       isRead INTEGER,
       isFlagged INTEGER,
@@ -86,7 +87,7 @@ function createSchema() {
     // Column already exists
   }
   try {
-    db.exec("ALTER TABLE emails ADD COLUMN folder TEXT DEFAULT 'Posteingang'");
+    db.exec(`ALTER TABLE emails ADD COLUMN folder TEXT DEFAULT '${INBOX_FOLDER}'`);
   } catch (_e) {
     // Column already exists
   }
@@ -253,7 +254,7 @@ function saveEmail(email) {
     body: email.body || '',
     bodyHtml: email.bodyHtml || null,
     date: email.date || new Date().toISOString(),
-    folder: email.folder || 'Posteingang',
+    folder: email.folder || INBOX_FOLDER,
     smartCategory: email.smartCategory || null,
     isRead: email.isRead ? 1 : 0,
     isFlagged: email.isFlagged ? 1 : 0,

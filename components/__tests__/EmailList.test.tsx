@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import EmailList from '../EmailList';
-import { Email } from '../../types';
+import { Email, INBOX_FOLDER } from '../../types';
 
 describe('EmailList', () => {
   // Sample email factory
@@ -12,7 +12,7 @@ describe('EmailList', () => {
     subject: 'Test Subject',
     body: 'This is the email body content for testing.',
     date: '2024-01-15T10:30:00Z',
-    folder: 'Posteingang',
+    folder: INBOX_FOLDER,
     isRead: false,
     isFlagged: false,
     hasAttachments: false,

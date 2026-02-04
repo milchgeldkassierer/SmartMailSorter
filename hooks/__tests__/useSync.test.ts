@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useSync } from '../useSync';
-import { ImapAccount, Email } from '../../types';
+import { ImapAccount, Email, INBOX_FOLDER } from '../../types';
 
 describe('useSync', () => {
   const mockAccount1: ImapAccount = {
@@ -27,7 +27,7 @@ describe('useSync', () => {
     subject: 'Test Email 1',
     body: 'This is a test email body',
     date: '2024-01-01T10:00:00Z',
-    folder: 'Posteingang',
+    folder: INBOX_FOLDER,
     isRead: false,
     isFlagged: false,
   };
@@ -39,7 +39,7 @@ describe('useSync', () => {
     subject: 'Important Meeting',
     body: 'Meeting scheduled for tomorrow',
     date: '2024-01-02T10:00:00Z',
-    folder: 'Posteingang',
+    folder: INBOX_FOLDER,
     isRead: false,
     isFlagged: false,
   };

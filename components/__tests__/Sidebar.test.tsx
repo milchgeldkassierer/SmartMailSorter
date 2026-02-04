@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import Sidebar from '../Sidebar';
-import { ImapAccount, DefaultEmailCategory } from '../../types';
+import { ImapAccount, DefaultEmailCategory, INBOX_FOLDER, SENT_FOLDER, SPAM_FOLDER, TRASH_FOLDER } from '../../types';
 
 describe('Sidebar', () => {
   const mockAccounts: ImapAccount[] = [
@@ -24,10 +24,10 @@ describe('Sidebar', () => {
   ];
 
   const mockCategories = [
-    { name: 'Posteingang', type: 'system' },
-    { name: 'Gesendet', type: 'system' },
-    { name: 'Spam', type: 'system' },
-    { name: 'Papierkorb', type: 'system' },
+    { name: INBOX_FOLDER, type: 'system' },
+    { name: SENT_FOLDER, type: 'system' },
+    { name: SPAM_FOLDER, type: 'system' },
+    { name: TRASH_FOLDER, type: 'system' },
     { name: 'Rechnungen', type: 'custom' },
     { name: 'Newsletter', type: 'custom' },
     { name: 'Meine Projekte', type: 'custom' }, // Truly custom category for context menu tests
@@ -35,16 +35,16 @@ describe('Sidebar', () => {
   ];
 
   const mockCounts: Record<string, number> = {
-    Posteingang: 25,
-    Gesendet: 10,
-    Spam: 5,
+    [INBOX_FOLDER]: 25,
+    [SENT_FOLDER]: 10,
+    [SPAM_FOLDER]: 5,
     Rechnungen: 3,
     Newsletter: 12,
     Sonstiges: 7,
   };
 
   const defaultProps = {
-    selectedCategory: 'Posteingang',
+    selectedCategory: INBOX_FOLDER,
     onSelectCategory: vi.fn(),
     onAddCategory: vi.fn(),
     categories: mockCategories,
@@ -70,10 +70,10 @@ describe('Sidebar', () => {
 
     it('should render all standard folder categories', () => {
       render(<Sidebar {...defaultProps} />);
-      expect(screen.getByText('Posteingang')).toBeInTheDocument();
-      expect(screen.getByText('Gesendet')).toBeInTheDocument();
-      expect(screen.getByText('Spam')).toBeInTheDocument();
-      expect(screen.getByText('Papierkorb')).toBeInTheDocument();
+      expect(screen.getByText(INBOX_FOLDER)).toBeInTheDocument();
+      expect(screen.getByText(SENT_FOLDER)).toBeInTheDocument();
+      expect(screen.getByText(SPAM_FOLDER)).toBeInTheDocument();
+      expect(screen.getByText(TRASH_FOLDER)).toBeInTheDocument();
     });
 
     it('should render smart categories section', () => {

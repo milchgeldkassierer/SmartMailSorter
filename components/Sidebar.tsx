@@ -12,7 +12,7 @@ import {
   FolderOpen,
   Archive,
 } from './Icon';
-import { ImapAccount, DefaultEmailCategory, Category } from '../types';
+import { ImapAccount, DefaultEmailCategory, Category, SYSTEM_FOLDERS } from '../types';
 
 interface SidebarProps {
   selectedCategory: string;
@@ -66,9 +66,7 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   // Sort function: Standard -> Physical -> Smart -> Other
 
-  const standardCategories = categories.filter((c) =>
-    ['Posteingang', 'Gesendet', 'Spam', 'Papierkorb'].includes(c.name)
-  );
+  const standardCategories = categories.filter((c) => SYSTEM_FOLDERS.includes(c.name));
 
   // Physical Folders (type='folder')
   // Should NOT include system folders (which are standard)
@@ -216,7 +214,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         <div>
           <div className="px-3 mb-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">Ordner</div>
           <div className="space-y-1">
-            {[DefaultEmailCategory.INBOX, 'Gesendet', 'Spam', 'Papierkorb'].map((cat) => {
+            {SYSTEM_FOLDERS.map((cat) => {
               const isActive = selectedCategory === cat;
               const count = counts[cat] || 0;
 

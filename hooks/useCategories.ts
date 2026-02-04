@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { Email, DefaultEmailCategory, Category } from '../types';
+import { Email, Category, SYSTEM_FOLDERS } from '../types';
 
 interface UseCategoriesReturn {
   addCategory: (name: string, type?: string) => Promise<void>;
@@ -62,8 +62,7 @@ export const useCategories = (): UseCategoriesReturn => {
   // Auto-discover physical folders from emails
   const autoDiscoverFolders = useCallback(
     async (emails: Email[], currentCategories: Category[]) => {
-      const systemFolders = Object.values(DefaultEmailCategory) as string[];
-      const mappedFolders = ['Gesendet', 'Spam', 'Papierkorb', 'Posteingang'];
+      const systemFolders = SYSTEM_FOLDERS;
 
       const foundFolders = new Set<string>();
       const categoriesToFix = new Set<string>();
@@ -74,7 +73,7 @@ export const useCategories = (): UseCategoriesReturn => {
 
       // Scan emails for physical folders
       emails.forEach((e) => {
-        if (e.folder && !systemFolders.includes(e.folder) && !mappedFolders.includes(e.folder)) {
+        if (e.folder && !systemFolders.includes(e.folder)) {
           // It's a physical folder candidate
           if (!existingCategoryNames.has(e.folder)) {
             foundFolders.add(e.folder);

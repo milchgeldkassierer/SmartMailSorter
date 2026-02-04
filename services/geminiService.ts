@@ -1,5 +1,5 @@
 import { GoogleGenAI, Type, Schema } from '@google/genai';
-import { Email, DefaultEmailCategory, SortResult, AISettings, LLMProvider } from '../types';
+import { Email, DefaultEmailCategory, SortResult, AISettings, LLMProvider, INBOX_FOLDER } from '../types';
 
 // Internal types for AI responses
 interface GeneratedEmailData {
@@ -210,7 +210,7 @@ export const generateDemoEmails = async (count: number = 5, settings?: AISetting
           body: emailData.body || '',
           date: new Date(Date.now() - (emailData.dateOffset || 0) * 3600000).toISOString(),
           category: DefaultEmailCategory.INBOX,
-          folder: 'Posteingang',
+          folder: INBOX_FOLDER,
           isRead: false,
           isFlagged: false,
         };

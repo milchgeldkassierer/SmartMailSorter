@@ -1,11 +1,17 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Email, DefaultEmailCategory, ImapAccount, AccountData, Category } from '../types';
+import {
+  Email,
+  DefaultEmailCategory,
+  ImapAccount,
+  AccountData,
+  Category,
+  SENT_FOLDER,
+  SPAM_FOLDER,
+  TRASH_FOLDER,
+} from '../types';
 import { SearchConfig } from '../components/SearchBar';
 
 // Standard folder name constants
-const SENT_FOLDER = DefaultEmailCategory.SENT;
-const SPAM_FOLDER = DefaultEmailCategory.SPAM;
-const TRASH_FOLDER = DefaultEmailCategory.TRASH;
 const STANDARD_EXCLUDED_FOLDERS = [SENT_FOLDER, SPAM_FOLDER, TRASH_FOLDER] as const;
 
 interface UseEmailsParams {

@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useEmails } from '../useEmails';
-import { Email, DefaultEmailCategory, ImapAccount } from '../../types';
+import { Email, DefaultEmailCategory, ImapAccount, INBOX_FOLDER, SENT_FOLDER, SPAM_FOLDER } from '../../types';
 
 describe('useEmails', () => {
   const mockAccount1: ImapAccount = {
@@ -25,7 +25,7 @@ describe('useEmails', () => {
     subject: 'Test Email 1',
     body: 'This is a test email body',
     date: '2024-01-01T10:00:00Z',
-    folder: 'Posteingang',
+    folder: INBOX_FOLDER,
     isRead: false,
     isFlagged: false,
   };
@@ -37,7 +37,7 @@ describe('useEmails', () => {
     subject: 'Important Meeting',
     body: 'Meeting scheduled for tomorrow',
     date: '2024-01-02T10:00:00Z',
-    folder: 'Posteingang',
+    folder: INBOX_FOLDER,
     smartCategory: 'Geschäftlich',
     isRead: false,
     isFlagged: false,
@@ -50,7 +50,7 @@ describe('useEmails', () => {
     subject: 'Newsletter',
     body: 'Weekly newsletter content',
     date: '2024-01-03T10:00:00Z',
-    folder: 'Posteingang',
+    folder: INBOX_FOLDER,
     smartCategory: 'Newsletter',
     isRead: true,
     isFlagged: false,
@@ -63,7 +63,7 @@ describe('useEmails', () => {
     subject: 'Sent Email',
     body: 'This is a sent email',
     date: '2024-01-04T10:00:00Z',
-    folder: 'Gesendet',
+    folder: SENT_FOLDER,
     isRead: true,
     isFlagged: false,
   };
@@ -75,7 +75,7 @@ describe('useEmails', () => {
     subject: 'Spam Email',
     body: 'This is spam',
     date: '2024-01-05T10:00:00Z',
-    folder: 'Spam',
+    folder: SPAM_FOLDER,
     isRead: false,
     isFlagged: false,
   };
@@ -539,7 +539,7 @@ describe('useEmails', () => {
       const manyEmails = Array.from({ length: 350 }, (_, i) => ({
         ...mockEmail1,
         id: `email-${i}`,
-        folder: i < 250 ? 'Posteingang' : 'Gesendet', // 250 in Posteingang, 100 in Gesendet
+        folder: i < 250 ? INBOX_FOLDER : SENT_FOLDER, // 250 in Posteingang, 100 in Gesendet
       }));
 
       act(() => {

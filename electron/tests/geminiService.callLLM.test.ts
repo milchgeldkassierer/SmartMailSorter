@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach, Mock } from 'vitest';
 import { Email, DefaultEmailCategory, AISettings, LLMProvider } from '../../types';
+import { INBOX_FOLDER } from '../folderConstants.cjs';
 
 // Store the original fetch
 const originalFetch = global.fetch;
@@ -99,7 +100,7 @@ describe('GeminiService - callLLM Function', () => {
       subject,
       body: `This is a test email about ${subject}`,
       date: new Date().toISOString(),
-      folder: 'INBOX',
+      folder: INBOX_FOLDER,
       category: DefaultEmailCategory.INBOX,
       isRead: false,
       isFlagged: false,
@@ -756,7 +757,7 @@ describe('GeminiService - callLLM Function', () => {
       expect(emails[0]).toHaveProperty('id');
       expect(emails[0]).toHaveProperty('sender');
       expect(emails[0]).toHaveProperty('subject');
-      expect(emails[0].folder).toBe('Posteingang');
+      expect(emails[0].folder).toBe(INBOX_FOLDER);
       expect(emails[0].isRead).toBe(false);
     });
 
@@ -971,7 +972,7 @@ describe('GeminiService - callLLM Function', () => {
       await geminiService.categorizeBatchWithAI([email], availableCategories, geminiSettings);
 
       const callArgs = mockGenerateContent.mock.calls[0][0];
-      // INBOX (Posteingang) should not appear alone in the categories list
+      // INBOX (INBOX_FOLDER) should not appear alone in the categories list
       // It should be filtered, so the categories list should not start with it
       expect(callArgs.contents).toContain('EXISTIERENDE KATEGORIEN:');
     });

@@ -13,6 +13,7 @@ vi.mock('electron', () => ({
 // Use CJS require to get the same module instances that imap.cjs uses
 const db = require('../db.cjs');
 const imap = require('../imap.cjs');
+const { INBOX_FOLDER, SENT_FOLDER, SPAM_FOLDER, TRASH_FOLDER } = require('../folderConstants.cjs');
 
 describe('IMAP Delete Operations', () => {
   const testAccount = {
@@ -55,49 +56,49 @@ describe('IMAP Delete Operations', () => {
 
   describe('Missing UID handling', () => {
     it('should return error when UID is null', async () => {
-      const result = await imap.deleteEmail(testAccount, null, 'Posteingang');
+      const result = await imap.deleteEmail(testAccount, null, INBOX_FOLDER);
 
       expect(result.success).toBe(false);
       expect(result.error).toBe('No UID');
     });
 
     it('should return error when UID is undefined', async () => {
-      const result = await imap.deleteEmail(testAccount, undefined, 'Posteingang');
+      const result = await imap.deleteEmail(testAccount, undefined, INBOX_FOLDER);
 
       expect(result.success).toBe(false);
       expect(result.error).toBe('No UID');
     });
 
     it('should return error when UID is 0', async () => {
-      const result = await imap.deleteEmail(testAccount, 0, 'Posteingang');
+      const result = await imap.deleteEmail(testAccount, 0, INBOX_FOLDER);
 
       expect(result.success).toBe(false);
       expect(result.error).toBe('No UID');
     });
 
     it('should return error when UID is empty string', async () => {
-      const result = await imap.deleteEmail(testAccount, '', 'Posteingang');
+      const result = await imap.deleteEmail(testAccount, '', INBOX_FOLDER);
 
       expect(result.success).toBe(false);
       expect(result.error).toBe('No UID');
     });
 
     it('should return error when UID is false', async () => {
-      const result = await imap.deleteEmail(testAccount, false, 'Posteingang');
+      const result = await imap.deleteEmail(testAccount, false, INBOX_FOLDER);
 
       expect(result.success).toBe(false);
       expect(result.error).toBe('No UID');
     });
 
     it('should NOT return error for valid numeric UID', async () => {
-      const result = await imap.deleteEmail(testAccount, 1001, 'Posteingang');
+      const result = await imap.deleteEmail(testAccount, 1001, INBOX_FOLDER);
 
       // Should succeed (UID check passes, function proceeds)
       expect(result.success).toBe(true);
     });
 
     it('should NOT return error for string UID that represents a number', async () => {
-      const result = await imap.deleteEmail(testAccount, '1001', 'Posteingang');
+      const result = await imap.deleteEmail(testAccount, '1001', INBOX_FOLDER);
 
       // String "1001" is truthy, so UID check passes
       expect(result.success).toBe(true);
@@ -106,7 +107,7 @@ describe('IMAP Delete Operations', () => {
 
   describe('Delete from INBOX (Posteingang)', () => {
     it('should successfully delete email from INBOX with valid UID', async () => {
-      const result = await imap.deleteEmail(testAccount, 1001, 'Posteingang');
+      const result = await imap.deleteEmail(testAccount, 1001, INBOX_FOLDER);
 
       expect(result.success).toBe(true);
       expect(result.error).toBeUndefined();
@@ -126,7 +127,7 @@ describe('IMAP Delete Operations', () => {
 
     it('should handle deletion of email that exists on server', async () => {
       // Delete first email
-      const result1 = await imap.deleteEmail(testAccount, 1001, 'Posteingang');
+      const result1 = await imap.deleteEmail(testAccount, 1001, INBOX_FOLDER);
       expect(result1.success).toBe(true);
 
       // Verify the email was removed from the mock state
@@ -135,8 +136,8 @@ describe('IMAP Delete Operations', () => {
     });
 
     it('should handle deletion of multiple emails sequentially', async () => {
-      const result1 = await imap.deleteEmail(testAccount, 1001, 'Posteingang');
-      const result2 = await imap.deleteEmail(testAccount, 1002, 'Posteingang');
+      const result1 = await imap.deleteEmail(testAccount, 1001, INBOX_FOLDER);
+      const result2 = await imap.deleteEmail(testAccount, 1002, INBOX_FOLDER);
 
       expect(result1.success).toBe(true);
       expect(result2.success).toBe(true);
@@ -150,7 +151,7 @@ describe('IMAP Delete Operations', () => {
         { name: 'Subfolder', path: 'INBOX.Subfolder', delimiter: '.', specialUse: null },
       ]);
 
-      const result = await imap.deleteEmail(testAccount, 1001, 'Posteingang/Subfolder');
+      const result = await imap.deleteEmail(testAccount, 1001, `${INBOX_FOLDER}/Subfolder`);
 
       expect(result.success).toBe(true);
     });
@@ -161,7 +162,7 @@ describe('IMAP Delete Operations', () => {
         { name: 'Sent', path: 'Sent', delimiter: '.', specialUse: '\\Sent' },
       ]);
 
-      const result = await imap.deleteEmail(testAccount, 1001, 'Gesendet');
+      const result = await imap.deleteEmail(testAccount, 1001, SENT_FOLDER);
 
       expect(result.success).toBe(true);
     });
@@ -172,7 +173,7 @@ describe('IMAP Delete Operations', () => {
         { name: 'Trash', path: 'Trash', delimiter: '.', specialUse: '\\Trash' },
       ]);
 
-      const result = await imap.deleteEmail(testAccount, 1001, 'Papierkorb');
+      const result = await imap.deleteEmail(testAccount, 1001, TRASH_FOLDER);
 
       expect(result.success).toBe(true);
     });
@@ -183,7 +184,7 @@ describe('IMAP Delete Operations', () => {
         { name: 'Junk', path: 'Junk', delimiter: '.', specialUse: '\\Junk' },
       ]);
 
-      const result = await imap.deleteEmail(testAccount, 1001, 'Spam');
+      const result = await imap.deleteEmail(testAccount, 1001, SPAM_FOLDER);
 
       expect(result.success).toBe(true);
     });
@@ -193,7 +194,7 @@ describe('IMAP Delete Operations', () => {
     it('should return error when connection fails', async () => {
       setConnectFailure(true);
 
-      const result = await imap.deleteEmail(testAccount, 1001, 'Posteingang');
+      const result = await imap.deleteEmail(testAccount, 1001, INBOX_FOLDER);
 
       expect(result.success).toBe(false);
       expect(result.error).toBe('Connection failed');
@@ -201,11 +202,11 @@ describe('IMAP Delete Operations', () => {
 
     it('should reset and succeed after connection failure is cleared', async () => {
       setConnectFailure(true);
-      const failResult = await imap.deleteEmail(testAccount, 1001, 'Posteingang');
+      const failResult = await imap.deleteEmail(testAccount, 1001, INBOX_FOLDER);
       expect(failResult.success).toBe(false);
 
       setConnectFailure(false);
-      const successResult = await imap.deleteEmail(testAccount, 1001, 'Posteingang');
+      const successResult = await imap.deleteEmail(testAccount, 1001, INBOX_FOLDER);
       expect(successResult.success).toBe(true);
     });
   });
@@ -214,13 +215,13 @@ describe('IMAP Delete Operations', () => {
     it('should handle large UID values', async () => {
       setServerEmails([{ uid: 999999999, body: 'Large UID email' }]);
 
-      const result = await imap.deleteEmail(testAccount, 999999999, 'Posteingang');
+      const result = await imap.deleteEmail(testAccount, 999999999, INBOX_FOLDER);
 
       expect(result.success).toBe(true);
     });
 
     it('should handle numeric string UID', async () => {
-      const result = await imap.deleteEmail(testAccount, '1001', 'Posteingang');
+      const result = await imap.deleteEmail(testAccount, '1001', INBOX_FOLDER);
 
       expect(result.success).toBe(true);
     });
@@ -233,7 +234,7 @@ describe('IMAP Delete Operations', () => {
         username: 'different_username',
       };
 
-      const result = await imap.deleteEmail(accountWithUsername, 1001, 'Posteingang');
+      const result = await imap.deleteEmail(accountWithUsername, 1001, INBOX_FOLDER);
 
       expect(result.success).toBe(true);
     });
@@ -247,7 +248,7 @@ describe('IMAP Delete Operations', () => {
         imapPort: 993,
       };
 
-      const result = await imap.deleteEmail(accountWithoutUsername, 1001, 'Posteingang');
+      const result = await imap.deleteEmail(accountWithoutUsername, 1001, INBOX_FOLDER);
 
       expect(result.success).toBe(true);
     });
@@ -258,7 +259,7 @@ describe('IMAP Delete Operations', () => {
         imapPort: 143, // Non-standard port
       };
 
-      const result = await imap.deleteEmail(accountCustomPort, 1001, 'Posteingang');
+      const result = await imap.deleteEmail(accountCustomPort, 1001, INBOX_FOLDER);
 
       expect(result.success).toBe(true);
     });
@@ -266,20 +267,20 @@ describe('IMAP Delete Operations', () => {
 
   describe('Return value structure', () => {
     it('should return object with success:true on successful delete', async () => {
-      const result = await imap.deleteEmail(testAccount, 1001, 'Posteingang');
+      const result = await imap.deleteEmail(testAccount, 1001, INBOX_FOLDER);
 
       expect(result).toEqual({ success: true });
     });
 
     it('should return object with success:false and error on UID error', async () => {
-      const result = await imap.deleteEmail(testAccount, null, 'Posteingang');
+      const result = await imap.deleteEmail(testAccount, null, INBOX_FOLDER);
 
       expect(result).toEqual({ success: false, error: 'No UID' });
     });
 
     it('should return object with success:false and error message on connection error', async () => {
       setConnectFailure(true);
-      const result = await imap.deleteEmail(testAccount, 1001, 'Posteingang');
+      const result = await imap.deleteEmail(testAccount, 1001, INBOX_FOLDER);
 
       expect(result).toHaveProperty('success', false);
       expect(result).toHaveProperty('error');

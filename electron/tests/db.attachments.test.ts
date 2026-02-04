@@ -47,6 +47,9 @@ interface DbModule {
 // Import the database module under test
 const db: DbModule = require('../db.cjs');
 
+// Import folder constants
+const { INBOX_FOLDER } = require('../folderConstants.cjs');
+
 describe('Database Attachments Module', () => {
   // Helper to create a test account
   const createTestAccount = (id: string = 'test-acc') => {
@@ -75,7 +78,7 @@ describe('Database Attachments Module', () => {
       subject: 'Test Email',
       body: 'Test body content',
       date: new Date().toISOString(),
-      folder: 'Posteingang',
+      folder: INBOX_FOLDER,
       isRead: false,
       isFlagged: false,
       hasAttachments: attachments ? attachments.length > 0 : false,
