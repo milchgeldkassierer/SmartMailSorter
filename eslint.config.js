@@ -5,6 +5,7 @@ import react from 'eslint-plugin-react';
 import reactHooks from 'eslint-plugin-react-hooks';
 import prettier from 'eslint-plugin-prettier';
 import prettierConfig from 'eslint-config-prettier';
+import globals from 'globals';
 
 export default [
   // Global ignores
@@ -48,9 +49,8 @@ export default [
         project: './tsconfig.json',
       },
       globals: {
-        browser: true,
-        es2022: true,
-        node: true,
+        ...globals.browser,
+        ...globals.node,
       },
     },
     plugins: {
@@ -96,6 +96,33 @@ export default [
       react: {
         version: 'detect',
       },
+    },
+  },
+  // Disable no-undef for TypeScript files (TypeScript handles this)
+  {
+    files: ['**/*.{ts,tsx}'],
+    rules: {
+      'no-undef': 'off',
+    },
+  },
+  // Configuration for CommonJS files (Node.js only, no browser globals)
+  {
+    files: ['**/*.cjs'],
+    languageOptions: {
+      globals: {
+        ...globals.node,
+      },
+      sourceType: 'commonjs',
+    },
+  },
+  // Configuration for ES Module files (Node.js only, no browser globals)
+  {
+    files: ['**/*.mjs'],
+    languageOptions: {
+      globals: {
+        ...globals.node,
+      },
+      sourceType: 'module',
     },
   },
   // Apply Prettier config to disable conflicting rules
