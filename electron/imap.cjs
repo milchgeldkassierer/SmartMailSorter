@@ -318,6 +318,35 @@ function migrateFolders(folderMap) {
   }
 }
 
+/**
+ * Fetches UIDs and flags for a sequence range from the IMAP server
+ * @param {ImapFlow} client - Connected IMAP client with mailbox lock
+ * @param {string} seqRange - Sequence range string (e.g., '1:5000')
+ * @returns {Promise<{uids: number[], headers: Array}>} Object containing array of UIDs and headers with flags
+ */
+async function fetchUidBatch(client, seqRange) {
+  const headers = [];
+  for await (const message of client.fetch(seqRange, { uid: false, flags: true })) {
+    headers.push({
+      attributes: {
+        uid: message.uid,
+        flags: message.flags || [],
+      },
+    });
+  }
+
+  // Extract server UIDs from this batch
+  const batchServerUids = headers
+    .map((m) => (m.attributes ? m.attributes.uid : null))
+    .filter((u) => u != null);
+
+  console.log(
+    `[Sync Debug] Range ${seqRange}: Fetched ${headers.length} headers, extracted ${batchServerUids.length} UIDs.`
+  );
+
+  return { uids: batchServerUids, headers: headers };
+}
+
 async function syncAccount(account) {
   console.log(`Starting sync for account: ${account.email}`);
 
@@ -657,4 +686,5 @@ module.exports = {
   checkAccountQuota,
   buildFolderMap,
   migrateFolders,
+  fetchUidBatch,
 };
