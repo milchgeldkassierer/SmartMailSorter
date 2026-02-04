@@ -66,9 +66,7 @@ const matchesStandardFolder = (email: Email, folderName: string): boolean => {
 const matchesPhysicalFolder = (email: Email, folderName: string): boolean => {
   if (!email.folder) return false;
   return (
-    email.folder === folderName ||
-    email.folder.endsWith('/' + folderName) ||
-    folderName.endsWith('/' + email.folder)
+    email.folder === folderName || email.folder.endsWith('/' + folderName) || folderName.endsWith('/' + email.folder)
   );
 };
 
@@ -170,9 +168,7 @@ export const useEmails = ({ activeAccountId, accounts: _accounts }: UseEmailsPar
     );
 
     // 2. Apply search filter
-    const searchFiltered = categoryFiltered.filter((email) =>
-      matchesSearchTerm(email, searchTerm, searchConfig)
-    );
+    const searchFiltered = categoryFiltered.filter((email) => matchesSearchTerm(email, searchTerm, searchConfig));
 
     return searchFiltered;
   }, [currentEmails, selectedCategory, searchTerm, searchConfig, showUnsortedOnly, currentCategories]);
