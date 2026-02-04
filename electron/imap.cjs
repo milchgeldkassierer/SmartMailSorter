@@ -11,6 +11,12 @@ const {
 } = require('./db.cjs');
 // Add db just for direct calls if needed, though we imported migrateFolder directly
 const db = require('./db.cjs');
+const {
+  INBOX_FOLDER,
+  SENT_FOLDER,
+  SPAM_FOLDER,
+  TRASH_FOLDER,
+} = require('./folderConstants.cjs');
 
 console.log('IMAP Module Loaded: Version LargeScaleSync_v1');
 
@@ -58,11 +64,11 @@ function mapServerFolderToDbName(box) {
   if (box.specialUse) {
     const specialUse = box.specialUse.toLowerCase();
     if (specialUse.includes('\\sent') || specialUse.includes('sent')) {
-      mappedName = 'Gesendet';
+      mappedName = SENT_FOLDER;
     } else if (specialUse.includes('\\trash') || specialUse.includes('trash')) {
-      mappedName = 'Papierkorb';
+      mappedName = TRASH_FOLDER;
     } else if (specialUse.includes('\\junk') || specialUse.includes('junk')) {
-      mappedName = 'Spam';
+      mappedName = SPAM_FOLDER;
     }
   }
 
@@ -73,20 +79,20 @@ function mapServerFolderToDbName(box) {
   const lower = (box.name || fullPath).toLowerCase();
   if (!mappedName) {
     if (lower === 'sent' || lower === 'gesendet') {
-      mappedName = 'Gesendet';
+      mappedName = SENT_FOLDER;
     } else if (lower === 'trash' || lower === 'papierkorb') {
-      mappedName = 'Papierkorb';
+      mappedName = TRASH_FOLDER;
     } else if (lower === 'junk' || lower === 'spam') {
-      mappedName = 'Spam';
+      mappedName = SPAM_FOLDER;
     } else if (lower === 'inbox') {
-      mappedName = 'Posteingang';
+      mappedName = INBOX_FOLDER;
     } else {
       // For other folders, handle INBOX subfolders or normalize delimiters
       let prettyPath = fullPath;
       if (prettyPath.toUpperCase().startsWith('INBOX')) {
         const parts = fullPath.split(delimiter);
         if (parts[0].toUpperCase() === 'INBOX') {
-          parts[0] = 'Posteingang';
+          parts[0] = INBOX_FOLDER;
           prettyPath = parts.join('/');
         }
       } else {
@@ -106,7 +112,7 @@ function mapServerFolderToDbName(box) {
  * @returns {Promise<string|null>} The server folder path, or null if not found
  */
 async function findServerFolderForDbName(client, dbFolder) {
-  if (!dbFolder || dbFolder === 'Posteingang') {
+  if (!dbFolder || dbFolder === INBOX_FOLDER) {
     return 'INBOX';
   }
 
@@ -135,7 +141,7 @@ async function processMessages(client, messages, account, targetCategory) {
     const currentUid = message.attributes.uid;
     // Construct unique ID for DB
     let id = currentUid + '-' + account.id;
-    if (targetCategory !== 'Posteingang') {
+    if (targetCategory !== INBOX_FOLDER) {
       id = currentUid + '-' + targetCategory.replace(/\s+/g, '_') + '-' + account.id;
     }
 
@@ -169,7 +175,7 @@ async function processMessages(client, messages, account, targetCategory) {
           uid: currentUid,
         };
 
-        if (targetCategory === 'Posteingang') {
+        if (targetCategory === INBOX_FOLDER) {
           email.isRead = message.attributes.flags?.has('\\Seen') || false;
         }
 
@@ -229,7 +235,7 @@ async function syncAccount(account) {
 
     // 1. Get all mailboxes
     const mailboxes = await client.list();
-    const folderMap = { INBOX: 'Posteingang' };
+    const folderMap = { INBOX: INBOX_FOLDER };
 
     try {
       console.log('[Quota] Checking storage quota...');
@@ -273,7 +279,7 @@ async function syncAccount(account) {
     for (const [fullPath, prettyName] of Object.entries(folderMap)) {
       const parts = fullPath.split(/[./]/);
       const oldLeafName = parts[parts.length - 1];
-      if (oldLeafName && prettyName !== oldLeafName && prettyName.startsWith('Posteingang/')) {
+      if (oldLeafName && prettyName !== oldLeafName && prettyName.startsWith(INBOX_FOLDER + '/')) {
         db.migrateFolder(oldLeafName, prettyName);
       }
     }
@@ -485,7 +491,7 @@ async function deleteEmail(account, uid, dbFolder) {
 
     if (foundPath) {
       console.log(`[Delete] Mapped DB folder '${dbFolder}' to Server folder '${serverPath}'`);
-    } else if (dbFolder && dbFolder !== 'Posteingang') {
+    } else if (dbFolder && dbFolder !== INBOX_FOLDER) {
       console.warn(`[Delete] Could not map '${dbFolder}' to server path. Defaulting to INBOX.`);
     }
 
@@ -521,7 +527,7 @@ async function setEmailFlag(account, uid, flag, value, dbFolder) {
 
     if (foundPath) {
       console.log(`[Flag] Mapped DB folder '${dbFolder}' to Server folder '${serverPath}'`);
-    } else if (dbFolder && dbFolder !== 'Posteingang') {
+    } else if (dbFolder && dbFolder !== INBOX_FOLDER) {
       console.warn(`[Flag] Could not map '${dbFolder}' to server path. Defaulting to INBOX.`);
     }
 
