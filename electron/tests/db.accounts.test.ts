@@ -47,6 +47,9 @@ interface DbModule {
 // Import the database module under test
 const db: DbModule = require('../db.cjs');
 
+// Import folder constants
+const { INBOX_FOLDER, SENT_FOLDER } = require('../folderConstants.cjs');
+
 describe('Database Account CRUD Operations', () => {
   beforeEach(() => {
     // Initialize with in-memory DB for test isolation
@@ -959,7 +962,7 @@ describe('Database Account CRUD Operations', () => {
         subject: 'Test 1',
         body: 'Body',
         date: new Date().toISOString(),
-        folder: 'Posteingang',
+        folder: INBOX_FOLDER,
         uid: 100,
       });
       db.saveEmail({
@@ -970,7 +973,7 @@ describe('Database Account CRUD Operations', () => {
         subject: 'Test 2',
         body: 'Body',
         date: new Date().toISOString(),
-        folder: 'Posteingang',
+        folder: INBOX_FOLDER,
         uid: 250,
       });
       db.saveEmail({
@@ -981,11 +984,11 @@ describe('Database Account CRUD Operations', () => {
         subject: 'Test 3',
         body: 'Body',
         date: new Date().toISOString(),
-        folder: 'Posteingang',
+        folder: INBOX_FOLDER,
         uid: 150,
       });
 
-      const maxUid = db.getMaxUidForFolder('uid-test-account', 'Posteingang');
+      const maxUid = db.getMaxUidForFolder('uid-test-account', INBOX_FOLDER);
       expect(maxUid).toBe(250);
     });
 
@@ -1003,7 +1006,7 @@ describe('Database Account CRUD Operations', () => {
         subject: 'Test',
         body: 'Body',
         date: new Date().toISOString(),
-        folder: 'Gesendet',
+        folder: SENT_FOLDER,
         uid: 10,
       });
       db.saveEmail({
@@ -1014,11 +1017,11 @@ describe('Database Account CRUD Operations', () => {
         subject: 'Test',
         body: 'Body',
         date: new Date().toISOString(),
-        folder: 'Gesendet',
+        folder: SENT_FOLDER,
         uid: 20,
       });
 
-      const uids = db.getAllUidsForFolder('uid-test-account', 'Gesendet');
+      const uids = db.getAllUidsForFolder('uid-test-account', SENT_FOLDER);
       expect(uids).toHaveLength(2);
       expect(uids).toContain(10);
       expect(uids).toContain(20);

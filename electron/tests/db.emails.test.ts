@@ -54,6 +54,9 @@ interface DbModule {
 // Import the database module under test
 const db: DbModule = require('../db.cjs');
 
+// Import folder constants
+const { INBOX_FOLDER, SENT_FOLDER } = require('../folderConstants.cjs');
+
 // Helper function to create a test account
 function createTestAccount(id: string = 'test-account') {
   return {
@@ -80,7 +83,7 @@ function createTestEmail(id: string, accountId: string, overrides: Partial<Email
     body: 'Test body content',
     bodyHtml: '<p>Test body content</p>',
     date: new Date().toISOString(),
-    folder: 'Posteingang',
+    folder: INBOX_FOLDER,
     smartCategory: undefined,
     isRead: false,
     isFlagged: false,
@@ -120,7 +123,7 @@ describe('Database Email Operations', () => {
         sender: 'Full Sender',
         senderEmail: 'full@test.com',
         subject: 'Full Subject',
-        folder: 'Gesendet',
+        folder: SENT_FOLDER,
         smartCategory: 'Rechnungen',
         isRead: true,
         isFlagged: true,
@@ -136,7 +139,7 @@ describe('Database Email Operations', () => {
 
       expect(emails).toHaveLength(1);
       expect(emails[0].sender).toBe('Full Sender');
-      expect(emails[0].folder).toBe('Gesendet');
+      expect(emails[0].folder).toBe(SENT_FOLDER);
       expect(emails[0].smartCategory).toBe('Rechnungen');
       expect(emails[0].isRead).toBe(true);
       expect(emails[0].isFlagged).toBe(true);
@@ -158,7 +161,7 @@ describe('Database Email Operations', () => {
       expect(emails).toHaveLength(1);
       expect(emails[0].sender).toBe('Unknown');
       expect(emails[0].subject).toBe('(No Subject)');
-      expect(emails[0].folder).toBe('Posteingang');
+      expect(emails[0].folder).toBe(INBOX_FOLDER);
       expect(emails[0].isRead).toBe(false);
       expect(emails[0].isFlagged).toBe(false);
     });
@@ -349,14 +352,14 @@ describe('Database Email Operations', () => {
   describe('deleteEmailsByUid', () => {
     beforeEach(() => {
       // Create multiple emails with different UIDs and folders
-      db.saveEmail(createTestEmail('email-uid-100', accountId, { uid: 100, folder: 'Posteingang' }));
-      db.saveEmail(createTestEmail('email-uid-101', accountId, { uid: 101, folder: 'Posteingang' }));
-      db.saveEmail(createTestEmail('email-uid-102', accountId, { uid: 102, folder: 'Posteingang' }));
-      db.saveEmail(createTestEmail('email-uid-200', accountId, { uid: 200, folder: 'Gesendet' }));
+      db.saveEmail(createTestEmail('email-uid-100', accountId, { uid: 100, folder: INBOX_FOLDER }));
+      db.saveEmail(createTestEmail('email-uid-101', accountId, { uid: 101, folder: INBOX_FOLDER }));
+      db.saveEmail(createTestEmail('email-uid-102', accountId, { uid: 102, folder: INBOX_FOLDER }));
+      db.saveEmail(createTestEmail('email-uid-200', accountId, { uid: 200, folder: SENT_FOLDER }));
     });
 
     it('should delete multiple emails by UID for specific folder', () => {
-      const deletedCount = db.deleteEmailsByUid(accountId, 'Posteingang', [100, 101]);
+      const deletedCount = db.deleteEmailsByUid(accountId, INBOX_FOLDER, [100, 101]);
 
       expect(deletedCount).toBe(2);
       const emails = db.getEmails(accountId);
@@ -366,7 +369,7 @@ describe('Database Email Operations', () => {
     });
 
     it('should only delete from specified folder', () => {
-      const deletedCount = db.deleteEmailsByUid(accountId, 'Posteingang', [200]);
+      const deletedCount = db.deleteEmailsByUid(accountId, INBOX_FOLDER, [200]);
 
       expect(deletedCount).toBe(0);
       const emails = db.getEmails(accountId);
@@ -376,9 +379,9 @@ describe('Database Email Operations', () => {
     it('should only delete from specified account', () => {
       // Create second account with same UIDs
       db.addAccount(createTestAccount('other-account'));
-      db.saveEmail(createTestEmail('other-email', 'other-account', { uid: 100, folder: 'Posteingang' }));
+      db.saveEmail(createTestEmail('other-email', 'other-account', { uid: 100, folder: INBOX_FOLDER }));
 
-      const deletedCount = db.deleteEmailsByUid(accountId, 'Posteingang', [100]);
+      const deletedCount = db.deleteEmailsByUid(accountId, INBOX_FOLDER, [100]);
 
       expect(deletedCount).toBe(1);
       // Other account's email should still exist
@@ -387,12 +390,12 @@ describe('Database Email Operations', () => {
     });
 
     it('should return 0 when empty array provided', () => {
-      const deletedCount = db.deleteEmailsByUid(accountId, 'Posteingang', []);
+      const deletedCount = db.deleteEmailsByUid(accountId, INBOX_FOLDER, []);
       expect(deletedCount).toBe(0);
     });
 
     it('should return 0 for non-existent UIDs', () => {
-      const deletedCount = db.deleteEmailsByUid(accountId, 'Posteingang', [999, 998]);
+      const deletedCount = db.deleteEmailsByUid(accountId, INBOX_FOLDER, [999, 998]);
       expect(deletedCount).toBe(0);
     });
   });
