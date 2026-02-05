@@ -31,8 +31,8 @@ export const useSync = ({
       const account = accounts.find((a) => a.id === activeAccountId);
       if (!account) return;
 
-      // Trigger backend sync
-      await window.electron.syncAccount(account);
+      // Trigger backend sync - pass only accountId for security
+      await window.electron.syncAccount(activeAccountId);
 
       // Refresh emails for the active account
       const emails = await window.electron.getEmails(activeAccountId);

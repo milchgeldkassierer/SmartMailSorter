@@ -119,7 +119,7 @@ describe('useSync', () => {
       expect(result.current.isSyncing).toBe(false);
     });
 
-    it('should call electron.syncAccount with correct account', async () => {
+    it('should call electron.syncAccount with correct accountId', async () => {
       const { result } = renderHook(() =>
         useSync({
           activeAccountId: 'account-1',
@@ -132,7 +132,7 @@ describe('useSync', () => {
       });
 
       expect(mockElectron.syncAccount).toHaveBeenCalledTimes(1);
-      expect(mockElectron.syncAccount).toHaveBeenCalledWith(mockAccount1);
+      expect(mockElectron.syncAccount).toHaveBeenCalledWith('account-1');
     });
 
     it('should call electron.getEmails with active account id', async () => {
@@ -549,7 +549,7 @@ describe('useSync', () => {
         await result.current.syncAccount();
       });
 
-      expect(mockElectron.syncAccount).toHaveBeenCalledWith(mockAccount1);
+      expect(mockElectron.syncAccount).toHaveBeenCalledWith('account-1');
       expect(mockElectron.syncAccount).toHaveBeenCalledTimes(1);
 
       mockElectron.syncAccount.mockClear();
@@ -565,7 +565,7 @@ describe('useSync', () => {
         await result.current.syncAccount();
       });
 
-      expect(mockElectron.syncAccount).toHaveBeenCalledWith(mockAccount2);
+      expect(mockElectron.syncAccount).toHaveBeenCalledWith('account-2');
       expect(mockElectron.syncAccount).toHaveBeenCalledTimes(1);
     });
   });
