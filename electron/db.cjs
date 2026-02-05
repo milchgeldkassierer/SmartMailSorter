@@ -150,7 +150,7 @@ function migratePasswordEncryption() {
       logger.warn('Password encryption migration skipped: safeStorage not available on this system');
       return;
     }
-  } catch (error) {
+  } catch (_error) {
     logger.warn('Password encryption migration skipped: Electron safeStorage not available');
     return;
   }
@@ -183,7 +183,7 @@ function migratePasswordEncryption() {
 
         // If decryption succeeded, password is already encrypted
         alreadyEncryptedCount++;
-      } catch (decryptError) {
+      } catch (_decryptError) {
         // Decryption failed, so password is plaintext - encrypt it
         try {
           const encryptedBuffer = encryptPassword(account.password);
@@ -267,7 +267,7 @@ function getAccountWithPassword(accountId) {
         account.password = decryptPassword(passwordBuffer);
       }
       // If encryption not available, password is already plaintext (test environment)
-    } catch (error) {
+    } catch (_error) {
       // If decryption fails, password might already be plaintext (test environment)
       // or this is a legacy account - use as-is
       logger.warn(`Failed to decrypt password for account ${accountId}, using as-is`);
@@ -290,7 +290,7 @@ function addAccount(account) {
       } else {
         logger.warn('Password encryption not available - storing password without encryption');
       }
-    } catch (error) {
+    } catch (_error) {
       // If Electron safeStorage is not available (e.g., in tests), store plaintext
       logger.warn('Password encryption not available - storing password without encryption');
     }

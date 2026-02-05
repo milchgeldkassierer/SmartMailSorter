@@ -45,10 +45,7 @@ Module.prototype.require = function (id: string) {
 };
 
 // Mock logger to suppress console output during tests
-const loggerPath = path.resolve(
-  path.dirname(new URL(import.meta.url).pathname),
-  '../utils/logger.cjs'
-);
+const loggerPath = path.resolve(path.dirname(new URL(import.meta.url).pathname), '../utils/logger.cjs');
 
 require.cache[loggerPath] = {
   exports: {

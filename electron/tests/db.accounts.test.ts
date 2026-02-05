@@ -28,6 +28,7 @@ interface DbModule {
     changes: number;
   };
   getAccounts: () => Array<ImapAccount & { username?: string; password?: string; lastSyncUid?: number }>;
+  getAccountWithPassword: (id: string) => (ImapAccount & { username?: string; password?: string }) | undefined;
   updateAccountSync: (id: string, lastSyncUid: number) => { changes: number };
   updateAccountQuota: (id: string, used: number, total: number) => { changes: number };
   deleteAccountDn: (id: string) => void;
@@ -79,7 +80,8 @@ describe('Database Account CRUD Operations', () => {
       expect(accounts[0].email).toBe('test@example.com');
       expect(accounts[0].provider).toBe('gmail');
       expect(accounts[0].username).toBe('testuser');
-      expect(accounts[0].password).toBe('securepassword');
+      // Password should NOT be returned by getAccounts() for security
+      expect(accounts[0].password).toBeUndefined();
       expect(accounts[0].imapHost).toBe('imap.gmail.com');
       expect(accounts[0].imapPort).toBe(993);
       expect(accounts[0].color).toBe('#FF5733');
@@ -645,7 +647,7 @@ describe('Database Account CRUD Operations', () => {
       db.addAccount(account);
 
       // Get account with password - should have plaintext password
-      const retrieved = (db as any).getAccountWithPassword('pwd-decrypt-test');
+      const retrieved = db.getAccountWithPassword('pwd-decrypt-test');
 
       expect(retrieved).toBeDefined();
       expect(retrieved.id).toBe('pwd-decrypt-test');
@@ -655,7 +657,7 @@ describe('Database Account CRUD Operations', () => {
     });
 
     it('should return undefined for non-existent account', () => {
-      const retrieved = (db as any).getAccountWithPassword('non-existent-id');
+      const retrieved = db.getAccountWithPassword('non-existent-id');
       expect(retrieved).toBeUndefined();
     });
 
@@ -673,7 +675,7 @@ describe('Database Account CRUD Operations', () => {
       };
 
       db.addAccount(account);
-      const retrieved = (db as any).getAccountWithPassword('no-pwd-test');
+      const retrieved = db.getAccountWithPassword('no-pwd-test');
 
       expect(retrieved).toBeDefined();
       expect(retrieved.password).toBe('');
