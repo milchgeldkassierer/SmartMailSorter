@@ -7,6 +7,7 @@ import { AISettings, LLMProvider, AVAILABLE_MODELS } from '../../types';
 const mockLoadAISettings = vi.fn();
 const mockSaveAISettings = vi.fn();
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 (global as any).window = {
   ...global.window,
   electron: {
@@ -344,9 +345,7 @@ describe('useAISettings', () => {
     });
 
     it('should not save before initialization completes', async () => {
-      mockLoadAISettings.mockImplementation(
-        () => new Promise((resolve) => setTimeout(() => resolve(null), 100))
-      );
+      mockLoadAISettings.mockImplementation(() => new Promise((resolve) => setTimeout(() => resolve(null), 100)));
 
       const { result } = renderHook(() => useAISettings());
 
