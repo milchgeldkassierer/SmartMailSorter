@@ -134,7 +134,7 @@ export function sanitizeHtml(html: string | null | undefined): string {
     ],
 
     // Block all URI schemes except safe ones
-    ALLOWED_URI_REGEXP: /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|sms|cid|xmpp):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i,
+    ALLOWED_URI_REGEXP: /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|sms|cid|xmpp):|[^a-z]|[a-z+.-]+(?:[^a-z+.-:]|$))/i,
 
     // Forbid specific tags that could be dangerous
     FORBID_TAGS: [
@@ -164,6 +164,7 @@ export function sanitizeHtml(html: string | null | undefined): string {
       'canvas',
       'svg',
       'math',
+      'noscript',
     ],
 
     // Forbid all event handler attributes
@@ -192,6 +193,8 @@ export function sanitizeHtml(html: string | null | undefined): string {
       'oninvalid',
       'onselect',
       'onwheel',
+      'onscroll',
+      'onscrollend',
       'oncopy',
       'oncut',
       'onpaste',
@@ -224,7 +227,6 @@ export function sanitizeHtml(html: string | null | undefined): string {
       'ondurationchange',
       'onemptied',
       'onended',
-      'onerror',
       'onloadeddata',
       'onloadedmetadata',
       'onloadstart',
