@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Email, Attachment } from '../types';
 import { CategoryIcon, BrainCircuit, Paperclip } from './Icon';
+import { sanitizeHtml } from '../utils/sanitizeHtml';
 
 interface EmailViewProps {
   email: Email | null;
@@ -216,7 +217,7 @@ const EmailView: React.FC<EmailViewProps> = ({ email }) => {
             <div
               className="prose prose-slate max-w-none font-sans text-slate-800"
               onClick={handleLinkClick}
-              dangerouslySetInnerHTML={{ __html: email.bodyHtml }}
+              dangerouslySetInnerHTML={{ __html: sanitizeHtml(email.bodyHtml) }}
             />
           ) : (
             <div className="prose prose-slate max-w-none whitespace-pre-wrap font-sans text-slate-800">
