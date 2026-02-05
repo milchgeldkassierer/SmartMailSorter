@@ -725,10 +725,23 @@ The Electron window will automatically reload when you make changes to React com
 
 #### Running Tests
 
-To run unit tests with Vitest:
+SmartMailSorter uses **Vitest** with a workspace configuration for organizing tests across different concerns. The test suite is split into separate configurations to isolate unit tests from component tests.
+
+**Test Structure:**
+
+The project uses a **Vitest workspace** (`vitest.workspace.ts`) that defines multiple test projects:
+- **Unit Tests** (`vitest.config.ts`): Tests for backend logic, database operations, IMAP sync, and AI services
+- **Component Tests** (`vitest.config.components.ts`): React component tests with `@testing-library/react` and JSDOM
+
+This separation allows you to:
+- Run backend tests without loading React Testing Library overhead
+- Test components in isolation with proper browser environment simulation
+- Parallelize test execution across different test suites
+
+**Running Tests:**
 
 ```bash
-# Run all tests
+# Run all tests (default configuration)
 npm test
 
 # Run with coverage report
@@ -742,6 +755,12 @@ npm run test:components:watch
 
 # Run all test suites (unit + components)
 npm run test:all
+
+# Run with full coverage report for all suites
+npm run test:all:coverage
+
+# Run tests using workspace configuration
+npm run test:workspace
 ```
 
 **Before running tests**, ensure native modules are compiled for Node.js:
@@ -751,6 +770,16 @@ npm run rebuild:node
 ```
 
 This is necessary because tests run in the Node.js environment, not Electron, so `better-sqlite3` must be compiled against Node.js headers.
+
+**Type Checking:**
+
+To manually verify TypeScript type correctness across the entire codebase:
+
+```bash
+npx tsc --noEmit
+```
+
+This runs the TypeScript compiler in check-only mode without emitting output files, catching type errors that may not be caught by tests alone. Type checking is especially important in strict mode to ensure null safety and proper type narrowing.
 
 #### Code Quality Tools
 
