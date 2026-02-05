@@ -1,14 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { Email, DefaultEmailCategory, SortResult, AISettings, LLMProvider } from '../../types';
+import { Email, DefaultEmailCategory, SortResult, AISettings, LLMProvider } from '../../src/types';
 
 // Mock the internal callLLM function before importing geminiService
 // We need to mock the entire geminiService module to intercept callLLM
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let mockCallLLM: any;
 
-vi.mock('../../services/geminiService', async () => {
+vi.mock('../../src/services/geminiService', async () => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const actual = (await vi.importActual('../../services/geminiService')) as any;
+  const actual = (await vi.importActual('../../src/services/geminiService')) as any;
 
   return {
     ...actual,
@@ -75,7 +75,7 @@ vi.mock('../../services/geminiService', async () => {
       availableCategories: string[],
       settings: AISettings
     ): Promise<SortResult> => {
-      const { categorizeBatchWithAI } = await import('../../services/geminiService');
+      const { categorizeBatchWithAI } = await import('../../src/services/geminiService');
       const results = await categorizeBatchWithAI([email], availableCategories, settings);
       return (
         results[0] || {
@@ -90,7 +90,7 @@ vi.mock('../../services/geminiService', async () => {
 });
 
 // Import after mocking
-const geminiService = await import('../../services/geminiService');
+const geminiService = await import('../../src/services/geminiService');
 
 describe('GeminiService - Batch Categorization', () => {
   const defaultSettings: AISettings = {

@@ -11,7 +11,7 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text', 'html', 'clover', 'json'],
       // Backend tests only cover electron and services (components tested separately with jsdom)
-      include: ['electron/**/*.{js,cjs,ts}', 'services/**/*.{js,ts}'],
+      include: ['electron/**/*.{js,cjs,ts}', 'src/services/**/*.{js,ts}'],
       exclude: [
         'electron/tests/**',
         'electron/main.cjs',

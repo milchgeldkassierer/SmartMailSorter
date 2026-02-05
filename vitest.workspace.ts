@@ -18,8 +18,8 @@ export default defineConfig([
       name: 'components',
       globals: true,
       environment: 'jsdom',
-      include: ['components/__tests__/**/*.{test,spec}.{ts,tsx}', 'hooks/__tests__/**/*.{test,spec}.{ts,tsx}'],
-      setupFiles: ['./components/__tests__/setup.ts'],
+      include: ['src/components/__tests__/**/*.{test,spec}.{ts,tsx}', 'src/hooks/__tests__/**/*.{test,spec}.{ts,tsx}'],
+      setupFiles: ['./src/components/__tests__/setup.ts'],
     },
   },
 ] as UserWorkspaceConfig);

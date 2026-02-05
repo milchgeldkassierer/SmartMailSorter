@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { createRequire } from 'module';
 import path from 'path';
-import { ImapAccount, Email } from '../../types';
+import { ImapAccount, Email } from '../../src/types';
 
 // Create require function for CommonJS modules
 const require = createRequire(import.meta.url);

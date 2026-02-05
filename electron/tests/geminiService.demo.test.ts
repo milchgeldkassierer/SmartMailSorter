@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { DefaultEmailCategory, AISettings, LLMProvider } from '../../types';
+import { DefaultEmailCategory, AISettings, LLMProvider } from '../../src/types';
 import { INBOX_FOLDER } from '../folderConstants.cjs';
 
 // Mock variables for GoogleGenAI
@@ -36,7 +36,7 @@ vi.mock('@google/genai', () => {
 });
 
 // Import after mocking
-const geminiService = await import('../../services/geminiService');
+const geminiService = await import('../../src/services/geminiService');
 
 describe('GeminiService - generateDemoEmails', () => {
   const geminiSettings: AISettings = {

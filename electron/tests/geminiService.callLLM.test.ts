@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach, Mock } from 'vitest';
-import { Email, DefaultEmailCategory, AISettings, LLMProvider } from '../../types';
+import { Email, DefaultEmailCategory, AISettings, LLMProvider } from '../../src/types';
 import { INBOX_FOLDER } from '../folderConstants.cjs';
 
 // Store the original fetch
@@ -67,7 +67,7 @@ vi.mock('@google/genai', () => {
 });
 
 // Import after mocking
-const geminiService = await import('../../services/geminiService');
+const geminiService = await import('../../src/services/geminiService');
 
 describe('GeminiService - callLLM Function', () => {
   const geminiSettings: AISettings = {
