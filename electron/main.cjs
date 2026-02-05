@@ -205,21 +205,27 @@ app.whenReady().then(() => {
     return true;
   });
 
-  ipcMain.handle('delete-email', async (event, { account, emailId, uid, folder }) => {
+  ipcMain.handle('delete-email', async (event, { accountId, emailId, uid, folder }) => {
     // Delete from DB
     db.deleteEmail(emailId);
+    // Retrieve account with decrypted password for IMAP operations
+    const accountWithPassword = db.getAccountWithPassword(accountId);
     // Delete from Server
-    return await imap.deleteEmail(account, uid, folder);
+    return await imap.deleteEmail(accountWithPassword, uid, folder);
   });
 
-  ipcMain.handle('update-email-read', async (event, { account, emailId, uid, isRead, folder }) => {
+  ipcMain.handle('update-email-read', async (event, { accountId, emailId, uid, isRead, folder }) => {
     db.updateEmailReadStatus(emailId, isRead);
-    return await imap.setEmailFlag(account, uid, '\\Seen', isRead, folder);
+    // Retrieve account with decrypted password for IMAP operations
+    const accountWithPassword = db.getAccountWithPassword(accountId);
+    return await imap.setEmailFlag(accountWithPassword, uid, '\\Seen', isRead, folder);
   });
 
-  ipcMain.handle('update-email-flag', async (event, { account, emailId, uid, isFlagged, folder }) => {
+  ipcMain.handle('update-email-flag', async (event, { accountId, emailId, uid, isFlagged, folder }) => {
     db.updateEmailFlagStatus(emailId, isFlagged);
-    return await imap.setEmailFlag(account, uid, '\\Flagged', isFlagged, folder);
+    // Retrieve account with decrypted password for IMAP operations
+    const accountWithPassword = db.getAccountWithPassword(accountId);
+    return await imap.setEmailFlag(accountWithPassword, uid, '\\Flagged', isFlagged, folder);
   });
 
   ipcMain.handle('move-email', (event, { emailId, category }) => {
