@@ -11,6 +11,10 @@ node_modules
 dist
 dist-ssr
 *.local
+*.db
+
+# Environment files
+.env*
 
 # Test coverage reports (generated artifacts - regenerate with npm run test:coverage)
 coverage/
