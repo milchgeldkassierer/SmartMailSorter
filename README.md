@@ -2,11 +2,41 @@
 <img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
 </div>
 
-# Run and deploy your AI Studio app
+# SmartMail AI Sorter (GMX-Style)
 
-This contains everything you need to run your app locally.
+**An intelligent email management application that automatically categorizes your emails using AI.**
 
-View your app in AI Studio: https://ai.studio/apps/drive/1MLJpHIpnT5wX2k-wh_Xj8og2kFNsePet
+## Overview
+
+SmartMail AI Sorter is a sophisticated desktop email client built with Electron that brings the power of artificial intelligence to email organization. Designed specifically for **German email power users** who manage high volumes of email across providers like GMX, Web.de, and other IMAP-compatible services, this application automatically sorts incoming mail into intelligent categories like Spam, Invoices, Newsletters, and Private conversations.
+
+### Why SmartMailSorter?
+
+Email overload is a universal problem, but German email users face unique challenges with providers that may have limited built-in filtering capabilities. SmartMailSorter solves this by:
+
+- **Automated AI Categorization**: Leverages Google Gemini AI to intelligently classify emails based on content, sender patterns, and context
+- **Local-First Architecture**: All email data is stored locally in SQLite, ensuring privacy and offline access
+- **Real IMAP Integration**: Connects directly to your email provider via IMAP for authentic email synchronization
+- **Multi-Provider Support**: Works with GMX, Web.de, Gmail, and any IMAP-compatible email service
+- **Desktop Performance**: Built as an Electron application for native desktop performance and system integration
+
+### Target Audience
+
+This application is designed for:
+
+- German email users managing multiple accounts across GMX, Web.de, or similar providers
+- Power users who receive high volumes of email and need automated organization
+- Privacy-conscious individuals who prefer local email storage over cloud-based solutions
+- Developers interested in AI-powered email processing and Electron application development
+
+### Technology Stack
+
+- **Frontend**: React 19 with TypeScript (strict mode)
+- **Desktop Framework**: Electron with native system integration
+- **Database**: SQLite with better-sqlite3 for local email storage
+- **AI Processing**: Google Gemini AI API for intelligent email categorization
+- **Email Protocol**: IMAP via imapflow for authentic email synchronization
+- **Email Parsing**: mailparser for robust MIME message handling
 
 ## Run Locally
 
