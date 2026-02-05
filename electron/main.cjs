@@ -1,5 +1,6 @@
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow, ipcMain, safeStorage } = require('electron');
 const path = require('path');
+const fs = require('fs');
 const logger = require('./utils/logger.cjs');
 
 process.on('uncaughtException', (error) => {
@@ -249,6 +250,88 @@ app.whenReady().then(() => {
 
   ipcMain.handle('rename-smart-category', (event, { oldName, newName }) => {
     return db.renameSmartCategory(oldName, newName);
+  });
+
+  // AI Settings safeStorage IPC handlers
+  const AI_SETTINGS_FILE = path.join(app.getPath('userData'), 'ai-settings.encrypted');
+  const AI_SETTINGS_FILE_PLAINTEXT = path.join(app.getPath('userData'), 'ai-settings.json');
+
+  ipcMain.handle('ai-settings-save', async (event, settings) => {
+    try {
+      // Basic input validation
+      if (!settings || typeof settings !== 'object') {
+        throw new Error('Invalid settings: expected an object');
+      }
+      if (typeof settings.provider !== 'string' || typeof settings.model !== 'string') {
+        throw new Error('Invalid settings: provider and model must be strings');
+      }
+      if (settings.apiKey !== undefined && typeof settings.apiKey !== 'string') {
+        throw new Error('Invalid settings: apiKey must be a string');
+      }
+
+      const settingsJson = JSON.stringify(settings);
+
+      if (!safeStorage.isEncryptionAvailable()) {
+        logger.warn('[IPC] safeStorage encryption is not available - falling back to plaintext storage');
+        logger.warn('[IPC] WARNING: AI settings will be stored unencrypted. This is not recommended for production use.');
+        fs.writeFileSync(AI_SETTINGS_FILE_PLAINTEXT, settingsJson);
+        logger.debug('[IPC] AI settings saved successfully (plaintext fallback)');
+        return { success: true, encrypted: false, warning: 'Settings stored unencrypted due to platform limitations' };
+      }
+
+      const encrypted = safeStorage.encryptString(settingsJson);
+      fs.writeFileSync(AI_SETTINGS_FILE, encrypted);
+      logger.debug('[IPC] AI settings saved successfully (encrypted)');
+      return { success: true, encrypted: true };
+    } catch (error) {
+      logger.error('[IPC] Failed to save AI settings:', error);
+      throw error;
+    }
+  });
+
+  ipcMain.handle('ai-settings-load', async () => {
+    try {
+      const hasEncryptedFile = fs.existsSync(AI_SETTINGS_FILE);
+      const hasPlaintextFile = fs.existsSync(AI_SETTINGS_FILE_PLAINTEXT);
+
+      // Prefer encrypted file when encryption is available
+      if (hasEncryptedFile && safeStorage.isEncryptionAvailable()) {
+        const encrypted = fs.readFileSync(AI_SETTINGS_FILE);
+        const decrypted = safeStorage.decryptString(encrypted);
+        const settings = JSON.parse(decrypted);
+        logger.debug('[IPC] AI settings loaded successfully (encrypted)');
+        // Clean up any stale plaintext file since we have encrypted data
+        if (hasPlaintextFile) {
+          logger.warn('[IPC] Removing stale plaintext settings file in favor of encrypted file');
+          fs.unlinkSync(AI_SETTINGS_FILE_PLAINTEXT);
+        }
+        return settings;
+      }
+
+      // Encrypted file exists but encryption is unavailable
+      if (hasEncryptedFile && !safeStorage.isEncryptionAvailable()) {
+        // Fall through to plaintext if available, otherwise error
+        if (!hasPlaintextFile) {
+          logger.error('[IPC] safeStorage encryption is not available, but encrypted file exists');
+          throw new Error('Encryption not available - cannot decrypt existing settings. Please set up platform keyring support.');
+        }
+      }
+
+      // Fall back to plaintext file
+      if (hasPlaintextFile) {
+        logger.warn('[IPC] Loading AI settings from plaintext file (unencrypted)');
+        const settingsJson = fs.readFileSync(AI_SETTINGS_FILE_PLAINTEXT, 'utf8');
+        const settings = JSON.parse(settingsJson);
+        logger.debug('[IPC] AI settings loaded successfully (plaintext)');
+        return settings;
+      }
+
+      logger.debug('[IPC] No AI settings file found');
+      return null;
+    } catch (error) {
+      logger.error('[IPC] Failed to load AI settings:', error);
+      throw error;
+    }
   });
 
   createWindow();
