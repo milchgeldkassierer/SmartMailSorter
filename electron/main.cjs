@@ -1,5 +1,6 @@
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow, ipcMain, safeStorage } = require('electron');
 const path = require('path');
+const fs = require('fs');
 const logger = require('./utils/logger.cjs');
 
 process.on('uncaughtException', (error) => {
@@ -236,8 +237,6 @@ app.whenReady().then(() => {
 
   ipcMain.handle('ai-settings-save', async (event, settings) => {
     try {
-      const { safeStorage } = require('electron');
-      const fs = require('fs');
       const settingsJson = JSON.stringify(settings);
 
       if (!safeStorage.isEncryptionAvailable()) {
@@ -260,9 +259,6 @@ app.whenReady().then(() => {
 
   ipcMain.handle('ai-settings-load', async () => {
     try {
-      const fs = require('fs');
-      const { safeStorage } = require('electron');
-
       // Check for plaintext fallback file first
       if (fs.existsSync(AI_SETTINGS_FILE_PLAINTEXT)) {
         logger.warn('[IPC] Loading AI settings from plaintext file (unencrypted)');
@@ -291,50 +287,6 @@ app.whenReady().then(() => {
       return settings;
     } catch (error) {
       logger.error('[IPC] Failed to load AI settings:', error);
-      throw error;
-    }
-  });
-
-  ipcMain.handle('ai-settings-check', async () => {
-    try {
-      const fs = require('fs');
-      const encryptedExists = fs.existsSync(AI_SETTINGS_FILE);
-      const plaintextExists = fs.existsSync(AI_SETTINGS_FILE_PLAINTEXT);
-      const exists = encryptedExists || plaintextExists;
-      logger.debug(`[IPC] AI settings file exists: ${exists} (encrypted: ${encryptedExists}, plaintext: ${plaintextExists})`);
-      return exists;
-    } catch (error) {
-      logger.error('[IPC] Failed to check AI settings:', error);
-      return false;
-    }
-  });
-
-  ipcMain.handle('ai-settings-delete', async () => {
-    try {
-      const fs = require('fs');
-      let deletedCount = 0;
-
-      // Delete encrypted file if it exists
-      if (fs.existsSync(AI_SETTINGS_FILE)) {
-        fs.unlinkSync(AI_SETTINGS_FILE);
-        deletedCount++;
-        logger.debug('[IPC] Encrypted AI settings file deleted');
-      }
-
-      // Delete plaintext file if it exists
-      if (fs.existsSync(AI_SETTINGS_FILE_PLAINTEXT)) {
-        fs.unlinkSync(AI_SETTINGS_FILE_PLAINTEXT);
-        deletedCount++;
-        logger.debug('[IPC] Plaintext AI settings file deleted');
-      }
-
-      if (deletedCount === 0) {
-        logger.debug('[IPC] No AI settings files found to delete');
-      }
-
-      return { success: true };
-    } catch (error) {
-      logger.error('[IPC] Failed to delete AI settings:', error);
       throw error;
     }
   });

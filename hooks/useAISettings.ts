@@ -1,10 +1,17 @@
 import { useState, useEffect, useRef } from 'react';
 import { AISettings, LLMProvider, AVAILABLE_MODELS } from '../types';
 
+interface SaveStatus {
+  encrypted?: boolean;
+  warning?: string;
+}
+
 interface UseAISettingsReturn {
   aiSettings: AISettings;
   setAiSettings: (settings: AISettings) => void;
   isLoading: boolean;
+  saveError: string | null;
+  saveStatus: SaveStatus | null;
 }
 
 const STORAGE_KEY = 'smartmail_ai_settings';
@@ -18,7 +25,10 @@ const getDefaultSettings = (): AISettings => ({
 export const useAISettings = (): UseAISettingsReturn => {
   const [aiSettings, setAiSettings] = useState<AISettings>(getDefaultSettings());
   const [isInitialized, setIsInitialized] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveStatus, setSaveStatus] = useState<SaveStatus | null>(null);
   const userModifiedDuringLoad = useRef(false);
+  const migratedDuringLoad = useRef(false);
 
   // Load settings from safeStorage on mount, with migration from localStorage
   useEffect(() => {
@@ -27,13 +37,29 @@ export const useAISettings = (): UseAISettingsReturn => {
         // First, check if there's existing data in localStorage (migration)
         const localStorageData = localStorage.getItem(STORAGE_KEY);
         if (localStorageData) {
+          let parsedSettings: AISettings;
           try {
-            const parsedSettings = JSON.parse(localStorageData);
+            parsedSettings = JSON.parse(localStorageData);
+          } catch (e) {
+            console.error('Failed to parse localStorage AI settings', e);
+            // Clear corrupted localStorage entry to prevent repeated errors
+            localStorage.removeItem(STORAGE_KEY);
+            // Fall through to load from safeStorage
+            parsedSettings = null as unknown as AISettings;
+          }
+
+          if (parsedSettings) {
             // Migrate to safeStorage
             if (window.electron) {
-              await window.electron.saveAISettings(parsedSettings);
-              // Remove from localStorage after successful migration
-              localStorage.removeItem(STORAGE_KEY);
+              try {
+                await window.electron.saveAISettings(parsedSettings);
+                // Only remove from localStorage after successful migration
+                localStorage.removeItem(STORAGE_KEY);
+                migratedDuringLoad.current = true;
+              } catch (e) {
+                console.error('Failed to migrate AI settings to safeStorage', e);
+                // Preserve localStorage - don't remove it since safeStorage save failed
+              }
             }
             // Only apply if user hasn't modified settings during load
             if (!userModifiedDuringLoad.current) {
@@ -41,10 +67,6 @@ export const useAISettings = (): UseAISettingsReturn => {
             }
             setIsInitialized(true);
             return;
-          } catch (e) {
-            console.error('Failed to migrate AI settings from localStorage', e);
-            // Clear corrupted localStorage entry to prevent repeated errors
-            localStorage.removeItem(STORAGE_KEY);
           }
         }
 
@@ -72,13 +94,26 @@ export const useAISettings = (): UseAISettingsReturn => {
       return;
     }
 
+    // Skip redundant save if we just migrated (data is already saved)
+    if (migratedDuringLoad.current) {
+      migratedDuringLoad.current = false;
+      return;
+    }
+
     const saveSettings = async () => {
       try {
         if (window.electron) {
-          await window.electron.saveAISettings(aiSettings);
+          const result = await window.electron.saveAISettings(aiSettings);
+          setSaveError(null);
+          setSaveStatus({
+            encrypted: result?.encrypted,
+            warning: result?.warning,
+          });
         }
       } catch (error) {
+        const message = error instanceof Error ? error.message : 'Failed to save AI settings';
         console.error('Failed to save AI settings', error);
+        setSaveError(message);
       }
     };
 
@@ -97,5 +132,7 @@ export const useAISettings = (): UseAISettingsReturn => {
     aiSettings,
     setAiSettings: handleSetAiSettings,
     isLoading: !isInitialized,
+    saveError,
+    saveStatus,
   };
 };
