@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 
+# Environment files
+.env
+
 # Test coverage reports (generated artifacts - regenerate with npm run test:coverage)
 coverage/
 
