@@ -174,7 +174,7 @@ module.exports = {
   },
   setQuotaResponse(quota) {
     // Set custom quota response for testing
-    // Example: { storage: { used: 1024000, limit: 10240000 } }
+    // Example: { storage: { usage: 1024000, limit: 10240000 } }
     global.__mockState.quotaResponse = quota;
   },
 };

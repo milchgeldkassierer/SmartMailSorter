@@ -266,8 +266,8 @@ function clearErrorSimulations() {
 
 /**
  * Sets up quota information for the mock server.
- * @param {number} used - Used storage in KB
- * @param {number} total - Total storage in KB
+ * @param {number} used - Used storage in KB (mapped to .usage in imapflow response)
+ * @param {number} total - Total storage in KB (mapped to .limit in imapflow response)
  */
 function setupQuota(used, total) {
   setQuota(used, total);

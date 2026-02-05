@@ -179,7 +179,7 @@ class ImapFlow {
     this.config = config;
     this.connected = false;
     this.mailbox = null;
-    this.capabilities = new Set(['IMAP4rev1', 'UIDPLUS', 'QUOTA']);
+    this.capabilities = new Map([['IMAP4REV1', true], ['UIDPLUS', true], ['QUOTA', true]]);
   }
 
   async connect() {
@@ -303,7 +303,7 @@ class ImapFlow {
     if (quotaInfo) {
       return {
         storage: {
-          used: quotaInfo.used,
+          usage: quotaInfo.used,
           limit: quotaInfo.total,
         },
       };

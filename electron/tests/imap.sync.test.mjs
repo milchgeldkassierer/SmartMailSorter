@@ -743,7 +743,7 @@ describe('IMAP Sync Edge Cases and Error Handling', () => {
       // Set quota response (storage in bytes)
       setQuotaResponse({
         storage: {
-          used: 1048576, // 1MB = 1024KB
+          usage: 1048576, // 1MB = 1024KB
           limit: 10485760, // 10MB = 10240KB
         },
       });
@@ -793,7 +793,7 @@ describe('IMAP Sync Edge Cases and Error Handling', () => {
       setServerEmails([]);
       setQuotaResponse({
         storage: {
-          used: 1000,
+          usage: 1000,
           limit: 0, // Zero limit should be handled
         },
       });

@@ -260,20 +260,42 @@ async function processMessages(client, messages, account, targetCategory) {
 async function checkAccountQuota(client, accountId) {
   try {
     logger.info('[Quota] Checking storage quota...');
-    // LOG CAPABILITIES
-    try {
-      const caps = client.capabilities || new Set();
-      logger.debug('[Quota Debug] Server Capabilities:', Array.from(caps));
-    } catch (_e) {}
+
+    // Log capabilities for debugging
+    const capNames = client.capabilities ? Array.from(client.capabilities.keys()) : [];
+    logger.info('[Quota] Server capabilities:', capNames.join(', '));
+
+    // imapflow v1.2.8 only checks capabilities.has('QUOTA'), but:
+    // 1. RFC 9208 servers may advertise QUOTA=RES-STORAGE instead of QUOTA
+    // 2. Some servers support QUOTA without advertising the capability
+    // Temporarily inject the QUOTA capability so imapflow attempts the command.
+    // If the server truly doesn't support it, GETQUOTAROOT will fail gracefully.
+    const hadQuota = client.capabilities && client.capabilities.has('QUOTA');
+    if (client.capabilities && !hadQuota) {
+      let reason = 'forcing GETQUOTAROOT attempt';
+      for (const key of client.capabilities.keys()) {
+        if (key.startsWith('QUOTA')) {
+          reason = `found RFC 9208 capability "${key}"`;
+          break;
+        }
+      }
+      logger.info(`[Quota] No QUOTA capability advertised, ${reason}`);
+      client.capabilities.set('QUOTA', true);
+    }
 
     // Use ImapFlow's getQuota() method
     const quota = await client.getQuota('INBOX');
-    logger.debug('[Quota Debug] Quota response received.');
+
+    // Clean up injected capability
+    if (!hadQuota && client.capabilities) {
+      client.capabilities.delete('QUOTA');
+    }
+
+    logger.info('[Quota] getQuota result:', typeof quota, quota === false ? 'false' : JSON.stringify(quota));
 
     if (quota && quota.storage) {
-      logger.debug('[Quota Debug] Quota Object:', JSON.stringify(quota));
-      // Convert bytes to KB (ImapFlow returns bytes, DB expects KB)
-      const usedKB = Math.round((quota.storage.used || 0) / 1024);
+      // Convert bytes to KB (ImapFlow returns .usage not .used, DB expects KB)
+      const usedKB = Math.round((quota.storage.usage || 0) / 1024);
       const totalKB = Math.round((quota.storage.limit || 0) / 1024);
 
       if (totalKB > 0) {
@@ -281,10 +303,10 @@ async function checkAccountQuota(client, accountId) {
         updateAccountQuota(accountId, usedKB, totalKB);
         return { usedKB, totalKB };
       } else {
-        logger.debug('[Quota Debug] No valid storage limits returned.');
+        logger.info('[Quota] Server returned storage quota with limit=0, ignoring.');
       }
     } else {
-      logger.debug('[Quota Debug] No quota object or storage property returned.');
+      logger.info('[Quota] Server does not support QUOTA or returned no storage data.');
     }
     return null;
   } catch (qErr) {

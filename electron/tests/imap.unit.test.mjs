@@ -239,7 +239,7 @@ describe('IMAP Module', () => {
       // Set mock quota response
       setQuotaResponse({
         storage: {
-          used: 1024000,  // 1000 KB in bytes
+          usage: 1024000,  // 1000 KB in bytes
           limit: 10240000, // 10000 KB in bytes
         },
       });
@@ -266,11 +266,11 @@ describe('IMAP Module', () => {
 
       // Create mock client
       const mockClient = {
-        capabilities: new Set(['IMAP4rev1', 'QUOTA']),
+        capabilities: new Map([['IMAP4REV1', true], ['QUOTA', true]]),
         async getQuota(_mailbox) {
           return {
             storage: {
-              used: 1024000,
+              usage: 1024000,
               limit: 10240000,
             },
           };
@@ -286,7 +286,7 @@ describe('IMAP Module', () => {
 
     it('should return null when quota has no storage property', async () => {
       const mockClient = {
-        capabilities: new Set(['IMAP4rev1', 'QUOTA']),
+        capabilities: new Map([['IMAP4REV1', true], ['QUOTA', true]]),
         async getQuota(_mailbox) {
           return { foo: 'bar' };
         },
@@ -299,11 +299,11 @@ describe('IMAP Module', () => {
 
     it('should return null when quota storage has no valid limit', async () => {
       const mockClient = {
-        capabilities: new Set(['IMAP4rev1', 'QUOTA']),
+        capabilities: new Map([['IMAP4REV1', true], ['QUOTA', true]]),
         async getQuota(_mailbox) {
           return {
             storage: {
-              used: 1024000,
+              usage: 1024000,
               limit: 0,
             },
           };
@@ -317,7 +317,7 @@ describe('IMAP Module', () => {
 
     it('should return null when getQuota returns null', async () => {
       const mockClient = {
-        capabilities: new Set(['IMAP4rev1']),
+        capabilities: new Map([['IMAP4REV1', true]]),
         async getQuota(_mailbox) {
           return null;
         },
@@ -330,7 +330,7 @@ describe('IMAP Module', () => {
 
     it('should handle getQuota errors gracefully', async () => {
       const mockClient = {
-        capabilities: new Set(['IMAP4rev1', 'QUOTA']),
+        capabilities: new Map([['IMAP4REV1', true], ['QUOTA', true]]),
         async getQuota(_mailbox) {
           throw new Error('Quota not supported');
         },
@@ -343,11 +343,11 @@ describe('IMAP Module', () => {
 
     it('should round bytes to KB correctly', async () => {
       const mockClient = {
-        capabilities: new Set(['IMAP4rev1', 'QUOTA']),
+        capabilities: new Map([['IMAP4REV1', true], ['QUOTA', true]]),
         async getQuota(_mailbox) {
           return {
             storage: {
-              used: 1536,  // 1.5 KB = 1536 bytes
+              usage: 1536,  // 1.5 KB = 1536 bytes
               limit: 2560, // 2.5 KB = 2560 bytes
             },
           };

@@ -389,7 +389,7 @@ describe('IMAP Folder Mapping and Special Folders', () => {
     it('should handle sync when quota is available', async () => {
       setQuotaResponse({
         storage: {
-          used: 1024000, // 1MB
+          usage: 1024000, // 1MB
           limit: 10240000, // 10MB
         },
       });
@@ -428,7 +428,7 @@ describe('IMAP Folder Mapping and Special Folders', () => {
     it('should handle quota with zero limit', async () => {
       setQuotaResponse({
         storage: {
-          used: 1024,
+          usage: 1024,
           limit: 0,
         },
       });
