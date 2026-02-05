@@ -342,15 +342,239 @@ SmartMailSorter implements several security best practices:
 
 **Note on Password Storage**: Account passwords are currently stored in plaintext in SQLite for development convenience. **For production use, implement Electron's `safeStorage` API** to encrypt passwords using OS-level credential storage (Keychain on macOS, Credential Vault on Windows, Secret Service on Linux).
 
-## Run Locally
+## 🚀 Getting Started
 
-**Prerequisites:** Node.js
+This section provides complete setup instructions for running SmartMailSorter locally on your development machine.
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+### Prerequisites
+
+Before you begin, ensure you have the following installed:
+
+- **Node.js**: Version **18.x or higher** (LTS recommended)
+  - Check your version: `node --version`
+  - Download from [nodejs.org](https://nodejs.org/)
+- **npm**: Version **8.x or higher** (comes with Node.js)
+  - Check your version: `npm --version`
+- **Build Tools**: Required for native module compilation (better-sqlite3)
+  - **Windows**: Install [Windows Build Tools](https://github.com/felixrieseberg/windows-build-tools) or Visual Studio Build Tools
+  - **macOS**: Install Xcode Command Line Tools: `xcode-select --install`
+  - **Linux**: Install `build-essential`: `sudo apt-get install build-essential`
+
+### Installation
+
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/yourusername/SmartMailSorter.git
+   cd SmartMailSorter
+   ```
+
+2. **Install dependencies:**
+   ```bash
+   npm install
+   ```
+
+   This will install all required packages including Electron, React, and native modules.
+
+3. **Rebuild native modules for Electron:**
+
+   SmartMailSorter uses `better-sqlite3`, a native Node.js module that must be compiled for Electron's runtime:
+
+   ```bash
+   npm run rebuild:electron
+   ```
+
+   This command uses `electron-rebuild` to recompile `better-sqlite3` against Electron's Node.js headers, ensuring compatibility with the Electron environment.
+
+   > **Note**: This step is **critical**. If you skip it, you'll encounter errors like "Module did not self-register" when the app tries to access the database.
+
+4. **Configure AI API credentials:**
+
+   Create a `.env.local` file in the project root with your AI provider API key:
+
+   ```bash
+   # For Google Gemini (recommended)
+   GEMINI_API_KEY=your_gemini_api_key_here
+
+   # For OpenAI (optional)
+   OPENAI_API_KEY=your_openai_api_key_here
+
+   # For Anthropic Claude (optional)
+   ANTHROPIC_API_KEY=your_anthropic_api_key_here
+   ```
+
+   **To get API keys:**
+   - **Google Gemini**: Visit [Google AI Studio](https://makersuite.google.com/app/apikey)
+   - **OpenAI**: Visit [OpenAI Platform](https://platform.openai.com/api-keys)
+   - **Anthropic**: Visit [Anthropic Console](https://console.anthropic.com/)
+
+### Development Workflow
+
+#### Running the Application
+
+To start the application in development mode:
+
+```bash
+npm run electron:dev
+```
+
+This command does the following:
+1. Rebuilds native modules for Electron (`npm run rebuild:electron`)
+2. Starts the Vite development server on port 3000
+3. Waits for the dev server to be ready
+4. Launches the Electron application pointing to `http://localhost:3000`
+
+The Electron window will automatically reload when you make changes to React components, and the main process will need to be manually restarted (Ctrl+C and re-run) when you modify `electron/*.cjs` files.
+
+**Hot Module Replacement (HMR):**
+- React component changes trigger instant hot reloading
+- CSS/styling changes apply without full page reload
+- Main process changes require application restart
+
+#### Running Tests
+
+To run unit tests with Vitest:
+
+```bash
+# Run all tests
+npm test
+
+# Run with coverage report
+npm run test:coverage
+
+# Run component tests only
+npm run test:components
+
+# Watch mode for component tests
+npm run test:components:watch
+
+# Run all test suites (unit + components)
+npm run test:all
+```
+
+**Before running tests**, ensure native modules are compiled for Node.js:
+
+```bash
+npm run rebuild:node
+```
+
+This is necessary because tests run in the Node.js environment, not Electron, so `better-sqlite3` must be compiled against Node.js headers.
+
+#### Code Quality Tools
+
+```bash
+# Lint TypeScript/JavaScript files
+npm run lint
+
+# Auto-fix linting issues
+npm run lint:fix
+
+# Format code with Prettier
+npm run format
+
+# Check code formatting
+npm run format:check
+```
+
+### Building for Production
+
+To create a production build of the application:
+
+```bash
+npm run electron:build
+```
+
+This command:
+1. Runs `npm run build` to create an optimized production build of the React frontend (output to `dist/`)
+2. Runs `electron-builder` to package the application into a distributable format
+
+**Build Output:**
+
+The packaged application will be created in the `dist-electron/` directory with platform-specific installers:
+
+- **Windows**: `.exe` installer (NSIS)
+- **macOS**: `.dmg` disk image and `.app` bundle
+- **Linux**: `.AppImage`, `.deb`, or `.rpm` (depending on configuration)
+
+**Build Configuration:**
+
+Electron Builder configuration is defined in `package.json` under the `"build"` key. You can customize:
+- Application icon
+- Installer settings
+- Code signing (for macOS and Windows)
+- File associations
+- Auto-updater configuration
+
+**Platform-Specific Builds:**
+
+To build for a specific platform:
+
+```bash
+# Build for Windows only
+npm run electron:build -- --win
+
+# Build for macOS only
+npm run electron:build -- --mac
+
+# Build for Linux only
+npm run electron:build -- --linux
+```
+
+### Troubleshooting
+
+#### "Module did not self-register" Error
+
+This error occurs when `better-sqlite3` is compiled for the wrong runtime (Node.js vs Electron).
+
+**Solution:**
+- If running the app: `npm run rebuild:electron`
+- If running tests: `npm run rebuild:node`
+
+#### Port 3000 Already in Use
+
+If another application is using port 3000, you'll need to either:
+- Stop the other application
+- Or modify the Vite configuration in `vite.config.ts` to use a different port
+
+#### Electron Window Opens But Shows Blank Screen
+
+This usually means the Vite dev server hasn't started yet. The `wait-on` package should handle this automatically, but if you see this issue:
+1. Check if Vite is running on `http://localhost:3000`
+2. Check the terminal for Vite startup errors
+3. Try restarting the development server
+
+#### Native Module Compilation Failures
+
+If `npm run rebuild:electron` fails:
+- **Windows**: Ensure Visual Studio Build Tools are installed
+- **macOS**: Run `xcode-select --install` to install Command Line Tools
+- **Linux**: Install `build-essential` and `python3`
+- Check that your Node.js version is 18.x or higher
+
+For more detailed logs during rebuild:
+```bash
+npm run rebuild:electron -- --verbose
+```
+
+### Development Tips
+
+1. **Database Location**: The SQLite database is stored in your OS's application data directory:
+   - **Linux**: `~/.config/SmartMailSorter/smartmail.db`
+   - **macOS**: `~/Library/Application Support/SmartMailSorter/smartmail.db`
+   - **Windows**: `%APPDATA%/SmartMailSorter/smartmail.db`
+
+2. **Clearing Data**: To start fresh, delete the database file and restart the application.
+
+3. **DevTools**: Press `Ctrl+Shift+I` (Windows/Linux) or `Cmd+Option+I` (macOS) to open Chrome DevTools in the Electron renderer process.
+
+4. **Main Process Debugging**: Add `debugger` statements in `electron/*.cjs` files and run with:
+   ```bash
+   NODE_ENV=development electron --inspect .
+   ```
+   Then connect to `chrome://inspect` in Chrome.
+
+5. **Log Files**: Check log files for debugging (see [Logging System](#logging-system) section):
+   - Development mode: Logs appear in terminal
+   - Production mode: Check `{userData}/logs/main.log`
 
 ## TypeScript Configuration
 
