@@ -59,7 +59,6 @@ interface GeminiResponse {
 
 const getApiKey = (settings?: AISettings) => {
   if (settings?.apiKey && settings.apiKey.trim() !== '') return settings.apiKey;
-  if (settings?.provider === LLMProvider.GEMINI) return process.env.API_KEY;
   return '';
 };
 
@@ -196,7 +195,7 @@ export const generateDemoEmails = async (count: number = 5, settings?: AISetting
       prompt,
       'You are a data generator.',
       emailSchema,
-      settings || { provider: LLMProvider.GEMINI, model: 'gemini-3-flash-preview', apiKey: process.env.API_KEY || '' }
+      settings || { provider: LLMProvider.GEMINI, model: 'gemini-3-flash-preview', apiKey: '' }
     );
     return (Array.isArray(rawData) ? rawData : [])
       .filter((item: unknown): item is object => typeof item === 'object' && item !== null)
