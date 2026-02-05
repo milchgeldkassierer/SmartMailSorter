@@ -240,7 +240,14 @@ function init(appOrPath) {
 
 // Account Methods
 function getAccounts() {
-  return db.prepare('SELECT * FROM accounts').all();
+  return db
+    .prepare(
+      `SELECT
+        id, name, email, provider, imapHost, imapPort, username,
+        color, lastSyncUid, storageUsed, storageTotal
+      FROM accounts`
+    )
+    .all();
 }
 
 function getAccountWithPassword(accountId) {

@@ -248,7 +248,7 @@ describe('Database Account CRUD Operations', () => {
       expect(retrieved?.imapHost).toBe('mail.custom.com');
       expect(retrieved?.imapPort).toBe(143);
       expect(retrieved?.username).toBe('fulluser');
-      expect(retrieved?.password).toBe('fullpass');
+      expect(retrieved?.password).toBeUndefined(); // getAccounts() should NOT return password for security
       expect(retrieved?.color).toBe('#ABCDEF');
       expect(retrieved?.lastSyncUid).toBe(500);
       expect(retrieved?.storageUsed).toBe(1024);
