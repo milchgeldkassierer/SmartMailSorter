@@ -244,11 +244,32 @@ function getAccounts() {
 }
 
 function addAccount(account) {
+  // Encrypt password before saving
+  let encryptedPassword = account.password;
+  if (account.password) {
+    try {
+      // Check if encryption is available before attempting to encrypt
+      const { safeStorage } = require('electron');
+      if (safeStorage.isEncryptionAvailable()) {
+        const encryptedBuffer = encryptPassword(account.password);
+        encryptedPassword = encryptedBuffer.toString('base64');
+      } else {
+        logger.warn('Password encryption not available - storing password without encryption');
+      }
+    } catch (error) {
+      // If Electron safeStorage is not available (e.g., in tests), store plaintext
+      logger.warn('Password encryption not available - storing password without encryption');
+    }
+  }
+
   const stmt = db.prepare(`
     INSERT INTO accounts (id, name, email, provider, imapHost, imapPort, username, password, color)
     VALUES (@id, @name, @email, @provider, @imapHost, @imapPort, @username, @password, @color)
   `);
-  return stmt.run(account);
+  return stmt.run({
+    ...account,
+    password: encryptedPassword,
+  });
 }
 
 function updateAccountSync(id, lastSyncUid) {
