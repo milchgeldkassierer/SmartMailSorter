@@ -628,6 +628,58 @@ describe('Database Account CRUD Operations', () => {
     });
   });
 
+  describe('getAccountWithPassword', () => {
+    it('should retrieve account with decrypted password', () => {
+      const account = {
+        id: 'pwd-decrypt-test',
+        name: 'Password Test',
+        email: 'pwd@test.com',
+        provider: 'test',
+        imapHost: 'imap.test.com',
+        imapPort: 993,
+        username: 'user',
+        password: 'my-secret-password',
+        color: '#PWD123',
+      };
+
+      db.addAccount(account);
+
+      // Get account with password - should have plaintext password
+      const retrieved = (db as any).getAccountWithPassword('pwd-decrypt-test');
+
+      expect(retrieved).toBeDefined();
+      expect(retrieved.id).toBe('pwd-decrypt-test');
+      expect(retrieved.name).toBe('Password Test');
+      expect(retrieved.email).toBe('pwd@test.com');
+      expect(retrieved.password).toBe('my-secret-password');
+    });
+
+    it('should return undefined for non-existent account', () => {
+      const retrieved = (db as any).getAccountWithPassword('non-existent-id');
+      expect(retrieved).toBeUndefined();
+    });
+
+    it('should handle account with no password', () => {
+      const account = {
+        id: 'no-pwd-test',
+        name: 'No Password',
+        email: 'nopwd@test.com',
+        provider: 'test',
+        imapHost: 'imap.test.com',
+        imapPort: 993,
+        username: 'user',
+        password: '',
+        color: '#NOPWD',
+      };
+
+      db.addAccount(account);
+      const retrieved = (db as any).getAccountWithPassword('no-pwd-test');
+
+      expect(retrieved).toBeDefined();
+      expect(retrieved.password).toBe('');
+    });
+  });
+
   describe('Combined Account Operations', () => {
     it('should handle full account lifecycle', () => {
       // 1. Add account

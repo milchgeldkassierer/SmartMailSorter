@@ -243,6 +243,33 @@ function getAccounts() {
   return db.prepare('SELECT * FROM accounts').all();
 }
 
+function getAccountWithPassword(accountId) {
+  const account = db.prepare('SELECT * FROM accounts WHERE id = ?').get(accountId);
+
+  if (!account) {
+    return undefined;
+  }
+
+  // Decrypt password if it exists
+  if (account.password) {
+    try {
+      // Check if encryption is available before attempting to decrypt
+      const { safeStorage } = require('electron');
+      if (safeStorage.isEncryptionAvailable()) {
+        const passwordBuffer = Buffer.from(account.password, 'base64');
+        account.password = decryptPassword(passwordBuffer);
+      }
+      // If encryption not available, password is already plaintext (test environment)
+    } catch (error) {
+      // If decryption fails, password might already be plaintext (test environment)
+      // or this is a legacy account - use as-is
+      logger.warn(`Failed to decrypt password for account ${accountId}, using as-is`);
+    }
+  }
+
+  return account;
+}
+
 function addAccount(account) {
   // Encrypt password before saving
   let encryptedPassword = account.password;
@@ -482,6 +509,7 @@ function renameSmartCategory(oldName, newName) {
 module.exports = {
   init,
   getAccounts,
+  getAccountWithPassword,
   addAccount,
   updateAccountSync,
   getEmails,
