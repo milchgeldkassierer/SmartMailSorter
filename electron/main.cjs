@@ -186,8 +186,10 @@ app.whenReady().then(() => {
     }
   });
 
-  ipcMain.handle('sync-account', async (event, account) => {
-    return await imap.syncAccount(account);
+  ipcMain.handle('sync-account', async (event, accountId) => {
+    // Retrieve account with decrypted password for IMAP operations
+    const accountWithPassword = db.getAccountWithPassword(accountId);
+    return await imap.syncAccount(accountWithPassword);
   });
 
   ipcMain.handle('test-connection', async (event, account) => {
