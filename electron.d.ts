@@ -6,6 +6,7 @@ import {
   CategoryOperationResult,
   Attachment,
   Category,
+  AISettings,
 } from './types';
 
 export {};
@@ -67,6 +68,12 @@ declare global {
 
       // Debug
       log: (msg: string) => void;
+
+      // AI Settings (safeStorage)
+      saveAISettings: (settings: AISettings) => Promise<void>;
+      loadAISettings: () => Promise<AISettings | null>;
+      checkAISettings: () => Promise<boolean>;
+      deleteAISettings: () => Promise<void>;
     };
   }
 }
