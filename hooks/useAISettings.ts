@@ -14,25 +14,62 @@ const getDefaultSettings = (): AISettings => ({
   apiKey: '',
 });
 
-const loadSettingsFromStorage = (): AISettings => {
-  const saved = localStorage.getItem(STORAGE_KEY);
-  if (saved) {
-    try {
-      return JSON.parse(saved);
-    } catch (e) {
-      console.error('Failed to parse AI settings', e);
-    }
-  }
-  return getDefaultSettings();
-};
-
 export const useAISettings = (): UseAISettingsReturn => {
-  const [aiSettings, setAiSettings] = useState<AISettings>(loadSettingsFromStorage);
+  const [aiSettings, setAiSettings] = useState<AISettings>(getDefaultSettings());
+  const [isInitialized, setIsInitialized] = useState(false);
 
-  // Persist AI Settings to localStorage whenever they change
+  // Load settings from safeStorage on mount, with migration from localStorage
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(aiSettings));
-  }, [aiSettings]);
+    const loadSettings = async () => {
+      try {
+        // First, check if there's existing data in localStorage (migration)
+        const localStorageData = localStorage.getItem(STORAGE_KEY);
+        if (localStorageData) {
+          try {
+            const parsedSettings = JSON.parse(localStorageData);
+            // Migrate to safeStorage
+            await window.electron.saveAISettings(parsedSettings);
+            // Remove from localStorage after successful migration
+            localStorage.removeItem(STORAGE_KEY);
+            setAiSettings(parsedSettings);
+            setIsInitialized(true);
+            return;
+          } catch (e) {
+            console.error('Failed to migrate AI settings from localStorage', e);
+          }
+        }
+
+        // Load from safeStorage
+        const savedSettings = await window.electron.loadAISettings();
+        if (savedSettings) {
+          setAiSettings(savedSettings);
+        }
+      } catch (error) {
+        console.error('Failed to load AI settings', error);
+      } finally {
+        setIsInitialized(true);
+      }
+    };
+
+    loadSettings();
+  }, []);
+
+  // Persist AI Settings to safeStorage whenever they change (after initialization)
+  useEffect(() => {
+    if (!isInitialized) {
+      return;
+    }
+
+    const saveSettings = async () => {
+      try {
+        await window.electron.saveAISettings(aiSettings);
+      } catch (error) {
+        console.error('Failed to save AI settings', error);
+      }
+    };
+
+    saveSettings();
+  }, [aiSettings, isInitialized]);
 
   return {
     aiSettings,
