@@ -38,6 +38,73 @@ This application is designed for:
 - **Email Protocol**: IMAP via imapflow for authentic email synchronization
 - **Email Parsing**: mailparser for robust MIME message handling
 
+## Features
+
+### 📧 IMAP Email Synchronization
+
+- **Real-time Email Sync**: Connects directly to email providers via IMAP protocol using `imapflow`
+- **Multi-Account Support**: Manage multiple email accounts (GMX, Web.de, Gmail, etc.) in a single interface
+- **Incremental Sync**: Efficiently syncs only new messages to minimize bandwidth and processing time
+- **Offline Access**: All synced emails are available offline after initial synchronization
+
+### 💾 Local SQLite Storage
+
+- **Privacy-First Design**: All email data stored locally using SQLite database with `better-sqlite3`
+- **Fast Search**: Indexed database enables quick email retrieval and filtering
+- **No Cloud Dependency**: Complete email archive accessible without internet connection
+- **Data Ownership**: Full control over your email data with local storage
+
+### 🤖 Multi-Provider AI Integration
+
+- **Flexible AI Providers**: Support for multiple AI backends:
+  - **Google Gemini**: `gemini-3-flash-preview`, `gemini-3-pro-preview`
+  - **OpenAI**: `gpt-4o`, `gpt-4o-mini`, `gpt-4-turbo`
+  - **Anthropic Claude**: `claude-3-5-sonnet-20240620`, `claude-3-haiku-20240307`
+- **Intelligent Categorization**: AI analyzes email content, sender patterns, and context for accurate classification
+- **Confidence Scoring**: Each AI categorization includes a confidence score for transparency
+- **AI Summaries**: Automatic generation of email summaries and reasoning for categorization decisions
+
+### 🇩🇪 German Folder System
+
+- **Native German Interface**: Built-in support for German email folder structure:
+  - **Posteingang** (Inbox)
+  - **Gesendet** (Sent)
+  - **Spam** (Spam)
+  - **Papierkorb** (Trash)
+- **Smart Categories**: AI-powered virtual categories in German:
+  - **Rechnungen** (Invoices)
+  - **Newsletter** (Newsletters)
+  - **Privat** (Private)
+  - **Geschäftlich** (Business)
+  - **Kündigungen** (Cancellations)
+  - **Sonstiges** (Other)
+- **Dual Organization**: Physical IMAP folders combined with virtual AI categories for flexible email organization
+
+### 🏷️ Intelligent Email Categorization
+
+- **Automatic Classification**: AI automatically categorizes emails as they arrive
+- **Context-Aware Sorting**: Analyzes email content, subject lines, sender information, and patterns
+- **Custom Categories**: Extensible category system for personalized email organization
+- **Manual Override**: Users can manually recategorize emails and train the system
+- **Flag Support**: Mark important emails with flags (Markierung) for quick access
+
+### 📎 Attachment Handling
+
+- **Attachment Detection**: Automatically identifies emails with attachments
+- **Metadata Extraction**: Captures filename, size, and content type for each attachment
+- **Visual Indicators**: Clear UI indicators for emails containing attachments
+- **Efficient Storage**: Attachments are parsed and stored with associated email metadata
+
+### 🔍 Search and Filtering
+
+- **Full-Text Search**: Search across email subjects, bodies, and sender information
+- **Category Filtering**: Filter emails by AI-assigned categories or physical folders
+- **Date Range Filtering**: Find emails within specific time periods
+- **Account Filtering**: View emails from specific accounts in multi-account setups
+- **Combined Filters**: Apply multiple filters simultaneously for precise email discovery
+- **Flag Filtering**: Quickly access flagged/marked emails
+- **Read/Unread Status**: Filter by read status for inbox management
+
 ## Run Locally
 
 **Prerequisites:** Node.js
