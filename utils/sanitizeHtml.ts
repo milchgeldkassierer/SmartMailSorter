@@ -1,4 +1,5 @@
-import * as DOMPurify from 'isomorphic-dompurify';
+import DOMPurify from 'isomorphic-dompurify';
+import type { Config } from 'dompurify';
 
 /**
  * Sanitize HTML content to prevent XSS attacks while preserving safe formatting.
@@ -33,38 +34,97 @@ export function sanitizeHtml(html: string | null | undefined): string {
   }
 
   // Configure DOMPurify with strict security settings
-  const config: DOMPurify.Config = {
+  const config: Config = {
     // Allow safe HTML tags for email formatting
     ALLOWED_TAGS: [
       // Text formatting
-      'p', 'br', 'span', 'div', 'blockquote', 'pre', 'code',
-      'strong', 'b', 'em', 'i', 'u', 's', 'strike', 'del', 'ins', 'mark',
-      'sub', 'sup', 'small', 'big',
+      'p',
+      'br',
+      'span',
+      'div',
+      'blockquote',
+      'pre',
+      'code',
+      'strong',
+      'b',
+      'em',
+      'i',
+      'u',
+      's',
+      'strike',
+      'del',
+      'ins',
+      'mark',
+      'sub',
+      'sup',
+      'small',
+      'big',
       // Headings
-      'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+      'h1',
+      'h2',
+      'h3',
+      'h4',
+      'h5',
+      'h6',
       // Lists
-      'ul', 'ol', 'li', 'dl', 'dt', 'dd',
+      'ul',
+      'ol',
+      'li',
+      'dl',
+      'dt',
+      'dd',
       // Tables
-      'table', 'thead', 'tbody', 'tfoot', 'tr', 'th', 'td', 'caption', 'col', 'colgroup',
+      'table',
+      'thead',
+      'tbody',
+      'tfoot',
+      'tr',
+      'th',
+      'td',
+      'caption',
+      'col',
+      'colgroup',
       // Links and media
-      'a', 'img',
+      'a',
+      'img',
       // Semantic elements
-      'article', 'section', 'aside', 'header', 'footer', 'main', 'nav',
-      'figure', 'figcaption',
+      'article',
+      'section',
+      'aside',
+      'header',
+      'footer',
+      'main',
+      'nav',
+      'figure',
+      'figcaption',
       // Other safe elements
-      'hr', 'abbr', 'address', 'cite', 'q', 'time',
+      'hr',
+      'abbr',
+      'address',
+      'cite',
+      'q',
+      'time',
     ],
 
     // Allow only safe attributes
     ALLOWED_ATTR: [
       // Link attributes (href will be further sanitized)
-      'href', 'title', 'target', 'rel',
+      'href',
+      'title',
+      'target',
+      'rel',
       // Image attributes
-      'src', 'alt', 'width', 'height',
+      'src',
+      'alt',
+      'width',
+      'height',
       // Table attributes
-      'colspan', 'rowspan', 'scope',
+      'colspan',
+      'rowspan',
+      'scope',
       // Safe styling attributes (DOMPurify will sanitize style content)
-      'class', 'id',
+      'class',
+      'id',
       // Text direction
       'dir',
       // Time element
@@ -78,38 +138,126 @@ export function sanitizeHtml(html: string | null | undefined): string {
 
     // Forbid specific tags that could be dangerous
     FORBID_TAGS: [
-      'script', 'style', 'iframe', 'object', 'embed', 'link', 'base',
-      'form', 'input', 'button', 'textarea', 'select', 'option',
-      'meta', 'title', 'head', 'html', 'body',
-      'applet', 'audio', 'video', 'source', 'track',
-      'canvas', 'svg', 'math',
+      'script',
+      'style',
+      'iframe',
+      'object',
+      'embed',
+      'link',
+      'base',
+      'form',
+      'input',
+      'button',
+      'textarea',
+      'select',
+      'option',
+      'meta',
+      'title',
+      'head',
+      'html',
+      'body',
+      'applet',
+      'audio',
+      'video',
+      'source',
+      'track',
+      'canvas',
+      'svg',
+      'math',
     ],
 
     // Forbid all event handler attributes
     FORBID_ATTR: [
-      'onerror', 'onload', 'onclick', 'onmouseover', 'onmouseout', 'onmousemove',
-      'onmousedown', 'onmouseup', 'onmouseenter', 'onmouseleave',
-      'onfocus', 'onblur', 'onchange', 'onsubmit', 'onreset',
-      'onkeydown', 'onkeyup', 'onkeypress',
-      'ondblclick', 'oncontextmenu', 'oninput', 'oninvalid',
-      'onselect', 'onwheel', 'oncopy', 'oncut', 'onpaste',
-      'ondrag', 'ondragstart', 'ondragend', 'ondragover', 'ondragenter', 'ondragleave', 'ondrop',
-      'ontouchstart', 'ontouchmove', 'ontouchend', 'ontouchcancel',
-      'onpointerdown', 'onpointerup', 'onpointermove', 'onpointerover', 'onpointerout',
-      'onpointerenter', 'onpointerleave', 'onpointercancel',
-      'onanimationstart', 'onanimationend', 'onanimationiteration',
+      'onerror',
+      'onload',
+      'onclick',
+      'onmouseover',
+      'onmouseout',
+      'onmousemove',
+      'onmousedown',
+      'onmouseup',
+      'onmouseenter',
+      'onmouseleave',
+      'onfocus',
+      'onblur',
+      'onchange',
+      'onsubmit',
+      'onreset',
+      'onkeydown',
+      'onkeyup',
+      'onkeypress',
+      'ondblclick',
+      'oncontextmenu',
+      'oninput',
+      'oninvalid',
+      'onselect',
+      'onwheel',
+      'oncopy',
+      'oncut',
+      'onpaste',
+      'ondrag',
+      'ondragstart',
+      'ondragend',
+      'ondragover',
+      'ondragenter',
+      'ondragleave',
+      'ondrop',
+      'ontouchstart',
+      'ontouchmove',
+      'ontouchend',
+      'ontouchcancel',
+      'onpointerdown',
+      'onpointerup',
+      'onpointermove',
+      'onpointerover',
+      'onpointerout',
+      'onpointerenter',
+      'onpointerleave',
+      'onpointercancel',
+      'onanimationstart',
+      'onanimationend',
+      'onanimationiteration',
       'ontransitionend',
-      'onabort', 'oncanplay', 'oncanplaythrough', 'ondurationchange',
-      'onemptied', 'onended', 'onerror', 'onloadeddata', 'onloadedmetadata',
-      'onloadstart', 'onpause', 'onplay', 'onplaying', 'onprogress',
-      'onratechange', 'onseeked', 'onseeking', 'onstalled', 'onsuspend',
-      'ontimeupdate', 'onvolumechange', 'onwaiting',
-      'onafterprint', 'onbeforeprint', 'onbeforeunload', 'onhashchange',
-      'onlanguagechange', 'onmessage', 'onoffline', 'ononline',
-      'onpagehide', 'onpageshow', 'onpopstate', 'onstorage', 'onunload',
+      'onabort',
+      'oncanplay',
+      'oncanplaythrough',
+      'ondurationchange',
+      'onemptied',
+      'onended',
+      'onerror',
+      'onloadeddata',
+      'onloadedmetadata',
+      'onloadstart',
+      'onpause',
+      'onplay',
+      'onplaying',
+      'onprogress',
+      'onratechange',
+      'onseeked',
+      'onseeking',
+      'onstalled',
+      'onsuspend',
+      'ontimeupdate',
+      'onvolumechange',
+      'onwaiting',
+      'onafterprint',
+      'onbeforeprint',
+      'onbeforeunload',
+      'onhashchange',
+      'onlanguagechange',
+      'onmessage',
+      'onoffline',
+      'ononline',
+      'onpagehide',
+      'onpageshow',
+      'onpopstate',
+      'onstorage',
+      'onunload',
       // Data attributes that could be misused
       'style', // Block inline styles entirely to prevent CSS injection
-      'formaction', 'action', 'ping',
+      'formaction',
+      'action',
+      'ping',
     ],
 
     // Keep safe HTML structure
@@ -139,8 +287,8 @@ export function sanitizeHtml(html: string | null | undefined): string {
   // Sanitize the HTML
   const sanitized = DOMPurify.sanitize(html, config);
 
-  // Return sanitized string
-  return sanitized;
+  // Return sanitized string (cast from TrustedHTML to string)
+  return sanitized as string;
 }
 
 /**
@@ -168,5 +316,5 @@ export function containsDangerousHtml(html: string | null | undefined): boolean 
     /data:text\/html/i,
   ];
 
-  return dangerousPatterns.some(pattern => pattern.test(html));
+  return dangerousPatterns.some((pattern) => pattern.test(html));
 }
