@@ -30,9 +30,11 @@ export const useAISettings = (): UseAISettingsReturn => {
           try {
             const parsedSettings = JSON.parse(localStorageData);
             // Migrate to safeStorage
-            await window.electron.saveAISettings(parsedSettings);
-            // Remove from localStorage after successful migration
-            localStorage.removeItem(STORAGE_KEY);
+            if (window.electron) {
+              await window.electron.saveAISettings(parsedSettings);
+              // Remove from localStorage after successful migration
+              localStorage.removeItem(STORAGE_KEY);
+            }
             // Only apply if user hasn't modified settings during load
             if (!userModifiedDuringLoad.current) {
               setAiSettings(parsedSettings);
@@ -41,14 +43,18 @@ export const useAISettings = (): UseAISettingsReturn => {
             return;
           } catch (e) {
             console.error('Failed to migrate AI settings from localStorage', e);
+            // Clear corrupted localStorage entry to prevent repeated errors
+            localStorage.removeItem(STORAGE_KEY);
           }
         }
 
         // Load from safeStorage
-        const savedSettings = await window.electron.loadAISettings();
-        // Only apply loaded settings if user hasn't modified them during loading
-        if (savedSettings && !userModifiedDuringLoad.current) {
-          setAiSettings(savedSettings);
+        if (window.electron) {
+          const savedSettings = await window.electron.loadAISettings();
+          // Only apply loaded settings if user hasn't modified them during loading
+          if (savedSettings && !userModifiedDuringLoad.current) {
+            setAiSettings(savedSettings);
+          }
         }
       } catch (error) {
         console.error('Failed to load AI settings', error);
@@ -68,7 +74,9 @@ export const useAISettings = (): UseAISettingsReturn => {
 
     const saveSettings = async () => {
       try {
-        await window.electron.saveAISettings(aiSettings);
+        if (window.electron) {
+          await window.electron.saveAISettings(aiSettings);
+        }
       } catch (error) {
         console.error('Failed to save AI settings', error);
       }

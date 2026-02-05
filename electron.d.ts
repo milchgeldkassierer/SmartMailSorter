@@ -70,10 +70,10 @@ declare global {
       log: (msg: string) => void;
 
       // AI Settings (safeStorage)
-      saveAISettings: (settings: AISettings) => Promise<void>;
+      saveAISettings: (settings: AISettings) => Promise<{ success: boolean; encrypted?: boolean; warning?: string }>;
       loadAISettings: () => Promise<AISettings | null>;
       checkAISettings: () => Promise<boolean>;
-      deleteAISettings: () => Promise<void>;
+      deleteAISettings: () => Promise<{ success: boolean }>;
     };
   }
 }

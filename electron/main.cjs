@@ -312,10 +312,26 @@ app.whenReady().then(() => {
   ipcMain.handle('ai-settings-delete', async () => {
     try {
       const fs = require('fs');
+      let deletedCount = 0;
+
+      // Delete encrypted file if it exists
       if (fs.existsSync(AI_SETTINGS_FILE)) {
         fs.unlinkSync(AI_SETTINGS_FILE);
-        logger.debug('[IPC] AI settings file deleted');
+        deletedCount++;
+        logger.debug('[IPC] Encrypted AI settings file deleted');
       }
+
+      // Delete plaintext file if it exists
+      if (fs.existsSync(AI_SETTINGS_FILE_PLAINTEXT)) {
+        fs.unlinkSync(AI_SETTINGS_FILE_PLAINTEXT);
+        deletedCount++;
+        logger.debug('[IPC] Plaintext AI settings file deleted');
+      }
+
+      if (deletedCount === 0) {
+        logger.debug('[IPC] No AI settings files found to delete');
+      }
+
       return { success: true };
     } catch (error) {
       logger.error('[IPC] Failed to delete AI settings:', error);
