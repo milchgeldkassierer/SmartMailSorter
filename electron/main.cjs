@@ -44,9 +44,18 @@ app.whenReady().then(() => {
   ipcMain.handle('get-accounts', () => db.getAccounts());
 
   ipcMain.handle('add-account', async (event, account) => {
+    // Save account with encrypted password
     db.addAccount(account);
-    // Initial sync
-    return await imap.syncAccount(account);
+
+    // Retrieve account with decrypted password for IMAP operations
+    const accountWithPassword = db.getAccountWithPassword(account.id);
+
+    // Initial sync using the account from DB (ensures encrypted/decrypted flow)
+    const syncResult = await imap.syncAccount(accountWithPassword);
+
+    // Return account without password for safe frontend state management
+    const { password, ...accountWithoutPassword } = accountWithPassword;
+    return { ...syncResult, account: accountWithoutPassword };
   });
 
   ipcMain.handle('delete-account', (event, id) => {
