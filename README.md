@@ -342,6 +342,299 @@ SmartMailSorter implements several security best practices:
 
 **Note on Password Storage**: Account passwords are currently stored in plaintext in SQLite for development convenience. **For production use, implement Electron's `safeStorage` API** to encrypt passwords using OS-level credential storage (Keychain on macOS, Credential Vault on Windows, Secret Service on Linux).
 
+## ⚙️ Configuration
+
+This section details the core configuration elements of SmartMailSorter, including database setup, AI provider configuration, and the German folder naming conventions.
+
+### Database Configuration
+
+SmartMailSorter uses **SQLite** with the `better-sqlite3` library for local email storage, providing fast, reliable, and privacy-focused data persistence.
+
+#### Database Location
+
+The SQLite database file is automatically created in the **Electron user data directory**:
+
+- **Windows**: `%APPDATA%\SmartMailSorter\smartmail.db`
+- **macOS**: `~/Library/Application Support/SmartMailSorter/smartmail.db`
+- **Linux**: `~/.config/SmartMailSorter/smartmail.db`
+
+The database is created automatically on first launch. No manual setup is required.
+
+#### Database Schema Overview
+
+The application uses a relational schema with four core tables:
+
+**1. `accounts` Table**
+Stores email account configuration and sync state:
+```sql
+CREATE TABLE accounts (
+  id TEXT PRIMARY KEY,              -- Unique account identifier
+  name TEXT,                        -- Display name (e.g., "Work Email")
+  email TEXT,                       -- Email address
+  provider TEXT,                    -- Provider name (GMX, Web.de, Gmail, Custom)
+  imapHost TEXT,                    -- IMAP server hostname
+  imapPort INTEGER,                 -- IMAP port (typically 993 for SSL)
+  username TEXT,                    -- IMAP username
+  password TEXT,                    -- IMAP password (plaintext in dev)
+  color TEXT,                       -- UI color identifier
+  lastSyncUid INTEGER DEFAULT 0,    -- Last synced email UID (for incremental sync)
+  storageUsed INTEGER DEFAULT 0,    -- Used storage in bytes
+  storageTotal INTEGER DEFAULT 0    -- Total storage quota in bytes
+)
+```
+
+**2. `emails` Table**
+Stores email metadata and content:
+```sql
+CREATE TABLE emails (
+  id TEXT PRIMARY KEY,              -- Unique email identifier
+  accountId TEXT,                   -- Foreign key to accounts table
+  sender TEXT,                      -- Sender display name
+  senderEmail TEXT,                 -- Sender email address
+  subject TEXT,                     -- Email subject
+  body TEXT,                        -- Plain text body
+  bodyHtml TEXT,                    -- HTML body content
+  date TEXT,                        -- ISO 8601 timestamp
+  folder TEXT DEFAULT 'Posteingang',-- Physical IMAP folder (German)
+  smartCategory TEXT,               -- AI-assigned virtual category (German)
+  isRead INTEGER,                   -- Read status (0/1)
+  isFlagged INTEGER,                -- Flag status (0/1)
+  hasAttachments INTEGER DEFAULT 0, -- Attachment indicator (0/1)
+  aiSummary TEXT,                   -- AI-generated email summary
+  aiReasoning TEXT,                 -- AI categorization reasoning
+  confidence REAL,                  -- AI confidence score (0.0-1.0)
+  uid INTEGER,                      -- IMAP server UID
+  FOREIGN KEY(accountId) REFERENCES accounts(id) ON DELETE CASCADE
+)
+```
+
+**3. `attachments` Table**
+Stores email attachments as BLOBs:
+```sql
+CREATE TABLE attachments (
+  id TEXT PRIMARY KEY,              -- Unique attachment identifier
+  emailId TEXT,                     -- Foreign key to emails table
+  filename TEXT,                    -- Original filename
+  contentType TEXT,                 -- MIME type
+  size INTEGER,                     -- Size in bytes
+  data BLOB,                        -- Binary attachment data
+  FOREIGN KEY(emailId) REFERENCES emails(id) ON DELETE CASCADE
+)
+```
+
+**4. `categories` Table**
+Defines system and custom email categories:
+```sql
+CREATE TABLE categories (
+  name TEXT PRIMARY KEY,            -- Category name (German)
+  type TEXT DEFAULT 'custom',       -- 'system' or 'custom'
+  icon TEXT                         -- Icon identifier
+)
+```
+
+**Default System Categories:**
+- `Rechnungen` (Invoices) - system
+- `Newsletter` (Newsletters) - system
+- `Privat` (Private) - system
+- `Geschäftlich` (Business) - system
+- `Kündigungen` (Cancellations) - system
+- `Sonstiges` (Other) - system
+
+#### Schema Migrations
+
+The database automatically applies column migrations on startup to ensure backward compatibility. If new columns are added in updates, existing databases will be upgraded automatically using `ALTER TABLE` statements with safe defaults.
+
+**Migration Strategy:**
+- Column additions wrapped in try-catch blocks (ignore errors if column exists)
+- Foreign key cascade deletes ensure referential integrity
+- Sync process migrates custom categories from `emails.smartCategory` to `categories` table
+
+### AI Provider Configuration
+
+SmartMailSorter supports **three major AI providers** for email categorization. You can configure your preferred provider and model through the application settings.
+
+#### Supported AI Providers
+
+**1. Google Gemini** (Default)
+- **Models Available:**
+  - `gemini-3-flash-preview` - Fast, cost-effective categorization (recommended)
+  - `gemini-3-pro-preview` - Higher accuracy with extended reasoning
+- **API Key Setup:**
+  1. Visit [Google AI Studio](https://aistudio.google.com/app/apikey)
+  2. Create or sign in to your Google account
+  3. Generate a new API key
+  4. Copy the key and paste it into SmartMailSorter Settings → AI Configuration
+- **Environment Variable (Optional):**
+  ```bash
+  export API_KEY=your_gemini_api_key_here
+  ```
+- **Rate Limits:** Generous free tier with rate limiting on high usage
+
+**2. OpenAI**
+- **Models Available:**
+  - `gpt-4o` - Latest GPT-4 optimized model (recommended)
+  - `gpt-4o-mini` - Faster, lower-cost version
+  - `gpt-4-turbo` - High-performance GPT-4 variant
+- **API Key Setup:**
+  1. Visit [OpenAI API Keys](https://platform.openai.com/api-keys)
+  2. Create an account and add billing information
+  3. Generate a new secret key
+  4. Copy the key and paste it into SmartMailSorter Settings → AI Configuration
+- **Environment Variable (Optional):**
+  ```bash
+  export OPENAI_API_KEY=your_openai_api_key_here
+  ```
+- **Rate Limits:** Based on usage tier and billing plan
+
+**3. Anthropic Claude**
+- **Models Available:**
+  - `claude-3-5-sonnet-20240620` - Balanced performance and accuracy (recommended)
+  - `claude-3-haiku-20240307` - Fast, cost-effective option
+- **API Key Setup:**
+  1. Visit [Anthropic Console](https://console.anthropic.com/)
+  2. Create an account and verify your email
+  3. Navigate to API Keys section
+  4. Generate a new API key
+  5. Copy the key and paste it into SmartMailSorter Settings → AI Configuration
+- **Environment Variable (Optional):**
+  ```bash
+  export ANTHROPIC_API_KEY=your_anthropic_api_key_here
+  ```
+- **Rate Limits:** Based on usage tier
+
+#### API Key Configuration
+
+**Option 1: Settings UI (Recommended)**
+1. Launch SmartMailSorter
+2. Navigate to **Settings** → **AI Configuration**
+3. Select your preferred provider from the dropdown
+4. Choose a model from the available options
+5. Paste your API key
+6. Click **Save Settings**
+
+**Option 2: Environment Variables**
+Set the appropriate environment variable before launching the application:
+
+```bash
+# Linux/macOS
+export API_KEY=your_gemini_api_key_here
+npm start
+
+# Windows (PowerShell)
+$env:API_KEY="your_gemini_api_key_here"
+npm start
+
+# Windows (Command Prompt)
+set API_KEY=your_gemini_api_key_here
+npm start
+```
+
+**Security Note:** API keys are stored in the SQLite database or read from environment variables. For production deployments, consider using Electron's `safeStorage` API or system keychains for enhanced security.
+
+#### AI Model Selection Guide
+
+Choose the right model based on your needs:
+
+| Provider | Model | Speed | Cost | Accuracy | Best For |
+|----------|-------|-------|------|----------|----------|
+| **Gemini** | `gemini-3-flash-preview` | ⚡⚡⚡ Fast | 💰 Low | ⭐⭐⭐ Good | High-volume email processing |
+| **Gemini** | `gemini-3-pro-preview` | ⚡⚡ Medium | 💰💰 Medium | ⭐⭐⭐⭐ Excellent | Complex categorization needs |
+| **OpenAI** | `gpt-4o-mini` | ⚡⚡⚡ Fast | 💰 Low | ⭐⭐⭐ Good | Budget-conscious users |
+| **OpenAI** | `gpt-4o` | ⚡⚡ Medium | 💰💰💰 High | ⭐⭐⭐⭐⭐ Best | Maximum accuracy required |
+| **Claude** | `claude-3-haiku` | ⚡⚡⚡ Fast | 💰 Low | ⭐⭐⭐ Good | Fast, reliable categorization |
+| **Claude** | `claude-3-5-sonnet` | ⚡⚡ Medium | 💰💰 Medium | ⭐⭐⭐⭐ Excellent | Balanced performance |
+
+**Recommendation:** Start with `gemini-3-flash-preview` for its excellent balance of speed, cost, and accuracy.
+
+### German Folder Naming System
+
+SmartMailSorter is designed specifically for German email users and uses **German folder names** throughout the application. This section explains the dual-layer organization system.
+
+#### Physical IMAP Folders (Server-Side)
+
+These folders correspond to **actual folders on your email server** and are synced via IMAP:
+
+| German Name | English Translation | IMAP Purpose |
+|-------------|---------------------|--------------|
+| **Posteingang** | Inbox | New, unread emails |
+| **Gesendet** | Sent | Emails you've sent |
+| **Spam** | Spam | Suspected spam messages |
+| **Papierkorb** | Trash | Deleted emails |
+
+**Constants in Code:**
+```typescript
+export const INBOX_FOLDER = 'Posteingang';
+export const SENT_FOLDER = 'Gesendet';
+export const SPAM_FOLDER = 'Spam';
+export const TRASH_FOLDER = 'Papierkorb';
+export const SYSTEM_FOLDERS = [INBOX_FOLDER, SENT_FOLDER, SPAM_FOLDER, TRASH_FOLDER];
+```
+
+These folders are **read-only to AI categorization** - they represent the physical structure of your email account.
+
+#### Virtual AI Categories (Application-Side)
+
+SmartMailSorter overlays **virtual categories** on top of physical folders using AI classification. These categories are stored in the `emails.smartCategory` column and do not modify the server-side folder structure.
+
+**Default AI Categories:**
+
+| German Name | English Translation | Description | Typical Examples |
+|-------------|---------------------|-------------|------------------|
+| **Rechnungen** | Invoices | Bills, receipts, invoices | Amazon orders, utility bills, tax documents |
+| **Newsletter** | Newsletters | Marketing emails, subscriptions | Company updates, promotional emails, digests |
+| **Privat** | Private | Personal communications | Family emails, friend messages, personal invitations |
+| **Geschäftlich** | Business | Work-related emails | Client correspondence, meeting invites, project updates |
+| **Kündigungen** | Cancellations | Service cancellations, terminations | Subscription cancellations, contract terminations |
+| **Sonstiges** | Other | Unclassified or miscellaneous | Emails that don't fit other categories |
+
+**Enum Definition:**
+```typescript
+export enum DefaultEmailCategory {
+  INBOX = 'Posteingang',
+  SENT = 'Gesendet',
+  SPAM = 'Spam',
+  TRASH = 'Papierkorb',
+  INVOICE = 'Rechnungen',
+  NEWSLETTER = 'Newsletter',
+  PRIVATE = 'Privat',
+  BUSINESS = 'Geschäftlich',
+  CANCELLATION = 'Kündigungen',
+  OTHER = 'Sonstiges',
+}
+```
+
+#### Dual Organization Example
+
+An email might have:
+- **Physical Folder:** `Posteingang` (stored in IMAP folder on server)
+- **Smart Category:** `Rechnungen` (AI-assigned virtual category)
+
+This allows you to:
+1. **Filter by physical folder** to see what's in your Inbox, Sent, etc.
+2. **Filter by AI category** to see all invoices across all folders
+3. **Combine filters** to see "Invoices in my Inbox" or "Business emails in Sent"
+
+#### Custom Categories
+
+Users can create **custom categories** beyond the default system categories:
+
+1. Navigate to **Settings** → **Categories**
+2. Click **Add Category**
+3. Enter a German name (e.g., "Versicherung" for Insurance)
+4. Choose an icon
+5. Click **Save**
+
+Custom categories are stored in the `categories` table with `type = 'custom'` and can be deleted by users. System categories cannot be deleted.
+
+#### Category Localization
+
+While the current implementation uses German names throughout, the architecture supports future localization:
+- Category names are stored as data, not hard-coded
+- UI labels can be mapped to translations
+- The `categories` table can be extended with locale fields
+
+**Future Enhancement:** Add support for English, French, and Spanish folder names with user-selectable language preferences.
+
 ## 🚀 Getting Started
 
 This section provides complete setup instructions for running SmartMailSorter locally on your development machine.
