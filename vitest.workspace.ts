@@ -18,7 +18,7 @@ export default defineConfig([
       name: 'components',
       globals: true,
       environment: 'jsdom',
-      include: ['components/__tests__/**/*.{test,spec}.{ts,tsx}'],
+      include: ['components/__tests__/**/*.{test,spec}.{ts,tsx}', 'hooks/__tests__/**/*.{test,spec}.{ts,tsx}'],
       setupFiles: ['./components/__tests__/setup.ts'],
     },
   },

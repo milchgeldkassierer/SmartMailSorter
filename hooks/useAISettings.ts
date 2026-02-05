@@ -37,15 +37,13 @@ export const useAISettings = (): UseAISettingsReturn => {
         // First, check if there's existing data in localStorage (migration)
         const localStorageData = localStorage.getItem(STORAGE_KEY);
         if (localStorageData) {
-          let parsedSettings: AISettings;
+          let parsedSettings: AISettings | null = null;
           try {
             parsedSettings = JSON.parse(localStorageData);
           } catch (e) {
             console.error('Failed to parse localStorage AI settings', e);
             // Clear corrupted localStorage entry to prevent repeated errors
             localStorage.removeItem(STORAGE_KEY);
-            // Fall through to load from safeStorage
-            parsedSettings = null as unknown as AISettings;
           }
 
           if (parsedSettings) {
