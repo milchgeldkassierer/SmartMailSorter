@@ -230,6 +230,77 @@ app.whenReady().then(() => {
     return db.renameSmartCategory(oldName, newName);
   });
 
+  // AI Settings safeStorage IPC handlers
+  const AI_SETTINGS_FILE = path.join(app.getPath('userData'), 'ai-settings.encrypted');
+
+  ipcMain.handle('ai-settings-save', async (event, settings) => {
+    try {
+      const { safeStorage } = require('electron');
+      if (!safeStorage.isEncryptionAvailable()) {
+        logger.error('safeStorage encryption is not available');
+        throw new Error('Encryption not available on this platform');
+      }
+      const settingsJson = JSON.stringify(settings);
+      const encrypted = safeStorage.encryptString(settingsJson);
+      const fs = require('fs');
+      fs.writeFileSync(AI_SETTINGS_FILE, encrypted);
+      logger.debug('[IPC] AI settings saved successfully');
+      return { success: true };
+    } catch (error) {
+      logger.error('[IPC] Failed to save AI settings:', error);
+      throw error;
+    }
+  });
+
+  ipcMain.handle('ai-settings-load', async () => {
+    try {
+      const fs = require('fs');
+      if (!fs.existsSync(AI_SETTINGS_FILE)) {
+        logger.debug('[IPC] No AI settings file found');
+        return null;
+      }
+      const { safeStorage } = require('electron');
+      if (!safeStorage.isEncryptionAvailable()) {
+        logger.error('safeStorage encryption is not available');
+        throw new Error('Encryption not available on this platform');
+      }
+      const encrypted = fs.readFileSync(AI_SETTINGS_FILE);
+      const decrypted = safeStorage.decryptString(encrypted);
+      const settings = JSON.parse(decrypted);
+      logger.debug('[IPC] AI settings loaded successfully');
+      return settings;
+    } catch (error) {
+      logger.error('[IPC] Failed to load AI settings:', error);
+      throw error;
+    }
+  });
+
+  ipcMain.handle('ai-settings-check', async () => {
+    try {
+      const fs = require('fs');
+      const exists = fs.existsSync(AI_SETTINGS_FILE);
+      logger.debug(`[IPC] AI settings file exists: ${exists}`);
+      return exists;
+    } catch (error) {
+      logger.error('[IPC] Failed to check AI settings:', error);
+      return false;
+    }
+  });
+
+  ipcMain.handle('ai-settings-delete', async () => {
+    try {
+      const fs = require('fs');
+      if (fs.existsSync(AI_SETTINGS_FILE)) {
+        fs.unlinkSync(AI_SETTINGS_FILE);
+        logger.debug('[IPC] AI settings file deleted');
+      }
+      return { success: true };
+    } catch (error) {
+      logger.error('[IPC] Failed to delete AI settings:', error);
+      throw error;
+    }
+  });
+
   createWindow();
 
   app.on('activate', () => {
