@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { AISettings, LLMProvider, AVAILABLE_MODELS } from '../types';
 
 interface UseAISettingsReturn {
   aiSettings: AISettings;
   setAiSettings: (settings: AISettings) => void;
+  isLoading: boolean;
 }
 
 const STORAGE_KEY = 'smartmail_ai_settings';
@@ -17,6 +18,7 @@ const getDefaultSettings = (): AISettings => ({
 export const useAISettings = (): UseAISettingsReturn => {
   const [aiSettings, setAiSettings] = useState<AISettings>(getDefaultSettings());
   const [isInitialized, setIsInitialized] = useState(false);
+  const userModifiedDuringLoad = useRef(false);
 
   // Load settings from safeStorage on mount, with migration from localStorage
   useEffect(() => {
@@ -31,7 +33,10 @@ export const useAISettings = (): UseAISettingsReturn => {
             await window.electron.saveAISettings(parsedSettings);
             // Remove from localStorage after successful migration
             localStorage.removeItem(STORAGE_KEY);
-            setAiSettings(parsedSettings);
+            // Only apply if user hasn't modified settings during load
+            if (!userModifiedDuringLoad.current) {
+              setAiSettings(parsedSettings);
+            }
             setIsInitialized(true);
             return;
           } catch (e) {
@@ -41,7 +46,8 @@ export const useAISettings = (): UseAISettingsReturn => {
 
         // Load from safeStorage
         const savedSettings = await window.electron.loadAISettings();
-        if (savedSettings) {
+        // Only apply loaded settings if user hasn't modified them during loading
+        if (savedSettings && !userModifiedDuringLoad.current) {
           setAiSettings(savedSettings);
         }
       } catch (error) {
@@ -71,8 +77,17 @@ export const useAISettings = (): UseAISettingsReturn => {
     saveSettings();
   }, [aiSettings, isInitialized]);
 
+  // Wrapper for setAiSettings that tracks user modifications during load
+  const handleSetAiSettings = (settings: AISettings) => {
+    if (!isInitialized) {
+      userModifiedDuringLoad.current = true;
+    }
+    setAiSettings(settings);
+  };
+
   return {
     aiSettings,
-    setAiSettings,
+    setAiSettings: handleSetAiSettings,
+    isLoading: !isInitialized,
   };
 };

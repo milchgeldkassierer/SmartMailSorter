@@ -232,20 +232,26 @@ app.whenReady().then(() => {
 
   // AI Settings safeStorage IPC handlers
   const AI_SETTINGS_FILE = path.join(app.getPath('userData'), 'ai-settings.encrypted');
+  const AI_SETTINGS_FILE_PLAINTEXT = path.join(app.getPath('userData'), 'ai-settings.json');
 
   ipcMain.handle('ai-settings-save', async (event, settings) => {
     try {
       const { safeStorage } = require('electron');
-      if (!safeStorage.isEncryptionAvailable()) {
-        logger.error('safeStorage encryption is not available');
-        throw new Error('Encryption not available on this platform');
-      }
-      const settingsJson = JSON.stringify(settings);
-      const encrypted = safeStorage.encryptString(settingsJson);
       const fs = require('fs');
+      const settingsJson = JSON.stringify(settings);
+
+      if (!safeStorage.isEncryptionAvailable()) {
+        logger.warn('[IPC] safeStorage encryption is not available - falling back to plaintext storage');
+        logger.warn('[IPC] WARNING: AI settings will be stored unencrypted. This is not recommended for production use.');
+        fs.writeFileSync(AI_SETTINGS_FILE_PLAINTEXT, settingsJson);
+        logger.debug('[IPC] AI settings saved successfully (plaintext fallback)');
+        return { success: true, encrypted: false, warning: 'Settings stored unencrypted due to platform limitations' };
+      }
+
+      const encrypted = safeStorage.encryptString(settingsJson);
       fs.writeFileSync(AI_SETTINGS_FILE, encrypted);
-      logger.debug('[IPC] AI settings saved successfully');
-      return { success: true };
+      logger.debug('[IPC] AI settings saved successfully (encrypted)');
+      return { success: true, encrypted: true };
     } catch (error) {
       logger.error('[IPC] Failed to save AI settings:', error);
       throw error;
@@ -255,19 +261,33 @@ app.whenReady().then(() => {
   ipcMain.handle('ai-settings-load', async () => {
     try {
       const fs = require('fs');
+      const { safeStorage } = require('electron');
+
+      // Check for plaintext fallback file first
+      if (fs.existsSync(AI_SETTINGS_FILE_PLAINTEXT)) {
+        logger.warn('[IPC] Loading AI settings from plaintext file (unencrypted)');
+        const settingsJson = fs.readFileSync(AI_SETTINGS_FILE_PLAINTEXT, 'utf8');
+        const settings = JSON.parse(settingsJson);
+        logger.debug('[IPC] AI settings loaded successfully (plaintext)');
+        return settings;
+      }
+
+      // Check for encrypted file
       if (!fs.existsSync(AI_SETTINGS_FILE)) {
         logger.debug('[IPC] No AI settings file found');
         return null;
       }
-      const { safeStorage } = require('electron');
+
       if (!safeStorage.isEncryptionAvailable()) {
-        logger.error('safeStorage encryption is not available');
-        throw new Error('Encryption not available on this platform');
+        logger.error('[IPC] safeStorage encryption is not available, but encrypted file exists');
+        logger.error('[IPC] Cannot decrypt settings. Platform does not support encryption.');
+        throw new Error('Encryption not available - cannot decrypt existing settings. Please set up platform keyring support.');
       }
+
       const encrypted = fs.readFileSync(AI_SETTINGS_FILE);
       const decrypted = safeStorage.decryptString(encrypted);
       const settings = JSON.parse(decrypted);
-      logger.debug('[IPC] AI settings loaded successfully');
+      logger.debug('[IPC] AI settings loaded successfully (encrypted)');
       return settings;
     } catch (error) {
       logger.error('[IPC] Failed to load AI settings:', error);
@@ -278,8 +298,10 @@ app.whenReady().then(() => {
   ipcMain.handle('ai-settings-check', async () => {
     try {
       const fs = require('fs');
-      const exists = fs.existsSync(AI_SETTINGS_FILE);
-      logger.debug(`[IPC] AI settings file exists: ${exists}`);
+      const encryptedExists = fs.existsSync(AI_SETTINGS_FILE);
+      const plaintextExists = fs.existsSync(AI_SETTINGS_FILE_PLAINTEXT);
+      const exists = encryptedExists || plaintextExists;
+      logger.debug(`[IPC] AI settings file exists: ${exists} (encrypted: ${encryptedExists}, plaintext: ${plaintextExists})`);
       return exists;
     } catch (error) {
       logger.error('[IPC] Failed to check AI settings:', error);

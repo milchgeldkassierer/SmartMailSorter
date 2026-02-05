@@ -79,7 +79,46 @@ describe('useAISettings', () => {
 
       expect(result.current).toHaveProperty('aiSettings');
       expect(result.current).toHaveProperty('setAiSettings');
+      expect(result.current).toHaveProperty('isLoading');
       expect(typeof result.current.setAiSettings).toBe('function');
+      expect(typeof result.current.isLoading).toBe('boolean');
+    });
+
+    it('should expose loading state correctly', async () => {
+      mockLoadAISettings.mockImplementation(() => new Promise((resolve) => setTimeout(() => resolve(null), 50)));
+
+      const { result } = renderHook(() => useAISettings());
+
+      // Initially should be loading
+      expect(result.current.isLoading).toBe(true);
+
+      // After load completes, should not be loading
+      await vi.waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
+    });
+
+    it('should not overwrite user changes made during async load', async () => {
+      // Simulate a slow async load
+      mockLoadAISettings.mockImplementation(
+        () => new Promise((resolve) => setTimeout(() => resolve(mockGeminiSettings), 100))
+      );
+
+      const { result } = renderHook(() => useAISettings());
+
+      // User makes a change before load completes
+      await act(async () => {
+        result.current.setAiSettings(mockOpenAISettings);
+      });
+
+      // Wait for async load to complete
+      await vi.waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
+
+      // User's OpenAI settings should still be there, not overwritten by loaded Gemini settings
+      expect(result.current.aiSettings).toEqual(mockOpenAISettings);
+      expect(result.current.aiSettings.provider).toBe(LLMProvider.OPENAI);
     });
 
     it('should handle IPC load errors gracefully', async () => {
