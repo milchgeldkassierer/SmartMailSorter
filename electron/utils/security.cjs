@@ -1,4 +1,52 @@
 const path = require('path');
+const { safeStorage } = require('electron');
+const logger = require('./logger.cjs');
+
+/**
+ * Encrypt a password using Electron's safeStorage API
+ * @param {string} plainPassword - The plaintext password to encrypt
+ * @returns {Buffer} - Encrypted password as a Buffer
+ * @throws {Error} - If encryption is not available or encryption fails
+ */
+function encryptPassword(plainPassword) {
+  if (!safeStorage.isEncryptionAvailable()) {
+    const error = new Error('Encryption is not available on this system');
+    logger.error('encryptPassword failed:', error.message);
+    throw error;
+  }
+
+  try {
+    const encryptedBuffer = safeStorage.encryptString(plainPassword);
+    logger.debug('Password encrypted successfully');
+    return encryptedBuffer;
+  } catch (error) {
+    logger.error('encryptPassword failed:', error);
+    throw error;
+  }
+}
+
+/**
+ * Decrypt a password using Electron's safeStorage API
+ * @param {Buffer} encryptedBuffer - The encrypted password buffer
+ * @returns {string} - Decrypted plaintext password
+ * @throws {Error} - If encryption is not available or decryption fails
+ */
+function decryptPassword(encryptedBuffer) {
+  if (!safeStorage.isEncryptionAvailable()) {
+    const error = new Error('Encryption is not available on this system');
+    logger.error('decryptPassword failed:', error.message);
+    throw error;
+  }
+
+  try {
+    const plainPassword = safeStorage.decryptString(encryptedBuffer);
+    logger.debug('Password decrypted successfully');
+    return plainPassword;
+  } catch (error) {
+    logger.error('decryptPassword failed:', error);
+    throw error;
+  }
+}
 
 /**
  * Sanitize filename to prevent path traversal attacks
@@ -63,4 +111,6 @@ function sanitizeFilename(filename) {
 
 module.exports = {
   sanitizeFilename,
+  encryptPassword,
+  decryptPassword,
 };
