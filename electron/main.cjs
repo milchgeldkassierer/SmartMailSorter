@@ -193,6 +193,10 @@ app.whenReady().then(() => {
   });
 
   ipcMain.handle('test-connection', async (event, account) => {
+    // SECURITY NOTE: This handler receives plaintext password from renderer
+    // This is an intentional exception for testing NEW accounts during setup
+    // The password is NOT saved to database - only used transiently for IMAP test
+    // After successful test, user adds account via add-account which encrypts the password
     return await imap.testConnection(account);
   });
 
