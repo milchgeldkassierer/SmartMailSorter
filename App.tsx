@@ -73,11 +73,10 @@ const App: React.FC = () => {
     updateActiveAccountData((prev) => ({ ...prev, emails: prev.emails.filter((e) => e.id !== id) }));
     if (selectedEmailId === id) setSelectedEmailId(null);
     if (!window.electron || !activeAccountId) return;
-    const account = accounts.find((a) => a.id === activeAccountId);
-    if (emailToDelete?.uid && account) {
+    if (emailToDelete?.uid) {
       try {
         await window.electron.deleteEmail({
-          account,
+          accountId: activeAccountId,
           emailId: id,
           uid: emailToDelete.uid,
           folder: emailToDelete.folder,
@@ -106,11 +105,10 @@ const App: React.FC = () => {
       emails: prev.emails.map((e) => (e.id === id ? { ...e, isRead: !e.isRead } : e)),
     }));
     if (window.electron && activeAccountId) {
-      const account = accounts.find((a) => a.id === activeAccountId);
-      if (email.uid && account) {
+      if (email.uid) {
         try {
           await window.electron.updateEmailRead({
-            account,
+            accountId: activeAccountId,
             emailId: id,
             uid: email.uid,
             isRead: !previousReadState,
@@ -137,11 +135,10 @@ const App: React.FC = () => {
       emails: prev.emails.map((e) => (e.id === id ? { ...e, isFlagged: !e.isFlagged } : e)),
     }));
     if (window.electron && activeAccountId) {
-      const account = accounts.find((a) => a.id === activeAccountId);
-      if (email.uid && account) {
+      if (email.uid) {
         try {
           await window.electron.updateEmailFlag({
-            account,
+            accountId: activeAccountId,
             emailId: id,
             uid: email.uid,
             isFlagged: !previousFlagState,
