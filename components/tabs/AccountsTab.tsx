@@ -77,11 +77,28 @@ const AccountsTab: React.FC<AccountsTabProps> = ({ accounts, onAddAccount, onRem
         imapPort: newPort,
         color: randomColor,
       });
+
+      // Clear form state after save - password should not remain in state
       setIsAdding(false);
       setNewName('');
       setNewEmail('');
       setNewPassword('');
+      setTestStatus('idle');
+      setTestMessage('');
     }
+  };
+
+  const handleCancelAdd = () => {
+    // Reset form state when cancelling
+    setIsAdding(false);
+    setNewName('');
+    setNewEmail('');
+    setNewPassword('');
+    setNewProvider('gmx');
+    setNewHost('imap.gmx.net');
+    setNewPort(993);
+    setTestStatus('idle');
+    setTestMessage('');
   };
 
   return (
@@ -224,7 +241,7 @@ const AccountsTab: React.FC<AccountsTabProps> = ({ accounts, onAddAccount, onRem
                   Verbindung testen
                 </button>
                 <button
-                  onClick={() => setIsAdding(false)}
+                  onClick={handleCancelAdd}
                   className="px-4 py-2 text-sm text-slate-600 hover:bg-slate-200 rounded"
                 >
                   Abbrechen
