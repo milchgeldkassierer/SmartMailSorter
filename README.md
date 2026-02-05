@@ -105,6 +105,243 @@ This application is designed for:
 - **Flag Filtering**: Quickly access flagged/marked emails
 - **Read/Unread Status**: Filter by read status for inbox management
 
+## 🏗️ Architecture
+
+SmartMailSorter is built on a robust Electron architecture that separates concerns between the UI layer and system-level operations. This section provides a technical overview of how the application is structured and how data flows through the system.
+
+### Electron Process Architecture
+
+The application follows Electron's standard **two-process architecture** for security and stability:
+
+#### Main Process (`electron/main.cjs`)
+
+The main process is the application's backend and serves as the entry point for the Electron app. It has full access to Node.js APIs and system resources:
+
+- **Window Management**: Creates and manages the BrowserWindow instance for the UI
+- **IPC Communication**: Handles all IPC (Inter-Process Communication) requests from the renderer via `ipcMain.handle()`
+- **System Integration**: Manages file system operations, external URL handling, and attachment opening
+- **Process Lifecycle**: Initializes the database, sets up error handlers, and manages application startup/shutdown
+- **Security Layer**: Implements context isolation and sandboxing to protect against malicious code execution
+
+**Key IPC Handlers:**
+- `get-accounts`, `add-account`, `delete-account`: Account management
+- `get-emails`, `get-email-content`, `get-email-attachments`: Email retrieval
+- `sync-account`, `test-connection`: IMAP operations
+- `open-attachment`, `open-external-url`: System integration with security validation
+- `delete-email`, `update-email-read`, `update-email-flag`: Email operations
+- `categorize-emails`: AI categorization triggers
+
+#### Renderer Process (React Frontend)
+
+The renderer process runs the React application in a sandboxed Chromium environment:
+
+- **UI Rendering**: React 19 components with TypeScript strict mode
+- **Context Isolation**: No direct Node.js access; all system operations go through IPC
+- **Preload Script**: `electron/preload.cjs` exposes a safe `window.electron` API for IPC communication
+- **State Management**: React hooks and context for application state
+- **Security**: Content Security Policy and no `nodeIntegration` prevent XSS attacks
+
+### Key Components
+
+#### 1. Database Layer (`electron/db.cjs`)
+
+The database layer provides all data persistence using **SQLite with better-sqlite3**:
+
+**Database Schema:**
+- **`accounts` table**: Stores email account credentials, IMAP settings, sync state, and storage quotas
+- **`emails` table**: Contains email metadata (sender, subject, body, HTML, dates, flags, folders, AI categories)
+- **`attachments` table**: Stores attachment metadata and binary data (BLOB)
+- **`categories` table**: Defines both system-provided and user-created categories
+
+**Key Features:**
+- **Synchronous API**: `better-sqlite3` provides synchronous database operations for simpler code flow
+- **Foreign Key Cascade**: Account deletion automatically removes associated emails and attachments
+- **Migration Support**: Automatic column additions for backward compatibility with existing databases
+- **Indexed Queries**: Optimized for fast email retrieval and filtering
+
+**Core Methods:**
+- Account CRUD: `getAccounts()`, `addAccount()`, `deleteAccountDn()`, `updateAccountSync()`, `updateAccountQuota()`
+- Email Operations: `getEmails()`, `saveEmail()`, `deleteEmail()`, `getEmailContent()`, `updateEmailRead()`, `updateEmailFlag()`
+- Attachment Handling: `getAttachment()`, `getEmailAttachments()`
+- Category Management: `getCategories()`, `addCategory()`, `deleteCategory()`
+
+#### 2. IMAP Integration (`electron/imap.cjs`)
+
+The IMAP module handles all email synchronization using **ImapFlow**:
+
+**Features:**
+- **Multi-Folder Sync**: Supports syncing Inbox, Sent, Spam, and Trash folders
+- **Incremental Sync**: Tracks `lastSyncUid` per account to sync only new messages
+- **Large-Scale Performance**: Optimized batch processing for accounts with thousands of emails
+- **Folder Mapping**: Intelligent mapping between server folders and German folder names (`mapServerFolderToDbName`)
+- **Server Operations**: Delete emails, mark as read/unread, toggle flags directly on IMAP server
+- **Connection Management**: Automatic connection handling with error recovery
+
+**Provider Presets:**
+Built-in configuration for popular German email providers:
+- **GMX**: `imap.gmx.net:993`
+- **Web.de**: `imap.web.de:993`
+- **Gmail**: `imap.gmail.com:993`
+- Custom IMAP servers supported with manual configuration
+
+**Sync Process:**
+1. Connect to IMAP server with account credentials
+2. Retrieve list of mailboxes and map to DB folder names
+3. For each folder, fetch UIDs greater than `lastSyncUid`
+4. Fetch email headers and bodies in batches
+5. Parse MIME messages with `mailparser` (simpleParser)
+6. Extract attachments and store in database
+7. Update `lastSyncUid` to track sync state
+
+**Key Functions:**
+- `syncAccount(account)`: Performs full multi-folder sync
+- `testConnection(account)`: Validates IMAP credentials
+- `deleteEmail(account, uid, folder)`: Removes email from server
+- `setEmailFlag(account, uid, folder, flag, value)`: Updates server flags
+- `processMessages(client, messages, account, folder)`: Batch email processing
+
+#### 3. AI Services (`services/geminiService.ts`)
+
+The AI service provides **multi-provider AI integration** for email categorization:
+
+**Supported Providers:**
+- **Google Gemini**: `gemini-3-flash-preview` (fast, cost-effective), `gemini-3-pro-preview` (higher accuracy)
+- **OpenAI**: `gpt-4o`, `gpt-4o-mini`, `gpt-4-turbo`
+- **Anthropic Claude**: `claude-3-5-sonnet-20240620`, `claude-3-haiku-20240307`
+
+**Architecture:**
+- **Unified Interface**: Single `callLLM()` function abstracts provider differences
+- **JSON Schema Validation**: Enforces structured responses using provider-specific schema systems
+- **Error Handling**: Graceful handling of rate limits (429 errors) and API failures
+- **Response Parsing**: Multi-strategy text extraction for robust response handling
+
+**Categorization Process:**
+1. Batch emails (up to 100) for processing efficiency
+2. Send email metadata (subject, sender, body preview) to AI with system instructions
+3. AI analyzes content and assigns German category (Rechnungen, Newsletter, Privat, etc.)
+4. Return category, confidence score, summary, and reasoning for each email
+5. Store AI results in database for transparency and manual review
+
+**Key Functions:**
+- `categorizeEmails(emails, categories, settings)`: Batch categorization with confidence scoring
+- `generateDemoEmails(count, settings)`: Generate realistic test emails for development
+- `callLLM(prompt, systemInstruction, jsonSchema, settings)`: Core LLM interaction
+
+**Optimization:**
+- **Thinking Budget**: Limits reasoning tokens for faster responses (Gemini)
+- **Batch Processing**: Reduces API calls by processing multiple emails per request
+- **Confidence Scoring**: Allows users to review low-confidence categorizations
+
+#### 4. Logging System (`electron/utils/logger.cjs`)
+
+Centralized logging using **electron-log** for debugging and troubleshooting:
+
+- **Environment-Aware**: Debug logs in development, info logs in production
+- **Automatic Rotation**: 10MB max file size with one backup file
+- **Structured Output**: Timestamped logs with severity levels (debug, info, warn, error)
+- **Cross-Platform Paths**: Logs stored in OS-specific app data directories
+
+See the [Logging System](#logging-system) section for detailed configuration and usage.
+
+### Data Flow
+
+Here's how email data flows through the application:
+
+```
+1. USER ACTION (Renderer Process)
+   ↓
+   User clicks "Sync Account" in React UI
+   ↓
+2. IPC COMMUNICATION (Preload Bridge)
+   ↓
+   window.electron.syncAccount(account) → ipcRenderer.invoke('sync-account', account)
+   ↓
+3. MAIN PROCESS (electron/main.cjs)
+   ↓
+   ipcMain.handle('sync-account') receives request
+   ↓
+4. IMAP SYNC (electron/imap.cjs)
+   ↓
+   • Connect to IMAP server (ImapFlow)
+   • Fetch new emails (UID > lastSyncUid)
+   • Parse MIME messages (mailparser)
+   • Extract attachments
+   ↓
+5. DATABASE STORAGE (electron/db.cjs)
+   ↓
+   • saveEmail() inserts email record
+   • Save attachments as BLOBs
+   • Update lastSyncUid
+   ↓
+6. AI CATEGORIZATION (services/geminiService.ts)
+   ↓
+   • Batch emails for processing
+   • Call AI provider API (Gemini/OpenAI/Claude)
+   • Parse JSON response with category + confidence
+   ↓
+7. DATABASE UPDATE (electron/db.cjs)
+   ↓
+   • updateEmailCategory() sets smartCategory, aiSummary, aiReasoning, confidence
+   ↓
+8. UI UPDATE (Renderer Process)
+   ↓
+   • IPC response returns to React
+   • State updates trigger re-render
+   • User sees new emails with AI categories
+```
+
+**Key Data Flow Characteristics:**
+- **Unidirectional**: Renderer → Main → IMAP/DB/AI → Main → Renderer
+- **Asynchronous**: All IPC handlers return Promises for non-blocking operations
+- **Transactional**: Database operations are wrapped in transactions for consistency
+- **Security-First**: All external data (URLs, filenames) is sanitized before use
+
+### File Structure Overview
+
+```
+SmartMailSorter/
+├── electron/                    # Electron main process
+│   ├── main.cjs                 # Application entry point, IPC handlers
+│   ├── preload.cjs              # Secure IPC bridge (context isolation)
+│   ├── db.cjs                   # SQLite database layer
+│   ├── imap.cjs                 # IMAP email synchronization
+│   ├── folderConstants.cjs      # German folder name constants
+│   └── utils/
+│       ├── logger.cjs           # electron-log configuration
+│       └── security.cjs         # Input sanitization utilities
+├── src/                         # React renderer process
+│   ├── App.tsx                  # Main React application
+│   ├── components/              # React UI components
+│   ├── contexts/                # React context providers
+│   ├── hooks/                   # Custom React hooks
+│   └── types.ts                 # TypeScript type definitions
+├── services/
+│   └── geminiService.ts         # Multi-provider AI integration
+├── public/                      # Static assets
+├── dist/                        # Production build output
+└── package.json                 # Dependencies and scripts
+```
+
+**Key Design Decisions:**
+- **`.cjs` Extension**: Main process uses CommonJS for better Electron compatibility
+- **`.ts/.tsx` Extension**: Renderer uses TypeScript for type safety
+- **Separation of Concerns**: Database, IMAP, and AI logic separated into distinct modules
+- **Security by Design**: Preload script enforces context isolation with no `nodeIntegration`
+- **Type Safety**: Shared `types.ts` ensures consistent data structures across IPC boundaries
+
+### Security Considerations
+
+SmartMailSorter implements several security best practices:
+
+1. **Context Isolation**: Renderer process has no direct Node.js access
+2. **Input Sanitization**: All filenames and URLs are validated before use (`security.cjs`)
+3. **Protocol Validation**: External URLs restricted to `http:`, `https:`, `mailto:`, `tel:`
+4. **No Hardcoded Secrets**: API keys loaded from environment variables or user settings
+5. **SQL Injection Prevention**: Parameterized queries via better-sqlite3
+6. **Content Security Policy**: Restricts script execution in renderer process
+
+**Note on Password Storage**: Account passwords are currently stored in plaintext in SQLite for development convenience. **For production use, implement Electron's `safeStorage` API** to encrypt passwords using OS-level credential storage (Keychain on macOS, Credential Vault on Windows, Secret Service on Linux).
+
 ## Run Locally
 
 **Prerequisites:** Node.js
