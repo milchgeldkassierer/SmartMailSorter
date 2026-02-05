@@ -25,6 +25,12 @@ contextBridge.exposeInMainWorld('electron', {
   deleteSmartCategory: (categoryName) => ipcRenderer.invoke('delete-smart-category', categoryName),
   renameSmartCategory: (data) => ipcRenderer.invoke('rename-smart-category', data),
 
+  // AI Settings
+  saveAISettings: (settings) => ipcRenderer.invoke('ai-settings-save', settings),
+  loadAISettings: () => ipcRenderer.invoke('ai-settings-load'),
+  checkAISettings: () => ipcRenderer.invoke('ai-settings-check'),
+  deleteAISettings: () => ipcRenderer.invoke('ai-settings-delete'),
+
   // External links
   openExternal: (url) => ipcRenderer.invoke('open-external-url', url),
 });
