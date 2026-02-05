@@ -2,6 +2,7 @@ const Database = require('better-sqlite3');
 const path = require('path');
 const { INBOX_FOLDER } = require('./folderConstants.cjs');
 const logger = require('./utils/logger.cjs');
+const { encryptPassword, decryptPassword } = require('./utils/security.cjs');
 // Electron import moved to lazy usage or injection
 
 const DEFAULT_DB_NAME = 'smartmail.db';
@@ -139,6 +140,73 @@ function createSchema() {
   }
 }
 
+function migratePasswordEncryption() {
+  if (!db) return;
+
+  try {
+    // Check if encryption is available before attempting migration
+    const { safeStorage } = require('electron');
+    if (!safeStorage.isEncryptionAvailable()) {
+      logger.warn('Password encryption migration skipped: safeStorage not available on this system');
+      return;
+    }
+  } catch (error) {
+    logger.warn('Password encryption migration skipped: Electron safeStorage not available');
+    return;
+  }
+
+  logger.info('Starting password encryption migration...');
+
+  const migrationTransaction = db.transaction(() => {
+    // Select all accounts
+    const accounts = db.prepare('SELECT id, password FROM accounts').all();
+
+    if (accounts.length === 0) {
+      logger.info('No accounts to migrate');
+      return;
+    }
+
+    const updateStmt = db.prepare('UPDATE accounts SET password = ? WHERE id = ?');
+    let migratedCount = 0;
+    let alreadyEncryptedCount = 0;
+
+    for (const account of accounts) {
+      if (!account.password) {
+        continue;
+      }
+
+      try {
+        // Check if password is already encrypted by attempting to decrypt
+        // Encrypted passwords are stored as base64-encoded buffers
+        const passwordBuffer = Buffer.from(account.password, 'base64');
+        decryptPassword(passwordBuffer);
+
+        // If decryption succeeded, password is already encrypted
+        alreadyEncryptedCount++;
+      } catch (decryptError) {
+        // Decryption failed, so password is plaintext - encrypt it
+        try {
+          const encryptedBuffer = encryptPassword(account.password);
+          const encryptedBase64 = encryptedBuffer.toString('base64');
+          updateStmt.run(encryptedBase64, account.id);
+          migratedCount++;
+        } catch (encryptError) {
+          logger.error(`Failed to encrypt password for account ${account.id}:`, encryptError);
+          throw encryptError; // Rollback transaction
+        }
+      }
+    }
+
+    logger.info(`Password migration complete: ${migratedCount} encrypted, ${alreadyEncryptedCount} already encrypted`);
+  });
+
+  try {
+    migrationTransaction();
+  } catch (error) {
+    logger.error('Password encryption migration failed - transaction rolled back:', error);
+  }
+}
+
 function init(appOrPath) {
   // Close existing database if reinitializing (for tests)
   if (db && typeof appOrPath === 'string' && appOrPath === ':memory:') {
@@ -167,6 +235,7 @@ function init(appOrPath) {
     db = new Database(fullPath);
   }
   createSchema();
+  migratePasswordEncryption();
 }
 
 // Account Methods
