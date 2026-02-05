@@ -36,12 +36,16 @@ const AccountsTab: React.FC<AccountsTabProps> = ({ accounts, onAddAccount, onRem
     }
 
     try {
+      // SECURITY: This is one of only TWO operations that sends password from renderer.
+      // The password is sent ONLY for testing NEW account connections during initial setup.
+      // The password is NOT saved to the database yet - it's used transiently for IMAP test.
+      // After successful test, user clicks "Save" which triggers handleSaveAccount().
       const tempAccount: ImapAccount = {
         id: 'temp',
         name: newName,
         email: newEmail,
         username: newEmail,
-        password: newPassword,
+        password: newPassword, // Plaintext password sent to main process for test
         provider: newProvider,
         imapHost: newHost,
         imapPort: newPort,
@@ -66,22 +70,46 @@ const AccountsTab: React.FC<AccountsTabProps> = ({ accounts, onAddAccount, onRem
       const colors = ['blue', 'green', 'purple', 'amber', 'rose', 'indigo'];
       const randomColor = colors[Math.floor(Math.random() * colors.length)];
 
+      // SECURITY: This is the second of TWO operations that sends password from renderer.
+      // The password is sent to main process where it will be encrypted using Electron
+      // safeStorage and saved to database. The main process (electron/db.cjs addAccount)
+      // handles encryption before persisting.
       onAddAccount({
         id: `acc-${Date.now()}`,
         name: newName,
         email: newEmail,
         username: newEmail, // Default username to email
-        password: newPassword,
+        password: newPassword, // Plaintext password sent to main process for encryption
         provider: newProvider,
         imapHost: newHost,
         imapPort: newPort,
         color: randomColor,
       });
+
+      // SECURITY: Immediately clear password from React state after sending to main process.
+      // The password should NEVER remain in renderer memory after account creation.
+      // From this point forward, all operations use accountId and main process retrieves
+      // the encrypted password from database as needed (electron/db.cjs getAccountWithPassword).
       setIsAdding(false);
       setNewName('');
       setNewEmail('');
-      setNewPassword('');
+      setNewPassword(''); // Critical: Clear password from state
+      setTestStatus('idle');
+      setTestMessage('');
     }
+  };
+
+  const handleCancelAdd = () => {
+    // Reset form state when cancelling
+    setIsAdding(false);
+    setNewName('');
+    setNewEmail('');
+    setNewPassword(''); // SECURITY: Clear password from state on cancel
+    setNewProvider('gmx');
+    setNewHost('imap.gmx.net');
+    setNewPort(993);
+    setTestStatus('idle');
+    setTestMessage('');
   };
 
   return (
@@ -224,7 +252,7 @@ const AccountsTab: React.FC<AccountsTabProps> = ({ accounts, onAddAccount, onRem
                   Verbindung testen
                 </button>
                 <button
-                  onClick={() => setIsAdding(false)}
+                  onClick={handleCancelAdd}
                   className="px-4 py-2 text-sm text-slate-600 hover:bg-slate-200 rounded"
                 >
                   Abbrechen

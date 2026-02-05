@@ -28,6 +28,7 @@ interface DbModule {
     changes: number;
   };
   getAccounts: () => Array<ImapAccount & { username?: string; password?: string; lastSyncUid?: number }>;
+  getAccountWithPassword: (id: string) => (ImapAccount & { username?: string; password?: string }) | undefined;
   updateAccountSync: (id: string, lastSyncUid: number) => { changes: number };
   updateAccountQuota: (id: string, used: number, total: number) => { changes: number };
   deleteAccountDn: (id: string) => void;
@@ -79,7 +80,8 @@ describe('Database Account CRUD Operations', () => {
       expect(accounts[0].email).toBe('test@example.com');
       expect(accounts[0].provider).toBe('gmail');
       expect(accounts[0].username).toBe('testuser');
-      expect(accounts[0].password).toBe('securepassword');
+      // Password should NOT be returned by getAccounts() for security
+      expect(accounts[0].password).toBeUndefined();
       expect(accounts[0].imapHost).toBe('imap.gmail.com');
       expect(accounts[0].imapPort).toBe(993);
       expect(accounts[0].color).toBe('#FF5733');
@@ -248,7 +250,7 @@ describe('Database Account CRUD Operations', () => {
       expect(retrieved?.imapHost).toBe('mail.custom.com');
       expect(retrieved?.imapPort).toBe(143);
       expect(retrieved?.username).toBe('fulluser');
-      expect(retrieved?.password).toBe('fullpass');
+      expect(retrieved?.password).toBeUndefined(); // getAccounts() should NOT return password for security
       expect(retrieved?.color).toBe('#ABCDEF');
       expect(retrieved?.lastSyncUid).toBe(500);
       expect(retrieved?.storageUsed).toBe(1024);
@@ -625,6 +627,58 @@ describe('Database Account CRUD Operations', () => {
       expect(accounts).toHaveLength(1);
       expect(accounts[0].name).toBe('New Account');
       expect(accounts[0].email).toBe('new@test.com');
+    });
+  });
+
+  describe('getAccountWithPassword', () => {
+    it('should retrieve account with decrypted password', () => {
+      const account = {
+        id: 'pwd-decrypt-test',
+        name: 'Password Test',
+        email: 'pwd@test.com',
+        provider: 'test',
+        imapHost: 'imap.test.com',
+        imapPort: 993,
+        username: 'user',
+        password: 'my-secret-password',
+        color: '#PWD123',
+      };
+
+      db.addAccount(account);
+
+      // Get account with password - should have plaintext password
+      const retrieved = db.getAccountWithPassword('pwd-decrypt-test');
+
+      expect(retrieved).toBeDefined();
+      expect(retrieved.id).toBe('pwd-decrypt-test');
+      expect(retrieved.name).toBe('Password Test');
+      expect(retrieved.email).toBe('pwd@test.com');
+      expect(retrieved.password).toBe('my-secret-password');
+    });
+
+    it('should return undefined for non-existent account', () => {
+      const retrieved = db.getAccountWithPassword('non-existent-id');
+      expect(retrieved).toBeUndefined();
+    });
+
+    it('should handle account with no password', () => {
+      const account = {
+        id: 'no-pwd-test',
+        name: 'No Password',
+        email: 'nopwd@test.com',
+        provider: 'test',
+        imapHost: 'imap.test.com',
+        imapPort: 993,
+        username: 'user',
+        password: '',
+        color: '#NOPWD',
+      };
+
+      db.addAccount(account);
+      const retrieved = db.getAccountWithPassword('no-pwd-test');
+
+      expect(retrieved).toBeDefined();
+      expect(retrieved.password).toBe('');
     });
   });
 
