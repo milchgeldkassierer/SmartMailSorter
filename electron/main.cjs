@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, safeStorage } = require('electron');
+const { app, BrowserWindow, ipcMain, safeStorage, session } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const logger = require('./utils/logger.cjs');
@@ -14,6 +14,7 @@ process.on('unhandledRejection', (reason, promise) => {
 const db = require('./db.cjs');
 const imap = require('./imap.cjs');
 const { sanitizeFilename } = require('./utils/security.cjs');
+const { createCspHeaderHandler } = require('./utils/csp-config.cjs');
 
 const isDev = !app.isPackaged;
 
@@ -40,6 +41,14 @@ function createWindow() {
 app.whenReady().then(() => {
   // Initialize Database
   db.init(app);
+
+  // Configure Content Security Policy
+  try {
+    session.defaultSession.webRequest.onHeadersReceived(createCspHeaderHandler(isDev));
+    logger.debug('Content Security Policy configured successfully');
+  } catch (error) {
+    logger.error('Failed to configure Content Security Policy:', error);
+  }
 
   // IPC Handlers
   ipcMain.handle('get-accounts', () => db.getAccounts());

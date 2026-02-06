@@ -334,7 +334,82 @@ SmartMailSorter implements several security best practices:
 3. **Protocol Validation**: External URLs restricted to `http:`, `https:`, `mailto:`, `tel:`
 4. **No Hardcoded Secrets**: API keys loaded from environment variables or user settings
 5. **SQL Injection Prevention**: Parameterized queries via better-sqlite3
-6. **Content Security Policy**: Restricts script execution in renderer process
+6. **Content Security Policy**: Restricts script execution and resource loading in renderer process (see detailed section below)
+
+#### Content Security Policy (CSP)
+
+SmartMailSorter implements a **strict Content Security Policy** to provide defense-in-depth protection against Cross-Site Scripting (XSS) attacks and unauthorized code execution. The CSP is configured through two layers for maximum protection:
+
+**Implementation Layers:**
+
+1. **HTTP Headers** (`electron/main.cjs`): CSP headers are injected via `session.defaultSession.webRequest.onHeadersReceived()` in the main process
+2. **Meta Tag** (`index.html`): A CSP meta tag provides fallback protection in case headers fail to apply
+
+**CSP Directives Explained:**
+
+| Directive | Production Value | Purpose |
+|-----------|-----------------|---------|
+| `default-src` | `'self'` | Default policy: only load resources from the application's origin |
+| `script-src` | `'self' https://cdn.tailwindcss.com https://esm.sh` | Allow scripts from: app bundle, Tailwind CSS CDN, ES modules from esm.sh. **Blocks inline scripts and `eval()`** to prevent XSS |
+| `style-src` | `'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.tailwindcss.com` | Allow styles from: app bundle, inline styles (required for React), Google Fonts, Tailwind CDN |
+| `font-src` | `'self' https://fonts.gstatic.com` | Allow fonts from: app bundle, Google Fonts CDN |
+| `connect-src` | `'self' https://api.openai.com https://generativelanguage.googleapis.com` | Restrict network connections to: app origin, OpenAI API, Google Gemini API. **Blocks connections to arbitrary external hosts** |
+| `img-src` | `'self' data: https:` | Allow images from: app bundle, data URIs (inline images), HTTPS sources |
+| `frame-src` | `'none'` | **Block all iframe embedding** to prevent clickjacking attacks |
+
+**Why These Domains Are Whitelisted:**
+
+- **`https://cdn.tailwindcss.com`**: Application uses Tailwind CSS via CDN for styling
+- **`https://esm.sh`**: Application loads React and dependencies as ES modules from esm.sh CDN
+- **`https://fonts.googleapis.com` / `https://fonts.gstatic.com`**: Application uses Inter font from Google Fonts
+- **`https://api.openai.com`**: Required for OpenAI GPT models (gpt-4o, gpt-4o-mini, gpt-4-turbo)
+- **`https://generativelanguage.googleapis.com`**: Required for Google Gemini AI models (gemini-3-flash-preview, gemini-3-pro-preview)
+
+**Development vs Production:**
+
+The CSP automatically adjusts based on the environment:
+
+**Development Mode** (when `isDev` is true):
+- Allows `http://localhost:3000` for Vite dev server
+- Allows `ws://localhost:3000` for Hot Module Replacement (HMR)
+- Permits `'unsafe-eval'` for development tooling
+- Enables `'unsafe-inline'` for development convenience
+
+**Production Mode** (packaged application):
+- Strict CSP with no localhost or eval allowed
+- Only whitelisted external domains permitted
+- Maximum protection against XSS attacks
+
+**Security Benefits:**
+
+1. **XSS Mitigation**: Even if an attacker injects malicious HTML through email content, inline scripts are blocked by CSP
+2. **Data Exfiltration Prevention**: The `connect-src` directive prevents XSS payloads from sending stolen data to attacker-controlled servers
+3. **Code Injection Defense**: Blocks `eval()`, `Function()`, and inline event handlers that could execute arbitrary code
+4. **Defense-in-Depth**: CSP provides a second layer of protection even if HTML sanitization is bypassed
+
+**Adding New External Resources:**
+
+If you need to add a new external CDN or API endpoint:
+
+1. **Update CSP Headers** in `electron/main.cjs`:
+   ```javascript
+   const cspDirectives = [
+     // ... existing directives ...
+     "script-src 'self' https://cdn.tailwindcss.com https://esm.sh https://new-cdn.example.com",
+   ];
+   ```
+
+2. **Update CSP Meta Tag** in `index.html`:
+   ```html
+   <meta http-equiv="Content-Security-Policy"
+         content="...; script-src 'self' https://cdn.tailwindcss.com https://esm.sh https://new-cdn.example.com; ..." />
+   ```
+
+3. **Update Tests** in `electron/tests/security.csp.test.ts` to verify the new domain is allowed
+
+4. **Document the Change**: Update this README section to explain why the new domain is whitelisted
+
+**Important**: Never add `'unsafe-inline'` to `script-src` or `'unsafe-eval'` in production, as this defeats the purpose of CSP and allows XSS attacks.
 
 **Note on Password Storage**: Account passwords are currently stored in plaintext in SQLite for development convenience. **For production use, implement Electron's `safeStorage` API** to encrypt passwords using OS-level credential storage (Keychain on macOS, Credential Vault on Windows, Secret Service on Linux).
 
