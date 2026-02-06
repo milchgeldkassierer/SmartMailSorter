@@ -57,6 +57,7 @@ const TopBar: React.FC<TopBarProps> = ({
           <h2 className="text-xl font-semibold text-blue-600 flex items-center gap-2 min-w-[150px]">
             <Search className="w-5 h-5" />
             Suchergebnisse
+            <span className="ml-2 text-sm font-normal text-slate-500">({filteredEmailsCount})</span>
           </h2>
         )}
 
