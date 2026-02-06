@@ -1,60 +1,24 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+// Import the actual CSP configuration from the shared module
+import { createCspHeaderHandler } from '../utils/csp-config.cjs';
 
 // Type definitions for Electron header objects
 interface ResponseHeaders {
   [key: string]: string[];
 }
 
-interface HeaderDetails {
-  responseHeaders: ResponseHeaders;
-}
-
 interface HeaderResponse {
   responseHeaders: ResponseHeaders;
 }
 
-type HeaderCallback = (response: HeaderResponse) => void;
-
 describe('Content Security Policy Configuration', () => {
-  // Helper function to simulate the CSP configuration logic from main.cjs
-  // This mirrors the actual implementation in main.cjs lines 44-76
-  const configureCsp = (isDev: boolean) => {
-    const cspDirectives = isDev
-      ? [
-          "default-src 'self'",
-          "script-src 'self' 'unsafe-inline' 'unsafe-eval' http://localhost:3000 https://cdn.tailwindcss.com https://esm.sh",
-          "style-src 'self' 'unsafe-inline' http://localhost:3000 https://fonts.googleapis.com https://cdn.tailwindcss.com",
-          "img-src 'self' data: http://localhost:3000 https:",
-          "connect-src 'self' http://localhost:3000 ws://localhost:3000 https://api.openai.com https://generativelanguage.googleapis.com",
-          "font-src 'self' data: https://fonts.gstatic.com",
-        ]
-      : [
-          "default-src 'self'",
-          "script-src 'self' https://cdn.tailwindcss.com https://esm.sh",
-          "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.tailwindcss.com",
-          "img-src 'self' data: https:",
-          "connect-src 'self' https://api.openai.com https://generativelanguage.googleapis.com",
-          "font-src 'self' https://fonts.gstatic.com",
-          "frame-src 'none'",
-        ];
-
-    return (details: HeaderDetails, callback: HeaderCallback) => {
-      callback({
-        responseHeaders: {
-          ...details.responseHeaders,
-          'Content-Security-Policy': [cspDirectives.join('; ')],
-        },
-      });
-    };
-  };
-
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   describe('CSP Header Registration', () => {
     it('should set CSP headers in production mode', () => {
-      const cspHandler = configureCsp(false); // Production mode
+      const cspHandler = createCspHeaderHandler(false); // Production mode
 
       // Simulate a request
       const mockDetails = {
@@ -92,7 +56,7 @@ describe('Content Security Policy Configuration', () => {
     });
 
     it('should set less restrictive CSP headers in development mode', () => {
-      const cspHandler = configureCsp(true); // Development mode
+      const cspHandler = createCspHeaderHandler(true); // Development mode
 
       const mockDetails = {
         responseHeaders: {
@@ -120,7 +84,7 @@ describe('Content Security Policy Configuration', () => {
 
   describe('CSP Directive Validation', () => {
     it('should include all required CSP directives in production', () => {
-      const cspHandler = configureCsp(false); // Production mode
+      const cspHandler = createCspHeaderHandler(false); // Production mode
 
       const mockDetails = { responseHeaders: {} };
       let capturedResponse: HeaderResponse | null = null;
@@ -149,7 +113,7 @@ describe('Content Security Policy Configuration', () => {
     });
 
     it('should not allow unsafe-eval in production mode', () => {
-      const cspHandler = configureCsp(false); // Production mode
+      const cspHandler = createCspHeaderHandler(false); // Production mode
 
       const mockDetails = { responseHeaders: {} };
       let capturedResponse: HeaderResponse | null = null;
@@ -165,7 +129,7 @@ describe('Content Security Policy Configuration', () => {
     });
 
     it('should preserve existing response headers', () => {
-      const cspHandler = configureCsp(true); // Development mode
+      const cspHandler = createCspHeaderHandler(true); // Development mode
 
       const mockDetails = {
         responseHeaders: {
@@ -193,7 +157,7 @@ describe('Content Security Policy Configuration', () => {
 
   describe('CSP Security Restrictions', () => {
     it('should restrict script-src to self and whitelisted CDNs in production', () => {
-      const cspHandler = configureCsp(false); // Production mode
+      const cspHandler = createCspHeaderHandler(false); // Production mode
 
       const mockDetails = { responseHeaders: {} };
       let capturedResponse: HeaderResponse | null = null;
@@ -214,7 +178,7 @@ describe('Content Security Policy Configuration', () => {
     });
 
     it('should allow data URIs for images', () => {
-      const cspHandler = configureCsp(false); // Production mode
+      const cspHandler = createCspHeaderHandler(false); // Production mode
 
       const mockDetails = { responseHeaders: {} };
       let capturedResponse: HeaderResponse | null = null;
@@ -232,7 +196,7 @@ describe('Content Security Policy Configuration', () => {
     });
 
     it('should allow unsafe-inline for styles in production', () => {
-      const cspHandler = configureCsp(false); // Production mode
+      const cspHandler = createCspHeaderHandler(false); // Production mode
 
       const mockDetails = { responseHeaders: {} };
       let capturedResponse: HeaderResponse | null = null;
@@ -251,7 +215,7 @@ describe('Content Security Policy Configuration', () => {
 
   describe('Development Mode CSP', () => {
     it('should allow localhost connections for HMR in development', () => {
-      const cspHandler = configureCsp(true); // Development mode
+      const cspHandler = createCspHeaderHandler(true); // Development mode
 
       const mockDetails = { responseHeaders: {} };
       let capturedResponse: HeaderResponse | null = null;
@@ -270,7 +234,7 @@ describe('Content Security Policy Configuration', () => {
     });
 
     it('should allow eval in development for source maps', () => {
-      const cspHandler = configureCsp(true); // Development mode
+      const cspHandler = createCspHeaderHandler(true); // Development mode
 
       const mockDetails = { responseHeaders: {} };
       let capturedResponse: HeaderResponse | null = null;
@@ -288,7 +252,7 @@ describe('Content Security Policy Configuration', () => {
 
   describe('CSP Header Format', () => {
     it('should format CSP header as a single semicolon-separated string', () => {
-      const cspHandler = configureCsp(false); // Production mode
+      const cspHandler = createCspHeaderHandler(false); // Production mode
 
       const mockDetails = { responseHeaders: {} };
       let capturedResponse: HeaderResponse | null = null;
@@ -314,7 +278,7 @@ describe('Content Security Policy Configuration', () => {
     });
 
     it('should not have trailing semicolon', () => {
-      const cspHandler = configureCsp(false); // Production mode
+      const cspHandler = createCspHeaderHandler(false); // Production mode
 
       const mockDetails = { responseHeaders: {} };
       let capturedResponse: HeaderResponse | null = null;

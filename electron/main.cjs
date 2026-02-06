@@ -14,6 +14,7 @@ process.on('unhandledRejection', (reason, promise) => {
 const db = require('./db.cjs');
 const imap = require('./imap.cjs');
 const { sanitizeFilename } = require('./utils/security.cjs');
+const { createCspHeaderHandler } = require('./utils/csp-config.cjs');
 
 const isDev = !app.isPackaged;
 
@@ -43,34 +44,7 @@ app.whenReady().then(() => {
 
   // Configure Content Security Policy
   try {
-    session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
-      // Define CSP directives based on environment
-      const cspDirectives = isDev
-        ? [
-            "default-src 'self'",
-            "script-src 'self' 'unsafe-inline' 'unsafe-eval' http://localhost:3000 https://cdn.tailwindcss.com https://esm.sh",
-            "style-src 'self' 'unsafe-inline' http://localhost:3000 https://fonts.googleapis.com https://cdn.tailwindcss.com",
-            "img-src 'self' data: http://localhost:3000 https:",
-            "connect-src 'self' http://localhost:3000 ws://localhost:3000 https://api.openai.com https://generativelanguage.googleapis.com",
-            "font-src 'self' data: https://fonts.gstatic.com",
-          ]
-        : [
-            "default-src 'self'",
-            "script-src 'self' https://cdn.tailwindcss.com https://esm.sh",
-            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.tailwindcss.com",
-            "img-src 'self' data: https:",
-            "connect-src 'self' https://api.openai.com https://generativelanguage.googleapis.com",
-            "font-src 'self' https://fonts.gstatic.com",
-            "frame-src 'none'",
-          ];
-
-      callback({
-        responseHeaders: {
-          ...details.responseHeaders,
-          'Content-Security-Policy': [cspDirectives.join('; ')],
-        },
-      });
-    });
+    session.defaultSession.webRequest.onHeadersReceived(createCspHeaderHandler(isDev));
     logger.debug('Content Security Policy configured successfully');
   } catch (error) {
     logger.error('Failed to configure Content Security Policy:', error);
