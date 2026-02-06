@@ -35,6 +35,7 @@ export interface ImapAccount {
   color: string; // 'blue', 'green', 'purple', etc.
   storageUsed?: number;
   storageTotal?: number;
+  lastSyncTime?: number;
 }
 
 export interface Email {
