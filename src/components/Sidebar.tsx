@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import type { LucideIcon } from 'lucide-react';
+import { Clock } from 'lucide-react';
 import {
   CategoryIcon,
   LogOut,
@@ -13,6 +14,7 @@ import {
   Archive,
 } from './Icon';
 import { ImapAccount, DefaultEmailCategory, Category, SYSTEM_FOLDERS } from '../types';
+import { formatTimeAgo } from '../utils/formatTimeAgo';
 
 interface SidebarProps {
   selectedCategory: string;
@@ -156,6 +158,14 @@ const Sidebar: React.FC<SidebarProps> = ({
                 <div className="text-left flex-1 min-w-0">
                   <div className="text-sm font-semibold text-white truncate">{activeAccount.name}</div>
                   <div className="text-xs text-slate-400 truncate">{activeAccount.email}</div>
+                  <div className="flex items-center gap-1 text-[10px] text-slate-500 mt-0.5">
+                    <Clock className="w-3 h-3" />
+                    <span>
+                      {activeAccount.lastSyncTime
+                        ? formatTimeAgo(activeAccount.lastSyncTime)
+                        : 'Noch nie synchronisiert'}
+                    </span>
+                  </div>
                 </div>
               </>
             ) : (
