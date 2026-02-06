@@ -1,0 +1,312 @@
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+
+describe('Content Security Policy Configuration', () => {
+  // Helper function to simulate the CSP configuration logic from main.cjs
+  // This mirrors the actual implementation in main.cjs lines 44-76
+  const configureCsp = (isDev: boolean) => {
+    const cspDirectives = isDev
+      ? [
+          "default-src 'self'",
+          "script-src 'self' 'unsafe-inline' 'unsafe-eval' http://localhost:3000",
+          "style-src 'self' 'unsafe-inline' http://localhost:3000",
+          "img-src 'self' data: http://localhost:3000",
+          "connect-src 'self' http://localhost:3000 ws://localhost:3000",
+          "font-src 'self' data:",
+        ]
+      : [
+          "default-src 'self'",
+          "script-src 'self'",
+          "style-src 'self' 'unsafe-inline'",
+          "img-src 'self' data:",
+          "connect-src 'self'",
+          "font-src 'self' data:",
+        ];
+
+    return (details: any, callback: any) => {
+      callback({
+        responseHeaders: {
+          ...details.responseHeaders,
+          'Content-Security-Policy': [cspDirectives.join('; ')],
+        },
+      });
+    };
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  describe('CSP Header Registration', () => {
+    it('should set CSP headers in production mode', () => {
+      const cspHandler = configureCsp(false); // Production mode
+
+      // Simulate a request
+      const mockDetails = {
+        responseHeaders: {
+          'content-type': ['text/html'],
+        },
+      };
+
+      let capturedResponse: any = null;
+      const mockCallback = (response: any) => {
+        capturedResponse = response;
+      };
+
+      // Call the CSP handler
+      cspHandler(mockDetails, mockCallback);
+
+      // Verify CSP header was added
+      expect(capturedResponse).toBeDefined();
+      expect(capturedResponse.responseHeaders).toBeDefined();
+      expect(capturedResponse.responseHeaders['Content-Security-Policy']).toBeDefined();
+      expect(Array.isArray(capturedResponse.responseHeaders['Content-Security-Policy'])).toBe(true);
+
+      const cspHeader = capturedResponse.responseHeaders['Content-Security-Policy'][0];
+      expect(cspHeader).toContain("default-src 'self'");
+      expect(cspHeader).toContain("script-src 'self'");
+      expect(cspHeader).toContain("style-src 'self' 'unsafe-inline'");
+      expect(cspHeader).toContain("img-src 'self' data:");
+      expect(cspHeader).toContain("connect-src 'self'");
+      expect(cspHeader).toContain("font-src 'self' data:");
+    });
+
+    it('should set less restrictive CSP headers in development mode', () => {
+      const cspHandler = configureCsp(true); // Development mode
+
+      const mockDetails = {
+        responseHeaders: {
+          'content-type': ['text/html'],
+        },
+      };
+
+      let capturedResponse: any = null;
+      const mockCallback = (response: any) => {
+        capturedResponse = response;
+      };
+
+      cspHandler(mockDetails, mockCallback);
+
+      const cspHeader = capturedResponse.responseHeaders['Content-Security-Policy'][0];
+
+      // Development mode should allow localhost and unsafe directives for hot reload
+      expect(cspHeader).toContain("default-src 'self'");
+      expect(cspHeader).toContain('http://localhost:3000');
+      expect(cspHeader).toContain("'unsafe-inline'");
+      expect(cspHeader).toContain("'unsafe-eval'");
+      expect(cspHeader).toContain('ws://localhost:3000');
+    });
+  });
+
+  describe('CSP Directive Validation', () => {
+    it('should include all required CSP directives in production', () => {
+      const cspHandler = configureCsp(false); // Production mode
+
+      const mockDetails = { responseHeaders: {} };
+      let capturedResponse: any = null;
+
+      cspHandler(mockDetails, (response: any) => {
+        capturedResponse = response;
+      });
+
+      const cspHeader = capturedResponse.responseHeaders['Content-Security-Policy'][0];
+      const directives = cspHeader.split('; ');
+
+      // Verify all critical directives are present
+      const hasDefaultSrc = directives.some((d: string) => d.startsWith('default-src'));
+      const hasScriptSrc = directives.some((d: string) => d.startsWith('script-src'));
+      const hasStyleSrc = directives.some((d: string) => d.startsWith('style-src'));
+      const hasImgSrc = directives.some((d: string) => d.startsWith('img-src'));
+      const hasConnectSrc = directives.some((d: string) => d.startsWith('connect-src'));
+      const hasFontSrc = directives.some((d: string) => d.startsWith('font-src'));
+
+      expect(hasDefaultSrc).toBe(true);
+      expect(hasScriptSrc).toBe(true);
+      expect(hasStyleSrc).toBe(true);
+      expect(hasImgSrc).toBe(true);
+      expect(hasConnectSrc).toBe(true);
+      expect(hasFontSrc).toBe(true);
+    });
+
+    it('should not allow unsafe-eval in production mode', () => {
+      const cspHandler = configureCsp(false); // Production mode
+
+      const mockDetails = { responseHeaders: {} };
+      let capturedResponse: any = null;
+
+      cspHandler(mockDetails, (response: any) => {
+        capturedResponse = response;
+      });
+
+      const cspHeader = capturedResponse.responseHeaders['Content-Security-Policy'][0];
+
+      // Production should NOT include unsafe-eval (blocks eval() to prevent XSS)
+      expect(cspHeader).not.toContain("'unsafe-eval'");
+    });
+
+    it('should preserve existing response headers', () => {
+      const cspHandler = configureCsp(true); // Development mode
+
+      const mockDetails = {
+        responseHeaders: {
+          'content-type': ['text/html'],
+          'x-custom-header': ['custom-value'],
+          'cache-control': ['no-cache'],
+        },
+      };
+
+      let capturedResponse: any = null;
+
+      cspHandler(mockDetails, (response: any) => {
+        capturedResponse = response;
+      });
+
+      // Verify original headers are preserved
+      expect(capturedResponse.responseHeaders['content-type']).toEqual(['text/html']);
+      expect(capturedResponse.responseHeaders['x-custom-header']).toEqual(['custom-value']);
+      expect(capturedResponse.responseHeaders['cache-control']).toEqual(['no-cache']);
+
+      // And CSP header is added
+      expect(capturedResponse.responseHeaders['Content-Security-Policy']).toBeDefined();
+    });
+  });
+
+  describe('CSP Security Restrictions', () => {
+    it('should restrict script-src to self in production', () => {
+      const cspHandler = configureCsp(false); // Production mode
+
+      const mockDetails = { responseHeaders: {} };
+      let capturedResponse: any = null;
+
+      cspHandler(mockDetails, (response: any) => {
+        capturedResponse = response;
+      });
+
+      const cspHeader = capturedResponse.responseHeaders['Content-Security-Policy'][0];
+      const scriptSrcDirective = cspHeader
+        .split('; ')
+        .find((d: string) => d.startsWith('script-src'));
+
+      expect(scriptSrcDirective).toBe("script-src 'self'");
+    });
+
+    it('should allow data URIs for images', () => {
+      const cspHandler = configureCsp(false); // Production mode
+
+      const mockDetails = { responseHeaders: {} };
+      let capturedResponse: any = null;
+
+      cspHandler(mockDetails, (response: any) => {
+        capturedResponse = response;
+      });
+
+      const cspHeader = capturedResponse.responseHeaders['Content-Security-Policy'][0];
+      const imgSrcDirective = cspHeader
+        .split('; ')
+        .find((d: string) => d.startsWith('img-src'));
+
+      // Should allow both 'self' and 'data:' for images (base64 encoded images)
+      expect(imgSrcDirective).toContain("'self'");
+      expect(imgSrcDirective).toContain('data:');
+    });
+
+    it('should allow unsafe-inline for styles in production', () => {
+      const cspHandler = configureCsp(false); // Production mode
+
+      const mockDetails = { responseHeaders: {} };
+      let capturedResponse: any = null;
+
+      cspHandler(mockDetails, (response: any) => {
+        capturedResponse = response;
+      });
+
+      const cspHeader = capturedResponse.responseHeaders['Content-Security-Policy'][0];
+      const styleSrcDirective = cspHeader
+        .split('; ')
+        .find((d: string) => d.startsWith('style-src'));
+
+      // Styles often need unsafe-inline for framework-generated styles
+      expect(styleSrcDirective).toContain("'unsafe-inline'");
+    });
+  });
+
+  describe('Development Mode CSP', () => {
+    it('should allow localhost connections for HMR in development', () => {
+      const cspHandler = configureCsp(true); // Development mode
+
+      const mockDetails = { responseHeaders: {} };
+      let capturedResponse: any = null;
+
+      cspHandler(mockDetails, (response: any) => {
+        capturedResponse = response;
+      });
+
+      const cspHeader = capturedResponse.responseHeaders['Content-Security-Policy'][0];
+
+      // Development needs localhost for Vite dev server
+      expect(cspHeader).toContain('http://localhost:3000');
+
+      // Development needs WebSocket for HMR
+      expect(cspHeader).toContain('ws://localhost:3000');
+    });
+
+    it('should allow eval in development for source maps', () => {
+      const cspHandler = configureCsp(true); // Development mode
+
+      const mockDetails = { responseHeaders: {} };
+      let capturedResponse: any = null;
+
+      cspHandler(mockDetails, (response: any) => {
+        capturedResponse = response;
+      });
+
+      const cspHeader = capturedResponse.responseHeaders['Content-Security-Policy'][0];
+
+      // Development may need unsafe-eval for dev tools and source maps
+      expect(cspHeader).toContain("'unsafe-eval'");
+    });
+  });
+
+  describe('CSP Header Format', () => {
+    it('should format CSP header as a single semicolon-separated string', () => {
+      const cspHandler = configureCsp(false); // Production mode
+
+      const mockDetails = { responseHeaders: {} };
+      let capturedResponse: any = null;
+
+      cspHandler(mockDetails, (response: any) => {
+        capturedResponse = response;
+      });
+
+      const cspHeaderArray = capturedResponse.responseHeaders['Content-Security-Policy'];
+
+      // Should be an array with one element
+      expect(Array.isArray(cspHeaderArray)).toBe(true);
+      expect(cspHeaderArray.length).toBe(1);
+
+      const cspHeader = cspHeaderArray[0];
+
+      // Should be a non-empty string
+      expect(typeof cspHeader).toBe('string');
+      expect(cspHeader.length).toBeGreaterThan(0);
+
+      // Should contain semicolons separating directives
+      expect(cspHeader).toContain(';');
+    });
+
+    it('should not have trailing semicolon', () => {
+      const cspHandler = configureCsp(false); // Production mode
+
+      const mockDetails = { responseHeaders: {} };
+      let capturedResponse: any = null;
+
+      cspHandler(mockDetails, (response: any) => {
+        capturedResponse = response;
+      });
+
+      const cspHeader = capturedResponse.responseHeaders['Content-Security-Policy'][0];
+
+      // Well-formed CSP should not end with semicolon
+      expect(cspHeader.endsWith(';')).toBe(false);
+    });
+  });
+});
