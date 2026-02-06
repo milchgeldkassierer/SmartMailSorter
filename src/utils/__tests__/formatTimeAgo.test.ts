@@ -19,6 +19,7 @@ describe('formatTimeAgo', () => {
     });
 
     it('should handle invalid number types', () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const result = formatTimeAgo('not a number' as any);
       expect(result).toBe(null);
     });
@@ -358,13 +359,7 @@ describe('formatTimeAgo', () => {
 
   describe('Type Safety', () => {
     it('should return string or null, never undefined', () => {
-      const testCases = [
-        null,
-        undefined,
-        Date.now(),
-        Date.now() - 1000,
-        0,
-      ];
+      const testCases = [null, undefined, Date.now(), Date.now() - 1000, 0];
 
       testCases.forEach((testCase) => {
         const result = formatTimeAgo(testCase);
