@@ -250,7 +250,7 @@ function getAccounts() {
     .prepare(
       `SELECT
         id, name, email, provider, imapHost, imapPort, username,
-        color, lastSyncUid, storageUsed, storageTotal
+        color, lastSyncUid, storageUsed, storageTotal, lastSyncTime
       FROM accounts`
     )
     .all();
