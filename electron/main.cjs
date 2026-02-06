@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, safeStorage } = require('electron');
+const { app, BrowserWindow, ipcMain, safeStorage, session } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const logger = require('./utils/logger.cjs');
@@ -40,6 +40,40 @@ function createWindow() {
 app.whenReady().then(() => {
   // Initialize Database
   db.init(app);
+
+  // Configure Content Security Policy
+  try {
+    session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+      // Define CSP directives based on environment
+      const cspDirectives = isDev
+        ? [
+            "default-src 'self'",
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval' http://localhost:3000",
+            "style-src 'self' 'unsafe-inline' http://localhost:3000",
+            "img-src 'self' data: http://localhost:3000",
+            "connect-src 'self' http://localhost:3000 ws://localhost:3000",
+            "font-src 'self' data:",
+          ]
+        : [
+            "default-src 'self'",
+            "script-src 'self'",
+            "style-src 'self' 'unsafe-inline'",
+            "img-src 'self' data:",
+            "connect-src 'self'",
+            "font-src 'self' data:",
+          ];
+
+      callback({
+        responseHeaders: {
+          ...details.responseHeaders,
+          'Content-Security-Policy': [cspDirectives.join('; ')],
+        },
+      });
+    });
+    logger.debug('Content Security Policy configured successfully');
+  } catch (error) {
+    logger.error('Failed to configure Content Security Policy:', error);
+  }
 
   // IPC Handlers
   ipcMain.handle('get-accounts', () => db.getAccounts());
