@@ -29,7 +29,7 @@ interface DbModule {
   };
   getAccounts: () => Array<ImapAccount & { username?: string; password?: string; lastSyncUid?: number }>;
   getAccountWithPassword: (id: string) => (ImapAccount & { username?: string; password?: string }) | undefined;
-  updateAccountSync: (id: string, lastSyncUid: number) => { changes: number };
+  updateAccountSync: (id: string, lastSyncUid: number, lastSyncTime?: number) => { changes: number };
   updateAccountQuota: (id: string, used: number, total: number) => { changes: number };
   deleteAccountDn: (id: string) => void;
   saveEmail: (email: { id: string; accountId: string; [key: string]: unknown }) => void;
