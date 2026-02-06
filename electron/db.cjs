@@ -312,9 +312,9 @@ function addAccount(account) {
   });
 }
 
-function updateAccountSync(id, lastSyncUid) {
-  const stmt = db.prepare('UPDATE accounts SET lastSyncUid = ? WHERE id = ?');
-  return stmt.run(lastSyncUid, id);
+function updateAccountSync(id, lastSyncUid, lastSyncTime) {
+  const stmt = db.prepare('UPDATE accounts SET lastSyncUid = ?, lastSyncTime = ? WHERE id = ?');
+  return stmt.run(lastSyncUid, lastSyncTime, id);
 }
 
 function updateAccountQuota(id, used, total) {
