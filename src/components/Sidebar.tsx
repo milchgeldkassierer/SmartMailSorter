@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import type { LucideIcon } from 'lucide-react';
-import { Clock } from 'lucide-react';
 import {
   CategoryIcon,
   LogOut,
@@ -12,6 +11,7 @@ import {
   Folder,
   FolderOpen,
   Archive,
+  Clock,
 } from './Icon';
 import { ImapAccount, DefaultEmailCategory, Category, SYSTEM_FOLDERS } from '../types';
 import { formatTimeAgo } from '../utils/formatTimeAgo';
