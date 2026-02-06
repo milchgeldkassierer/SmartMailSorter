@@ -31,7 +31,7 @@ function createWindow() {
 
   if (isDev) {
     win.loadURL('http://localhost:3000');
-    // win.webContents.openDevTools();
+    win.webContents.openDevTools();
   } else {
     win.loadFile(path.join(__dirname, '../dist/index.html'));
   }
@@ -48,11 +48,11 @@ app.whenReady().then(() => {
       const cspDirectives = isDev
         ? [
             "default-src 'self'",
-            "script-src 'self' 'unsafe-inline' 'unsafe-eval' http://localhost:3000",
-            "style-src 'self' 'unsafe-inline' http://localhost:3000",
-            "img-src 'self' data: http://localhost:3000",
-            "connect-src 'self' http://localhost:3000 ws://localhost:3000",
-            "font-src 'self' data:",
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval' http://localhost:3000 https://cdn.tailwindcss.com https://esm.sh",
+            "style-src 'self' 'unsafe-inline' http://localhost:3000 https://fonts.googleapis.com https://cdn.tailwindcss.com",
+            "img-src 'self' data: http://localhost:3000 https:",
+            "connect-src 'self' http://localhost:3000 ws://localhost:3000 https://api.openai.com https://generativelanguage.googleapis.com",
+            "font-src 'self' data: https://fonts.gstatic.com",
           ]
         : [
             "default-src 'self'",

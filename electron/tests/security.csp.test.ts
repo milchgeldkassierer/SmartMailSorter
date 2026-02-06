@@ -1,5 +1,20 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
+// Type definitions for Electron header objects
+interface ResponseHeaders {
+  [key: string]: string[];
+}
+
+interface HeaderDetails {
+  responseHeaders: ResponseHeaders;
+}
+
+interface HeaderResponse {
+  responseHeaders: ResponseHeaders;
+}
+
+type HeaderCallback = (response: HeaderResponse) => void;
+
 describe('Content Security Policy Configuration', () => {
   // Helper function to simulate the CSP configuration logic from main.cjs
   // This mirrors the actual implementation in main.cjs lines 44-76
@@ -7,11 +22,11 @@ describe('Content Security Policy Configuration', () => {
     const cspDirectives = isDev
       ? [
           "default-src 'self'",
-          "script-src 'self' 'unsafe-inline' 'unsafe-eval' http://localhost:3000",
-          "style-src 'self' 'unsafe-inline' http://localhost:3000",
-          "img-src 'self' data: http://localhost:3000",
-          "connect-src 'self' http://localhost:3000 ws://localhost:3000",
-          "font-src 'self' data:",
+          "script-src 'self' 'unsafe-inline' 'unsafe-eval' http://localhost:3000 https://cdn.tailwindcss.com https://esm.sh",
+          "style-src 'self' 'unsafe-inline' http://localhost:3000 https://fonts.googleapis.com https://cdn.tailwindcss.com",
+          "img-src 'self' data: http://localhost:3000 https:",
+          "connect-src 'self' http://localhost:3000 ws://localhost:3000 https://api.openai.com https://generativelanguage.googleapis.com",
+          "font-src 'self' data: https://fonts.gstatic.com",
         ]
       : [
           "default-src 'self'",
@@ -23,7 +38,7 @@ describe('Content Security Policy Configuration', () => {
           "frame-src 'none'",
         ];
 
-    return (details: any, callback: any) => {
+    return (details: HeaderDetails, callback: HeaderCallback) => {
       callback({
         responseHeaders: {
           ...details.responseHeaders,
@@ -48,8 +63,8 @@ describe('Content Security Policy Configuration', () => {
         },
       };
 
-      let capturedResponse: any = null;
-      const mockCallback = (response: any) => {
+      let capturedResponse: HeaderResponse | null = null;
+      const mockCallback = (response: HeaderResponse) => {
         capturedResponse = response;
       };
 
@@ -85,8 +100,8 @@ describe('Content Security Policy Configuration', () => {
         },
       };
 
-      let capturedResponse: any = null;
-      const mockCallback = (response: any) => {
+      let capturedResponse: HeaderResponse | null = null;
+      const mockCallback = (response: HeaderResponse) => {
         capturedResponse = response;
       };
 
@@ -108,9 +123,9 @@ describe('Content Security Policy Configuration', () => {
       const cspHandler = configureCsp(false); // Production mode
 
       const mockDetails = { responseHeaders: {} };
-      let capturedResponse: any = null;
+      let capturedResponse: HeaderResponse | null = null;
 
-      cspHandler(mockDetails, (response: any) => {
+      cspHandler(mockDetails, (response: HeaderResponse) => {
         capturedResponse = response;
       });
 
@@ -137,9 +152,9 @@ describe('Content Security Policy Configuration', () => {
       const cspHandler = configureCsp(false); // Production mode
 
       const mockDetails = { responseHeaders: {} };
-      let capturedResponse: any = null;
+      let capturedResponse: HeaderResponse | null = null;
 
-      cspHandler(mockDetails, (response: any) => {
+      cspHandler(mockDetails, (response: HeaderResponse) => {
         capturedResponse = response;
       });
 
@@ -160,9 +175,9 @@ describe('Content Security Policy Configuration', () => {
         },
       };
 
-      let capturedResponse: any = null;
+      let capturedResponse: HeaderResponse | null = null;
 
-      cspHandler(mockDetails, (response: any) => {
+      cspHandler(mockDetails, (response: HeaderResponse) => {
         capturedResponse = response;
       });
 
@@ -181,16 +196,14 @@ describe('Content Security Policy Configuration', () => {
       const cspHandler = configureCsp(false); // Production mode
 
       const mockDetails = { responseHeaders: {} };
-      let capturedResponse: any = null;
+      let capturedResponse: HeaderResponse | null = null;
 
-      cspHandler(mockDetails, (response: any) => {
+      cspHandler(mockDetails, (response: HeaderResponse) => {
         capturedResponse = response;
       });
 
       const cspHeader = capturedResponse.responseHeaders['Content-Security-Policy'][0];
-      const scriptSrcDirective = cspHeader
-        .split('; ')
-        .find((d: string) => d.startsWith('script-src'));
+      const scriptSrcDirective = cspHeader.split('; ').find((d: string) => d.startsWith('script-src'));
 
       // Should allow self and necessary external CDNs
       expect(scriptSrcDirective).toContain("'self'");
@@ -204,16 +217,14 @@ describe('Content Security Policy Configuration', () => {
       const cspHandler = configureCsp(false); // Production mode
 
       const mockDetails = { responseHeaders: {} };
-      let capturedResponse: any = null;
+      let capturedResponse: HeaderResponse | null = null;
 
-      cspHandler(mockDetails, (response: any) => {
+      cspHandler(mockDetails, (response: HeaderResponse) => {
         capturedResponse = response;
       });
 
       const cspHeader = capturedResponse.responseHeaders['Content-Security-Policy'][0];
-      const imgSrcDirective = cspHeader
-        .split('; ')
-        .find((d: string) => d.startsWith('img-src'));
+      const imgSrcDirective = cspHeader.split('; ').find((d: string) => d.startsWith('img-src'));
 
       // Should allow both 'self' and 'data:' for images (base64 encoded images)
       expect(imgSrcDirective).toContain("'self'");
@@ -224,16 +235,14 @@ describe('Content Security Policy Configuration', () => {
       const cspHandler = configureCsp(false); // Production mode
 
       const mockDetails = { responseHeaders: {} };
-      let capturedResponse: any = null;
+      let capturedResponse: HeaderResponse | null = null;
 
-      cspHandler(mockDetails, (response: any) => {
+      cspHandler(mockDetails, (response: HeaderResponse) => {
         capturedResponse = response;
       });
 
       const cspHeader = capturedResponse.responseHeaders['Content-Security-Policy'][0];
-      const styleSrcDirective = cspHeader
-        .split('; ')
-        .find((d: string) => d.startsWith('style-src'));
+      const styleSrcDirective = cspHeader.split('; ').find((d: string) => d.startsWith('style-src'));
 
       // Styles often need unsafe-inline for framework-generated styles
       expect(styleSrcDirective).toContain("'unsafe-inline'");
@@ -245,9 +254,9 @@ describe('Content Security Policy Configuration', () => {
       const cspHandler = configureCsp(true); // Development mode
 
       const mockDetails = { responseHeaders: {} };
-      let capturedResponse: any = null;
+      let capturedResponse: HeaderResponse | null = null;
 
-      cspHandler(mockDetails, (response: any) => {
+      cspHandler(mockDetails, (response: HeaderResponse) => {
         capturedResponse = response;
       });
 
@@ -264,9 +273,9 @@ describe('Content Security Policy Configuration', () => {
       const cspHandler = configureCsp(true); // Development mode
 
       const mockDetails = { responseHeaders: {} };
-      let capturedResponse: any = null;
+      let capturedResponse: HeaderResponse | null = null;
 
-      cspHandler(mockDetails, (response: any) => {
+      cspHandler(mockDetails, (response: HeaderResponse) => {
         capturedResponse = response;
       });
 
@@ -282,9 +291,9 @@ describe('Content Security Policy Configuration', () => {
       const cspHandler = configureCsp(false); // Production mode
 
       const mockDetails = { responseHeaders: {} };
-      let capturedResponse: any = null;
+      let capturedResponse: HeaderResponse | null = null;
 
-      cspHandler(mockDetails, (response: any) => {
+      cspHandler(mockDetails, (response: HeaderResponse) => {
         capturedResponse = response;
       });
 
@@ -308,9 +317,9 @@ describe('Content Security Policy Configuration', () => {
       const cspHandler = configureCsp(false); // Production mode
 
       const mockDetails = { responseHeaders: {} };
-      let capturedResponse: any = null;
+      let capturedResponse: HeaderResponse | null = null;
 
-      cspHandler(mockDetails, (response: any) => {
+      cspHandler(mockDetails, (response: HeaderResponse) => {
         capturedResponse = response;
       });
 
