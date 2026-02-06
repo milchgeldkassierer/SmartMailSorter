@@ -24,7 +24,8 @@ function createSchema() {
       color TEXT,
       lastSyncUid INTEGER DEFAULT 0,
       storageUsed INTEGER DEFAULT 0,
-      storageTotal INTEGER DEFAULT 0
+      storageTotal INTEGER DEFAULT 0,
+      lastSyncTime INTEGER DEFAULT NULL
     )
   `);
 
@@ -36,6 +37,11 @@ function createSchema() {
   }
   try {
     db.exec('ALTER TABLE accounts ADD COLUMN storageTotal INTEGER DEFAULT 0');
+  } catch (_e) {
+    // Column already exists
+  }
+  try {
+    db.exec('ALTER TABLE accounts ADD COLUMN lastSyncTime INTEGER DEFAULT NULL');
   } catch (_e) {
     // Column already exists
   }
