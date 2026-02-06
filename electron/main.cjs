@@ -56,11 +56,12 @@ app.whenReady().then(() => {
           ]
         : [
             "default-src 'self'",
-            "script-src 'self'",
-            "style-src 'self' 'unsafe-inline'",
-            "img-src 'self' data:",
-            "connect-src 'self'",
-            "font-src 'self' data:",
+            "script-src 'self' https://cdn.tailwindcss.com https://esm.sh",
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.tailwindcss.com",
+            "img-src 'self' data: https:",
+            "connect-src 'self' https://api.openai.com https://generativelanguage.googleapis.com",
+            "font-src 'self' https://fonts.gstatic.com",
+            "frame-src 'none'",
           ];
 
       callback({

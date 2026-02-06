@@ -15,11 +15,12 @@ describe('Content Security Policy Configuration', () => {
         ]
       : [
           "default-src 'self'",
-          "script-src 'self'",
-          "style-src 'self' 'unsafe-inline'",
-          "img-src 'self' data:",
-          "connect-src 'self'",
-          "font-src 'self' data:",
+          "script-src 'self' https://cdn.tailwindcss.com https://esm.sh",
+          "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.tailwindcss.com",
+          "img-src 'self' data: https:",
+          "connect-src 'self' https://api.openai.com https://generativelanguage.googleapis.com",
+          "font-src 'self' https://fonts.gstatic.com",
+          "frame-src 'none'",
         ];
 
     return (details: any, callback: any) => {
@@ -64,10 +65,15 @@ describe('Content Security Policy Configuration', () => {
       const cspHeader = capturedResponse.responseHeaders['Content-Security-Policy'][0];
       expect(cspHeader).toContain("default-src 'self'");
       expect(cspHeader).toContain("script-src 'self'");
+      expect(cspHeader).toContain('https://cdn.tailwindcss.com');
+      expect(cspHeader).toContain('https://esm.sh');
       expect(cspHeader).toContain("style-src 'self' 'unsafe-inline'");
+      expect(cspHeader).toContain('https://fonts.googleapis.com');
       expect(cspHeader).toContain("img-src 'self' data:");
       expect(cspHeader).toContain("connect-src 'self'");
-      expect(cspHeader).toContain("font-src 'self' data:");
+      expect(cspHeader).toContain('https://api.openai.com');
+      expect(cspHeader).toContain('https://generativelanguage.googleapis.com');
+      expect(cspHeader).toContain('https://fonts.gstatic.com');
     });
 
     it('should set less restrictive CSP headers in development mode', () => {
@@ -171,7 +177,7 @@ describe('Content Security Policy Configuration', () => {
   });
 
   describe('CSP Security Restrictions', () => {
-    it('should restrict script-src to self in production', () => {
+    it('should restrict script-src to self and whitelisted CDNs in production', () => {
       const cspHandler = configureCsp(false); // Production mode
 
       const mockDetails = { responseHeaders: {} };
@@ -186,7 +192,12 @@ describe('Content Security Policy Configuration', () => {
         .split('; ')
         .find((d: string) => d.startsWith('script-src'));
 
-      expect(scriptSrcDirective).toBe("script-src 'self'");
+      // Should allow self and necessary external CDNs
+      expect(scriptSrcDirective).toContain("'self'");
+      expect(scriptSrcDirective).toContain('https://cdn.tailwindcss.com');
+      expect(scriptSrcDirective).toContain('https://esm.sh');
+      // Should NOT contain unsafe-eval in production
+      expect(scriptSrcDirective).not.toContain("'unsafe-eval'");
     });
 
     it('should allow data URIs for images', () => {
