@@ -68,6 +68,12 @@ describe('TopBar', () => {
       expect(screen.queryByText(DefaultEmailCategory.INBOX)).not.toBeInTheDocument();
     });
 
+    it('should show count badge with "Suchergebnisse" when searching', () => {
+      render(<TopBar {...defaultProps} searchTerm="test" filteredEmailsCount={15} />);
+      expect(screen.getByText('Suchergebnisse')).toBeInTheDocument();
+      expect(screen.getByText('(15)')).toBeInTheDocument();
+    });
+
     it('should not show "Nur unsortierte" button when searching', () => {
       render(<TopBar {...defaultProps} searchTerm="test" />);
       expect(screen.queryByText('Nur unsortierte')).not.toBeInTheDocument();
@@ -197,6 +203,14 @@ describe('TopBar', () => {
       rerender(<TopBar {...defaultProps} searchTerm="test" />);
       expect(screen.getByText('Suchergebnisse')).toBeInTheDocument();
       expect(screen.queryByText(DefaultEmailCategory.INBOX)).not.toBeInTheDocument();
+    });
+
+    it('should update search results count display', () => {
+      const { rerender } = render(<TopBar {...defaultProps} searchTerm="test" filteredEmailsCount={7} />);
+      expect(screen.getByText('(7)')).toBeInTheDocument();
+
+      rerender(<TopBar {...defaultProps} searchTerm="test" filteredEmailsCount={25} />);
+      expect(screen.getByText('(25)')).toBeInTheDocument();
     });
   });
 });
