@@ -24,7 +24,8 @@ function createSchema() {
       color TEXT,
       lastSyncUid INTEGER DEFAULT 0,
       storageUsed INTEGER DEFAULT 0,
-      storageTotal INTEGER DEFAULT 0
+      storageTotal INTEGER DEFAULT 0,
+      lastSyncTime INTEGER DEFAULT NULL
     )
   `);
 
@@ -36,6 +37,11 @@ function createSchema() {
   }
   try {
     db.exec('ALTER TABLE accounts ADD COLUMN storageTotal INTEGER DEFAULT 0');
+  } catch (_e) {
+    // Column already exists
+  }
+  try {
+    db.exec('ALTER TABLE accounts ADD COLUMN lastSyncTime INTEGER DEFAULT NULL');
   } catch (_e) {
     // Column already exists
   }
@@ -244,7 +250,7 @@ function getAccounts() {
     .prepare(
       `SELECT
         id, name, email, provider, imapHost, imapPort, username,
-        color, lastSyncUid, storageUsed, storageTotal
+        color, lastSyncUid, storageUsed, storageTotal, lastSyncTime
       FROM accounts`
     )
     .all();
@@ -306,9 +312,9 @@ function addAccount(account) {
   });
 }
 
-function updateAccountSync(id, lastSyncUid) {
-  const stmt = db.prepare('UPDATE accounts SET lastSyncUid = ? WHERE id = ?');
-  return stmt.run(lastSyncUid, id);
+function updateAccountSync(id, lastSyncUid, lastSyncTime) {
+  const stmt = db.prepare('UPDATE accounts SET lastSyncUid = ?, lastSyncTime = ? WHERE id = ?');
+  return stmt.run(lastSyncUid, lastSyncTime, id);
 }
 
 function updateAccountQuota(id, used, total) {

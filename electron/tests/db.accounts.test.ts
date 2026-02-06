@@ -29,7 +29,7 @@ interface DbModule {
   };
   getAccounts: () => Array<ImapAccount & { username?: string; password?: string; lastSyncUid?: number }>;
   getAccountWithPassword: (id: string) => (ImapAccount & { username?: string; password?: string }) | undefined;
-  updateAccountSync: (id: string, lastSyncUid: number) => { changes: number };
+  updateAccountSync: (id: string, lastSyncUid: number, lastSyncTime?: number) => { changes: number };
   updateAccountQuota: (id: string, used: number, total: number) => { changes: number };
   deleteAccountDn: (id: string) => void;
   saveEmail: (email: { id: string; accountId: string; [key: string]: unknown }) => void;
@@ -351,6 +351,159 @@ describe('Database Account CRUD Operations', () => {
       const result = db.updateAccountSync('non-existent-id', 100);
       // Should not throw, but changes should be 0
       expect(result.changes).toBe(0);
+    });
+
+    it('should update lastSyncTime when provided with all 3 parameters', () => {
+      const account = {
+        id: 'sync-time-test-1',
+        name: 'Sync Time Test',
+        email: 'synctime@test.com',
+        provider: 'test',
+        imapHost: 'imap.test.com',
+        imapPort: 993,
+        username: 'user',
+        password: 'pass',
+        color: '#FF00FF',
+      };
+
+      db.addAccount(account);
+
+      // Initial state should be null for lastSyncTime
+      let accounts = db.getAccounts();
+      const initialAccount = accounts.find((a) => a.id === 'sync-time-test-1');
+      expect(initialAccount?.lastSyncTime).toBeNull();
+
+      // Update with lastSyncTime
+      const timestamp = 1704067200000; // 2024-01-01 00:00:00 UTC
+      db.updateAccountSync('sync-time-test-1', 100, timestamp);
+
+      accounts = db.getAccounts();
+      const updatedAccount = accounts.find((a) => a.id === 'sync-time-test-1');
+      expect(updatedAccount?.lastSyncUid).toBe(100);
+      expect(updatedAccount?.lastSyncTime).toBe(timestamp);
+    });
+
+    it('should update lastSyncTime multiple times correctly', () => {
+      const account = {
+        id: 'sync-time-multi',
+        name: 'Multi Time Sync',
+        email: 'multitime@test.com',
+        provider: 'test',
+        imapHost: 'imap.test.com',
+        imapPort: 993,
+        username: 'user',
+        password: 'pass',
+        color: '#00FFFF',
+      };
+
+      db.addAccount(account);
+
+      const timestamp1 = 1704067200000; // 2024-01-01 00:00:00 UTC
+      const timestamp2 = 1704153600000; // 2024-01-02 00:00:00 UTC
+      const timestamp3 = Date.now();
+
+      db.updateAccountSync('sync-time-multi', 50, timestamp1);
+      let account1 = db.getAccounts().find((a) => a.id === 'sync-time-multi');
+      expect(account1?.lastSyncTime).toBe(timestamp1);
+
+      db.updateAccountSync('sync-time-multi', 150, timestamp2);
+      let account2 = db.getAccounts().find((a) => a.id === 'sync-time-multi');
+      expect(account2?.lastSyncTime).toBe(timestamp2);
+
+      db.updateAccountSync('sync-time-multi', 999, timestamp3);
+      let account3 = db.getAccounts().find((a) => a.id === 'sync-time-multi');
+      expect(account3?.lastSyncTime).toBe(timestamp3);
+    });
+
+    it('should handle optional lastSyncTime parameter (backward compatibility)', () => {
+      const account = {
+        id: 'sync-optional-time',
+        name: 'Optional Time',
+        email: 'optional@test.com',
+        provider: 'test',
+        imapHost: 'imap.test.com',
+        imapPort: 993,
+        username: 'user',
+        password: 'pass',
+        color: '#FFFF00',
+      };
+
+      db.addAccount(account);
+
+      // Update without lastSyncTime (only 2 parameters)
+      db.updateAccountSync('sync-optional-time', 200);
+
+      const updatedAccount = db.getAccounts().find((a) => a.id === 'sync-optional-time');
+      expect(updatedAccount?.lastSyncUid).toBe(200);
+      // lastSyncTime should remain undefined when not provided
+    });
+
+    it('should update lastSyncTime independently for each account', () => {
+      const account1 = {
+        id: 'sync-time-iso-1',
+        name: 'Time Iso 1',
+        email: 'timeiso1@test.com',
+        provider: 'test',
+        imapHost: 'imap.test.com',
+        imapPort: 993,
+        username: 'u1',
+        password: 'p1',
+        color: '#111111',
+      };
+
+      const account2 = {
+        id: 'sync-time-iso-2',
+        name: 'Time Iso 2',
+        email: 'timeiso2@test.com',
+        provider: 'test',
+        imapHost: 'imap.test.com',
+        imapPort: 993,
+        username: 'u2',
+        password: 'p2',
+        color: '#222222',
+      };
+
+      db.addAccount(account1);
+      db.addAccount(account2);
+
+      const timestamp1 = 1704067200000; // 2024-01-01
+      const timestamp2 = 1704153600000; // 2024-01-02
+
+      db.updateAccountSync('sync-time-iso-1', 100, timestamp1);
+      db.updateAccountSync('sync-time-iso-2', 200, timestamp2);
+
+      const accounts = db.getAccounts();
+      const acc1 = accounts.find((a) => a.id === 'sync-time-iso-1');
+      const acc2 = accounts.find((a) => a.id === 'sync-time-iso-2');
+
+      expect(acc1?.lastSyncUid).toBe(100);
+      expect(acc1?.lastSyncTime).toBe(timestamp1);
+      expect(acc2?.lastSyncUid).toBe(200);
+      expect(acc2?.lastSyncTime).toBe(timestamp2);
+    });
+
+    it('should update lastSyncTime with current Date.now() value', () => {
+      const account = {
+        id: 'sync-now-test',
+        name: 'Now Test',
+        email: 'now@test.com',
+        provider: 'test',
+        imapHost: 'imap.test.com',
+        imapPort: 993,
+        username: 'user',
+        password: 'pass',
+        color: '#AABBCC',
+      };
+
+      db.addAccount(account);
+
+      const now = Date.now();
+      db.updateAccountSync('sync-now-test', 500, now);
+
+      const updatedAccount = db.getAccounts().find((a) => a.id === 'sync-now-test');
+      expect(updatedAccount?.lastSyncTime).toBe(now);
+      // Verify it's a realistic timestamp (within the last second)
+      expect(updatedAccount?.lastSyncTime).toBeGreaterThan(now - 1000);
     });
   });
 

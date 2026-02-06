@@ -595,6 +595,10 @@ async function syncAccount(account) {
       totalNew += newMessagesCount;
     }
 
+    // Update account sync timestamp after successful sync
+    const maxUid = _getMaxUidForFolder(account.id, INBOX_FOLDER);
+    _updateAccountSync(account.id, maxUid, Date.now());
+
     await client.logout();
     logger.info(`Sync completed. Total new messages: ${totalNew}`);
     return { success: true, count: totalNew };
