@@ -204,6 +204,10 @@ export const useEmails = ({ activeAccountId, accounts: _accounts }: UseEmailsPar
         case 'subject':
           comparison = a.subject.localeCompare(b.subject);
           break;
+        default: {
+          const _exhaustive: never = sortConfig.field;
+          throw new Error(`Unhandled sort field: ${_exhaustive}`);
+        }
       }
 
       return sortConfig.direction === 'asc' ? comparison : -comparison;
