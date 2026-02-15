@@ -216,37 +216,39 @@ app.whenReady().then(() => {
   });
 
   ipcMain.handle('delete-email', async (event, { accountId, emailId, uid, folder }) => {
-    // Delete from DB
-    db.deleteEmail(emailId);
-    // Retrieve account with decrypted password for IMAP operations
+    // Retrieve account with decrypted password for IMAP operations FIRST
     const accountWithPassword = db.getAccountWithPassword(accountId);
     if (!accountWithPassword) {
       logger.error(`[IPC delete-email] Account not found: ${accountId}`);
       return { success: false, error: 'Account not found' };
     }
+    // Delete from DB only after account validation
+    db.deleteEmail(emailId);
     // Delete from Server
     return await imap.deleteEmail(accountWithPassword, uid, folder);
   });
 
   ipcMain.handle('update-email-read', async (event, { accountId, emailId, uid, isRead, folder }) => {
-    db.updateEmailReadStatus(emailId, isRead);
-    // Retrieve account with decrypted password for IMAP operations
+    // Retrieve account with decrypted password for IMAP operations FIRST
     const accountWithPassword = db.getAccountWithPassword(accountId);
     if (!accountWithPassword) {
       logger.error(`[IPC update-email-read] Account not found: ${accountId}`);
       return { success: false, error: 'Account not found' };
     }
+    // Update DB only after account validation
+    db.updateEmailReadStatus(emailId, isRead);
     return await imap.setEmailFlag(accountWithPassword, uid, '\\Seen', isRead, folder);
   });
 
   ipcMain.handle('update-email-flag', async (event, { accountId, emailId, uid, isFlagged, folder }) => {
-    db.updateEmailFlagStatus(emailId, isFlagged);
-    // Retrieve account with decrypted password for IMAP operations
+    // Retrieve account with decrypted password for IMAP operations FIRST
     const accountWithPassword = db.getAccountWithPassword(accountId);
     if (!accountWithPassword) {
       logger.error(`[IPC update-email-flag] Account not found: ${accountId}`);
       return { success: false, error: 'Account not found' };
     }
+    // Update DB only after account validation
+    db.updateEmailFlagStatus(emailId, isFlagged);
     return await imap.setEmailFlag(accountWithPassword, uid, '\\Flagged', isFlagged, folder);
   });
 
@@ -363,5 +365,12 @@ app.whenReady().then(() => {
 });
 
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') app.quit();
+  // Quit the app when all windows are closed, even on macOS
+  app.quit();
+});
+
+app.on('before-quit', () => {
+  logger.info('App is quitting, cleaning up resources...');
+  // Perform any cleanup here if needed in the future
+  // e.g., close database connections, cancel pending operations, etc.
 });
