@@ -113,6 +113,11 @@ const shouldShowInCategory = (
   showUnsortedOnly: boolean,
   categories: Category[]
 ): boolean => {
+  // Handle FLAGGED virtual view
+  if (selectedCategory === FLAGGED) {
+    return email.isFlagged === true;
+  }
+
   // Handle standard folders first
   if (isStandardFolderCategory(selectedCategory)) {
     if (!matchesStandardFolder(email, selectedCategory)) {
