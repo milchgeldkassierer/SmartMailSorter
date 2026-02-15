@@ -78,6 +78,11 @@ declare global {
       // Notification Settings
       saveNotificationSettings: (settings: NotificationSettings) => Promise<NotificationOperationResult>;
       loadNotificationSettings: () => Promise<NotificationSettings | null>;
+      updateBadgeCount: (count: number) => Promise<void>;
+
+      // Event listeners
+      onNotificationClicked: (callback: (data: { emailId: string }) => void) => void;
+      removeNotificationClickedListener: (callback: (data: { emailId: string }) => void) => void;
     };
   }
 }

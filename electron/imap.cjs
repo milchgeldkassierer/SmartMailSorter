@@ -8,6 +8,7 @@ const {
   getMaxUidForFolder: _getMaxUidForFolder,
   getAllUidsForFolder: _getAllUidsForFolder,
   deleteEmailsByUid: _deleteEmailsByUid,
+  getUnreadEmailCount,
 } = require('./db.cjs');
 // Add db just for direct calls if needed, though we imported migrateFolder directly
 const db = require('./db.cjs');
@@ -605,8 +606,12 @@ async function syncAccount(account) {
     const maxUid = _getMaxUidForFolder(account.id, INBOX_FOLDER);
     _updateAccountSync(account.id, maxUid, Date.now());
 
+    // Update badge count with total unread emails
+    const unreadCount = getUnreadEmailCount(account.id);
+    notifications.updateBadgeCount(unreadCount);
+
     await client.logout();
-    logger.info(`Sync completed. Total new messages: ${totalNew}`);
+    logger.info(`Sync completed. Total new messages: ${totalNew}, Unread count: ${unreadCount}`);
     return { success: true, count: totalNew };
   } catch (error) {
     if (process.env.NODE_ENV !== 'test') {

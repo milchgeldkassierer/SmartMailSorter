@@ -34,6 +34,14 @@ contextBridge.exposeInMainWorld('electron', {
   saveNotificationSettings: (accountId, settings) => ipcRenderer.invoke('save-notification-settings', accountId, settings),
   updateBadgeCount: (count) => ipcRenderer.invoke('update-badge-count', count),
 
+  // Event listeners
+  onNotificationClicked: (callback) => {
+    ipcRenderer.on('notification-clicked', (event, data) => callback(data));
+  },
+  removeNotificationClickedListener: (callback) => {
+    ipcRenderer.removeListener('notification-clicked', callback);
+  },
+
   // External links
   openExternal: (url) => ipcRenderer.invoke('open-external-url', url),
 });

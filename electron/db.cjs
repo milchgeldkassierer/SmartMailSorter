@@ -568,6 +568,13 @@ function saveNotificationSettings(accountId, settings) {
   return stmt.run(accountId, settings.enabled ? 1 : 0, mutedCategoriesJson);
 }
 
+function getUnreadEmailCount(accountId) {
+  const result = db
+    .prepare('SELECT COUNT(*) as count FROM emails WHERE accountId = ? AND isRead = 0')
+    .get(accountId);
+  return result ? result.count : 0;
+}
+
 module.exports = {
   init,
   close,
@@ -587,6 +594,7 @@ module.exports = {
   updateEmailFlagStatus,
   getEmailAttachments,
   getAttachment,
+  getUnreadEmailCount,
 
   // New Category Methods
   getCategories: () => db.prepare('SELECT name, type FROM categories ORDER BY name').all(),

@@ -222,6 +222,30 @@ const App: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [setAccounts, setActiveAccountId, setData, setIsAuthenticated, dialog.alert]);
 
+  // Handle notification clicks
+  useEffect(() => {
+    if (!window.electron) return;
+
+    const handleNotificationClick = (data: { emailId: string }) => {
+      // Navigate to the email
+      setSelectedEmailId(data.emailId);
+
+      // Find the email's category and switch to it
+      const email = currentEmails.find((e) => e.id === data.emailId);
+      if (email && email.smartCategory) {
+        setSelectedCategory(email.smartCategory);
+      }
+    };
+
+    window.electron.onNotificationClicked(handleNotificationClick);
+
+    return () => {
+      if (window.electron) {
+        window.electron.removeNotificationClickedListener(handleNotificationClick);
+      }
+    };
+  }, [currentEmails, setSelectedEmailId, setSelectedCategory]);
+
   // Fetch emails when switching accounts
   useEffect(() => {
     (async () => {
