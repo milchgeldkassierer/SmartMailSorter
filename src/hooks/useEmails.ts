@@ -198,8 +198,27 @@ export const useEmails = ({ activeAccountId, accounts: _accounts }: UseEmailsPar
     // 2. Apply search filter
     const searchFiltered = categoryFiltered.filter((email) => matchesSearchTerm(email, searchTerm, searchConfig));
 
-    return searchFiltered;
-  }, [currentEmails, selectedCategory, searchTerm, searchConfig, showUnsortedOnly, currentCategories]);
+    // 3. Apply sort
+    const sorted = [...searchFiltered].sort((a, b) => {
+      let comparison = 0;
+
+      switch (sortConfig.field) {
+        case 'date':
+          comparison = new Date(a.date).getTime() - new Date(b.date).getTime();
+          break;
+        case 'sender':
+          comparison = a.sender.localeCompare(b.sender);
+          break;
+        case 'subject':
+          comparison = a.subject.localeCompare(b.subject);
+          break;
+      }
+
+      return sortConfig.direction === 'asc' ? comparison : -comparison;
+    });
+
+    return sorted;
+  }, [currentEmails, selectedCategory, searchTerm, searchConfig, showUnsortedOnly, currentCategories, sortConfig]);
 
   // Pagination
   const displayedEmails = filteredEmails.slice(0, visibleCount);
