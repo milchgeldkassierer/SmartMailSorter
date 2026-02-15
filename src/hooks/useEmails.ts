@@ -12,6 +12,15 @@ import {
 } from '../types';
 import { SearchConfig } from '../components/SearchBar';
 
+// Sort configuration type
+export type SortField = 'date' | 'sender' | 'subject';
+export type SortDirection = 'asc' | 'desc';
+
+export interface SortConfig {
+  field: SortField;
+  direction: SortDirection;
+}
+
 // Standard folder name constants
 const STANDARD_EXCLUDED_FOLDERS = [SENT_FOLDER, SPAM_FOLDER, TRASH_FOLDER] as const;
 
@@ -27,6 +36,7 @@ interface UseEmailsReturn {
   selectedCategory: string;
   searchTerm: string;
   searchConfig: SearchConfig;
+  sortConfig: SortConfig;
   showUnsortedOnly: boolean;
 
   // Computed
@@ -44,6 +54,7 @@ interface UseEmailsReturn {
   setSelectedCategory: (category: string) => void;
   setSearchTerm: (term: string) => void;
   setSearchConfig: (config: SearchConfig) => void;
+  setSortConfig: (config: SortConfig) => void;
   setShowUnsortedOnly: (value: boolean) => void;
 
   // Helper Functions
@@ -160,6 +171,12 @@ export const useEmails = ({ activeAccountId, accounts: _accounts }: UseEmailsPar
     logic: 'AND',
   });
 
+  // Sort State
+  const [sortConfig, setSortConfig] = useState<SortConfig>({
+    field: 'date',
+    direction: 'desc',
+  });
+
   // Filter State
   const [showUnsortedOnly, setShowUnsortedOnly] = useState(false);
 
@@ -253,6 +270,7 @@ export const useEmails = ({ activeAccountId, accounts: _accounts }: UseEmailsPar
     selectedCategory,
     searchTerm,
     searchConfig,
+    sortConfig,
     showUnsortedOnly,
 
     // Computed
@@ -270,6 +288,7 @@ export const useEmails = ({ activeAccountId, accounts: _accounts }: UseEmailsPar
     setSelectedCategory,
     setSearchTerm,
     setSearchConfig,
+    setSortConfig,
     setShowUnsortedOnly,
 
     // Helper Functions
