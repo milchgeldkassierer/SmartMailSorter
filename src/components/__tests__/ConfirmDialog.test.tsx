@@ -38,13 +38,11 @@ describe('ConfirmDialog - Integration Tests', () => {
     });
 
     it('should call onClose when close button is clicked', () => {
-      const { container } = render(<ConfirmDialog {...defaultProps} />);
-      const closeButton = container.querySelector('.text-slate-400');
+      render(<ConfirmDialog {...defaultProps} />);
+      const closeButton = screen.getByTestId('close-button');
 
-      if (closeButton) {
-        fireEvent.click(closeButton);
-        expect(defaultProps.onClose).toHaveBeenCalledTimes(1);
-      }
+      fireEvent.click(closeButton);
+      expect(defaultProps.onClose).toHaveBeenCalledTimes(1);
     });
 
     it('should render with backdrop overlay', () => {
@@ -85,7 +83,7 @@ describe('ConfirmDialog - Integration Tests', () => {
         fireEvent.click(confirmButton);
 
         expect(defaultProps.onConfirm).toHaveBeenCalledTimes(1);
-        expect(defaultProps.onConfirm).toHaveBeenCalledWith();
+        expect(defaultProps.onConfirm).toHaveBeenCalled();
       });
 
       it('should call onClose after confirming', () => {

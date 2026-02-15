@@ -67,6 +67,7 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
         onConfirm();
       }
     }
+    // Always call onClose after confirmation to ensure consistent behavior
     onClose();
   };
 
@@ -113,17 +114,30 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
 
   return (
     <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="dialog-title"
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
       onClick={handleOverlayClick}
+      onKeyDown={(e) => {
+        if (e.key === 'Escape') onClose();
+      }}
     >
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden">
         {/* Header */}
         <div className={`flex items-center justify-between p-6 border-b ${variantStyles.borderClass}`}>
           <div className="flex items-center gap-3">
             {variantStyles.icon}
-            <h2 className="text-xl font-bold text-slate-800">{title}</h2>
+            <h2 id="dialog-title" className="text-xl font-bold text-slate-800">
+              {title}
+            </h2>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600">
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-slate-400 hover:text-slate-600"
+            data-testid="close-button"
+          >
             <X className="w-6 h-6" />
           </button>
         </div>
@@ -150,6 +164,7 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
         <div className="flex items-center justify-end gap-3 p-6 bg-slate-50 border-t border-slate-100">
           {type !== 'alert' && (
             <button
+              type="button"
               onClick={onClose}
               className="px-4 py-2 text-slate-600 hover:text-slate-800 font-medium rounded-lg hover:bg-slate-100 transition-colors"
             >
@@ -157,6 +172,7 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
             </button>
           )}
           <button
+            type="button"
             onClick={handleConfirm}
             className={`px-4 py-2 font-medium rounded-lg transition-colors ${variantStyles.confirmButtonClass}`}
           >
