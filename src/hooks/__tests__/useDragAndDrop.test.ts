@@ -101,7 +101,7 @@ describe('useDragAndDrop', () => {
       });
 
       expect(event.dataTransfer.setData).toHaveBeenCalledWith(
-        'application/json',
+        'application/x-email-ids',
         JSON.stringify(['email-1'])
       );
       expect(event.dataTransfer.effectAllowed).toBe('move');
