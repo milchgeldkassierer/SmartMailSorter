@@ -333,33 +333,34 @@ const Sidebar: React.FC<SidebarProps> = ({
             {contextMenu.category}
           </div>
 
-          {!(Object.values(DefaultEmailCategory) as string[]).includes(contextMenu.category) && (
-            <>
-              <button
-                onClick={() => {
-                  const newName = prompt('Neuer Name:', contextMenu.category);
-                  if (newName && newName.trim()) onRenameCategory(contextMenu.category, newName.trim());
-                  setContextMenu(null);
-                }}
-                className="w-full text-left px-3 py-2 text-sm text-slate-300 hover:bg-slate-700 flex items-center gap-2"
-              >
-                <div className="w-4 h-4" /> <span>Umbenennen</span>
-              </button>
-              <div className="h-px bg-slate-700 my-1" />
-              <button
-                onClick={() => {
-                  if (confirm(`Ordner '${contextMenu.category}' wirklich löschen?`)) {
-                    onDeleteCategory(contextMenu.category);
-                  }
-                  setContextMenu(null);
-                }}
-                className="w-full text-left px-3 py-2 text-sm text-red-400 hover:bg-red-900/30 flex items-center gap-2"
-              >
-                <LogOut className="w-4 h-4" /> <span>Löschen</span>
-              </button>
-              <div className="h-px bg-slate-700 my-1" />
-            </>
-          )}
+          {!(Object.values(DefaultEmailCategory) as string[]).includes(contextMenu.category) &&
+            contextMenu.category !== FLAGGED_FOLDER && (
+              <>
+                <button
+                  onClick={() => {
+                    const newName = prompt('Neuer Name:', contextMenu.category);
+                    if (newName && newName.trim()) onRenameCategory(contextMenu.category, newName.trim());
+                    setContextMenu(null);
+                  }}
+                  className="w-full text-left px-3 py-2 text-sm text-slate-300 hover:bg-slate-700 flex items-center gap-2"
+                >
+                  <div className="w-4 h-4" /> <span>Umbenennen</span>
+                </button>
+                <div className="h-px bg-slate-700 my-1" />
+                <button
+                  onClick={() => {
+                    if (confirm(`Ordner '${contextMenu.category}' wirklich löschen?`)) {
+                      onDeleteCategory(contextMenu.category);
+                    }
+                    setContextMenu(null);
+                  }}
+                  className="w-full text-left px-3 py-2 text-sm text-red-400 hover:bg-red-900/30 flex items-center gap-2"
+                >
+                  <LogOut className="w-4 h-4" /> <span>Löschen</span>
+                </button>
+                <div className="h-px bg-slate-700 my-1" />
+              </>
+            )}
 
           <button
             onClick={() => {
