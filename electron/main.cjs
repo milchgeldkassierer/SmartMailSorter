@@ -220,6 +220,10 @@ app.whenReady().then(() => {
     db.deleteEmail(emailId);
     // Retrieve account with decrypted password for IMAP operations
     const accountWithPassword = db.getAccountWithPassword(accountId);
+    if (!accountWithPassword) {
+      logger.error(`[IPC delete-email] Account not found: ${accountId}`);
+      return { success: false, error: 'Account not found' };
+    }
     // Delete from Server
     return await imap.deleteEmail(accountWithPassword, uid, folder);
   });
@@ -228,6 +232,10 @@ app.whenReady().then(() => {
     db.updateEmailReadStatus(emailId, isRead);
     // Retrieve account with decrypted password for IMAP operations
     const accountWithPassword = db.getAccountWithPassword(accountId);
+    if (!accountWithPassword) {
+      logger.error(`[IPC update-email-read] Account not found: ${accountId}`);
+      return { success: false, error: 'Account not found' };
+    }
     return await imap.setEmailFlag(accountWithPassword, uid, '\\Seen', isRead, folder);
   });
 
@@ -235,6 +243,10 @@ app.whenReady().then(() => {
     db.updateEmailFlagStatus(emailId, isFlagged);
     // Retrieve account with decrypted password for IMAP operations
     const accountWithPassword = db.getAccountWithPassword(accountId);
+    if (!accountWithPassword) {
+      logger.error(`[IPC update-email-flag] Account not found: ${accountId}`);
+      return { success: false, error: 'Account not found' };
+    }
     return await imap.setEmailFlag(accountWithPassword, uid, '\\Flagged', isFlagged, folder);
   });
 
