@@ -1,3 +1,5 @@
+// DefaultEmailCategory enum values MUST remain in German for database compatibility
+// Use CategoryTranslationKey mapping for display translation
 export enum DefaultEmailCategory {
   INBOX = 'Posteingang',
   SENT = 'Gesendet',
@@ -11,13 +13,38 @@ export enum DefaultEmailCategory {
   OTHER = 'Sonstiges',
 }
 
-// German folder name constants
+// Translation key mapping for DefaultEmailCategory
+// Use with i18next: t(`categories.${CategoryTranslationKey[category]}`)
+export const CategoryTranslationKey: Record<DefaultEmailCategory, string> = {
+  [DefaultEmailCategory.INBOX]: 'INBOX',
+  [DefaultEmailCategory.SENT]: 'SENT',
+  [DefaultEmailCategory.SPAM]: 'SPAM',
+  [DefaultEmailCategory.TRASH]: 'TRASH',
+  [DefaultEmailCategory.INVOICE]: 'INVOICE',
+  [DefaultEmailCategory.NEWSLETTER]: 'NEWSLETTER',
+  [DefaultEmailCategory.PRIVATE]: 'PRIVATE',
+  [DefaultEmailCategory.BUSINESS]: 'BUSINESS',
+  [DefaultEmailCategory.CANCELLATION]: 'CANCELLATION',
+  [DefaultEmailCategory.OTHER]: 'OTHER',
+};
+
+// Folder name constants (German - used for IMAP folder names)
+// For display, use i18next with translation keys from FolderTranslationKey
 export const INBOX_FOLDER = 'Posteingang';
 export const SENT_FOLDER = 'Gesendet';
 export const SPAM_FOLDER = 'Spam';
 export const TRASH_FOLDER = 'Papierkorb';
 export const FLAGGED_FOLDER = 'Markierte';
 export const SYSTEM_FOLDERS = [INBOX_FOLDER, SENT_FOLDER, SPAM_FOLDER, TRASH_FOLDER];
+
+// Folder to translation key mapping
+// Use with i18next: t(`categories.${FolderTranslationKey[folderName]}`)
+export const FolderTranslationKey: Record<string, string> = {
+  [INBOX_FOLDER]: 'INBOX',
+  [SENT_FOLDER]: 'SENT',
+  [SPAM_FOLDER]: 'SPAM',
+  [TRASH_FOLDER]: 'TRASH',
+};
 
 export interface Category {
   name: string;
