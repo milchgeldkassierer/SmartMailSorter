@@ -2,6 +2,34 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useSync } from '../useSync';
 import { ImapAccount, Email, INBOX_FOLDER } from '../../types';
+import * as useDialogModule from '../useDialog';
+
+// Mock useDialog hook
+const mockDialogAlert = vi.fn();
+const mockDialogConfirm = vi.fn();
+const mockDialogPrompt = vi.fn();
+const mockOpenDialog = vi.fn();
+const mockCloseDialog = vi.fn();
+const mockHandleConfirm = vi.fn();
+const mockHandleClose = vi.fn();
+
+vi.spyOn(useDialogModule, 'useDialog').mockReturnValue({
+  isOpen: false,
+  dialogState: {
+    isOpen: false,
+    title: '',
+    message: '',
+    type: 'confirm',
+    variant: 'info',
+  },
+  openDialog: mockOpenDialog,
+  closeDialog: mockCloseDialog,
+  confirm: mockDialogConfirm,
+  alert: mockDialogAlert,
+  prompt: mockDialogPrompt,
+  handleConfirm: mockHandleConfirm,
+  handleClose: mockHandleClose,
+});
 
 describe('useSync', () => {
   const mockAccount1: ImapAccount = {
@@ -61,6 +89,11 @@ describe('useSync', () => {
     mockElectron.syncAccount.mockResolvedValue(undefined);
     mockElectron.getEmails.mockResolvedValue([mockEmail1, mockEmail2]);
     mockElectron.getAccounts.mockResolvedValue([mockAccount1, mockAccount2]);
+
+    // Reset dialog mocks
+    mockDialogAlert.mockResolvedValue(undefined);
+    mockDialogConfirm.mockResolvedValue(true);
+    mockDialogPrompt.mockResolvedValue('test');
   });
 
   describe('Initial State', () => {
@@ -93,6 +126,7 @@ describe('useSync', () => {
       );
       expect(result.current).toHaveProperty('isSyncing');
       expect(result.current).toHaveProperty('syncAccount');
+      expect(result.current).toHaveProperty('dialog');
     });
   });
 
@@ -267,7 +301,6 @@ describe('useSync', () => {
   describe('Error Handling', () => {
     it('should set isSyncing to false on error', async () => {
       mockElectron.syncAccount.mockRejectedValue(new Error('Sync failed'));
-      const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
       const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
       const { result } = renderHook(() =>
@@ -283,7 +316,6 @@ describe('useSync', () => {
 
       expect(result.current.isSyncing).toBe(false);
 
-      alertSpy.mockRestore();
       consoleErrorSpy.mockRestore();
     });
 
@@ -291,7 +323,6 @@ describe('useSync', () => {
       const error = new Error('Sync failed');
       mockElectron.syncAccount.mockRejectedValue(error);
       const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-      const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
 
       const { result } = renderHook(() =>
         useSync({
@@ -307,12 +338,10 @@ describe('useSync', () => {
       expect(consoleErrorSpy).toHaveBeenCalledWith('Failed to sync account:', error);
 
       consoleErrorSpy.mockRestore();
-      alertSpy.mockRestore();
     });
 
     it('should show alert on sync failure', async () => {
       mockElectron.syncAccount.mockRejectedValue(new Error('Sync failed'));
-      const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
       const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
       const { result } = renderHook(() =>
@@ -326,15 +355,17 @@ describe('useSync', () => {
         await result.current.syncAccount();
       });
 
-      expect(alertSpy).toHaveBeenCalledWith('Synchronisierung fehlgeschlagen. Bitte versuchen Sie es erneut.');
+      expect(mockDialogAlert).toHaveBeenCalledWith({
+        title: 'Synchronisierungsfehler',
+        message: 'Synchronisierung fehlgeschlagen. Bitte versuchen Sie es erneut.',
+        variant: 'error',
+      });
 
-      alertSpy.mockRestore();
       consoleErrorSpy.mockRestore();
     });
 
     it('should handle error during getEmails', async () => {
       mockElectron.getEmails.mockRejectedValue(new Error('Failed to get emails'));
-      const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
       const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
       const { result } = renderHook(() =>
@@ -350,15 +381,13 @@ describe('useSync', () => {
 
       expect(result.current.isSyncing).toBe(false);
       expect(consoleErrorSpy).toHaveBeenCalled();
-      expect(alertSpy).toHaveBeenCalled();
+      expect(mockDialogAlert).toHaveBeenCalled();
 
-      alertSpy.mockRestore();
       consoleErrorSpy.mockRestore();
     });
 
     it('should handle error during getAccounts', async () => {
       mockElectron.getAccounts.mockRejectedValue(new Error('Failed to get accounts'));
-      const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
       const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
       const { result } = renderHook(() =>
@@ -374,9 +403,8 @@ describe('useSync', () => {
 
       expect(result.current.isSyncing).toBe(false);
       expect(consoleErrorSpy).toHaveBeenCalled();
-      expect(alertSpy).toHaveBeenCalled();
+      expect(mockDialogAlert).toHaveBeenCalled();
 
-      alertSpy.mockRestore();
       consoleErrorSpy.mockRestore();
     });
   });

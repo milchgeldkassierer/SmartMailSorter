@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { ImapAccount, Email } from '../types';
+import { useDialog } from './useDialog';
 
 interface UseSyncParams {
   activeAccountId: string;
@@ -11,6 +12,7 @@ interface UseSyncParams {
 interface UseSyncReturn {
   isSyncing: boolean;
   syncAccount: () => Promise<void>;
+  dialog: ReturnType<typeof useDialog>;
 }
 
 export const useSync = ({
@@ -20,6 +22,7 @@ export const useSync = ({
   onDataUpdate,
 }: UseSyncParams): UseSyncReturn => {
   const [isSyncing, setIsSyncing] = useState(false);
+  const dialog = useDialog();
 
   // Sync emails for the active account
   const syncAccount = useCallback(async () => {
@@ -50,14 +53,19 @@ export const useSync = ({
       }
     } catch (error) {
       console.error('Failed to sync account:', error);
-      alert('Synchronisierung fehlgeschlagen. Bitte versuchen Sie es erneut.');
+      await dialog.alert({
+        title: 'Synchronisierungsfehler',
+        message: 'Synchronisierung fehlgeschlagen. Bitte versuchen Sie es erneut.',
+        variant: 'error',
+      });
     } finally {
       setIsSyncing(false);
     }
-  }, [activeAccountId, accounts, onAccountsUpdate, onDataUpdate]);
+  }, [activeAccountId, accounts, onAccountsUpdate, onDataUpdate, dialog]);
 
   return {
     isSyncing,
     syncAccount,
+    dialog,
   };
 };
