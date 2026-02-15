@@ -196,7 +196,7 @@ Built-in configuration for popular German email providers:
 - `setEmailFlag(account, uid, folder, flag, value)`: Updates server flags
 - `processMessages(client, messages, account, folder)`: Batch email processing
 
-#### 3. AI Services (`services/geminiService.ts`)
+#### 3. AI Services (`src/services/geminiService.ts`)
 
 The AI service provides **multi-provider AI integration** for email categorization:
 
@@ -302,17 +302,20 @@ SmartMailSorter/
 │   ├── db.cjs                   # SQLite database layer
 │   ├── imap.cjs                 # IMAP email synchronization
 │   ├── folderConstants.cjs      # German folder name constants
+│   ├── tests/                   # Backend unit tests
 │   └── utils/
+│       ├── csp-config.cjs       # Content Security Policy configuration
 │       ├── logger.cjs           # electron-log configuration
 │       └── security.cjs         # Input sanitization utilities
 ├── src/                         # React renderer process
 │   ├── App.tsx                  # Main React application
 │   ├── components/              # React UI components
-│   ├── contexts/                # React context providers
+│   ├── contexts/                # React context providers (DialogContext)
 │   ├── hooks/                   # Custom React hooks
+│   ├── services/
+│   │   └── geminiService.ts     # Multi-provider AI integration
+│   ├── utils/                   # Shared utilities (sanitizeHtml, formatTimeAgo, emailHtml)
 │   └── types.ts                 # TypeScript type definitions
-├── services/
-│   └── geminiService.ts         # Multi-provider AI integration
 ├── public/                      # Static assets
 ├── dist/                        # Production build output
 └── package.json                 # Dependencies and scripts
