@@ -198,7 +198,7 @@ describe('ConfirmDialog - Integration Tests', () => {
         const input = screen.getByRole('textbox');
 
         fireEvent.change(input, { target: { value: 'Test value' } });
-        fireEvent.keyPress(input, { key: 'Enter', code: 'Enter', charCode: 13 });
+        fireEvent.keyDown(input, { key: 'Enter', code: 'Enter' });
 
         expect(defaultProps.onConfirm).toHaveBeenCalledWith('Test value');
         expect(defaultProps.onClose).toHaveBeenCalledTimes(1);

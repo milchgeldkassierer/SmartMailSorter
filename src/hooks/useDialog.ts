@@ -79,7 +79,7 @@ export const useDialog = (): UseDialogReturn => {
       if (type === 'confirm') {
         resolveRef.current(true);
       } else if (type === 'prompt') {
-        resolveRef.current(value || null);
+        resolveRef.current(value ?? null);
       } else {
         resolveRef.current(undefined);
       }

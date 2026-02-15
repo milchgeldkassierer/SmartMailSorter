@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Email, AISettings, DefaultEmailCategory, SortResult, Category } from '../types';
 import { categorizeBatchWithAI } from '../services/geminiService';
-import { DialogConfig } from './useDialog';
+import { UseDialogReturn } from './useDialog';
 
 interface UseBatchOperationsProps {
   selectedIds: Set<string>;
@@ -15,10 +15,7 @@ interface UseBatchOperationsProps {
   onUpdateEmails: (updateFn: (emails: Email[]) => Email[]) => void;
   onUpdateCategories: (categories: Category[]) => void;
   onOpenSettings: () => void;
-  dialog: {
-    confirm: (config: Omit<DialogConfig, 'type'>) => Promise<boolean>;
-    alert: (config: Omit<DialogConfig, 'type'>) => Promise<void>;
-  };
+  dialog: Pick<UseDialogReturn, 'confirm' | 'alert'>;
   onConfirmDelete?: (count: number) => Promise<boolean>;
   onConfirmNewCategories?: (categories: string[]) => Promise<boolean>;
 }

@@ -1,15 +1,13 @@
 import { useState, useCallback } from 'react';
 import { ImapAccount, Email } from '../types';
-import { DialogConfig } from './useDialog';
+import { UseDialogReturn } from './useDialog';
 
 interface UseSyncParams {
   activeAccountId: string;
   accounts: ImapAccount[];
   onAccountsUpdate?: (accounts: ImapAccount[]) => void;
   onDataUpdate?: (accountId: string, data: { emails: Email[] }) => void;
-  dialog: {
-    alert: (config: Omit<DialogConfig, 'type'>) => Promise<void>;
-  };
+  dialog: Pick<UseDialogReturn, 'alert'>;
 }
 
 interface UseSyncReturn {

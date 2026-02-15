@@ -61,9 +61,8 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
       } else {
         onConfirm();
       }
-    } else {
-      onClose();
     }
+    onClose();
   };
 
   const handleOverlayClick = (e: React.MouseEvent) => {
