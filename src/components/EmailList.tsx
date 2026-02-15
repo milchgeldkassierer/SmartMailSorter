@@ -168,9 +168,7 @@ const EmailList: React.FC<EmailListProps> = ({
               </div>
 
               <div className={`flex items-baseline mb-1 gap-2 ${email.isFlagged ? 'pr-9' : ''}`}>
-                <span
-                  className={`font-medium truncate min-w-0 ${email.isRead ? 'text-slate-600' : 'text-slate-900'}`}
-                >
+                <span className={`font-medium truncate min-w-0 ${email.isRead ? 'text-slate-600' : 'text-slate-900'}`}>
                   {displayName(email.sender)}
                 </span>
                 <span className="text-xs text-slate-400 whitespace-nowrap flex-shrink-0 ml-auto group-hover:invisible">

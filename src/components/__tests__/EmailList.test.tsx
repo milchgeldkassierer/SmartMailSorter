@@ -204,7 +204,7 @@ describe('EmailList', () => {
   });
 
   describe('Smart Date Formatting', () => {
-    it('should display time (HH:MM) for today\'s emails', () => {
+    it("should display time (HH:MM) for today's emails", () => {
       const todayEmail = createEmail({
         id: 'today-email',
         sender: 'Today Sender',

@@ -287,7 +287,9 @@ describe('formatEmailDate', () => {
       twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
       twoDaysAgo.setHours(23, 59, 0, 0);
       const twoDaysAgoResult = formatEmailDate(twoDaysAgo.getTime());
-      expect(['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag']).toContain(twoDaysAgoResult);
+      expect(['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag']).toContain(
+        twoDaysAgoResult
+      );
     });
 
     it('should correctly transition from this week to older', () => {
@@ -295,7 +297,9 @@ describe('formatEmailDate', () => {
       sixDaysAgo.setDate(sixDaysAgo.getDate() - 6);
       sixDaysAgo.setHours(23, 59, 0, 0);
       const sixDaysResult = formatEmailDate(sixDaysAgo.getTime());
-      expect(['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag']).toContain(sixDaysResult);
+      expect(['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag']).toContain(
+        sixDaysResult
+      );
 
       const sevenDaysAgo = new Date();
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
@@ -417,14 +421,7 @@ describe('formatEmailDate', () => {
 
   describe('Type Safety', () => {
     it('should return string or null, never undefined', () => {
-      const testCases = [
-        null,
-        undefined,
-        Date.now(),
-        Date.now() - 1000,
-        0,
-        new Date().getTime(),
-      ];
+      const testCases = [null, undefined, Date.now(), Date.now() - 1000, 0, new Date().getTime()];
 
       testCases.forEach((testCase) => {
         const result = formatEmailDate(testCase);
