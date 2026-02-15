@@ -5,7 +5,7 @@ import { categorizeBatchWithAI } from '../services/geminiService';
 interface DialogConfig {
   title: string;
   message: string;
-  variant?: 'info' | 'warning' | 'danger' | 'success';
+  variant?: 'info' | 'warning' | 'danger';
   confirmText?: string;
   cancelText?: string;
 }

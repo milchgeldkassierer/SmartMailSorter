@@ -77,9 +77,11 @@ const App: React.FC = () => {
     if (selectedEmailId === id) setSelectedEmailId(null);
     if (!window.electron || !activeAccountId) return;
     if (emailToDelete?.uid) {
+      const account = accounts.find((a) => a.id === activeAccountId);
+      if (!account) return;
       try {
         await window.electron.deleteEmail({
-          accountId: activeAccountId,
+          account,
           emailId: id,
           uid: emailToDelete.uid,
           folder: emailToDelete.folder,
@@ -109,9 +111,11 @@ const App: React.FC = () => {
     }));
     if (window.electron && activeAccountId) {
       if (email.uid) {
+        const account = accounts.find((a) => a.id === activeAccountId);
+        if (!account) return;
         try {
           await window.electron.updateEmailRead({
-            accountId: activeAccountId,
+            account,
             emailId: id,
             uid: email.uid,
             isRead: !previousReadState,
@@ -139,9 +143,11 @@ const App: React.FC = () => {
     }));
     if (window.electron && activeAccountId) {
       if (email.uid) {
+        const account = accounts.find((a) => a.id === activeAccountId);
+        if (!account) return;
         try {
           await window.electron.updateEmailFlag({
-            accountId: activeAccountId,
+            account,
             emailId: id,
             uid: email.uid,
             isFlagged: !previousFlagState,
@@ -176,6 +182,7 @@ const App: React.FC = () => {
       onUpdateEmails: (updateFn) => updateActiveAccountData((prev) => ({ ...prev, emails: updateFn(prev.emails) })),
       onUpdateCategories: (categories) => updateActiveAccountData((prev) => ({ ...prev, categories })),
       onOpenSettings: () => setIsSettingsOpen(true),
+      dialog,
     });
 
   const { isSyncing, syncAccount } = useSync({

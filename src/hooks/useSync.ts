@@ -56,7 +56,7 @@ export const useSync = ({
       await dialog.alert({
         title: 'Synchronisierungsfehler',
         message: 'Synchronisierung fehlgeschlagen. Bitte versuchen Sie es erneut.',
-        variant: 'error',
+        variant: 'danger',
       });
     } finally {
       setIsSyncing(false);

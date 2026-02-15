@@ -358,7 +358,7 @@ describe('useSync', () => {
       expect(mockDialogAlert).toHaveBeenCalledWith({
         title: 'Synchronisierungsfehler',
         message: 'Synchronisierung fehlgeschlagen. Bitte versuchen Sie es erneut.',
-        variant: 'error',
+        variant: 'danger',
       });
 
       consoleErrorSpy.mockRestore();
