@@ -16,7 +16,7 @@ import {
   Star,
 } from './Icon';
 import { ImapAccount, DefaultEmailCategory, Category, SYSTEM_FOLDERS, FLAGGED_FOLDER } from '../types';
-import { formatTimeAgo } from '../utils/formatTimeAgo';
+import { formatTimeAgo, formatNumber } from '../utils/formatTimeAgo';
 import { useDialogContext } from '../contexts/DialogContext';
 
 interface SidebarProps {
@@ -417,9 +417,9 @@ const Sidebar: React.FC<SidebarProps> = ({
           </div>
           {activeAccount && activeAccount.storageTotal ? (
             <span>
-              {Math.round((activeAccount.storageUsed || 0) / 1024)} MB /{' '}
-              {Math.round((activeAccount.storageTotal / 1024 / 1024) * 100) / 100} GB (
-              {Math.round(((activeAccount.storageUsed || 0) / activeAccount.storageTotal) * 100)}%)
+              {formatNumber((activeAccount.storageUsed || 0) / 1024, { maximumFractionDigits: 0 })} MB /{' '}
+              {formatNumber(activeAccount.storageTotal / 1024 / 1024, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} GB (
+              {formatNumber(((activeAccount.storageUsed || 0) / activeAccount.storageTotal) * 100, { maximumFractionDigits: 0 })}%)
             </span>
           ) : (
             <span>{t('common.unknown')}</span>

@@ -164,3 +164,50 @@ export function formatDateTime(timestamp: number | null | undefined): string | n
     minute: '2-digit',
   });
 }
+
+/**
+ * Format a number with locale-aware separators.
+ *
+ * This function formats numbers according to the current language's conventions:
+ * - German (de): 1.234,56 (dot as thousands separator, comma as decimal)
+ * - English (en): 1,234.56 (comma as thousands separator, dot as decimal)
+ *
+ * @param value - The number to format
+ * @param options - Optional Intl.NumberFormat options to customize the output
+ * @returns Localized number string, or null if input is invalid
+ *
+ * @example
+ * ```typescript
+ * // Format storage size
+ * formatNumber(1234.56); // "1.234,56" (DE) or "1,234.56" (EN)
+ *
+ * // Format with specific decimal places
+ * formatNumber(1234.567, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+ * // "1.234,57" (DE) or "1,234.57" (EN)
+ *
+ * // Format as integer (no decimals)
+ * formatNumber(1234.567, { maximumFractionDigits: 0 });
+ * // "1.235" (DE) or "1,235" (EN)
+ * ```
+ */
+export function formatNumber(
+  value: number | null | undefined,
+  options?: Intl.NumberFormatOptions
+): string | null {
+  // Handle null/undefined/invalid input
+  if (value == null || typeof value !== 'number' || isNaN(value)) {
+    return null;
+  }
+
+  // Get current language from i18n
+  const locale = i18n.language || 'de';
+
+  try {
+    // Format the number using Intl.NumberFormat
+    const formatter = new Intl.NumberFormat(locale, options);
+    return formatter.format(value);
+  } catch (error) {
+    // Fallback to string conversion if formatting fails
+    return value.toString();
+  }
+}
