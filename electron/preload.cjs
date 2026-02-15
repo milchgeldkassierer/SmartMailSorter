@@ -29,6 +29,11 @@ contextBridge.exposeInMainWorld('electron', {
   saveAISettings: (settings) => ipcRenderer.invoke('ai-settings-save', settings),
   loadAISettings: () => ipcRenderer.invoke('ai-settings-load'),
 
+  // Notification Settings
+  getNotificationSettings: (accountId) => ipcRenderer.invoke('get-notification-settings', accountId),
+  saveNotificationSettings: (accountId, settings) => ipcRenderer.invoke('save-notification-settings', accountId, settings),
+  updateBadgeCount: (count) => ipcRenderer.invoke('update-badge-count', count),
+
   // External links
   openExternal: (url) => ipcRenderer.invoke('open-external-url', url),
 });

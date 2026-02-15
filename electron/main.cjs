@@ -13,6 +13,7 @@ process.on('unhandledRejection', (reason, promise) => {
 
 const db = require('./db.cjs');
 const imap = require('./imap.cjs');
+const notifications = require('./notifications.cjs');
 const { sanitizeFilename } = require('./utils/security.cjs');
 const { createCspHeaderHandler } = require('./utils/csp-config.cjs');
 
@@ -370,6 +371,19 @@ app.whenReady().then(() => {
       logger.error('[IPC] Failed to load AI settings:', error);
       throw error;
     }
+  });
+
+  // Notification Settings IPC handlers
+  ipcMain.handle('get-notification-settings', (event, accountId) => {
+    return db.getNotificationSettings(accountId);
+  });
+
+  ipcMain.handle('save-notification-settings', (event, accountId, settings) => {
+    return db.saveNotificationSettings(accountId, settings);
+  });
+
+  ipcMain.handle('update-badge-count', (event, count) => {
+    return notifications.updateBadgeCount(count);
   });
 
   createWindow();
