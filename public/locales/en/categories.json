@@ -1,0 +1,14 @@
+{
+  "categories": {
+    "INBOX": "Inbox",
+    "SENT": "Sent",
+    "SPAM": "Spam",
+    "TRASH": "Trash",
+    "INVOICE": "Invoices",
+    "NEWSLETTER": "Newsletter",
+    "PRIVATE": "Private",
+    "BUSINESS": "Business",
+    "CANCELLATION": "Cancellations",
+    "OTHER": "Other"
+  }
+}
