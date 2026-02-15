@@ -71,6 +71,14 @@ export interface SortResult {
   confidence: number;
 }
 
+// Email Sort Types
+export type SortField = 'date' | 'sender' | 'subject';
+
+export interface SortConfig {
+  field: SortField;
+  direction: 'asc' | 'desc';
+}
+
 // AI Specific Types
 export enum LLMProvider {
   GEMINI = 'Google Gemini',
