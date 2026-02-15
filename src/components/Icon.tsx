@@ -42,6 +42,8 @@ import {
   FolderOpen,
   AlertOctagon,
   Clock,
+  Bell,
+  BellOff,
 } from 'lucide-react';
 import { DefaultEmailCategory, SENT_FOLDER, SPAM_FOLDER, TRASH_FOLDER } from '../types';
 
@@ -123,4 +125,6 @@ export {
   AlertOctagon,
   Trash2,
   Clock,
+  Bell,
+  BellOff,
 };
