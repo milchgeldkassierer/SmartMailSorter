@@ -359,8 +359,8 @@ const App: React.FC = () => {
             onRowClick={handleRowClick}
             onToggleSelection={handleToggleSelection}
             onDeleteEmail={handleDeleteEmail}
-            onToggleRead={handleToggleRead}
-            onToggleFlag={handleToggleFlag}
+            onToggleRead={(id) => handleToggleRead(id).catch(() => {})}
+            onToggleFlag={(id) => handleToggleFlag(id).catch(() => {})}
             isLoading={false}
             onLoadMore={loadMoreEmails}
             hasMore={canLoadMore}
