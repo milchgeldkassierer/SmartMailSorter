@@ -13,9 +13,11 @@ import { useCategories } from './hooks/useCategories';
 import { useSelection } from './hooks/useSelection';
 import { useBatchOperations } from './hooks/useBatchOperations';
 import { useSync } from './hooks/useSync';
+import { useDialog } from './hooks/useDialog';
 import TopBar from './components/TopBar';
 import BatchActionBar from './components/BatchActionBar';
 import ProgressBar from './components/ProgressBar';
+import ConfirmDialog from './components/ConfirmDialog';
 
 const App: React.FC = () => {
   const { setIsAuthenticated, setIsConnecting } = useAuth();
@@ -23,6 +25,7 @@ const App: React.FC = () => {
     useAccounts();
   const { aiSettings, setAiSettings } = useAISettings();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const dialog = useDialog();
 
   const {
     setData,
@@ -202,10 +205,14 @@ const App: React.FC = () => {
         }
       } catch (error) {
         console.error('Failed to initialize app:', error);
-        alert('Fehler beim Laden der Daten');
+        await dialog.alert({
+          title: 'Fehler',
+          message: 'Fehler beim Laden der Daten',
+          variant: 'danger',
+        });
       }
     })();
-  }, [setAccounts, setActiveAccountId, setData, setIsAuthenticated]);
+  }, [setAccounts, setActiveAccountId, setData, setIsAuthenticated, dialog]);
 
   // Fetch emails when switching accounts
   useEffect(() => {
@@ -222,10 +229,14 @@ const App: React.FC = () => {
         }));
       } catch (error) {
         console.error('Failed to switch account:', error);
-        alert('Fehler beim Laden des Kontos');
+        await dialog.alert({
+          title: 'Fehler',
+          message: 'Fehler beim Laden des Kontos',
+          variant: 'danger',
+        });
       }
     })();
-  }, [activeAccountId, autoDiscoverFolders, setData]);
+  }, [activeAccountId, autoDiscoverFolders, setData, dialog]);
 
   const handleAddAccount = async (newAccount: ImapAccount) => {
     if (window.electron) {
@@ -244,7 +255,11 @@ const App: React.FC = () => {
         }));
         setIsAuthenticated(true);
       } catch {
-        alert('Konto konnte nicht hinzugefügt werden. Prüfe die Daten.');
+        await dialog.alert({
+          title: 'Fehler',
+          message: 'Konto konnte nicht hinzugefügt werden. Prüfe die Daten.',
+          variant: 'danger',
+        });
       } finally {
         setIsConnecting(false);
       }
@@ -375,6 +390,20 @@ const App: React.FC = () => {
           onSaveAISettings={setAiSettings}
         />
       </div>
+
+      <ConfirmDialog
+        isOpen={dialog.isOpen}
+        title={dialog.dialogState.title}
+        message={dialog.dialogState.message}
+        type={dialog.dialogState.type}
+        variant={dialog.dialogState.variant}
+        confirmText={dialog.dialogState.confirmText}
+        cancelText={dialog.dialogState.cancelText}
+        defaultValue={dialog.dialogState.defaultValue}
+        placeholder={dialog.dialogState.placeholder}
+        onConfirm={dialog.handleConfirm}
+        onClose={dialog.handleClose}
+      />
     </div>
   );
 };
