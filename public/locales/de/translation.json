@@ -201,5 +201,28 @@
     "monthsAgo": "Vor {{count}} Monaten",
     "yearAgo": "Vor einem Jahr",
     "yearsAgo": "Vor {{count}} Jahren"
+  },
+  "batchActionBar": {
+    "selected": "ausgewählt",
+    "markAsRead": "Als gelesen",
+    "markAsUnread": "Als ungelesen",
+    "flag": "Markieren",
+    "unflag": "Entmarkieren",
+    "smartSort": "Smart Sortieren",
+    "tooltipApiKeyMissing": "Bitte API Key in Einstellungen hinterlegen",
+    "tooltipSmartSort": "Ausgewählte Mails mit AI sortieren"
+  },
+  "simulationStart": {
+    "title": "GMX AI Sorter",
+    "subtitle": "Intelligent Email Categorization Prototype",
+    "simulationModeTitle": "Simulation Mode:",
+    "simulationModeDescription": "Direct IMAP access is not possible from a browser. This app uses Gemini AI to generate realistic email data and demonstrate how the AI sorting algorithm functions.",
+    "description": "Klicken Sie auf \"Verbinden\", um den Simulator zu starten. Gemini generiert Beispiel-Emails und sortiert diese automatisch in die richtigen Ordner.",
+    "connecting": "Generiere Postfach...",
+    "connectButton": "Mit Demo-Postfach verbinden",
+    "poweredBy": "Powered by Gemini 3 Flash Preview"
+  },
+  "confirmDialog": {
+    "confirm": "Bestätigen"
   }
 }

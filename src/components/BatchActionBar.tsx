@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Trash2, BrainCircuit, Mail, MailOpen, Star } from './Icon';
 import { Email, AISettings } from '../types';
 
@@ -25,17 +26,18 @@ const BatchActionBar: React.FC<BatchActionBarProps> = ({
   canSmartSort,
   aiSettings,
 }) => {
+  const { t } = useTranslation();
   const allSelected = filteredEmails.length > 0 && selectedIds.size === filteredEmails.length;
 
   // Determine if any selected email is unread
   const selectedEmails = filteredEmails.filter((e) => selectedIds.has(e.id));
   const hasUnread = selectedEmails.some((e) => !e.isRead);
-  const markAsReadLabel = hasUnread ? 'Als gelesen' : 'Als ungelesen';
+  const markAsReadLabel = hasUnread ? t('batchActionBar.markAsRead') : t('batchActionBar.markAsUnread');
   const MarkAsReadIcon = hasUnread ? MailOpen : Mail;
 
   // Determine if any selected email is unflagged
   const hasUnflagged = selectedEmails.some((e) => !e.isFlagged);
-  const flagLabel = hasUnflagged ? 'Markieren' : 'Entmarkieren';
+  const flagLabel = hasUnflagged ? t('batchActionBar.flag') : t('batchActionBar.unflag');
 
   return (
     <div className="h-10 border-b border-slate-200 bg-slate-50 flex items-center px-6 gap-4">
@@ -48,7 +50,9 @@ const BatchActionBar: React.FC<BatchActionBarProps> = ({
         />
 
         {selectedIds.size > 0 && (
-          <span className="text-sm font-medium text-slate-700 fade-in">{selectedIds.size} ausgewählt</span>
+          <span className="text-sm font-medium text-slate-700 fade-in">
+            {selectedIds.size} {t('batchActionBar.selected')}
+          </span>
         )}
       </div>
 
@@ -59,7 +63,7 @@ const BatchActionBar: React.FC<BatchActionBarProps> = ({
             className="flex items-center gap-1.5 px-3 py-1 bg-white border border-slate-200 text-slate-700 text-sm rounded hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors"
           >
             <Trash2 className="w-4 h-4" />
-            <span>Löschen</span>
+            <span>{t('common.delete')}</span>
           </button>
 
           {/* Mark as Read/Unread Button */}
@@ -90,11 +94,11 @@ const BatchActionBar: React.FC<BatchActionBarProps> = ({
                 : 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed'
             }`}
             title={
-              !aiSettings.apiKey ? 'Bitte API Key in Einstellungen hinterlegen' : 'Ausgewählte Mails mit AI sortieren'
+              !aiSettings.apiKey ? t('batchActionBar.tooltipApiKeyMissing') : t('batchActionBar.tooltipSmartSort')
             }
           >
             <BrainCircuit className="w-3.5 h-3.5" />
-            <span>Smart Sortieren</span>
+            <span>{t('batchActionBar.smartSort')}</span>
           </button>
         </div>
       )}
