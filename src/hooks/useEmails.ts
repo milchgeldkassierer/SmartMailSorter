@@ -8,6 +8,7 @@ import {
   SENT_FOLDER,
   SPAM_FOLDER,
   TRASH_FOLDER,
+  FLAGGED_FOLDER,
 } from '../types';
 import { SearchConfig } from '../components/SearchBar';
 
@@ -112,6 +113,11 @@ const shouldShowInCategory = (
   showUnsortedOnly: boolean,
   categories: Category[]
 ): boolean => {
+  // Handle FLAGGED_FOLDER virtual view
+  if (selectedCategory === FLAGGED_FOLDER) {
+    return email.isFlagged === true;
+  }
+
   // Handle standard folders first
   if (isStandardFolderCategory(selectedCategory)) {
     if (!matchesStandardFolder(email, selectedCategory)) {
@@ -200,6 +206,7 @@ export const useEmails = ({ activeAccountId, accounts: _accounts }: UseEmailsPar
     counts[TRASH_FOLDER] = currentEmails.filter(
       (e) => (e.folder === TRASH_FOLDER || e.folder === 'Gelöscht' || e.folder === 'Trash') && !e.isRead
     ).length;
+    counts[FLAGGED_FOLDER] = currentEmails.filter((e) => e.isFlagged && !e.isRead).length;
 
     // 2. Calculate Categories & Physical Folders
     currentCategories.forEach((cat) => {

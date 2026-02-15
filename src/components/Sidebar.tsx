@@ -12,8 +12,9 @@ import {
   FolderOpen,
   Archive,
   Clock,
+  Star,
 } from './Icon';
-import { ImapAccount, DefaultEmailCategory, Category, SYSTEM_FOLDERS } from '../types';
+import { ImapAccount, DefaultEmailCategory, Category, SYSTEM_FOLDERS, FLAGGED_FOLDER } from '../types';
 import { formatTimeAgo } from '../utils/formatTimeAgo';
 
 interface SidebarProps {
@@ -268,6 +269,12 @@ const Sidebar: React.FC<SidebarProps> = ({
           </div>
         </div>
 
+        {/* Flagged/Starred Virtual View */}
+        <div>
+          <div className="px-3 mb-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">Markierungen</div>
+          <div className="space-y-1">{renderCategoryItem(FLAGGED_FOLDER, 'Markierte', Star)}</div>
+        </div>
+
         {/* Smart Categories Group */}
         <div>
           <div className="px-3 mb-2 flex items-center justify-between">
@@ -326,33 +333,34 @@ const Sidebar: React.FC<SidebarProps> = ({
             {contextMenu.category}
           </div>
 
-          {!(Object.values(DefaultEmailCategory) as string[]).includes(contextMenu.category) && (
-            <>
-              <button
-                onClick={() => {
-                  const newName = prompt('Neuer Name:', contextMenu.category);
-                  if (newName && newName.trim()) onRenameCategory(contextMenu.category, newName.trim());
-                  setContextMenu(null);
-                }}
-                className="w-full text-left px-3 py-2 text-sm text-slate-300 hover:bg-slate-700 flex items-center gap-2"
-              >
-                <div className="w-4 h-4" /> <span>Umbenennen</span>
-              </button>
-              <div className="h-px bg-slate-700 my-1" />
-              <button
-                onClick={() => {
-                  if (confirm(`Ordner '${contextMenu.category}' wirklich löschen?`)) {
-                    onDeleteCategory(contextMenu.category);
-                  }
-                  setContextMenu(null);
-                }}
-                className="w-full text-left px-3 py-2 text-sm text-red-400 hover:bg-red-900/30 flex items-center gap-2"
-              >
-                <LogOut className="w-4 h-4" /> <span>Löschen</span>
-              </button>
-              <div className="h-px bg-slate-700 my-1" />
-            </>
-          )}
+          {!(Object.values(DefaultEmailCategory) as string[]).includes(contextMenu.category) &&
+            contextMenu.category !== FLAGGED_FOLDER && (
+              <>
+                <button
+                  onClick={() => {
+                    const newName = prompt('Neuer Name:', contextMenu.category);
+                    if (newName && newName.trim()) onRenameCategory(contextMenu.category, newName.trim());
+                    setContextMenu(null);
+                  }}
+                  className="w-full text-left px-3 py-2 text-sm text-slate-300 hover:bg-slate-700 flex items-center gap-2"
+                >
+                  <div className="w-4 h-4" /> <span>Umbenennen</span>
+                </button>
+                <div className="h-px bg-slate-700 my-1" />
+                <button
+                  onClick={() => {
+                    if (confirm(`Ordner '${contextMenu.category}' wirklich löschen?`)) {
+                      onDeleteCategory(contextMenu.category);
+                    }
+                    setContextMenu(null);
+                  }}
+                  className="w-full text-left px-3 py-2 text-sm text-red-400 hover:bg-red-900/30 flex items-center gap-2"
+                >
+                  <LogOut className="w-4 h-4" /> <span>Löschen</span>
+                </button>
+                <div className="h-px bg-slate-700 my-1" />
+              </>
+            )}
 
           <button
             onClick={() => {
