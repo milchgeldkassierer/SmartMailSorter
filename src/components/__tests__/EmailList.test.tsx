@@ -62,7 +62,7 @@ describe('EmailList', () => {
     it('should not render empty state message when loading', () => {
       render(<EmailList {...defaultProps} isLoading={true} emails={[]} />);
 
-      expect(screen.queryByText('Keine Emails in diesem Ordner.')).not.toBeInTheDocument();
+      expect(screen.queryByText('Keine Emails')).not.toBeInTheDocument();
     });
   });
 
@@ -104,7 +104,9 @@ describe('EmailList', () => {
       const { container } = render(<EmailList {...defaultProps} emails={[]} />);
 
       // Should have flex centering and proper background
-      const emptyStateRoot = container.querySelector('.bg-white.border-r.border-slate-200.flex.flex-col.items-center.justify-center');
+      const emptyStateRoot = container.querySelector(
+        '.bg-white.border-r.border-slate-200' + '.flex.flex-col.items-center.justify-center'
+      );
       expect(emptyStateRoot).toBeInTheDocument();
     });
   });

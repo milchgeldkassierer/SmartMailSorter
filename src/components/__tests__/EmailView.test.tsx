@@ -446,16 +446,16 @@ describe('EmailView', () => {
       expect(screen.getByText('This is the plain text email body.')).toBeInTheDocument();
     });
 
-    it('should render HTML body when available and showHtml is true', () => {
+    it('should render HTML body in iframe when available and showHtml is true', () => {
       const email = createEmail({
         body: 'Plain text',
         bodyHtml: '<strong>Bold HTML content</strong>',
       });
       render(<EmailView email={email} />);
 
-      // The HTML should be rendered with dangerouslySetInnerHTML
-      const htmlContainer = document.querySelector('[class*="prose"]');
-      expect(htmlContainer?.innerHTML).toContain('<strong>Bold HTML content</strong>');
+      // When showHtml is true (default) and bodyHtml is provided, content is rendered via iframe
+      const iframe = document.querySelector('iframe[title="Email content"]');
+      expect(iframe).toBeInTheDocument();
     });
 
     it('should render plain text when showHtml is false', () => {
