@@ -76,8 +76,8 @@ declare global {
       loadAISettings: () => Promise<AISettings | null>;
 
       // Notification Settings
-      saveNotificationSettings: (settings: NotificationSettings) => Promise<NotificationOperationResult>;
       loadNotificationSettings: () => Promise<NotificationSettings | null>;
+      saveNotificationSettings: (settings: NotificationSettings) => Promise<NotificationOperationResult>;
       updateBadgeCount: (count: number) => Promise<void>;
 
       // Event listeners

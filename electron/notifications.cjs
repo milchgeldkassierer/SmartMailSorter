@@ -50,7 +50,7 @@ function showNotification(email, accountId) {
     }
 
     // Respect OS-level Do Not Disturb settings
-    if (!Notification.isSupported()) {
+    if (!Notification || !Notification.isSupported()) {
       logger.warn('Notifications not supported on this system');
       return;
     }

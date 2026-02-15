@@ -385,12 +385,45 @@ app.whenReady().then(() => {
   });
 
   // Notification Settings IPC handlers
-  ipcMain.handle('get-notification-settings', (event, accountId) => {
-    return db.getNotificationSettings(accountId);
+  // Load notification settings (global + all accounts)
+  ipcMain.handle('load-notification-settings', async (event) => {
+    const accounts = db.getAccounts();
+    const accountSettings = {};
+
+    // Load per-account settings
+    accounts.forEach(account => {
+      const settings = db.getNotificationSettings(account.id);
+      accountSettings[account.id] = settings.enabled;
+    });
+
+    // Load global settings (stored with special accountId)
+    const globalSettings = db.getNotificationSettings('GLOBAL');
+    const categorySettings = JSON.parse(globalSettings.mutedCategories || '{}');
+
+    return {
+      enabled: globalSettings.enabled,
+      accountSettings,
+      categorySettings,
+    };
   });
 
-  ipcMain.handle('save-notification-settings', (event, accountId, settings) => {
-    return db.saveNotificationSettings(accountId, settings);
+  // Save notification settings (global + per-account)
+  ipcMain.handle('save-notification-settings', async (event, settings) => {
+    // Save global enabled + category settings
+    db.saveNotificationSettings('GLOBAL', {
+      enabled: settings.enabled,
+      mutedCategories: JSON.stringify(settings.categorySettings || {}),
+    });
+
+    // Save per-account settings
+    for (const [accountId, enabled] of Object.entries(settings.accountSettings)) {
+      db.saveNotificationSettings(accountId, {
+        enabled,
+        mutedCategories: '[]',  // Categories are now global
+      });
+    }
+
+    return { success: true };
   });
 
   ipcMain.handle('update-badge-count', (event, count) => {
