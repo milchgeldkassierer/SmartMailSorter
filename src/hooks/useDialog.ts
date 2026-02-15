@@ -67,9 +67,10 @@ export const useDialog = (): UseDialogReturn => {
     });
   }, []);
 
+  // Skips redundant state update if already closed (e.g., after handleConfirm)
   const closeDialog = useCallback(() => {
     cancelPendingDialog();
-    setDialogState((prev) => ({ ...prev, isOpen: false }));
+    setDialogState((prev) => (prev.isOpen ? { ...prev, isOpen: false } : prev));
   }, [cancelPendingDialog]);
 
   const handleConfirm = useCallback((value?: string) => {

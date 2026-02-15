@@ -23,6 +23,7 @@ export const useSync = ({
   dialog,
 }: UseSyncParams): UseSyncReturn => {
   const [isSyncing, setIsSyncing] = useState(false);
+  const { alert: dialogAlert } = dialog;
 
   // Sync emails for the active account
   const syncAccount = useCallback(async () => {
@@ -53,7 +54,7 @@ export const useSync = ({
       }
     } catch (error) {
       console.error('Failed to sync account:', error);
-      await dialog.alert({
+      await dialogAlert({
         title: 'Synchronisierungsfehler',
         message: 'Synchronisierung fehlgeschlagen. Bitte versuchen Sie es erneut.',
         variant: 'danger',
@@ -61,7 +62,7 @@ export const useSync = ({
     } finally {
       setIsSyncing(false);
     }
-  }, [activeAccountId, accounts, onAccountsUpdate, onDataUpdate, dialog]);
+  }, [activeAccountId, accounts, onAccountsUpdate, onDataUpdate, dialogAlert]);
 
   return {
     isSyncing,

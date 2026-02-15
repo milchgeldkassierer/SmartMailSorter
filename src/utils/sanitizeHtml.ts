@@ -1,4 +1,5 @@
-import DOMPurify, { type Config } from 'dompurify';
+import DOMPurify from 'isomorphic-dompurify';
+import type { Config } from 'dompurify';
 
 /**
  * Sanitize HTML content to prevent XSS attacks while preserving safe formatting.
@@ -124,7 +125,9 @@ export function sanitizeHtml(html: string | null | undefined): string {
       // Safe styling attributes (DOMPurify will sanitize style content)
       'class',
       'id',
-      // Inline styles (DOMPurify sanitizes dangerous CSS like expression() and url(javascript:))
+      // Inline styles - DOMPurify sanitizes dangerous CSS like expression() and url(javascript:).
+      // Note: when 'Load Images' is enabled, CSS url() in styles can enable tracking pixels
+      // (e.g., background-image: url(https://tracker/pixel)) similarly to <img> tags.
       'style',
       // Text direction
       'dir',
