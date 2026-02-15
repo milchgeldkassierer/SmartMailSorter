@@ -14,7 +14,7 @@ import {
   Clock,
   Star,
 } from './Icon';
-import { ImapAccount, DefaultEmailCategory, Category, SYSTEM_FOLDERS, FLAGGED } from '../types';
+import { ImapAccount, DefaultEmailCategory, Category, SYSTEM_FOLDERS, FLAGGED_FOLDER } from '../types';
 import { formatTimeAgo } from '../utils/formatTimeAgo';
 
 interface SidebarProps {
@@ -271,35 +271,8 @@ const Sidebar: React.FC<SidebarProps> = ({
 
         {/* Flagged/Starred Virtual View */}
         <div>
-          <div className="px-3 mb-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">
-            Markierungen
-          </div>
-          <div className="space-y-1">
-            <button
-              onClick={() => onSelectCategory(FLAGGED)}
-              className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                selectedCategory === FLAGGED
-                  ? 'bg-blue-600 text-white'
-                  : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <Star
-                  className={`w-4 h-4 ${selectedCategory === FLAGGED ? 'text-blue-200' : 'text-slate-500'}`}
-                />
-                <span>Markierte</span>
-              </div>
-              {counts[FLAGGED] > 0 && (
-                <span
-                  className={`text-xs px-2 py-0.5 rounded-full ${
-                    selectedCategory === FLAGGED ? 'bg-blue-500 text-white' : 'bg-slate-800 text-slate-500'
-                  }`}
-                >
-                  {counts[FLAGGED]}
-                </span>
-              )}
-            </button>
-          </div>
+          <div className="px-3 mb-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">Markierungen</div>
+          <div className="space-y-1">{renderCategoryItem(FLAGGED_FOLDER, 'Markierte', Star)}</div>
         </div>
 
         {/* Smart Categories Group */}

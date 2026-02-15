@@ -16,7 +16,7 @@ export const INBOX_FOLDER = 'Posteingang';
 export const SENT_FOLDER = 'Gesendet';
 export const SPAM_FOLDER = 'Spam';
 export const TRASH_FOLDER = 'Papierkorb';
-export const FLAGGED = 'Markierte';
+export const FLAGGED_FOLDER = 'Markierte';
 export const SYSTEM_FOLDERS = [INBOX_FOLDER, SENT_FOLDER, SPAM_FOLDER, TRASH_FOLDER];
 
 export interface Category {
