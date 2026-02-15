@@ -1,7 +1,15 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useEmails } from '../useEmails';
-import { Email, DefaultEmailCategory, ImapAccount, INBOX_FOLDER, SENT_FOLDER, SPAM_FOLDER } from '../../types';
+import {
+  Email,
+  DefaultEmailCategory,
+  ImapAccount,
+  INBOX_FOLDER,
+  SENT_FOLDER,
+  SPAM_FOLDER,
+  FLAGGED_FOLDER,
+} from '../../types';
 
 describe('useEmails', () => {
   const mockAccount1: ImapAccount = {
@@ -630,6 +638,81 @@ describe('useEmails', () => {
       });
 
       expect(result.current.categoryCounts[DefaultEmailCategory.INBOX]).toBe(1);
+    });
+
+    it('should calculate flagged count for unread flagged emails', () => {
+      const { result } = renderHook(() => useEmails(defaultParams));
+      const flaggedUnread: Email = { ...mockEmail1, id: 'flagged-1', isFlagged: true, isRead: false };
+      const flaggedRead: Email = { ...mockEmail2, id: 'flagged-2', isFlagged: true, isRead: true };
+      const notFlagged: Email = { ...mockEmail3, id: 'not-flagged', isFlagged: false, isRead: false };
+
+      act(() => {
+        result.current.setData({
+          'account-1': {
+            emails: [flaggedUnread, flaggedRead, notFlagged],
+            categories: [],
+          },
+        });
+      });
+
+      expect(result.current.categoryCounts[FLAGGED_FOLDER]).toBe(1);
+    });
+  });
+
+  describe('Flagged Folder Filtering', () => {
+    it('should show only flagged emails when FLAGGED_FOLDER is selected', () => {
+      const { result } = renderHook(() => useEmails(defaultParams));
+      const flaggedEmail: Email = { ...mockEmail1, id: 'flagged-1', isFlagged: true };
+      const unflaggedEmail: Email = { ...mockEmail2, id: 'unflagged-1', isFlagged: false };
+
+      act(() => {
+        result.current.setData({
+          'account-1': {
+            emails: [flaggedEmail, unflaggedEmail],
+            categories: [],
+          },
+        });
+        result.current.setSelectedCategory(FLAGGED_FOLDER);
+      });
+
+      expect(result.current.filteredEmails).toHaveLength(1);
+      expect(result.current.filteredEmails[0].id).toBe('flagged-1');
+    });
+
+    it('should return empty list when no emails are flagged', () => {
+      const { result } = renderHook(() => useEmails(defaultParams));
+
+      act(() => {
+        result.current.setData({
+          'account-1': {
+            emails: [mockEmail1, mockEmail2, mockEmail3],
+            categories: [],
+          },
+        });
+        result.current.setSelectedCategory(FLAGGED_FOLDER);
+      });
+
+      expect(result.current.filteredEmails).toHaveLength(0);
+    });
+
+    it('should show flagged emails from all folders', () => {
+      const { result } = renderHook(() => useEmails(defaultParams));
+      const flaggedInbox: Email = { ...mockEmail1, id: 'f-inbox', isFlagged: true, folder: INBOX_FOLDER };
+      const flaggedSent: Email = { ...mockEmail4, id: 'f-sent', isFlagged: true, folder: SENT_FOLDER };
+      const unflaggedInbox: Email = { ...mockEmail2, id: 'u-inbox', isFlagged: false, folder: INBOX_FOLDER };
+
+      act(() => {
+        result.current.setData({
+          'account-1': {
+            emails: [flaggedInbox, flaggedSent, unflaggedInbox],
+            categories: [],
+          },
+        });
+        result.current.setSelectedCategory(FLAGGED_FOLDER);
+      });
+
+      expect(result.current.filteredEmails).toHaveLength(2);
+      expect(result.current.filteredEmails.map((e) => e.id).sort()).toEqual(['f-inbox', 'f-sent']);
     });
   });
 

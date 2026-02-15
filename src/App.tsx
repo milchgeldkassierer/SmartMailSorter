@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { DefaultEmailCategory, ImapAccount, Category, AccountData } from './types';
+import { DefaultEmailCategory, ImapAccount, Category, AccountData, FLAGGED_FOLDER, SYSTEM_FOLDERS } from './types';
 import Sidebar from './components/Sidebar';
 import EmailList from './components/EmailList';
 import EmailView from './components/EmailView';
@@ -273,6 +273,8 @@ const App: React.FC = () => {
           if (cat === DefaultEmailCategory.INBOX) setShowUnsortedOnly(false);
         }}
         onAddCategory={async (newCategory) => {
+          const reservedNames = [...SYSTEM_FOLDERS, FLAGGED_FOLDER];
+          if (reservedNames.includes(newCategory)) return;
           if (!currentCategories.some((c) => c.name === newCategory)) {
             updateActiveAccountData((prev) => ({
               ...prev,
