@@ -803,10 +803,10 @@ describe('Database Account CRUD Operations', () => {
       const retrieved = db.getAccountWithPassword('pwd-decrypt-test');
 
       expect(retrieved).toBeDefined();
-      expect(retrieved.id).toBe('pwd-decrypt-test');
-      expect(retrieved.name).toBe('Password Test');
-      expect(retrieved.email).toBe('pwd@test.com');
-      expect(retrieved.password).toBe('my-secret-password');
+      expect(retrieved!.id).toBe('pwd-decrypt-test');
+      expect(retrieved!.name).toBe('Password Test');
+      expect(retrieved!.email).toBe('pwd@test.com');
+      expect(retrieved!.password).toBe('my-secret-password');
     });
 
     it('should return undefined for non-existent account', () => {
@@ -831,7 +831,7 @@ describe('Database Account CRUD Operations', () => {
       const retrieved = db.getAccountWithPassword('no-pwd-test');
 
       expect(retrieved).toBeDefined();
-      expect(retrieved.password).toBe('');
+      expect(retrieved!.password).toBe('');
     });
   });
 
