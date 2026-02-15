@@ -25,7 +25,6 @@ export interface UseDialogReturn {
   alert: (config: Omit<DialogConfig, 'type'>) => Promise<void>;
   prompt: (config: Omit<DialogConfig, 'type'>) => Promise<string | null>;
   handleConfirm: (value?: string) => void;
-  handleClose: () => void;
 }
 
 export const useDialog = (): UseDialogReturn => {
@@ -79,7 +78,7 @@ export const useDialog = (): UseDialogReturn => {
       if (type === 'confirm') {
         resolveRef.current(true);
       } else if (type === 'prompt') {
-        resolveRef.current(value ?? null);
+        resolveRef.current(value || null);
       } else {
         resolveRef.current(undefined);
       }
@@ -87,10 +86,6 @@ export const useDialog = (): UseDialogReturn => {
     }
     setDialogState((prev) => ({ ...prev, isOpen: false }));
   }, []);
-
-  const handleClose = useCallback(() => {
-    closeDialog();
-  }, [closeDialog]);
 
   const confirm = useCallback(
     (config: Omit<DialogConfig, 'type'>): Promise<boolean> => {
@@ -137,6 +132,5 @@ export const useDialog = (): UseDialogReturn => {
     alert,
     prompt,
     handleConfirm,
-    handleClose,
   };
 };

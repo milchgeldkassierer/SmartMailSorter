@@ -104,8 +104,10 @@ describe('GeneralTab', () => {
       const cancelButton = screen.getByText('Abbrechen');
       fireEvent.click(cancelButton);
 
-      // Wait a bit to ensure no actions were taken
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      // Wait for dialog to close
+      await waitFor(() => {
+        expect(screen.queryByText('Datenbank zurücksetzen')).not.toBeInTheDocument();
+      });
 
       expect(mockElectron.resetDb).not.toHaveBeenCalled();
       expect(reloadMock).not.toHaveBeenCalled();

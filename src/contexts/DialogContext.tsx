@@ -20,7 +20,7 @@ export const DialogProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       {children}
       <ConfirmDialog
         isOpen={dialog.isOpen}
-        onClose={dialog.handleClose}
+        onClose={dialog.closeDialog}
         onConfirm={dialog.handleConfirm}
         title={dialog.dialogState.title}
         message={dialog.dialogState.message}

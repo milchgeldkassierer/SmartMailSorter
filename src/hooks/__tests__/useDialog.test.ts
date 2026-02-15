@@ -1,12 +1,8 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useDialog } from '../useDialog';
 
 describe('useDialog', () => {
-  beforeEach(() => {
-    // Reset any state if needed
-  });
-
   describe('Initial State', () => {
     it('should initialize with correct default values', () => {
       const { result } = renderHook(() => useDialog());
@@ -32,7 +28,6 @@ describe('useDialog', () => {
       expect(result.current).toHaveProperty('alert');
       expect(result.current).toHaveProperty('prompt');
       expect(result.current).toHaveProperty('handleConfirm');
-      expect(result.current).toHaveProperty('handleClose');
     });
 
     it('should return functions for all methods', () => {
@@ -44,7 +39,6 @@ describe('useDialog', () => {
       expect(typeof result.current.alert).toBe('function');
       expect(typeof result.current.prompt).toBe('function');
       expect(typeof result.current.handleConfirm).toBe('function');
-      expect(typeof result.current.handleClose).toBe('function');
     });
   });
 
@@ -288,7 +282,7 @@ describe('useDialog', () => {
       expect(result.current.isOpen).toBe(false);
     });
 
-    it('should resolve to false when handleClose is called', async () => {
+    it('should resolve to false when closeDialog is called', async () => {
       const { result } = renderHook(() => useDialog());
 
       let resolvedValue: boolean | undefined;
@@ -304,7 +298,7 @@ describe('useDialog', () => {
       });
 
       act(() => {
-        result.current.handleClose();
+        result.current.closeDialog();
       });
 
       await act(async () => {
@@ -527,44 +521,6 @@ describe('useDialog', () => {
       expect(() => {
         act(() => {
           result.current.handleConfirm();
-        });
-      }).not.toThrow();
-
-      expect(result.current.isOpen).toBe(false);
-    });
-  });
-
-  describe('handleClose', () => {
-    it('should close dialog when called', () => {
-      const { result } = renderHook(() => useDialog());
-
-      act(() => {
-        result.current.openDialog({
-          title: 'Test',
-          message: 'Message',
-        });
-      });
-      expect(result.current.isOpen).toBe(true);
-
-      act(() => {
-        result.current.handleClose();
-      });
-      expect(result.current.isOpen).toBe(false);
-    });
-
-    it('should work when called without active promise', () => {
-      const { result } = renderHook(() => useDialog());
-
-      act(() => {
-        result.current.openDialog({
-          title: 'Test',
-          message: 'Message',
-        });
-      });
-
-      expect(() => {
-        act(() => {
-          result.current.handleClose();
         });
       }).not.toThrow();
 

@@ -61,8 +61,7 @@ export const useSync = ({
     } finally {
       setIsSyncing(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeAccountId, accounts, onAccountsUpdate, onDataUpdate, dialog.alert]);
+  }, [activeAccountId, accounts, onAccountsUpdate, onDataUpdate, dialog]);
 
   return {
     isSyncing,

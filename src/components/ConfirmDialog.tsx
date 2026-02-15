@@ -125,7 +125,7 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
 
         {/* Content */}
         <div className="p-6">
-          <p className="text-slate-600 mb-4">{message}</p>
+          <p className="text-slate-600 mb-4 whitespace-pre-wrap">{message}</p>
 
           {/* Input field for prompt type */}
           {type === 'prompt' && (
