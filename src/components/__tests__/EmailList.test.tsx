@@ -67,16 +67,45 @@ describe('EmailList', () => {
   });
 
   describe('Empty State', () => {
-    it('should render empty state message when no emails', () => {
+    it('should render empty state icon when no emails', () => {
       render(<EmailList {...defaultProps} emails={[]} />);
 
-      expect(screen.getByText('Keine Emails in diesem Ordner.')).toBeInTheDocument();
+      // Folder icon should be present with specific styling
+      const icon = document.querySelector('svg.w-16.h-16.opacity-20');
+      expect(icon).toBeInTheDocument();
+    });
+
+    it('should render empty state heading when no emails', () => {
+      render(<EmailList {...defaultProps} emails={[]} />);
+
+      expect(screen.getByText('Keine Emails')).toBeInTheDocument();
+    });
+
+    it('should render empty state description when no emails', () => {
+      render(<EmailList {...defaultProps} emails={[]} />);
+
+      expect(screen.getByText('Dieser Ordner enthält noch keine Emails.')).toBeInTheDocument();
+    });
+
+    it('should center align empty state content', () => {
+      render(<EmailList {...defaultProps} emails={[]} />);
+
+      const emptyStateContainer = screen.getByText('Keine Emails').closest('div');
+      expect(emptyStateContainer).toHaveClass('text-center');
     });
 
     it('should not render email count header when empty', () => {
       render(<EmailList {...defaultProps} emails={[]} />);
 
       expect(screen.queryByText(/Emails \(/)).not.toBeInTheDocument();
+    });
+
+    it('should apply proper styling to empty state container', () => {
+      const { container } = render(<EmailList {...defaultProps} emails={[]} />);
+
+      // Should have flex centering and proper background
+      const emptyStateRoot = container.querySelector('.bg-white.border-r.border-slate-200.flex.flex-col.items-center.justify-center');
+      expect(emptyStateRoot).toBeInTheDocument();
     });
   });
 

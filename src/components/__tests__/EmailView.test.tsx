@@ -39,10 +39,31 @@ describe('EmailView', () => {
   });
 
   describe('Empty State', () => {
-    it('should render placeholder when no email is selected', () => {
+    it('should render empty state icon when no email is selected', () => {
       render(<EmailView email={null} />);
 
-      expect(screen.getByText('Wähle eine Email aus, um Details zu sehen.')).toBeInTheDocument();
+      // CategoryIcon should be present with specific styling
+      const icon = document.querySelector('svg.w-16.h-16.opacity-20');
+      expect(icon).toBeInTheDocument();
+    });
+
+    it('should render empty state heading when no email is selected', () => {
+      render(<EmailView email={null} />);
+
+      expect(screen.getByText('Keine Email ausgewählt')).toBeInTheDocument();
+    });
+
+    it('should render empty state description when no email is selected', () => {
+      render(<EmailView email={null} />);
+
+      expect(screen.getByText('Wähle eine Email aus der Liste aus, um den Inhalt anzuzeigen.')).toBeInTheDocument();
+    });
+
+    it('should center align empty state content', () => {
+      render(<EmailView email={null} />);
+
+      const emptyStateContainer = screen.getByText('Keine Email ausgewählt').closest('div');
+      expect(emptyStateContainer).toHaveClass('text-center');
     });
 
     it('should not render any email content when email is null', () => {
@@ -52,12 +73,12 @@ describe('EmailView', () => {
       expect(screen.queryByText('John Doe')).not.toBeInTheDocument();
     });
 
-    it('should render CategoryIcon with INBOX category in placeholder', () => {
-      render(<EmailView email={null} />);
+    it('should apply proper styling to empty state container', () => {
+      const { container } = render(<EmailView email={null} />);
 
-      // The icon should be rendered (we can verify the container exists)
-      const placeholder = screen.getByText('Wähle eine Email aus, um Details zu sehen.');
-      expect(placeholder).toBeInTheDocument();
+      // Should have flex centering and proper background
+      const emptyStateRoot = container.querySelector('.flex-1.bg-slate-50.flex.items-center.justify-center');
+      expect(emptyStateRoot).toBeInTheDocument();
     });
   });
 
@@ -610,7 +631,7 @@ describe('EmailView', () => {
 
       rerender(<EmailView email={null} />);
 
-      expect(screen.getByText('Wähle eine Email aus, um Details zu sehen.')).toBeInTheDocument();
+      expect(screen.getByText('Wähle eine Email aus der Liste aus, um den Inhalt anzuzeigen.')).toBeInTheDocument();
       expect(screen.queryByText('Test Subject')).not.toBeInTheDocument();
     });
   });
