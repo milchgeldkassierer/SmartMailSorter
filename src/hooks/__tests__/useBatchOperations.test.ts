@@ -63,6 +63,7 @@ describe('useBatchOperations', () => {
           aiSettings: defaultAISettings,
           onDeleteEmail: vi.fn(),
           onToggleRead: vi.fn(),
+          onToggleFlag: vi.fn(),
           onClearSelection: vi.fn(),
           onUpdateEmails: vi.fn(),
           onUpdateCategories: vi.fn(),
@@ -88,6 +89,7 @@ describe('useBatchOperations', () => {
           aiSettings: defaultAISettings,
           onDeleteEmail: vi.fn(),
           onToggleRead,
+          onToggleFlag: vi.fn(),
           onClearSelection,
           onUpdateEmails: vi.fn(),
           onUpdateCategories: vi.fn(),
@@ -121,6 +123,7 @@ describe('useBatchOperations', () => {
           aiSettings: defaultAISettings,
           onDeleteEmail: vi.fn(),
           onToggleRead,
+          onToggleFlag: vi.fn(),
           onClearSelection,
           onUpdateEmails: vi.fn(),
           onUpdateCategories: vi.fn(),
@@ -154,6 +157,7 @@ describe('useBatchOperations', () => {
           aiSettings: defaultAISettings,
           onDeleteEmail: vi.fn(),
           onToggleRead,
+          onToggleFlag: vi.fn(),
           onClearSelection,
           onUpdateEmails: vi.fn(),
           onUpdateCategories: vi.fn(),
@@ -186,6 +190,7 @@ describe('useBatchOperations', () => {
           aiSettings: defaultAISettings,
           onDeleteEmail: vi.fn(),
           onToggleRead,
+          onToggleFlag: vi.fn(),
           onClearSelection,
           onUpdateEmails: vi.fn(),
           onUpdateCategories: vi.fn(),
@@ -214,6 +219,7 @@ describe('useBatchOperations', () => {
           aiSettings: defaultAISettings,
           onDeleteEmail: vi.fn(),
           onToggleRead,
+          onToggleFlag: vi.fn(),
           onClearSelection,
           onUpdateEmails: vi.fn(),
           onUpdateCategories: vi.fn(),
@@ -241,6 +247,7 @@ describe('useBatchOperations', () => {
           aiSettings: defaultAISettings,
           onDeleteEmail: vi.fn(),
           onToggleRead,
+          onToggleFlag: vi.fn(),
           onClearSelection,
           onUpdateEmails: vi.fn(),
           onUpdateCategories: vi.fn(),
@@ -271,6 +278,7 @@ describe('useBatchOperations', () => {
           aiSettings: defaultAISettings,
           onDeleteEmail: vi.fn(),
           onToggleRead,
+          onToggleFlag: vi.fn(),
           onClearSelection,
           onUpdateEmails: vi.fn(),
           onUpdateCategories: vi.fn(),
@@ -305,6 +313,7 @@ describe('useBatchOperations', () => {
           aiSettings: defaultAISettings,
           onDeleteEmail: vi.fn(),
           onToggleRead,
+          onToggleFlag: vi.fn(),
           onClearSelection,
           onUpdateEmails: vi.fn(),
           onUpdateCategories: vi.fn(),
@@ -314,6 +323,285 @@ describe('useBatchOperations', () => {
 
       await act(async () => {
         await result.current.handleBatchMarkRead();
+      });
+
+      // Selection should NOT be cleared on failure
+      expect(onClearSelection).not.toHaveBeenCalled();
+      expect(alertSpy).toHaveBeenCalled();
+      alertSpy.mockRestore();
+    });
+  });
+
+  describe('handleBatchFlag', () => {
+    it('should return handleBatchFlag function', () => {
+      const { result } = renderHook(() =>
+        useBatchOperations({
+          selectedIds: new Set(),
+          currentEmails: [],
+          currentCategories: [],
+          aiSettings: defaultAISettings,
+          onDeleteEmail: vi.fn(),
+          onToggleRead: vi.fn(),
+          onToggleFlag: vi.fn(),
+          onClearSelection: vi.fn(),
+          onUpdateEmails: vi.fn(),
+          onUpdateCategories: vi.fn(),
+          onOpenSettings: vi.fn(),
+        })
+      );
+
+      expect(result.current.handleBatchFlag).toBeDefined();
+      expect(typeof result.current.handleBatchFlag).toBe('function');
+    });
+
+    it('should flag all when any selected email is unflagged', async () => {
+      const onToggleFlag = vi.fn().mockResolvedValue(undefined);
+      const onClearSelection = vi.fn();
+      const unflaggedEmail: Email = { ...mockEmail1, isFlagged: false };
+      const flaggedEmail: Email = { ...mockEmail2, isFlagged: true };
+
+      const { result } = renderHook(() =>
+        useBatchOperations({
+          selectedIds: new Set(['1', '2']),
+          currentEmails: [unflaggedEmail, flaggedEmail],
+          currentCategories: [],
+          aiSettings: defaultAISettings,
+          onDeleteEmail: vi.fn(),
+          onToggleRead: vi.fn(),
+          onToggleFlag,
+          onClearSelection,
+          onUpdateEmails: vi.fn(),
+          onUpdateCategories: vi.fn(),
+          onOpenSettings: vi.fn(),
+        })
+      );
+
+      await act(async () => {
+        await result.current.handleBatchFlag();
+      });
+
+      // Should toggle the unflagged email (id: '1') to make it flagged
+      expect(onToggleFlag).toHaveBeenCalledWith('1');
+      // Should NOT toggle the already-flagged email (id: '2')
+      expect(onToggleFlag).not.toHaveBeenCalledWith('2');
+      expect(onToggleFlag).toHaveBeenCalledTimes(1);
+      expect(onClearSelection).toHaveBeenCalled();
+    });
+
+    it('should unflag all when all selected emails are flagged', async () => {
+      const onToggleFlag = vi.fn().mockResolvedValue(undefined);
+      const onClearSelection = vi.fn();
+      const flaggedEmail1: Email = { ...mockEmail1, id: '1', isFlagged: true };
+      const flaggedEmail2: Email = { ...mockEmail2, id: '2', isFlagged: true };
+
+      const { result } = renderHook(() =>
+        useBatchOperations({
+          selectedIds: new Set(['1', '2']),
+          currentEmails: [flaggedEmail1, flaggedEmail2],
+          currentCategories: [],
+          aiSettings: defaultAISettings,
+          onDeleteEmail: vi.fn(),
+          onToggleRead: vi.fn(),
+          onToggleFlag,
+          onClearSelection,
+          onUpdateEmails: vi.fn(),
+          onUpdateCategories: vi.fn(),
+          onOpenSettings: vi.fn(),
+        })
+      );
+
+      await act(async () => {
+        await result.current.handleBatchFlag();
+      });
+
+      // Should toggle both emails to unflag them
+      expect(onToggleFlag).toHaveBeenCalledWith('1');
+      expect(onToggleFlag).toHaveBeenCalledWith('2');
+      expect(onToggleFlag).toHaveBeenCalledTimes(2);
+      expect(onClearSelection).toHaveBeenCalled();
+    });
+
+    it('should only toggle emails whose state differs from target', async () => {
+      const onToggleFlag = vi.fn().mockResolvedValue(undefined);
+      const onClearSelection = vi.fn();
+      const unflaggedEmail1: Email = { ...mockEmail1, id: '1', isFlagged: false };
+      const unflaggedEmail2: Email = { ...mockEmail2, id: '2', isFlagged: false };
+      const unflaggedEmail3: Email = { ...mockEmail3, id: '3', isFlagged: false };
+
+      const { result } = renderHook(() =>
+        useBatchOperations({
+          selectedIds: new Set(['1', '2', '3']),
+          currentEmails: [unflaggedEmail1, unflaggedEmail2, unflaggedEmail3],
+          currentCategories: [],
+          aiSettings: defaultAISettings,
+          onDeleteEmail: vi.fn(),
+          onToggleRead: vi.fn(),
+          onToggleFlag,
+          onClearSelection,
+          onUpdateEmails: vi.fn(),
+          onUpdateCategories: vi.fn(),
+          onOpenSettings: vi.fn(),
+        })
+      );
+
+      await act(async () => {
+        await result.current.handleBatchFlag();
+      });
+
+      // All are unflagged, so all should be toggled to flagged
+      expect(onToggleFlag).toHaveBeenCalledWith('1');
+      expect(onToggleFlag).toHaveBeenCalledWith('2');
+      expect(onToggleFlag).toHaveBeenCalledWith('3');
+      expect(onToggleFlag).toHaveBeenCalledTimes(3);
+      expect(onClearSelection).toHaveBeenCalled();
+    });
+
+    it('should clear selection after successful operation', async () => {
+      const onToggleFlag = vi.fn().mockResolvedValue(undefined);
+      const onClearSelection = vi.fn();
+      const unflaggedEmail: Email = { ...mockEmail1, isFlagged: false };
+
+      const { result } = renderHook(() =>
+        useBatchOperations({
+          selectedIds: new Set(['1']),
+          currentEmails: [unflaggedEmail],
+          currentCategories: [],
+          aiSettings: defaultAISettings,
+          onDeleteEmail: vi.fn(),
+          onToggleRead: vi.fn(),
+          onToggleFlag,
+          onClearSelection,
+          onUpdateEmails: vi.fn(),
+          onUpdateCategories: vi.fn(),
+          onOpenSettings: vi.fn(),
+        })
+      );
+
+      await act(async () => {
+        await result.current.handleBatchFlag();
+      });
+
+      expect(onClearSelection).toHaveBeenCalledTimes(1);
+    });
+
+    it('should display error alert on failure', async () => {
+      const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
+      const onToggleFlag = vi.fn().mockRejectedValue(new Error('Network error'));
+      const onClearSelection = vi.fn();
+      const unflaggedEmail: Email = { ...mockEmail1, isFlagged: false };
+
+      const { result } = renderHook(() =>
+        useBatchOperations({
+          selectedIds: new Set(['1']),
+          currentEmails: [unflaggedEmail],
+          currentCategories: [],
+          aiSettings: defaultAISettings,
+          onDeleteEmail: vi.fn(),
+          onToggleRead: vi.fn(),
+          onToggleFlag,
+          onClearSelection,
+          onUpdateEmails: vi.fn(),
+          onUpdateCategories: vi.fn(),
+          onOpenSettings: vi.fn(),
+        })
+      );
+
+      await act(async () => {
+        await result.current.handleBatchFlag();
+      });
+
+      expect(alertSpy).toHaveBeenCalledWith('Einige Emails konnten nicht aktualisiert werden');
+      alertSpy.mockRestore();
+    });
+
+    it('should do nothing when selectedIds is empty', async () => {
+      const onToggleFlag = vi.fn();
+      const onClearSelection = vi.fn();
+
+      const { result } = renderHook(() =>
+        useBatchOperations({
+          selectedIds: new Set(),
+          currentEmails: [mockEmail1, mockEmail2],
+          currentCategories: [],
+          aiSettings: defaultAISettings,
+          onDeleteEmail: vi.fn(),
+          onToggleRead: vi.fn(),
+          onToggleFlag,
+          onClearSelection,
+          onUpdateEmails: vi.fn(),
+          onUpdateCategories: vi.fn(),
+          onOpenSettings: vi.fn(),
+        })
+      );
+
+      await act(async () => {
+        await result.current.handleBatchFlag();
+      });
+
+      expect(onToggleFlag).not.toHaveBeenCalled();
+      expect(onClearSelection).not.toHaveBeenCalled();
+    });
+
+    it('should handle mixed flagged/unflagged selection correctly', async () => {
+      const onToggleFlag = vi.fn().mockResolvedValue(undefined);
+      const onClearSelection = vi.fn();
+      const unflaggedEmail1: Email = { ...mockEmail1, id: '1', isFlagged: false };
+      const flaggedEmail1: Email = { ...mockEmail2, id: '2', isFlagged: true };
+      const unflaggedEmail2: Email = { ...mockEmail3, id: '3', isFlagged: false };
+
+      const { result } = renderHook(() =>
+        useBatchOperations({
+          selectedIds: new Set(['1', '2', '3']),
+          currentEmails: [unflaggedEmail1, flaggedEmail1, unflaggedEmail2],
+          currentCategories: [],
+          aiSettings: defaultAISettings,
+          onDeleteEmail: vi.fn(),
+          onToggleRead: vi.fn(),
+          onToggleFlag,
+          onClearSelection,
+          onUpdateEmails: vi.fn(),
+          onUpdateCategories: vi.fn(),
+          onOpenSettings: vi.fn(),
+        })
+      );
+
+      await act(async () => {
+        await result.current.handleBatchFlag();
+      });
+
+      // If any email is unflagged, target state is flagged
+      // So only unflagged emails should be toggled
+      expect(onToggleFlag).toHaveBeenCalledWith('1');
+      expect(onToggleFlag).toHaveBeenCalledWith('3');
+      expect(onToggleFlag).not.toHaveBeenCalledWith('2');
+      expect(onToggleFlag).toHaveBeenCalledTimes(2);
+      expect(onClearSelection).toHaveBeenCalled();
+    });
+
+    it('should not clear selection on failure', async () => {
+      const onToggleFlag = vi.fn().mockRejectedValue(new Error('Failed'));
+      const onClearSelection = vi.fn();
+      const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
+      const unflaggedEmail: Email = { ...mockEmail1, isFlagged: false };
+
+      const { result } = renderHook(() =>
+        useBatchOperations({
+          selectedIds: new Set(['1']),
+          currentEmails: [unflaggedEmail],
+          currentCategories: [],
+          aiSettings: defaultAISettings,
+          onDeleteEmail: vi.fn(),
+          onToggleRead: vi.fn(),
+          onToggleFlag,
+          onClearSelection,
+          onUpdateEmails: vi.fn(),
+          onUpdateCategories: vi.fn(),
+          onOpenSettings: vi.fn(),
+        })
+      );
+
+      await act(async () => {
+        await result.current.handleBatchFlag();
       });
 
       // Selection should NOT be cleared on failure
@@ -333,6 +621,7 @@ describe('useBatchOperations', () => {
           aiSettings: defaultAISettings,
           onDeleteEmail: vi.fn(),
           onToggleRead: vi.fn(),
+          onToggleFlag: vi.fn(),
           onClearSelection: vi.fn(),
           onUpdateEmails: vi.fn(),
           onUpdateCategories: vi.fn(),
@@ -346,6 +635,7 @@ describe('useBatchOperations', () => {
       expect(result.current).toHaveProperty('handleBatchDelete');
       expect(result.current).toHaveProperty('handleBatchSmartSort');
       expect(result.current).toHaveProperty('handleBatchMarkRead');
+      expect(result.current).toHaveProperty('handleBatchFlag');
     });
 
     it('should initialize with correct default values', () => {
@@ -357,6 +647,7 @@ describe('useBatchOperations', () => {
           aiSettings: defaultAISettings,
           onDeleteEmail: vi.fn(),
           onToggleRead: vi.fn(),
+          onToggleFlag: vi.fn(),
           onClearSelection: vi.fn(),
           onUpdateEmails: vi.fn(),
           onUpdateCategories: vi.fn(),
