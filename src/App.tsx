@@ -121,6 +121,7 @@ const App: React.FC = () => {
             ...prev,
             emails: prev.emails.map((e) => (e.id === id ? { ...e, isRead: previousReadState } : e)),
           }));
+          throw error;
         }
       }
     }
@@ -151,6 +152,7 @@ const App: React.FC = () => {
             ...prev,
             emails: prev.emails.map((e) => (e.id === id ? { ...e, isFlagged: previousFlagState } : e)),
           }));
+          throw error;
         }
       }
     }
