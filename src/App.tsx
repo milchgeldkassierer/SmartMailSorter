@@ -306,6 +306,8 @@ const App: React.FC = () => {
           await deleteCategory(cat);
         }}
         onRenameCategory={async (oldName, newName) => {
+          const reservedNames = [...SYSTEM_FOLDERS, FLAGGED_FOLDER];
+          if (reservedNames.includes(newName)) return;
           updateActiveAccountData((prev) => ({
             ...prev,
             categories: prev.categories.map((c: Category) => (c.name === oldName ? { ...c, name: newName } : c)),
