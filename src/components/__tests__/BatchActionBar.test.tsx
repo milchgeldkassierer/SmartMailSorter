@@ -304,7 +304,9 @@ describe('BatchActionBar', () => {
       const flaggedEmail: Email = { ...mockEmail1, id: '3', isFlagged: true };
       const unflaggedEmail: Email = { ...mockEmail2, id: '4', isFlagged: false };
       const selectedIds = new Set(['3', '4']);
-      render(<BatchActionBar {...defaultProps} filteredEmails={[flaggedEmail, unflaggedEmail]} selectedIds={selectedIds} />);
+      render(
+        <BatchActionBar {...defaultProps} filteredEmails={[flaggedEmail, unflaggedEmail]} selectedIds={selectedIds} />
+      );
       // If any email is unflagged, button should say "Markieren"
       expect(screen.getByText('Markieren')).toBeInTheDocument();
     });

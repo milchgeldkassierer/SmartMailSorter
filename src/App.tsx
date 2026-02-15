@@ -161,20 +161,27 @@ const App: React.FC = () => {
     onSelectEmail: handleSelectEmail,
   });
 
-  const { isSorting, sortProgress, canSmartSort, handleBatchDelete, handleBatchSmartSort, handleBatchMarkRead, handleBatchFlag } =
-    useBatchOperations({
-      selectedIds,
-      currentEmails,
-      currentCategories,
-      aiSettings,
-      onDeleteEmail: handleDeleteEmail,
-      onToggleRead: handleToggleRead,
-      onToggleFlag: handleToggleFlag,
-      onClearSelection: clearSelection,
-      onUpdateEmails: (updateFn) => updateActiveAccountData((prev) => ({ ...prev, emails: updateFn(prev.emails) })),
-      onUpdateCategories: (categories) => updateActiveAccountData((prev) => ({ ...prev, categories })),
-      onOpenSettings: () => setIsSettingsOpen(true),
-    });
+  const {
+    isSorting,
+    sortProgress,
+    canSmartSort,
+    handleBatchDelete,
+    handleBatchSmartSort,
+    handleBatchMarkRead,
+    handleBatchFlag,
+  } = useBatchOperations({
+    selectedIds,
+    currentEmails,
+    currentCategories,
+    aiSettings,
+    onDeleteEmail: handleDeleteEmail,
+    onToggleRead: handleToggleRead,
+    onToggleFlag: handleToggleFlag,
+    onClearSelection: clearSelection,
+    onUpdateEmails: (updateFn) => updateActiveAccountData((prev) => ({ ...prev, emails: updateFn(prev.emails) })),
+    onUpdateCategories: (categories) => updateActiveAccountData((prev) => ({ ...prev, categories })),
+    onOpenSettings: () => setIsSettingsOpen(true),
+  });
 
   const { isSyncing, syncAccount } = useSync({
     activeAccountId,
