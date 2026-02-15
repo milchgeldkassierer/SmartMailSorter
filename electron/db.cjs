@@ -575,6 +575,13 @@ function getUnreadEmailCount(accountId) {
   return result ? result.count : 0;
 }
 
+function getTotalUnreadEmailCount() {
+  const result = db
+    .prepare('SELECT COUNT(*) as count FROM emails WHERE isRead = 0')
+    .get();
+  return result ? result.count : 0;
+}
+
 module.exports = {
   init,
   close,
@@ -595,6 +602,7 @@ module.exports = {
   getEmailAttachments,
   getAttachment,
   getUnreadEmailCount,
+  getTotalUnreadEmailCount,
 
   // New Category Methods
   getCategories: () => db.prepare('SELECT name, type FROM categories ORDER BY name').all(),

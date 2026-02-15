@@ -64,6 +64,8 @@ app.whenReady().then(() => {
     // Initial sync using the account from DB (ensures encrypted/decrypted flow)
     const syncResult = await imap.syncAccount(accountWithPassword);
 
+    // Badge count is updated inside imap.syncAccount
+
     // Return account without password for safe frontend state management
     const { password, ...accountWithoutPassword } = accountWithPassword;
     return { ...syncResult, account: accountWithoutPassword };
@@ -71,6 +73,9 @@ app.whenReady().then(() => {
 
   ipcMain.handle('delete-account', (event, id) => {
     db.deleteAccountDn(id);
+    // Update badge count after account deletion
+    const unreadCount = db.getTotalUnreadEmailCount();
+    notifications.updateBadgeCount(unreadCount);
     return true;
   });
 
@@ -232,6 +237,9 @@ app.whenReady().then(() => {
     // Only delete from DB if server deletion succeeded
     if (result.success) {
       db.deleteEmail(emailId);
+      // Update badge count after deletion
+      const unreadCount = db.getTotalUnreadEmailCount();
+      notifications.updateBadgeCount(unreadCount);
     }
     return result;
   });
@@ -248,6 +256,9 @@ app.whenReady().then(() => {
     // Only update DB if server update succeeded
     if (result.success) {
       db.updateEmailReadStatus(emailId, isRead);
+      // Update badge count after read status change
+      const unreadCount = db.getTotalUnreadEmailCount();
+      notifications.updateBadgeCount(unreadCount);
     }
     return result;
   });
