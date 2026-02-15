@@ -1,0 +1,68 @@
+import { useState, useEffect, useCallback } from 'react';
+
+export interface UndoAction {
+  type: 'move-category' | 'move-folder' | 'toggle-flag';
+  emailIds: string[];
+  previousState: Map<string, { smartCategory?: string; folder?: string; isFlagged?: boolean }>;
+  description: string;
+  execute: () => void | Promise<void>;
+}
+
+interface UseUndoStackReturn {
+  pushAction: (action: UndoAction) => void;
+  undo: () => void;
+  canUndo: boolean;
+  lastActionDescription: string | null;
+}
+
+const MAX_STACK_SIZE = 20;
+
+export const useUndoStack = (): UseUndoStackReturn => {
+  const [stack, setStack] = useState<UndoAction[]>([]);
+
+  const pushAction = useCallback((action: UndoAction) => {
+    setStack((prev) => {
+      const next = [...prev, action];
+      if (next.length > MAX_STACK_SIZE) {
+        return next.slice(next.length - MAX_STACK_SIZE);
+      }
+      return next;
+    });
+  }, []);
+
+  const undo = useCallback(() => {
+    setStack((prev) => {
+      if (prev.length === 0) return prev;
+      const next = [...prev];
+      const action = next.pop()!;
+      try {
+        action.execute();
+      } catch {
+        // Silently handle undo failures
+      }
+      return next;
+    });
+  }, []);
+
+  const canUndo = stack.length > 0;
+  const lastActionDescription = stack.length > 0 ? stack[stack.length - 1].description : null;
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        undo();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [undo]);
+
+  return {
+    pushAction,
+    undo,
+    canUndo,
+    lastActionDescription,
+  };
+};
