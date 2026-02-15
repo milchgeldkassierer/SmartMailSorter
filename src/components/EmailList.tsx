@@ -2,18 +2,7 @@ import React from 'react';
 import { Email } from '../types';
 import { BrainCircuit, Trash2, Mail, MailOpen, Star, Paperclip, Folder } from './Icon';
 import { formatEmailDate } from '../utils/formatEmailDate';
-
-/** Extract display name from sender strings like '"Name" <email>' or 'Name <email>' */
-function displayName(sender: string): string {
-  // Try quoted name: "Name" <email>
-  const quoted = sender.match(/^"(.+?)"\s*</);
-  if (quoted) return quoted[1];
-  // Try unquoted name: Name <email>
-  const unquoted = sender.match(/^(.+?)\s*</);
-  if (unquoted) return unquoted[1].trim();
-  // Fallback: return as-is (plain email or name)
-  return sender;
-}
+import { displayName } from '../utils/displayName';
 
 interface EmailListProps {
   emails: Email[];
