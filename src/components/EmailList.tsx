@@ -1,6 +1,8 @@
 import React from 'react';
 import { Email } from '../types';
 import { BrainCircuit, Trash2, Mail, MailOpen, Star, Paperclip, Folder } from './Icon';
+import { formatEmailDate } from '../utils/formatEmailDate';
+import { displayName } from '../utils/displayName';
 
 interface EmailListProps {
   emails: Email[];
@@ -113,24 +115,8 @@ const EmailList: React.FC<EmailListProps> = ({
 
               {/* Action Bar - Visible on Hover or if Flagged */}
               <div className="absolute top-2 right-2 flex items-center gap-1">
-                {/* Star: Visible if flagged OR on group hover */}
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onToggleFlag(email.id);
-                  }}
-                  className={`p-1.5 rounded-full transition-all ${
-                    email.isFlagged
-                      ? 'text-yellow-400 opacity-100'
-                      : 'text-slate-400 opacity-0 group-hover:opacity-100 hover:bg-slate-200 hover:text-yellow-400'
-                  }`}
-                  title={email.isFlagged ? 'Markierung entfernen' : 'Markieren'}
-                >
-                  <Star className={`w-4 h-4 ${email.isFlagged ? 'fill-current' : ''}`} />
-                </button>
-
                 {/* Delete & Read: Visible only on hover */}
-                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-white/80 backdrop-blur-sm rounded-lg pl-1">
+                <div className="hidden group-hover:flex items-center gap-1 bg-white/80 backdrop-blur-sm rounded-lg pr-1">
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -152,16 +138,30 @@ const EmailList: React.FC<EmailListProps> = ({
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
+
+                {/* Star: Visible if flagged OR on group hover — last so it stays in place */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onToggleFlag(email.id);
+                  }}
+                  className={`p-1.5 rounded-full transition-all ${
+                    email.isFlagged
+                      ? 'text-yellow-400 opacity-100'
+                      : 'text-slate-400 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto focus-visible:opacity-100 focus-visible:pointer-events-auto hover:bg-slate-200 hover:text-yellow-400'
+                  }`}
+                  title={email.isFlagged ? 'Markierung entfernen' : 'Markieren'}
+                >
+                  <Star className={`w-4 h-4 ${email.isFlagged ? 'fill-current' : ''}`} />
+                </button>
               </div>
 
-              <div className="flex justify-between items-start mb-1 pr-6">
-                <span
-                  className={`font-medium truncate max-w-[65%] ${email.isRead ? 'text-slate-600' : 'text-slate-900'}`}
-                >
-                  {email.sender}
+              <div className={`flex items-baseline mb-1 gap-2 ${email.isFlagged ? 'pr-9' : ''}`}>
+                <span className={`font-medium truncate min-w-0 ${email.isRead ? 'text-slate-600' : 'text-slate-900'}`}>
+                  {displayName(email.sender)}
                 </span>
-                <span className="text-xs text-slate-400 whitespace-nowrap">
-                  {new Date(email.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                <span className="text-xs text-slate-400 whitespace-nowrap flex-shrink-0 ml-auto group-hover:invisible">
+                  {formatEmailDate(new Date(email.date).getTime()) ?? ''}
                 </span>
               </div>
 

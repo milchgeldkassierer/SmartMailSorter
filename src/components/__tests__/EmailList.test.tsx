@@ -11,7 +11,7 @@ describe('EmailList', () => {
     senderEmail: 'john@example.com',
     subject: 'Test Subject',
     body: 'This is the email body content for testing.',
-    date: '2024-01-15T10:30:00Z',
+    date: new Date().toISOString(), // Use current date/time so formatEmailDate shows time
     folder: INBOX_FOLDER,
     isRead: false,
     isFlagged: false,
@@ -139,10 +139,10 @@ describe('EmailList', () => {
       expect(bodyPreviews.length).toBe(3);
     });
 
-    it('should render formatted time', () => {
+    it('should render smart date formatting for today (shows time)', () => {
       render(<EmailList {...defaultProps} />);
 
-      // Time is formatted as HH:MM
+      // Today's emails should show time in HH:MM format
       const timeElements = screen.getAllByText(/\d{2}:\d{2}/);
       expect(timeElements.length).toBeGreaterThan(0);
     });
@@ -200,6 +200,175 @@ describe('EmailList', () => {
       // BrainCircuit icon should not be present when no AI summary
       const aiIndicators = document.querySelectorAll('.bg-blue-100');
       expect(aiIndicators.length).toBe(0);
+    });
+  });
+
+  describe('Smart Date Formatting', () => {
+    it("should display time (HH:MM) for today's emails", () => {
+      const todayEmail = createEmail({
+        id: 'today-email',
+        sender: 'Today Sender',
+        date: new Date().toISOString(),
+      });
+
+      render(<EmailList {...defaultProps} emails={[todayEmail]} />);
+
+      // Should show time in HH:MM format
+      const timeElement = screen.getByText(/\d{2}:\d{2}/);
+      expect(timeElement).toBeInTheDocument();
+    });
+
+    it('should display "Gestern" for yesterday\'s emails', () => {
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+
+      const yesterdayEmail = createEmail({
+        id: 'yesterday-email',
+        sender: 'Yesterday Sender',
+        date: yesterday.toISOString(),
+      });
+
+      render(<EmailList {...defaultProps} emails={[yesterdayEmail]} />);
+
+      // Should show "Gestern"
+      expect(screen.getByText('Gestern')).toBeInTheDocument();
+    });
+
+    it('should display day name for emails from 2-6 days ago', () => {
+      const threeDaysAgo = new Date();
+      threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+
+      const thisWeekEmail = createEmail({
+        id: 'thisweek-email',
+        sender: 'This Week Sender',
+        date: threeDaysAgo.toISOString(),
+      });
+
+      render(<EmailList {...defaultProps} emails={[thisWeekEmail]} />);
+
+      // Should show a German day name
+      const germanDays = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
+      const hasGermanDayName = germanDays.some((day) => screen.queryByText(day) !== null);
+      expect(hasGermanDayName).toBe(true);
+    });
+
+    it('should display full date (DD.MM.YYYY) for emails older than 6 days', () => {
+      const tenDaysAgo = new Date();
+      tenDaysAgo.setDate(tenDaysAgo.getDate() - 10);
+
+      const olderEmail = createEmail({
+        id: 'older-email',
+        sender: 'Older Sender',
+        date: tenDaysAgo.toISOString(),
+      });
+
+      render(<EmailList {...defaultProps} emails={[olderEmail]} />);
+
+      // Should show full date in DD.MM.YYYY format
+      const dateElement = screen.getByText(/\d{2}\.\d{2}\.\d{4}/);
+      expect(dateElement).toBeInTheDocument();
+    });
+
+    it('should display full date for emails from last year', () => {
+      const lastYear = new Date();
+      lastYear.setFullYear(lastYear.getFullYear() - 1);
+      lastYear.setMonth(5); // June
+      lastYear.setDate(15);
+
+      const oldEmail = createEmail({
+        id: 'lastyear-email',
+        sender: 'Last Year Sender',
+        date: lastYear.toISOString(),
+      });
+
+      render(<EmailList {...defaultProps} emails={[oldEmail]} />);
+
+      // Should show full date
+      const dateElement = screen.getByText(/\d{2}\.\d{2}\.\d{4}/);
+      expect(dateElement).toBeInTheDocument();
+    });
+
+    it('should use German day names, not English', () => {
+      const threeDaysAgo = new Date();
+      threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+
+      const thisWeekEmail = createEmail({
+        id: 'german-day-email',
+        sender: 'German Day Sender',
+        date: threeDaysAgo.toISOString(),
+      });
+
+      render(<EmailList {...defaultProps} emails={[thisWeekEmail]} />);
+
+      // Should not show English day names
+      const englishDays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+      englishDays.forEach((day) => {
+        expect(screen.queryByText(day)).not.toBeInTheDocument();
+      });
+    });
+
+    it('should handle mixed date ranges in email list', () => {
+      const today = new Date();
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      const threeDaysAgo = new Date();
+      threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+      const oneMonthAgo = new Date();
+      oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+
+      const mixedEmails = [
+        createEmail({ id: 'today', sender: 'Today', date: today.toISOString() }),
+        createEmail({ id: 'yesterday', sender: 'Yesterday', date: yesterday.toISOString() }),
+        createEmail({ id: 'thisweek', sender: 'This Week', date: threeDaysAgo.toISOString() }),
+        createEmail({ id: 'older', sender: 'Older', date: oneMonthAgo.toISOString() }),
+      ];
+
+      render(<EmailList {...defaultProps} emails={mixedEmails} />);
+
+      // Should render all emails with appropriate date formatting
+      expect(screen.getByText('Today')).toBeInTheDocument();
+      expect(screen.getByText('Yesterday')).toBeInTheDocument();
+      expect(screen.getByText('This Week')).toBeInTheDocument();
+      expect(screen.getByText('Older')).toBeInTheDocument();
+
+      // Should have time format (HH:MM) for today
+      expect(screen.getByText(/\d{2}:\d{2}/)).toBeInTheDocument();
+      // Should have "Gestern" for yesterday
+      expect(screen.getByText('Gestern')).toBeInTheDocument();
+      // Should have full date for older
+      expect(screen.getByText(/\d{2}\.\d{2}\.\d{4}/)).toBeInTheDocument();
+    });
+
+    it('should format specific time correctly for today', () => {
+      const specificTime = new Date();
+      specificTime.setHours(14, 30, 0, 0);
+
+      const specificTimeEmail = createEmail({
+        id: 'specific-time',
+        sender: 'Specific Time Sender',
+        date: specificTime.toISOString(),
+      });
+
+      render(<EmailList {...defaultProps} emails={[specificTimeEmail]} />);
+
+      // Should show exactly 14:30
+      expect(screen.getByText('14:30')).toBeInTheDocument();
+    });
+
+    it('should pad single-digit hours and minutes with zeros', () => {
+      const morningTime = new Date();
+      morningTime.setHours(9, 5, 0, 0);
+
+      const morningEmail = createEmail({
+        id: 'morning',
+        sender: 'Morning Sender',
+        date: morningTime.toISOString(),
+      });
+
+      render(<EmailList {...defaultProps} emails={[morningEmail]} />);
+
+      // Should show 09:05, not 9:5
+      expect(screen.getByText('09:05')).toBeInTheDocument();
     });
   });
 
