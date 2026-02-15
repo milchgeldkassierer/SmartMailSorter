@@ -42,6 +42,7 @@ describe('BatchActionBar', () => {
     onSelectAll: vi.fn(),
     onBatchDelete: vi.fn(),
     onBatchMarkRead: vi.fn(),
+    onBatchFlag: vi.fn(),
     onBatchSmartSort: vi.fn(),
     canSmartSort: false,
     aiSettings: defaultAISettings,
@@ -276,6 +277,55 @@ describe('BatchActionBar', () => {
 
       const markReadButton = screen.getByText('Als gelesen').closest('button');
       expect(markReadButton).toHaveClass('hover:bg-blue-50', 'hover:text-blue-600', 'hover:border-blue-200');
+    });
+  });
+
+  describe('Flag/Unflag Button', () => {
+    it('should not render when no items are selected', () => {
+      render(<BatchActionBar {...defaultProps} />);
+      expect(screen.queryByText('Markieren')).not.toBeInTheDocument();
+      expect(screen.queryByText('Entmarkieren')).not.toBeInTheDocument();
+    });
+
+    it('should render with "Markieren" label when unflagged emails are selected', () => {
+      const selectedIds = new Set(['1']); // mockEmail1 has isFlagged: false
+      render(<BatchActionBar {...defaultProps} selectedIds={selectedIds} />);
+      expect(screen.getByText('Markieren')).toBeInTheDocument();
+    });
+
+    it('should render with "Entmarkieren" label when only flagged emails are selected', () => {
+      const flaggedEmail: Email = { ...mockEmail1, id: '3', isFlagged: true };
+      const selectedIds = new Set(['3']);
+      render(<BatchActionBar {...defaultProps} filteredEmails={[flaggedEmail]} selectedIds={selectedIds} />);
+      expect(screen.getByText('Entmarkieren')).toBeInTheDocument();
+    });
+
+    it('should render with "Markieren" label when mixed flagged/unflagged emails are selected', () => {
+      const flaggedEmail: Email = { ...mockEmail1, id: '3', isFlagged: true };
+      const unflaggedEmail: Email = { ...mockEmail2, id: '4', isFlagged: false };
+      const selectedIds = new Set(['3', '4']);
+      render(<BatchActionBar {...defaultProps} filteredEmails={[flaggedEmail, unflaggedEmail]} selectedIds={selectedIds} />);
+      // If any email is unflagged, button should say "Markieren"
+      expect(screen.getByText('Markieren')).toBeInTheDocument();
+    });
+
+    it('should call onBatchFlag when clicked', () => {
+      const onBatchFlag = vi.fn();
+      const selectedIds = new Set(['1']);
+      render(<BatchActionBar {...defaultProps} selectedIds={selectedIds} onBatchFlag={onBatchFlag} />);
+
+      const flagButton = screen.getByText('Markieren').closest('button');
+      fireEvent.click(flagButton!);
+
+      expect(onBatchFlag).toHaveBeenCalledTimes(1);
+    });
+
+    it('should have correct styling', () => {
+      const selectedIds = new Set(['1']);
+      render(<BatchActionBar {...defaultProps} selectedIds={selectedIds} />);
+
+      const flagButton = screen.getByText('Markieren').closest('button');
+      expect(flagButton).toHaveClass('hover:bg-amber-50', 'hover:text-amber-600', 'hover:border-amber-200');
     });
   });
 
