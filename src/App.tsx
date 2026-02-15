@@ -105,9 +105,7 @@ const App: React.FC = () => {
         updateActiveAccountData((prev) => ({
           ...prev,
           emails: isAlreadyInTrash
-            ? [...prev.emails, emailToDelete].sort(
-                (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-              )
+            ? [...prev.emails, emailToDelete].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
             : prev.emails.map((e) => (e.id === id ? emailToDelete : e)),
         }));
       }
@@ -143,34 +141,37 @@ const App: React.FC = () => {
     }
   };
 
-  const handleToggleFlag = async (id: string) => {
-    const email = currentEmails.find((e) => e.id === id);
-    if (!email) return;
-    const previousFlagState = email.isFlagged;
-    updateActiveAccountData((prev) => ({
-      ...prev,
-      emails: prev.emails.map((e) => (e.id === id ? { ...e, isFlagged: !e.isFlagged } : e)),
-    }));
-    if (window.electron && activeAccountId && email.uid) {
-      try {
-        await window.electron.updateEmailFlag({
-          accountId: activeAccountId,
-          emailId: id,
-          uid: email.uid,
-          isFlagged: !previousFlagState,
-          folder: email.folder,
-        });
-      } catch (error) {
-        console.error('Failed to update flag status:', error);
-        // Rollback optimistic update
-        updateActiveAccountData((prev) => ({
-          ...prev,
-          emails: prev.emails.map((e) => (e.id === id ? { ...e, isFlagged: previousFlagState } : e)),
-        }));
-        throw error;
+  const handleToggleFlag = useCallback(
+    async (id: string) => {
+      const email = currentEmails.find((e) => e.id === id);
+      if (!email) return;
+      const previousFlagState = email.isFlagged;
+      updateActiveAccountData((prev) => ({
+        ...prev,
+        emails: prev.emails.map((e) => (e.id === id ? { ...e, isFlagged: !e.isFlagged } : e)),
+      }));
+      if (window.electron && activeAccountId && email.uid) {
+        try {
+          await window.electron.updateEmailFlag({
+            accountId: activeAccountId,
+            emailId: id,
+            uid: email.uid,
+            isFlagged: !previousFlagState,
+            folder: email.folder,
+          });
+        } catch (error) {
+          console.error('Failed to update flag status:', error);
+          // Rollback optimistic update
+          updateActiveAccountData((prev) => ({
+            ...prev,
+            emails: prev.emails.map((e) => (e.id === id ? { ...e, isFlagged: previousFlagState } : e)),
+          }));
+          throw error;
+        }
       }
-    }
-  };
+    },
+    [currentEmails, updateActiveAccountData, activeAccountId]
+  );
 
   const { selectedIds, handleRowClick, handleToggleSelection, handleSelectAll, clearSelection } = useSelection({
     filteredEmails,

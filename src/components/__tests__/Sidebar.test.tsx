@@ -621,11 +621,11 @@ describe('Sidebar', () => {
       onDropEmails: vi.fn(),
     };
 
-    it('should show drop target ring classes when isDraggingEmails is true', () => {
+    it('should show drop target styling when isDraggingEmails is true', () => {
       const { container } = renderWithDialog(<Sidebar {...defaultProps} {...dndProps} />);
-      // When dragging, categories should have ring-dashed styling
-      const ringElements = container.querySelectorAll('.ring-dashed');
-      expect(ringElements.length).toBeGreaterThan(0);
+      // When dragging, categories should have drop target background styling
+      const styledElements = container.querySelectorAll('[class*="bg-slate-800"]');
+      expect(styledElements.length).toBeGreaterThan(0);
     });
 
     it('should not show drop target ring classes when isDraggingEmails is false', () => {
@@ -638,7 +638,7 @@ describe('Sidebar', () => {
       const { container } = renderWithDialog(
         <Sidebar {...defaultProps} {...dndProps} dropTargetCategory="Rechnungen" />
       );
-      const activeDropTarget = container.querySelectorAll('.ring-blue-500');
+      const activeDropTarget = container.querySelectorAll('[class*="bg-blue-600"]');
       expect(activeDropTarget.length).toBeGreaterThan(0);
     });
 
@@ -708,7 +708,7 @@ describe('Sidebar', () => {
       const onDropEmails = vi.fn();
       renderWithDialog(<Sidebar {...defaultProps} {...dndProps} onDropEmails={onDropEmails} />);
 
-      const newCategoryZone = screen.getByText('Neue Kategorie erstellen').closest('div[class*="border-dashed"]');
+      const newCategoryZone = screen.getByText('Neue Kategorie erstellen').closest('div[class*="shadow-"]');
       const emailIds = ['email-4'];
 
       fireEvent.drop(newCategoryZone!, {
