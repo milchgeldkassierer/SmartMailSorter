@@ -1,7 +1,7 @@
 import React from 'react';
 import SearchBar, { SearchConfig } from './SearchBar';
 import { RefreshCw, Search, Filter } from './Icon';
-import { DefaultEmailCategory } from '../types';
+import { DefaultEmailCategory, SortConfig } from '../types';
 
 interface TopBarProps {
   selectedCategory: string;
@@ -10,6 +10,8 @@ interface TopBarProps {
   onSearchChange: (term: string) => void;
   searchConfig: SearchConfig;
   onSearchConfigChange: (config: SearchConfig) => void;
+  sortConfig: SortConfig;
+  onSortConfigChange: (config: SortConfig) => void;
   showUnsortedOnly: boolean;
   onToggleUnsorted: () => void;
   onSync: () => void;
@@ -23,6 +25,8 @@ const TopBar: React.FC<TopBarProps> = ({
   onSearchChange,
   searchConfig,
   onSearchConfigChange,
+  sortConfig,
+  onSortConfigChange,
   showUnsortedOnly,
   onToggleUnsorted,
   onSync,

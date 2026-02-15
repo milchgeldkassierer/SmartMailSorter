@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import TopBar from '../TopBar';
 import { SearchConfig } from '../SearchBar';
-import { DefaultEmailCategory } from '../../types';
+import { DefaultEmailCategory, SortConfig } from '../../types';
 
 describe('TopBar', () => {
   const defaultSearchConfig: SearchConfig = {
@@ -12,6 +12,11 @@ describe('TopBar', () => {
     logic: 'AND',
   };
 
+  const defaultSortConfig: SortConfig = {
+    field: 'date',
+    direction: 'desc',
+  };
+
   const defaultProps = {
     selectedCategory: DefaultEmailCategory.INBOX,
     filteredEmailsCount: 10,
@@ -19,6 +24,8 @@ describe('TopBar', () => {
     onSearchChange: vi.fn(),
     searchConfig: defaultSearchConfig,
     onSearchConfigChange: vi.fn(),
+    sortConfig: defaultSortConfig,
+    onSortConfigChange: vi.fn(),
     showUnsortedOnly: false,
     onToggleUnsorted: vi.fn(),
     onSync: vi.fn(),
