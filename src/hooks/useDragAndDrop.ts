@@ -29,32 +29,29 @@ export const useDragAndDrop = (callbacks: DragAndDropCallbacks): UseDragAndDropR
     dropTargetCategory: null,
   });
 
-  const onEmailDragStart = useCallback(
-    (emailId: string, selectedIds: Set<string>, event: React.DragEvent) => {
-      const ids = selectedIds.has(emailId) ? Array.from(selectedIds) : [emailId];
+  const onEmailDragStart = useCallback((emailId: string, selectedIds: Set<string>, event: React.DragEvent) => {
+    const ids = selectedIds.has(emailId) ? Array.from(selectedIds) : [emailId];
 
-      event.dataTransfer.setData('application/x-email-ids', JSON.stringify(ids));
-      event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData('application/x-email-ids', JSON.stringify(ids));
+    event.dataTransfer.effectAllowed = 'move';
 
-      // Create custom drag image showing count
-      if (ids.length > 1) {
-        const dragImage = document.createElement('div');
-        dragImage.textContent = `${ids.length} emails`;
-        dragImage.style.cssText =
-          'position:absolute;top:-1000px;padding:8px 12px;background:#3b82f6;color:white;border-radius:6px;font-size:13px;font-weight:500;';
-        document.body.appendChild(dragImage);
-        event.dataTransfer.setDragImage(dragImage, 0, 0);
-        setTimeout(() => document.body.removeChild(dragImage), 0);
-      }
+    // Create custom drag image showing count
+    if (ids.length > 1) {
+      const dragImage = document.createElement('div');
+      dragImage.textContent = `${ids.length} emails`;
+      dragImage.style.cssText =
+        'position:absolute;top:-1000px;padding:8px 12px;background:#3b82f6;color:white;border-radius:6px;font-size:13px;font-weight:500;';
+      document.body.appendChild(dragImage);
+      event.dataTransfer.setDragImage(dragImage, 0, 0);
+      setTimeout(() => document.body.removeChild(dragImage), 0);
+    }
 
-      setState({
-        isDragging: true,
-        draggedEmailIds: ids,
-        dropTargetCategory: null,
-      });
-    },
-    []
-  );
+    setState({
+      isDragging: true,
+      draggedEmailIds: ids,
+      dropTargetCategory: null,
+    });
+  }, []);
 
   const onCategoryDragOver = useCallback((categoryName: string, event: React.DragEvent) => {
     event.preventDefault();

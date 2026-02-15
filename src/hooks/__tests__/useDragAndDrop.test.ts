@@ -100,10 +100,7 @@ describe('useDragAndDrop', () => {
         result.current.onEmailDragStart('email-1', new Set(), event);
       });
 
-      expect(event.dataTransfer.setData).toHaveBeenCalledWith(
-        'application/x-email-ids',
-        JSON.stringify(['email-1'])
-      );
+      expect(event.dataTransfer.setData).toHaveBeenCalledWith('application/x-email-ids', JSON.stringify(['email-1']));
       expect(event.dataTransfer.effectAllowed).toBe('move');
     });
   });
@@ -211,9 +208,7 @@ describe('useDragAndDrop', () => {
       });
 
       const dropEvent = createMockDragEvent();
-      (dropEvent.dataTransfer.getData as ReturnType<typeof vi.fn>).mockReturnValue(
-        JSON.stringify(['email-1'])
-      );
+      (dropEvent.dataTransfer.getData as ReturnType<typeof vi.fn>).mockReturnValue(JSON.stringify(['email-1']));
 
       act(() => {
         result.current.onCategoryDrop('Work', 'smart', dropEvent);
@@ -258,9 +253,7 @@ describe('useDragAndDrop', () => {
       const { result } = renderHook(() => useDragAndDrop(defaultCallbacks));
 
       const dropEvent = createMockDragEvent();
-      (dropEvent.dataTransfer.getData as ReturnType<typeof vi.fn>).mockReturnValue(
-        JSON.stringify([])
-      );
+      (dropEvent.dataTransfer.getData as ReturnType<typeof vi.fn>).mockReturnValue(JSON.stringify([]));
 
       act(() => {
         result.current.onCategoryDrop('Work', 'smart', dropEvent);
@@ -273,9 +266,7 @@ describe('useDragAndDrop', () => {
       const { result } = renderHook(() => useDragAndDrop(defaultCallbacks));
 
       const dropEvent = createMockDragEvent();
-      (dropEvent.dataTransfer.getData as ReturnType<typeof vi.fn>).mockReturnValue(
-        JSON.stringify(['email-1'])
-      );
+      (dropEvent.dataTransfer.getData as ReturnType<typeof vi.fn>).mockReturnValue(JSON.stringify(['email-1']));
 
       act(() => {
         result.current.onCategoryDrop('Work', 'smart', dropEvent);

@@ -135,7 +135,13 @@ const Sidebar: React.FC<SidebarProps> = ({
     return 'ring-2 ring-dashed ring-slate-600 transition-all';
   };
 
-  const renderCategoryItem = (cat: string, displayName: string, icon: LucideIcon, depth = 0, targetType: 'folder' | 'smart' = 'smart') => {
+  const renderCategoryItem = (
+    cat: string,
+    displayName: string,
+    icon: LucideIcon,
+    depth = 0,
+    targetType: 'folder' | 'smart' = 'smart'
+  ) => {
     const isSelected = selectedCategory === cat;
     const count = counts[cat] || 0;
 

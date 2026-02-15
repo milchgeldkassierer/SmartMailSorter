@@ -43,27 +43,33 @@ const EmailList: React.FC<EmailListProps> = ({
   // Create persistent drag image element
   React.useEffect(() => {
     const el = document.createElement('div');
-    el.style.cssText = 'position:absolute;top:-1000px;left:-1000px;padding:6px 12px;background:#3b82f6;color:white;border-radius:6px;font-size:13px;font-weight:500;white-space:nowrap;pointer-events:none;z-index:9999;';
+    el.style.cssText =
+      'position:absolute;top:-1000px;left:-1000px;padding:6px 12px;background:#3b82f6;color:white;border-radius:6px;font-size:13px;font-weight:500;white-space:nowrap;pointer-events:none;z-index:9999;';
     document.body.appendChild(el);
     dragImageRef.current = el;
-    return () => { document.body.removeChild(el); };
+    return () => {
+      document.body.removeChild(el);
+    };
   }, []);
 
-  const handleDragStart = React.useCallback((emailId: string, e: React.DragEvent) => {
-    if (!onDragStart) return;
-    // Determine dragged set: if email is in selection, drag all selected; otherwise just this one
-    const dragIds = selectedIds.has(emailId) ? selectedIds : new Set([emailId]);
-    const count = dragIds.size;
+  const handleDragStart = React.useCallback(
+    (emailId: string, e: React.DragEvent) => {
+      if (!onDragStart) return;
+      // Determine dragged set: if email is in selection, drag all selected; otherwise just this one
+      const dragIds = selectedIds.has(emailId) ? selectedIds : new Set([emailId]);
+      const count = dragIds.size;
 
-    // Set custom drag image
-    if (dragImageRef.current) {
-      dragImageRef.current.textContent = count === 1 ? '1 Email' : `${count} Emails`;
-      e.dataTransfer.setDragImage(dragImageRef.current, 0, 0);
-    }
+      // Set custom drag image
+      if (dragImageRef.current) {
+        dragImageRef.current.textContent = count === 1 ? '1 Email' : `${count} Emails`;
+        e.dataTransfer.setDragImage(dragImageRef.current, 0, 0);
+      }
 
-    e.dataTransfer.effectAllowed = 'move';
-    onDragStart(emailId, dragIds, e);
-  }, [onDragStart, selectedIds]);
+      e.dataTransfer.effectAllowed = 'move';
+      onDragStart(emailId, dragIds, e);
+    },
+    [onDragStart, selectedIds]
+  );
 
   const handleDragEnd = React.useCallback(() => {
     onDragEnd?.();

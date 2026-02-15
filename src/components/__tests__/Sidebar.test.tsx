@@ -644,9 +644,7 @@ describe('Sidebar', () => {
 
     it('should call onDropEmails with correct args on drop event', () => {
       const onDropEmails = vi.fn();
-      renderWithDialog(
-        <Sidebar {...defaultProps} {...dndProps} onDropEmails={onDropEmails} />
-      );
+      renderWithDialog(<Sidebar {...defaultProps} {...dndProps} onDropEmails={onDropEmails} />);
 
       const inboxButton = screen.getByRole('button', { name: /Posteingang/i });
       const emailIds = ['email-1', 'email-2'];
@@ -665,9 +663,7 @@ describe('Sidebar', () => {
 
     it('should call onDropEmails for smart category drops', () => {
       const onDropEmails = vi.fn();
-      renderWithDialog(
-        <Sidebar {...defaultProps} {...dndProps} onDropEmails={onDropEmails} />
-      );
+      renderWithDialog(<Sidebar {...defaultProps} {...dndProps} onDropEmails={onDropEmails} />);
 
       const rechnungenItem = screen.getByText('Rechnungen').closest('div[class*="cursor-pointer"]');
       const emailIds = ['email-3'];
@@ -710,9 +706,7 @@ describe('Sidebar', () => {
 
     it('should call onDropEmails with __new_category__ when dropping on new category zone', () => {
       const onDropEmails = vi.fn();
-      renderWithDialog(
-        <Sidebar {...defaultProps} {...dndProps} onDropEmails={onDropEmails} />
-      );
+      renderWithDialog(<Sidebar {...defaultProps} {...dndProps} onDropEmails={onDropEmails} />);
 
       const newCategoryZone = screen.getByText('Neue Kategorie erstellen').closest('div[class*="border-dashed"]');
       const emailIds = ['email-4'];

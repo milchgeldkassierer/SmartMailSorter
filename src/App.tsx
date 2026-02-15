@@ -14,7 +14,7 @@ import { useSelection } from './hooks/useSelection';
 import { useBatchOperations } from './hooks/useBatchOperations';
 import { useSync } from './hooks/useSync';
 import { useDragAndDrop } from './hooks/useDragAndDrop';
-import { useUndoStack, UndoAction } from './hooks/useUndoStack';
+import { useUndoStack } from './hooks/useUndoStack';
 import { useDialogContext } from './contexts/DialogContext';
 import TopBar from './components/TopBar';
 import BatchActionBar from './components/BatchActionBar';
@@ -322,13 +322,7 @@ const App: React.FC = () => {
     [currentEmails, updateActiveAccountData, pushAction]
   );
 
-  const {
-    isDragging,
-    draggedEmailIds,
-    dropTargetCategory,
-    onEmailDragStart,
-    onDragEnd,
-  } = useDragAndDrop({
+  const { isDragging, draggedEmailIds, dropTargetCategory, onEmailDragStart, onDragEnd } = useDragAndDrop({
     onMoveToSmartCategory: handleMoveToSmartCategory,
     onMoveToFolder: handleMoveToFolder,
   });
