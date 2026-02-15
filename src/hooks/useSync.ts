@@ -1,18 +1,19 @@
 import { useState, useCallback } from 'react';
 import { ImapAccount, Email } from '../types';
-import { useDialog } from './useDialog';
 
 interface UseSyncParams {
   activeAccountId: string;
   accounts: ImapAccount[];
   onAccountsUpdate?: (accounts: ImapAccount[]) => void;
   onDataUpdate?: (accountId: string, data: { emails: Email[] }) => void;
+  dialog: {
+    alert: (config: { title: string; message: string; variant?: string }) => Promise<void>;
+  };
 }
 
 interface UseSyncReturn {
   isSyncing: boolean;
   syncAccount: () => Promise<void>;
-  dialog: ReturnType<typeof useDialog>;
 }
 
 export const useSync = ({
@@ -20,9 +21,9 @@ export const useSync = ({
   accounts,
   onAccountsUpdate,
   onDataUpdate,
+  dialog,
 }: UseSyncParams): UseSyncReturn => {
   const [isSyncing, setIsSyncing] = useState(false);
-  const dialog = useDialog();
 
   // Sync emails for the active account
   const syncAccount = useCallback(async () => {
@@ -61,11 +62,11 @@ export const useSync = ({
     } finally {
       setIsSyncing(false);
     }
-  }, [activeAccountId, accounts, onAccountsUpdate, onDataUpdate, dialog]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeAccountId, accounts, onAccountsUpdate, onDataUpdate, dialog.alert]);
 
   return {
     isSyncing,
     syncAccount,
-    dialog,
   };
 };

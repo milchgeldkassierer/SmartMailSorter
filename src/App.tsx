@@ -191,6 +191,7 @@ const App: React.FC = () => {
     onAccountsUpdate: setAccounts,
     onDataUpdate: (accountId, { emails }) =>
       setData((prev: Record<string, AccountData>) => ({ ...prev, [accountId]: { ...prev[accountId], emails } })),
+    dialog,
   });
 
   // Load initial data
@@ -219,7 +220,8 @@ const App: React.FC = () => {
         });
       }
     })();
-  }, [setAccounts, setActiveAccountId, setData, setIsAuthenticated, dialog]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [setAccounts, setActiveAccountId, setData, setIsAuthenticated, dialog.alert]);
 
   // Fetch emails when switching accounts
   useEffect(() => {
@@ -243,7 +245,8 @@ const App: React.FC = () => {
         });
       }
     })();
-  }, [activeAccountId, autoDiscoverFolders, setData, dialog]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeAccountId, autoDiscoverFolders, setData, dialog.alert]);
 
   const handleAddAccount = async (newAccount: ImapAccount) => {
     if (window.electron) {

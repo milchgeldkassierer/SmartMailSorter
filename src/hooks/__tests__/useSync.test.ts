@@ -2,34 +2,12 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useSync } from '../useSync';
 import { ImapAccount, Email, INBOX_FOLDER } from '../../types';
-import * as useDialogModule from '../useDialog';
 
-// Mock useDialog hook
+// Mock dialog passed as prop
 const mockDialogAlert = vi.fn();
-const mockDialogConfirm = vi.fn();
-const mockDialogPrompt = vi.fn();
-const mockOpenDialog = vi.fn();
-const mockCloseDialog = vi.fn();
-const mockHandleConfirm = vi.fn();
-const mockHandleClose = vi.fn();
-
-vi.spyOn(useDialogModule, 'useDialog').mockReturnValue({
-  isOpen: false,
-  dialogState: {
-    isOpen: false,
-    title: '',
-    message: '',
-    type: 'confirm',
-    variant: 'info',
-  },
-  openDialog: mockOpenDialog,
-  closeDialog: mockCloseDialog,
-  confirm: mockDialogConfirm,
+const mockDialog = {
   alert: mockDialogAlert,
-  prompt: mockDialogPrompt,
-  handleConfirm: mockHandleConfirm,
-  handleClose: mockHandleClose,
-});
+};
 
 describe('useSync', () => {
   const mockAccount1: ImapAccount = {
@@ -92,8 +70,6 @@ describe('useSync', () => {
 
     // Reset dialog mocks
     mockDialogAlert.mockResolvedValue(undefined);
-    mockDialogConfirm.mockResolvedValue(true);
-    mockDialogPrompt.mockResolvedValue('test');
   });
 
   describe('Initial State', () => {
@@ -102,6 +78,7 @@ describe('useSync', () => {
         useSync({
           activeAccountId: 'account-1',
           accounts: [mockAccount1],
+          dialog: mockDialog,
         })
       );
       expect(result.current.isSyncing).toBe(false);
@@ -112,6 +89,7 @@ describe('useSync', () => {
         useSync({
           activeAccountId: 'account-1',
           accounts: [mockAccount1],
+          dialog: mockDialog,
         })
       );
       expect(typeof result.current.syncAccount).toBe('function');
@@ -122,11 +100,11 @@ describe('useSync', () => {
         useSync({
           activeAccountId: 'account-1',
           accounts: [mockAccount1],
+          dialog: mockDialog,
         })
       );
       expect(result.current).toHaveProperty('isSyncing');
       expect(result.current).toHaveProperty('syncAccount');
-      expect(result.current).toHaveProperty('dialog');
     });
   });
 
@@ -136,6 +114,7 @@ describe('useSync', () => {
         useSync({
           activeAccountId: 'account-1',
           accounts: [mockAccount1],
+          dialog: mockDialog,
         })
       );
 
@@ -158,6 +137,7 @@ describe('useSync', () => {
         useSync({
           activeAccountId: 'account-1',
           accounts: [mockAccount1, mockAccount2],
+          dialog: mockDialog,
         })
       );
 
@@ -174,6 +154,7 @@ describe('useSync', () => {
         useSync({
           activeAccountId: 'account-1',
           accounts: [mockAccount1],
+          dialog: mockDialog,
         })
       );
 
@@ -190,6 +171,7 @@ describe('useSync', () => {
         useSync({
           activeAccountId: 'account-1',
           accounts: [mockAccount1],
+          dialog: mockDialog,
         })
       );
 
@@ -210,6 +192,7 @@ describe('useSync', () => {
           activeAccountId: 'account-1',
           accounts: [mockAccount1],
           onAccountsUpdate,
+          dialog: mockDialog,
         })
       );
 
@@ -231,6 +214,7 @@ describe('useSync', () => {
           activeAccountId: 'account-1',
           accounts: [mockAccount1],
           onDataUpdate,
+          dialog: mockDialog,
         })
       );
 
@@ -252,6 +236,7 @@ describe('useSync', () => {
           accounts: [mockAccount1],
           onAccountsUpdate,
           onDataUpdate,
+          dialog: mockDialog,
         })
       );
 
@@ -268,6 +253,7 @@ describe('useSync', () => {
         useSync({
           activeAccountId: 'account-1',
           accounts: [mockAccount1],
+          dialog: mockDialog,
         })
       );
 
@@ -285,6 +271,7 @@ describe('useSync', () => {
         useSync({
           activeAccountId: 'account-1',
           accounts: [mockAccount1],
+          dialog: mockDialog,
         })
       );
 
@@ -307,6 +294,7 @@ describe('useSync', () => {
         useSync({
           activeAccountId: 'account-1',
           accounts: [mockAccount1],
+          dialog: mockDialog,
         })
       );
 
@@ -328,6 +316,7 @@ describe('useSync', () => {
         useSync({
           activeAccountId: 'account-1',
           accounts: [mockAccount1],
+          dialog: mockDialog,
         })
       );
 
@@ -348,6 +337,7 @@ describe('useSync', () => {
         useSync({
           activeAccountId: 'account-1',
           accounts: [mockAccount1],
+          dialog: mockDialog,
         })
       );
 
@@ -372,6 +362,7 @@ describe('useSync', () => {
         useSync({
           activeAccountId: 'account-1',
           accounts: [mockAccount1],
+          dialog: mockDialog,
         })
       );
 
@@ -394,6 +385,7 @@ describe('useSync', () => {
         useSync({
           activeAccountId: 'account-1',
           accounts: [mockAccount1],
+          dialog: mockDialog,
         })
       );
 
@@ -417,6 +409,7 @@ describe('useSync', () => {
         useSync({
           activeAccountId: 'account-1',
           accounts: [mockAccount1],
+          dialog: mockDialog,
         })
       );
 
@@ -432,6 +425,7 @@ describe('useSync', () => {
         useSync({
           activeAccountId: '',
           accounts: [mockAccount1],
+          dialog: mockDialog,
         })
       );
 
@@ -448,6 +442,7 @@ describe('useSync', () => {
         useSync({
           activeAccountId: 'non-existent-account',
           accounts: [mockAccount1],
+          dialog: mockDialog,
         })
       );
 
@@ -465,6 +460,7 @@ describe('useSync', () => {
         useSync({
           activeAccountId: 'account-1',
           accounts: [],
+          dialog: mockDialog,
         })
       );
 
@@ -483,6 +479,7 @@ describe('useSync', () => {
         initialProps: {
           activeAccountId: 'account-1',
           accounts: [mockAccount1, mockAccount2],
+          dialog: mockDialog,
         },
       });
 
@@ -491,6 +488,7 @@ describe('useSync', () => {
       rerender({
         activeAccountId: 'account-2',
         accounts: [mockAccount1, mockAccount2],
+        dialog: mockDialog,
       });
 
       expect(result.current.syncAccount).not.toBe(firstSyncAccount);
@@ -501,6 +499,7 @@ describe('useSync', () => {
         initialProps: {
           activeAccountId: 'account-1',
           accounts: [mockAccount1],
+          dialog: mockDialog,
         },
       });
 
@@ -509,6 +508,7 @@ describe('useSync', () => {
       rerender({
         activeAccountId: 'account-1',
         accounts: [mockAccount1, mockAccount2],
+        dialog: mockDialog,
       });
 
       expect(result.current.syncAccount).not.toBe(firstSyncAccount);
@@ -523,6 +523,7 @@ describe('useSync', () => {
           activeAccountId: 'account-1',
           accounts: [mockAccount1],
           onAccountsUpdate: onAccountsUpdate1,
+          dialog: mockDialog,
         },
       });
 
@@ -532,6 +533,7 @@ describe('useSync', () => {
         activeAccountId: 'account-1',
         accounts: [mockAccount1],
         onAccountsUpdate: onAccountsUpdate2,
+        dialog: mockDialog,
       });
 
       expect(result.current.syncAccount).not.toBe(firstSyncAccount);
@@ -544,6 +546,7 @@ describe('useSync', () => {
         useSync({
           activeAccountId: 'account-1',
           accounts: [mockAccount1],
+          dialog: mockDialog,
         })
       );
 
@@ -570,6 +573,7 @@ describe('useSync', () => {
         initialProps: {
           activeAccountId: 'account-1',
           accounts: [mockAccount1, mockAccount2],
+          dialog: mockDialog,
         },
       });
 
@@ -586,6 +590,7 @@ describe('useSync', () => {
         rerender({
           activeAccountId: 'account-2',
           accounts: [mockAccount1, mockAccount2],
+          dialog: mockDialog,
         });
       });
 
