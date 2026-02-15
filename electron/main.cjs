@@ -199,6 +199,10 @@ app.whenReady().then(() => {
   ipcMain.handle('sync-account', async (event, accountId) => {
     // Retrieve account with decrypted password for IMAP operations
     const accountWithPassword = db.getAccountWithPassword(accountId);
+    if (!accountWithPassword) {
+      logger.error(`[IPC sync-account] Account not found: ${accountId}`);
+      return { success: false, error: 'Account not found' };
+    }
     return await imap.syncAccount(accountWithPassword);
   });
 
@@ -216,40 +220,51 @@ app.whenReady().then(() => {
   });
 
   ipcMain.handle('delete-email', async (event, { accountId, emailId, uid, folder }) => {
-    // Retrieve account with decrypted password for IMAP operations FIRST
+    // Retrieve account with decrypted password for IMAP operations
     const accountWithPassword = db.getAccountWithPassword(accountId);
     if (!accountWithPassword) {
       logger.error(`[IPC delete-email] Account not found: ${accountId}`);
       return { success: false, error: 'Account not found' };
     }
-    // Delete from DB only after account validation
-    db.deleteEmail(emailId);
-    // Delete from Server
-    return await imap.deleteEmail(accountWithPassword, uid, folder);
+    // Delete from server FIRST
+    const result = await imap.deleteEmail(accountWithPassword, uid, folder);
+    // Only delete from DB if server deletion succeeded
+    if (result.success) {
+      db.deleteEmail(emailId);
+    }
+    return result;
   });
 
   ipcMain.handle('update-email-read', async (event, { accountId, emailId, uid, isRead, folder }) => {
-    // Retrieve account with decrypted password for IMAP operations FIRST
+    // Retrieve account with decrypted password for IMAP operations
     const accountWithPassword = db.getAccountWithPassword(accountId);
     if (!accountWithPassword) {
       logger.error(`[IPC update-email-read] Account not found: ${accountId}`);
       return { success: false, error: 'Account not found' };
     }
-    // Update DB only after account validation
-    db.updateEmailReadStatus(emailId, isRead);
-    return await imap.setEmailFlag(accountWithPassword, uid, '\\Seen', isRead, folder);
+    // Update server FIRST
+    const result = await imap.setEmailFlag(accountWithPassword, uid, '\\Seen', isRead, folder);
+    // Only update DB if server update succeeded
+    if (result.success) {
+      db.updateEmailReadStatus(emailId, isRead);
+    }
+    return result;
   });
 
   ipcMain.handle('update-email-flag', async (event, { accountId, emailId, uid, isFlagged, folder }) => {
-    // Retrieve account with decrypted password for IMAP operations FIRST
+    // Retrieve account with decrypted password for IMAP operations
     const accountWithPassword = db.getAccountWithPassword(accountId);
     if (!accountWithPassword) {
       logger.error(`[IPC update-email-flag] Account not found: ${accountId}`);
       return { success: false, error: 'Account not found' };
     }
-    // Update DB only after account validation
-    db.updateEmailFlagStatus(emailId, isFlagged);
-    return await imap.setEmailFlag(accountWithPassword, uid, '\\Flagged', isFlagged, folder);
+    // Update server FIRST
+    const result = await imap.setEmailFlag(accountWithPassword, uid, '\\Flagged', isFlagged, folder);
+    // Only update DB if server update succeeded
+    if (result.success) {
+      db.updateEmailFlagStatus(emailId, isFlagged);
+    }
+    return result;
   });
 
   ipcMain.handle('move-email', (event, { emailId, category }) => {

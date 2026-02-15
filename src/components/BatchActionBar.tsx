@@ -5,7 +5,7 @@ import { Email, AISettings } from '../types';
 interface BatchActionBarProps {
   filteredEmails: Email[];
   selectedIds: Set<string>;
-  onSelectAll: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onSelectAll: () => void;
   onBatchDelete: () => void;
   onBatchMarkRead: () => void;
   onBatchFlag: () => void;
