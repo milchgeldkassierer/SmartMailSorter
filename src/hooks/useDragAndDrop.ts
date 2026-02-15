@@ -33,7 +33,7 @@ export const useDragAndDrop = (callbacks: DragAndDropCallbacks): UseDragAndDropR
     (emailId: string, selectedIds: Set<string>, event: React.DragEvent) => {
       const ids = selectedIds.has(emailId) ? Array.from(selectedIds) : [emailId];
 
-      event.dataTransfer.setData('application/json', JSON.stringify(ids));
+      event.dataTransfer.setData('application/x-email-ids', JSON.stringify(ids));
       event.dataTransfer.effectAllowed = 'move';
 
       // Create custom drag image showing count
@@ -86,7 +86,7 @@ export const useDragAndDrop = (callbacks: DragAndDropCallbacks): UseDragAndDropR
 
       let emailIds: string[] = [];
       try {
-        const data = event.dataTransfer.getData('application/json');
+        const data = event.dataTransfer.getData('application/x-email-ids');
         emailIds = JSON.parse(data);
       } catch {
         // Invalid drag data, ignore

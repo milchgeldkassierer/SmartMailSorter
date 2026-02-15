@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { DefaultEmailCategory, ImapAccount, Category, AccountData, FLAGGED_FOLDER, SYSTEM_FOLDERS } from './types';
 import Sidebar from './components/Sidebar';
 import EmailList from './components/EmailList';
@@ -13,6 +13,8 @@ import { useCategories } from './hooks/useCategories';
 import { useSelection } from './hooks/useSelection';
 import { useBatchOperations } from './hooks/useBatchOperations';
 import { useSync } from './hooks/useSync';
+import { useDragAndDrop } from './hooks/useDragAndDrop';
+import { useUndoStack, UndoAction } from './hooks/useUndoStack';
 import { useDialogContext } from './contexts/DialogContext';
 import TopBar from './components/TopBar';
 import BatchActionBar from './components/BatchActionBar';
@@ -193,6 +195,153 @@ const App: React.FC = () => {
     dialog,
   });
 
+  const { pushAction, undo, canUndo, lastActionDescription } = useUndoStack();
+  const [undoToast, setUndoToast] = useState<string | null>(null);
+
+  const handleMoveToSmartCategory = useCallback(
+    (emailIds: string[], category: string) => {
+      if (category === FLAGGED_FOLDER) {
+        // Toggle flag for each email
+        const previousStates = new Map<string, { isFlagged?: boolean }>();
+        emailIds.forEach((id) => {
+          const email = currentEmails.find((e) => e.id === id);
+          if (email) previousStates.set(id, { isFlagged: email.isFlagged });
+        });
+
+        emailIds.forEach((id) => handleToggleFlag(id).catch(() => {}));
+
+        pushAction({
+          type: 'toggle-flag',
+          emailIds,
+          previousState: previousStates,
+          description: `${emailIds.length} Email(s) markiert`,
+          execute: () => {
+            previousStates.forEach((prev, id) => {
+              const email = currentEmails.find((e) => e.id === id);
+              if (email && email.isFlagged !== prev.isFlagged) {
+                handleToggleFlag(id).catch(() => {});
+              }
+            });
+          },
+        });
+        return;
+      }
+
+      // Smart category assignment
+      const previousStates = new Map<string, { smartCategory?: string }>();
+      emailIds.forEach((id) => {
+        const email = currentEmails.find((e) => e.id === id);
+        if (email) previousStates.set(id, { smartCategory: email.smartCategory });
+      });
+
+      // Optimistic update
+      updateActiveAccountData((prev) => ({
+        ...prev,
+        emails: prev.emails.map((e) => (emailIds.includes(e.id) ? { ...e, smartCategory: category } : e)),
+      }));
+
+      // Persist via IPC
+      emailIds.forEach((id) => {
+        if (window.electron) {
+          window.electron.updateEmailSmartCategory({ emailId: id, category }).catch((error) => {
+            console.error('Failed to update smart category:', error);
+          });
+        }
+      });
+
+      pushAction({
+        type: 'move-category',
+        emailIds,
+        previousState: previousStates,
+        description: `${emailIds.length} Email(s) nach ${category} verschoben`,
+        execute: () => {
+          updateActiveAccountData((prev) => ({
+            ...prev,
+            emails: prev.emails.map((e) => {
+              const prevState = previousStates.get(e.id);
+              return prevState ? { ...e, smartCategory: prevState.smartCategory } : e;
+            }),
+          }));
+          previousStates.forEach((prev, id) => {
+            if (window.electron) {
+              window.electron
+                .updateEmailSmartCategory({ emailId: id, category: prev.smartCategory ?? '' })
+                .catch(() => {});
+            }
+          });
+        },
+      });
+    },
+    [currentEmails, updateActiveAccountData, handleToggleFlag, pushAction]
+  );
+
+  const handleMoveToFolder = useCallback(
+    (emailIds: string[], folder: string) => {
+      const previousStates = new Map<string, { folder?: string }>();
+      emailIds.forEach((id) => {
+        const email = currentEmails.find((e) => e.id === id);
+        if (email) previousStates.set(id, { folder: email.folder });
+      });
+
+      // Optimistic update
+      updateActiveAccountData((prev) => ({
+        ...prev,
+        emails: prev.emails.map((e) => (emailIds.includes(e.id) ? { ...e, folder } : e)),
+      }));
+
+      // Persist via IPC
+      emailIds.forEach((id) => {
+        if (window.electron) {
+          window.electron.moveEmail({ emailId: id, target: folder, type: 'folder' }).catch((error) => {
+            console.error('Failed to move email:', error);
+          });
+        }
+      });
+
+      pushAction({
+        type: 'move-folder',
+        emailIds,
+        previousState: previousStates,
+        description: `${emailIds.length} Email(s) nach ${folder} verschoben`,
+        execute: () => {
+          updateActiveAccountData((prev) => ({
+            ...prev,
+            emails: prev.emails.map((e) => {
+              const prevState = previousStates.get(e.id);
+              return prevState ? { ...e, folder: prevState.folder! } : e;
+            }),
+          }));
+          previousStates.forEach((prev, id) => {
+            if (window.electron && prev.folder) {
+              window.electron.moveEmail({ emailId: id, target: prev.folder, type: 'folder' }).catch(() => {});
+            }
+          });
+        },
+      });
+    },
+    [currentEmails, updateActiveAccountData, pushAction]
+  );
+
+  const {
+    isDragging,
+    draggedEmailIds,
+    dropTargetCategory,
+    onEmailDragStart,
+    onDragEnd,
+  } = useDragAndDrop({
+    onMoveToSmartCategory: handleMoveToSmartCategory,
+    onMoveToFolder: handleMoveToFolder,
+  });
+
+  const handleUndo = useCallback(() => {
+    const desc = lastActionDescription;
+    undo();
+    if (desc) {
+      setUndoToast(`Rückgängig: ${desc}`);
+      setTimeout(() => setUndoToast(null), 3000);
+    }
+  }, [undo, lastActionDescription]);
+
   // Load initial data
   useEffect(() => {
     (async () => {
@@ -339,6 +488,15 @@ const App: React.FC = () => {
           }));
           await renameCategory(oldName, newName);
         }}
+        isDraggingEmails={isDragging}
+        dropTargetCategory={dropTargetCategory}
+        onDropEmails={(emailIds, targetCategory, targetType) => {
+          if (targetType === 'folder') {
+            handleMoveToFolder(emailIds, targetCategory);
+          } else {
+            handleMoveToSmartCategory(emailIds, targetCategory);
+          }
+        }}
       />
 
       <div className="flex-1 flex flex-col min-w-0">
@@ -384,9 +542,30 @@ const App: React.FC = () => {
             isLoading={false}
             onLoadMore={loadMoreEmails}
             hasMore={canLoadMore}
+            onDragStart={onEmailDragStart}
+            onDragEnd={onDragEnd}
+            draggedEmailIds={draggedEmailIds}
           />
           <EmailView email={selectedEmail} />
         </div>
+
+        {undoToast && (
+          <div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-gray-800 text-white px-4 py-2 rounded-lg shadow-lg text-sm z-50 flex items-center gap-2">
+            <span>{undoToast}</span>
+          </div>
+        )}
+
+        {canUndo && !undoToast && (
+          <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50">
+            <button
+              onClick={handleUndo}
+              className="bg-gray-800 text-white px-4 py-2 rounded-lg shadow-lg text-sm hover:bg-gray-700 transition-colors flex items-center gap-2"
+            >
+              <span>↩</span>
+              <span>Rückgängig (Ctrl+Z)</span>
+            </button>
+          </div>
+        )}
 
         <SettingsModal
           isOpen={isSettingsOpen}
