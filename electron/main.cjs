@@ -267,9 +267,12 @@ app.whenReady().then(() => {
     return result;
   });
 
-  ipcMain.handle('move-email', (event, { emailId, category }) => {
-    // Move is local category change only (for now)
-    return db.updateEmailCategory(emailId, category, null, null, 0);
+  ipcMain.handle('move-email', (event, { emailId, category, targetType }) => {
+    if (targetType === 'folder') {
+      return db.updateEmailFolder(emailId, category);
+    }
+    // Default: smart category move
+    return db.updateEmailSmartCategory(emailId, category, null, null, 0);
   });
 
   ipcMain.handle('update-email-smart-category', (event, { emailId, category, summary, reasoning, confidence }) => {
