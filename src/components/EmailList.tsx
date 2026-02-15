@@ -155,13 +155,13 @@ const EmailList: React.FC<EmailListProps> = ({
                 </div>
               </div>
 
-              <div className="flex justify-between items-start mb-1 pr-6">
+              <div className="flex justify-between items-start mb-1 pr-28">
                 <span
-                  className={`font-medium truncate max-w-[65%] ${email.isRead ? 'text-slate-600' : 'text-slate-900'}`}
+                  className={`font-medium truncate max-w-[55%] ${email.isRead ? 'text-slate-600' : 'text-slate-900'}`}
                 >
                   {email.sender}
                 </span>
-                <span className="text-xs text-slate-400 whitespace-nowrap">
+                <span className="text-xs text-slate-400 whitespace-nowrap flex-shrink-0">
                   {formatEmailDate(new Date(email.date).getTime())}
                 </span>
               </div>
