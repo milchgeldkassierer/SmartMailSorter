@@ -22,20 +22,20 @@ declare global {
       testConnection: (account: ImapAccount) => Promise<{ success: boolean; error?: string }>;
       resetDb: () => Promise<boolean>;
       deleteEmail: (data: {
-        account: ImapAccount;
+        accountId: string;
         emailId: string;
         uid: number;
         folder?: string;
       }) => Promise<EmailOperationResult>;
       updateEmailRead: (data: {
-        account: ImapAccount;
+        accountId: string;
         emailId: string;
         uid: number;
         isRead: boolean;
         folder?: string;
       }) => Promise<EmailOperationResult>;
       updateEmailFlag: (data: {
-        account: ImapAccount;
+        accountId: string;
         emailId: string;
         uid: number;
         isFlagged: boolean;
