@@ -1,4 +1,5 @@
-import DOMPurify, { type Config } from 'dompurify';
+import DOMPurify from 'isomorphic-dompurify';
+import type { Config } from 'dompurify';
 
 /**
  * Sanitize HTML content to prevent XSS attacks while preserving safe formatting.
@@ -124,8 +125,6 @@ export function sanitizeHtml(html: string | null | undefined): string {
       // Safe styling attributes (DOMPurify will sanitize style content)
       'class',
       'id',
-      // Inline styles (DOMPurify sanitizes dangerous CSS like expression() and url(javascript:))
-      'style',
       // Text direction
       'dir',
       // Time element
@@ -257,6 +256,7 @@ export function sanitizeHtml(html: string | null | undefined): string {
       'onstorage',
       'onunload',
       // Data attributes that could be misused
+      'style', // Block inline styles entirely to prevent CSS injection
       'formaction',
       'action',
       'ping',

@@ -389,7 +389,3 @@ app.on('before-quit', () => {
   // Perform any cleanup here if needed in the future
   // e.g., close database connections, cancel pending operations, etc.
 });
-
-app.on('will-quit', () => {
-  db.close();
-});

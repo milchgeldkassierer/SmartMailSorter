@@ -1,15 +1,11 @@
 import { useState, useCallback } from 'react';
 import { ImapAccount, Email } from '../types';
-import { DialogConfig } from './useDialog';
 
 interface UseSyncParams {
   activeAccountId: string;
   accounts: ImapAccount[];
   onAccountsUpdate?: (accounts: ImapAccount[]) => void;
   onDataUpdate?: (accountId: string, data: { emails: Email[] }) => void;
-  dialog: {
-    alert: (config: Omit<DialogConfig, 'type'>) => Promise<void>;
-  };
 }
 
 interface UseSyncReturn {
@@ -22,7 +18,6 @@ export const useSync = ({
   accounts,
   onAccountsUpdate,
   onDataUpdate,
-  dialog,
 }: UseSyncParams): UseSyncReturn => {
   const [isSyncing, setIsSyncing] = useState(false);
 
@@ -55,16 +50,11 @@ export const useSync = ({
       }
     } catch (error) {
       console.error('Failed to sync account:', error);
-      await dialog.alert({
-        title: 'Synchronisierungsfehler',
-        message: 'Synchronisierung fehlgeschlagen. Bitte versuchen Sie es erneut.',
-        variant: 'danger',
-      });
+      alert('Synchronisierung fehlgeschlagen. Bitte versuchen Sie es erneut.');
     } finally {
       setIsSyncing(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeAccountId, accounts, onAccountsUpdate, onDataUpdate, dialog.alert]);
+  }, [activeAccountId, accounts, onAccountsUpdate, onDataUpdate]);
 
   return {
     isSyncing,

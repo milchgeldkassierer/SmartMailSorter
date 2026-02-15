@@ -27,7 +27,7 @@ function getCspDirectives(isDev) {
         "img-src 'self' data: https:",
         "connect-src 'self' https://api.openai.com https://generativelanguage.googleapis.com",
         "font-src 'self' https://fonts.gstatic.com",
-        "frame-src 'self'",
+        "frame-src 'none'",
       ];
 }
 

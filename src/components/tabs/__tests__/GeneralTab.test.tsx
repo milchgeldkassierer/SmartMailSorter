@@ -1,14 +1,18 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import GeneralTab from '../GeneralTab';
 
 describe('GeneralTab', () => {
+  let confirmSpy: ReturnType<typeof vi.spyOn>;
   let reloadMock: ReturnType<typeof vi.fn>;
   let mockElectron: { resetDb: ReturnType<typeof vi.fn> };
   let originalLocation: Location;
 
   beforeEach(() => {
     vi.clearAllMocks();
+
+    // Mock window.confirm
+    confirmSpy = vi.spyOn(window, 'confirm');
 
     // Mock window.location.reload
     reloadMock = vi.fn();
@@ -27,6 +31,7 @@ describe('GeneralTab', () => {
   });
 
   afterEach(() => {
+    confirmSpy.mockRestore();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (window as any).location = originalLocation;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -74,87 +79,57 @@ describe('GeneralTab', () => {
   });
 
   describe('Reset Button Interaction', () => {
-    it('should show confirmation dialog when reset button is clicked', async () => {
+    it('should show confirmation dialog when reset button is clicked', () => {
+      confirmSpy.mockReturnValue(false);
       render(<GeneralTab />);
 
       const resetButton = screen.getByText('Datenbank komplett zurücksetzen & neu starten');
       fireEvent.click(resetButton);
 
-      // Dialog should be visible
-      await waitFor(() => {
-        expect(screen.getByText('Datenbank zurücksetzen')).toBeInTheDocument();
-        expect(
-          screen.getByText('Achtung: Dies löscht alle gespeicherten Emails und Konten! Fortfahren?')
-        ).toBeInTheDocument();
-      });
+      expect(confirmSpy).toHaveBeenCalledTimes(1);
+      expect(confirmSpy).toHaveBeenCalledWith('Achtung: Dies löscht alle gespeicherten Emails und Konten! Fortfahren?');
     });
 
     it('should not reset database when user cancels confirmation', async () => {
+      confirmSpy.mockReturnValue(false);
       render(<GeneralTab />);
 
       const resetButton = screen.getByText('Datenbank komplett zurücksetzen & neu starten');
       fireEvent.click(resetButton);
-
-      // Wait for dialog to appear
-      await waitFor(() => {
-        expect(screen.getByText('Datenbank zurücksetzen')).toBeInTheDocument();
-      });
-
-      // Click cancel button
-      const cancelButton = screen.getByText('Abbrechen');
-      fireEvent.click(cancelButton);
-
-      // Wait a bit to ensure no actions were taken
-      await new Promise((resolve) => setTimeout(resolve, 100));
 
       expect(mockElectron.resetDb).not.toHaveBeenCalled();
       expect(reloadMock).not.toHaveBeenCalled();
     });
 
     it('should call resetDb when user confirms', async () => {
+      confirmSpy.mockReturnValue(true);
       render(<GeneralTab />);
 
       const resetButton = screen.getByText('Datenbank komplett zurücksetzen & neu starten');
       fireEvent.click(resetButton);
 
-      // Wait for dialog to appear
-      await waitFor(() => {
-        expect(screen.getByText('Datenbank zurücksetzen')).toBeInTheDocument();
-      });
-
-      // Click confirm button
-      const confirmButton = screen.getByText('Zurücksetzen');
-      fireEvent.click(confirmButton);
-
       // Wait for async operation
-      await waitFor(() => {
+      await vi.waitFor(() => {
         expect(mockElectron.resetDb).toHaveBeenCalledTimes(1);
       });
     });
 
     it('should reload page after successful reset', async () => {
+      confirmSpy.mockReturnValue(true);
       render(<GeneralTab />);
 
       const resetButton = screen.getByText('Datenbank komplett zurücksetzen & neu starten');
       fireEvent.click(resetButton);
 
-      // Wait for dialog to appear
-      await waitFor(() => {
-        expect(screen.getByText('Datenbank zurücksetzen')).toBeInTheDocument();
-      });
-
-      // Click confirm button
-      const confirmButton = screen.getByText('Zurücksetzen');
-      fireEvent.click(confirmButton);
-
       // Wait for async operation
-      await waitFor(() => {
+      await vi.waitFor(() => {
         expect(mockElectron.resetDb).toHaveBeenCalledTimes(1);
         expect(reloadMock).toHaveBeenCalledTimes(1);
       });
     });
 
     it('should handle case when electron is not available', async () => {
+      confirmSpy.mockReturnValue(true);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       delete (window as any).electron;
       render(<GeneralTab />);
@@ -162,22 +137,14 @@ describe('GeneralTab', () => {
       const resetButton = screen.getByText('Datenbank komplett zurücksetzen & neu starten');
       fireEvent.click(resetButton);
 
-      // Wait for dialog to appear
-      await waitFor(() => {
-        expect(screen.getByText('Datenbank zurücksetzen')).toBeInTheDocument();
-      });
-
-      // Click confirm button
-      const confirmButton = screen.getByText('Zurücksetzen');
-      fireEvent.click(confirmButton);
-
       // Should still reload even without electron
-      await waitFor(() => {
+      await vi.waitFor(() => {
         expect(reloadMock).toHaveBeenCalledTimes(1);
       });
     });
 
     it('should call resetDb before reload', async () => {
+      confirmSpy.mockReturnValue(true);
       const callOrder: string[] = [];
 
       mockElectron.resetDb.mockImplementation(async () => {
@@ -193,16 +160,7 @@ describe('GeneralTab', () => {
       const resetButton = screen.getByText('Datenbank komplett zurücksetzen & neu starten');
       fireEvent.click(resetButton);
 
-      // Wait for dialog to appear
-      await waitFor(() => {
-        expect(screen.getByText('Datenbank zurücksetzen')).toBeInTheDocument();
-      });
-
-      // Click confirm button
-      const confirmButton = screen.getByText('Zurücksetzen');
-      fireEvent.click(confirmButton);
-
-      await waitFor(() => {
+      await vi.waitFor(() => {
         expect(callOrder).toEqual(['resetDb', 'reload']);
       });
     });
@@ -210,6 +168,7 @@ describe('GeneralTab', () => {
 
   describe('Electron API Integration', () => {
     it('should work in browser environment without electron', async () => {
+      confirmSpy.mockReturnValue(true);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       delete (window as any).electron;
 
@@ -218,17 +177,8 @@ describe('GeneralTab', () => {
       const resetButton = screen.getByText('Datenbank komplett zurücksetzen & neu starten');
       fireEvent.click(resetButton);
 
-      // Wait for dialog to appear
-      await waitFor(() => {
-        expect(screen.getByText('Datenbank zurücksetzen')).toBeInTheDocument();
-      });
-
-      // Click confirm button
-      const confirmButton = screen.getByText('Zurücksetzen');
-      fireEvent.click(confirmButton);
-
       // Should only reload without calling electron API
-      await waitFor(() => {
+      await vi.waitFor(() => {
         expect(reloadMock).toHaveBeenCalledTimes(1);
       });
     });
@@ -242,36 +192,21 @@ describe('GeneralTab', () => {
     });
 
     it('should respond to multiple clicks correctly', async () => {
+      confirmSpy.mockReturnValueOnce(false).mockReturnValueOnce(true);
+
       render(<GeneralTab />);
       const resetButton = screen.getByText('Datenbank komplett zurücksetzen & neu starten');
 
       // First click - user cancels
       fireEvent.click(resetButton);
-
-      // Wait for dialog to appear
-      await waitFor(() => {
-        expect(screen.getByText('Datenbank zurücksetzen')).toBeInTheDocument();
-      });
-
-      // Click cancel button
-      const cancelButton = screen.getByText('Abbrechen');
-      fireEvent.click(cancelButton);
-
+      expect(confirmSpy).toHaveBeenCalledTimes(1);
       expect(mockElectron.resetDb).not.toHaveBeenCalled();
 
       // Second click - user confirms
       fireEvent.click(resetButton);
+      expect(confirmSpy).toHaveBeenCalledTimes(2);
 
-      // Wait for dialog to appear again
-      await waitFor(() => {
-        expect(screen.getByText('Datenbank zurücksetzen')).toBeInTheDocument();
-      });
-
-      // Click confirm button
-      const confirmButton = screen.getByText('Zurücksetzen');
-      fireEvent.click(confirmButton);
-
-      await waitFor(() => {
+      await vi.waitFor(() => {
         expect(mockElectron.resetDb).toHaveBeenCalledTimes(1);
       });
     });

@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Email, AISettings, DefaultEmailCategory, SortResult, Category } from '../types';
 import { categorizeBatchWithAI } from '../services/geminiService';
-import { DialogConfig } from './useDialog';
 
 interface UseBatchOperationsProps {
   selectedIds: Set<string>;
@@ -15,10 +14,6 @@ interface UseBatchOperationsProps {
   onUpdateEmails: (updateFn: (emails: Email[]) => Email[]) => void;
   onUpdateCategories: (categories: Category[]) => void;
   onOpenSettings: () => void;
-  dialog: {
-    confirm: (config: Omit<DialogConfig, 'type'>) => Promise<boolean>;
-    alert: (config: Omit<DialogConfig, 'type'>) => Promise<void>;
-  };
   onConfirmDelete?: (count: number) => Promise<boolean>;
   onConfirmNewCategories?: (categories: string[]) => Promise<boolean>;
 }
@@ -45,7 +40,6 @@ export const useBatchOperations = ({
   onUpdateEmails,
   onUpdateCategories,
   onOpenSettings,
-  dialog,
   onConfirmDelete,
   onConfirmNewCategories,
 }: UseBatchOperationsProps): UseBatchOperationsReturn => {
@@ -144,16 +138,10 @@ export const useBatchOperations = ({
   const handleBatchDelete = async () => {
     if (selectedIds.size === 0) return;
 
-    // Use callback if provided, otherwise use dialog
+    // Use callback if provided, otherwise fallback to native confirm
     const confirmed = onConfirmDelete
       ? await onConfirmDelete(selectedIds.size)
-      : await dialog.confirm({
-          title: 'Emails löschen',
-          message: `${selectedIds.size} Emails wirklich löschen?`,
-          variant: 'danger',
-          confirmText: 'Löschen',
-          cancelText: 'Abbrechen',
-        });
+      : confirm(`${selectedIds.size} Emails wirklich löschen?`);
 
     if (!confirmed) return;
 
@@ -163,11 +151,7 @@ export const useBatchOperations = ({
       onClearSelection();
     } catch (error) {
       console.error('Failed to delete emails:', error);
-      await dialog.alert({
-        title: 'Fehler',
-        message: 'Einige Emails konnten nicht gelöscht werden',
-        variant: 'danger',
-      });
+      alert('Einige Emails konnten nicht gelöscht werden');
     }
   };
 
@@ -196,11 +180,7 @@ export const useBatchOperations = ({
         onClearSelection();
       } catch (error) {
         console.error(errorMsg, error);
-        await dialog.alert({
-          title: 'Fehler',
-          message: 'Einige Emails konnten nicht aktualisiert werden',
-          variant: 'danger',
-        });
+        alert('Einige Emails konnten nicht aktualisiert werden');
       }
     };
   };
@@ -220,11 +200,7 @@ export const useBatchOperations = ({
   const handleBatchSmartSort = async () => {
     if (selectedIds.size === 0) return;
     if (!aiSettings.apiKey) {
-      await dialog.alert({
-        title: 'AI Settings erforderlich',
-        message: 'Bitte AI Settings (API Key) konfigurieren!',
-        variant: 'warning',
-      });
+      alert('Bitte AI Settings (API Key) konfigurieren!');
       onOpenSettings();
       return;
     }
@@ -244,13 +220,9 @@ export const useBatchOperations = ({
         const newArr = Array.from(newCategories);
         const confirmed = onConfirmNewCategories
           ? await onConfirmNewCategories(newArr)
-          : await dialog.confirm({
-              title: 'Neue Ordner vorgeschlagen',
-              message: `Die KI schlägt folgende neue Ordner vor:\n\n${newArr.join(', ')}\n\nSollen diese angelegt werden?\n(Bei 'Abbrechen' werden die Mails in 'Sonstiges' verschoben)`,
-              variant: 'info',
-              confirmText: 'Anlegen',
-              cancelText: 'Abbrechen',
-            });
+          : confirm(
+              `Die KI schlägt folgende neue Ordner vor:\n\n${newArr.join(', ')}\n\nSollen diese angelegt werden?\n(Bei 'Abbrechen' werden die Mails in 'Sonstiges' verschoben)`
+            );
 
         if (confirmed) {
           allowedNewCategories = newCategories;
@@ -292,11 +264,7 @@ export const useBatchOperations = ({
       await new Promise((r) => setTimeout(r, 500));
     } catch (e) {
       console.error('Smart Sort Error:', e);
-      await dialog.alert({
-        title: 'Fehler beim Sortieren',
-        message: `Ein Fehler ist beim Sortieren aufgetreten: ${e instanceof Error ? e.message : 'Unbekannter Fehler'}`,
-        variant: 'danger',
-      });
+      alert(`Ein Fehler ist beim Sortieren aufgetreten: ${e instanceof Error ? e.message : 'Unbekannter Fehler'}`);
     } finally {
       setIsSorting(false);
       setSortProgress(0);
