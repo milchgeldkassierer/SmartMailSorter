@@ -8,6 +8,7 @@ import {
   SENT_FOLDER,
   SPAM_FOLDER,
   TRASH_FOLDER,
+  FLAGGED,
 } from '../types';
 import { SearchConfig } from '../components/SearchBar';
 
@@ -200,6 +201,7 @@ export const useEmails = ({ activeAccountId, accounts: _accounts }: UseEmailsPar
     counts[TRASH_FOLDER] = currentEmails.filter(
       (e) => (e.folder === TRASH_FOLDER || e.folder === 'Gelöscht' || e.folder === 'Trash') && !e.isRead
     ).length;
+    counts[FLAGGED] = currentEmails.filter((e) => e.isFlagged && !e.isRead).length;
 
     // 2. Calculate Categories & Physical Folders
     currentCategories.forEach((cat) => {
