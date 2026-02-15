@@ -1,6 +1,7 @@
 import React from 'react';
 import { Email } from '../types';
 import { BrainCircuit, Trash2, Mail, MailOpen, Star, Paperclip, Folder } from './Icon';
+import { formatEmailDate } from '../utils/formatEmailDate';
 
 interface EmailListProps {
   emails: Email[];
@@ -161,7 +162,7 @@ const EmailList: React.FC<EmailListProps> = ({
                   {email.sender}
                 </span>
                 <span className="text-xs text-slate-400 whitespace-nowrap">
-                  {new Date(email.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  {formatEmailDate(new Date(email.date).getTime())}
                 </span>
               </div>
 

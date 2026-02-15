@@ -11,7 +11,7 @@ describe('EmailList', () => {
     senderEmail: 'john@example.com',
     subject: 'Test Subject',
     body: 'This is the email body content for testing.',
-    date: '2024-01-15T10:30:00Z',
+    date: new Date().toISOString(), // Use current date/time so formatEmailDate shows time
     folder: INBOX_FOLDER,
     isRead: false,
     isFlagged: false,
