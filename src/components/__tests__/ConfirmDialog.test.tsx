@@ -375,7 +375,7 @@ describe('ConfirmDialog - Integration Tests', () => {
 
   describe('Complex Scenarios', () => {
     it('should work without onConfirm handler', () => {
-      const { onConfirm, ...propsWithoutConfirm } = defaultProps;
+      const { onConfirm: _onConfirm, ...propsWithoutConfirm } = defaultProps;
       render(<ConfirmDialog {...propsWithoutConfirm} />);
 
       const confirmButton = screen.getByText('Bestätigen');
@@ -408,7 +408,8 @@ describe('ConfirmDialog - Integration Tests', () => {
     });
 
     it('should handle long messages gracefully', () => {
-      const longMessage = 'This is a very long message that should be handled correctly by the dialog component. '.repeat(10);
+      const longMessage =
+        'This is a very long message that should be handled correctly by the dialog component. '.repeat(10);
       render(<ConfirmDialog {...defaultProps} message={longMessage} />);
       // Use partial match since testing-library may normalize whitespace
       expect(screen.getByText(/This is a very long message that should be handled correctly/)).toBeInTheDocument();

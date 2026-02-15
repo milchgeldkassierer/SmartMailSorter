@@ -231,13 +231,15 @@ describe('useDialog', () => {
 
       let resolvedValue: boolean | undefined;
       act(() => {
-        result.current.confirm({
-          title: 'Confirm Action',
-          message: 'Are you sure?',
-          variant: 'warning',
-        }).then((value) => {
-          resolvedValue = value;
-        });
+        result.current
+          .confirm({
+            title: 'Confirm Action',
+            message: 'Are you sure?',
+            variant: 'warning',
+          })
+          .then((value) => {
+            resolvedValue = value;
+          });
       });
 
       expect(result.current.isOpen).toBe(true);
@@ -262,12 +264,14 @@ describe('useDialog', () => {
 
       let resolvedValue: boolean | undefined;
       act(() => {
-        result.current.confirm({
-          title: 'Confirm',
-          message: 'Proceed?',
-        }).then((value) => {
-          resolvedValue = value;
-        });
+        result.current
+          .confirm({
+            title: 'Confirm',
+            message: 'Proceed?',
+          })
+          .then((value) => {
+            resolvedValue = value;
+          });
       });
 
       expect(result.current.isOpen).toBe(true);
@@ -289,12 +293,14 @@ describe('useDialog', () => {
 
       let resolvedValue: boolean | undefined;
       act(() => {
-        result.current.confirm({
-          title: 'Confirm',
-          message: 'Proceed?',
-        }).then((value) => {
-          resolvedValue = value;
-        });
+        result.current
+          .confirm({
+            title: 'Confirm',
+            message: 'Proceed?',
+          })
+          .then((value) => {
+            resolvedValue = value;
+          });
       });
 
       act(() => {
@@ -316,13 +322,15 @@ describe('useDialog', () => {
 
       let resolved = false;
       act(() => {
-        result.current.alert({
-          title: 'Alert',
-          message: 'Important message',
-          variant: 'info',
-        }).then(() => {
-          resolved = true;
-        });
+        result.current
+          .alert({
+            title: 'Alert',
+            message: 'Important message',
+            variant: 'info',
+          })
+          .then(() => {
+            resolved = true;
+          });
       });
 
       expect(result.current.isOpen).toBe(true);
@@ -347,12 +355,14 @@ describe('useDialog', () => {
 
       let resolved = false;
       act(() => {
-        result.current.alert({
-          title: 'Alert',
-          message: 'Message',
-        }).then(() => {
-          resolved = true;
-        });
+        result.current
+          .alert({
+            title: 'Alert',
+            message: 'Message',
+          })
+          .then(() => {
+            resolved = true;
+          });
       });
 
       act(() => {
@@ -374,14 +384,16 @@ describe('useDialog', () => {
 
       let resolvedValue: string | null | undefined;
       act(() => {
-        result.current.prompt({
-          title: 'Enter Name',
-          message: 'Please enter your name',
-          defaultValue: 'John',
-          placeholder: 'Your name',
-        }).then((value) => {
-          resolvedValue = value;
-        });
+        result.current
+          .prompt({
+            title: 'Enter Name',
+            message: 'Please enter your name',
+            defaultValue: 'John',
+            placeholder: 'Your name',
+          })
+          .then((value) => {
+            resolvedValue = value;
+          });
       });
 
       expect(result.current.isOpen).toBe(true);
@@ -407,12 +419,14 @@ describe('useDialog', () => {
 
       let resolvedValue: string | null | undefined;
       act(() => {
-        result.current.prompt({
-          title: 'Enter Value',
-          message: 'Enter something',
-        }).then((value) => {
-          resolvedValue = value;
-        });
+        result.current
+          .prompt({
+            title: 'Enter Value',
+            message: 'Enter something',
+          })
+          .then((value) => {
+            resolvedValue = value;
+          });
       });
 
       act(() => {
@@ -432,12 +446,14 @@ describe('useDialog', () => {
 
       let resolvedValue: string | null | undefined;
       act(() => {
-        result.current.prompt({
-          title: 'Enter Value',
-          message: 'Enter something',
-        }).then((value) => {
-          resolvedValue = value;
-        });
+        result.current
+          .prompt({
+            title: 'Enter Value',
+            message: 'Enter something',
+          })
+          .then((value) => {
+            resolvedValue = value;
+          });
       });
 
       act(() => {
@@ -457,12 +473,14 @@ describe('useDialog', () => {
 
       let resolvedValue: string | null | undefined;
       act(() => {
-        result.current.prompt({
-          title: 'Enter Value',
-          message: 'Enter something',
-        }).then((value) => {
-          resolvedValue = value;
-        });
+        result.current
+          .prompt({
+            title: 'Enter Value',
+            message: 'Enter something',
+          })
+          .then((value) => {
+            resolvedValue = value;
+          });
       });
 
       act(() => {
@@ -562,12 +580,14 @@ describe('useDialog', () => {
       let secondValue: boolean | undefined;
 
       act(() => {
-        result.current.confirm({
-          title: 'First',
-          message: 'First confirm',
-        }).then((value) => {
-          firstValue = value;
-        });
+        result.current
+          .confirm({
+            title: 'First',
+            message: 'First confirm',
+          })
+          .then((value) => {
+            firstValue = value;
+          });
       });
 
       act(() => {
@@ -581,12 +601,14 @@ describe('useDialog', () => {
       expect(firstValue).toBe(true);
 
       act(() => {
-        result.current.confirm({
-          title: 'Second',
-          message: 'Second confirm',
-        }).then((value) => {
-          secondValue = value;
-        });
+        result.current
+          .confirm({
+            title: 'Second',
+            message: 'Second confirm',
+          })
+          .then((value) => {
+            secondValue = value;
+          });
       });
 
       act(() => {
@@ -608,12 +630,14 @@ describe('useDialog', () => {
       let alertResolved = false;
 
       act(() => {
-        result.current.confirm({
-          title: 'Confirm',
-          message: 'Confirm this',
-        }).then((value) => {
-          confirmValue = value;
-        });
+        result.current
+          .confirm({
+            title: 'Confirm',
+            message: 'Confirm this',
+          })
+          .then((value) => {
+            confirmValue = value;
+          });
       });
 
       act(() => {
@@ -627,12 +651,14 @@ describe('useDialog', () => {
       expect(confirmValue).toBe(true);
 
       act(() => {
-        result.current.prompt({
-          title: 'Prompt',
-          message: 'Enter value',
-        }).then((value) => {
-          promptValue = value;
-        });
+        result.current
+          .prompt({
+            title: 'Prompt',
+            message: 'Enter value',
+          })
+          .then((value) => {
+            promptValue = value;
+          });
       });
 
       act(() => {
@@ -646,12 +672,14 @@ describe('useDialog', () => {
       expect(promptValue).toBe('test value');
 
       act(() => {
-        result.current.alert({
-          title: 'Alert',
-          message: 'Done',
-        }).then(() => {
-          alertResolved = true;
-        });
+        result.current
+          .alert({
+            title: 'Alert',
+            message: 'Done',
+          })
+          .then(() => {
+            alertResolved = true;
+          });
       });
 
       act(() => {

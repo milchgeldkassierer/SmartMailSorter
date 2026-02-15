@@ -83,7 +83,9 @@ describe('GeneralTab', () => {
       // Dialog should be visible
       await waitFor(() => {
         expect(screen.getByText('Datenbank zurücksetzen')).toBeInTheDocument();
-        expect(screen.getByText('Achtung: Dies löscht alle gespeicherten Emails und Konten! Fortfahren?')).toBeInTheDocument();
+        expect(
+          screen.getByText('Achtung: Dies löscht alle gespeicherten Emails und Konten! Fortfahren?')
+        ).toBeInTheDocument();
       });
     });
 
