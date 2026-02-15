@@ -272,7 +272,7 @@ export const useEmails = ({ activeAccountId, accounts: _accounts }: UseEmailsPar
   // Reset pagination when filter/category changes
   useEffect(() => {
     resetPagination();
-  }, [selectedCategory, searchTerm, showUnsortedOnly, activeAccountId]);
+  }, [selectedCategory, searchTerm, showUnsortedOnly, activeAccountId, sortConfig]);
 
   return {
     // State
