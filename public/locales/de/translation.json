@@ -99,7 +99,7 @@
   "topBar": {
     "searchResults": "Suchergebnisse",
     "onlyUnsorted": "Nur unsortierte",
-    "sortBy": "Sortieren nach",
+    "sortBy": "Sortieren nach {{field}}",
     "sortFields": {
       "date": "Datum",
       "sender": "Absender",
@@ -111,12 +111,42 @@
     },
     "fetchEmails": "Emails abrufen"
   },
+  "searchBar": {
+    "placeholder": "Suchen...",
+    "filters": "Suchfilter",
+    "searchFields": "Suchfelder",
+    "sender": "Absender",
+    "subject": "Betreff",
+    "body": "Inhalt (Body)",
+    "logic": "Logik",
+    "and": "UND (Alle)",
+    "or": "ODER"
+  },
   "emailList": {
     "noEmails": "Keine Emails",
+    "emptyFolder": "Dieser Ordner enthält noch keine Emails.",
+    "emails": "Emails",
     "loading": "Lädt...",
-    "selectEmail": "Wähle eine Email aus"
+    "selectEmail": "Wähle eine Email aus",
+    "markRead": "Als gelesen markieren",
+    "markUnread": "Als ungelesen markieren",
+    "delete": "Löschen",
+    "flag": "Markieren",
+    "unflag": "Markierung entfernen",
+    "loadMore": "Mehr laden..."
   },
   "emailView": {
+    "noEmailSelected": "Keine Email ausgewählt",
+    "selectEmail": "Wähle eine Email aus der Liste aus, um den Inhalt anzuzeigen.",
+    "loadingContent": "Lade Inhalt...",
+    "linkError": "Link konnte nicht geöffnet werden",
+    "attachmentError": "Anhang konnte nicht geöffnet werden",
+    "dismiss": "Schließen",
+    "showText": "Text",
+    "showHtml": "HTML",
+    "blockedImages": "{{count}} externe Bilder blockiert",
+    "loadImages": "Bilder laden",
+    "preparingView": "Bereite Ansicht vor...",
     "from": "Von",
     "to": "An",
     "cc": "CC",

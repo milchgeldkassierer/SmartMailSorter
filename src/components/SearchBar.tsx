@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Search, SlidersHorizontal, X } from './Icon';
 
 export interface SearchConfig {
@@ -16,6 +17,7 @@ interface SearchBarProps {
 }
 
 const SearchBar: React.FC<SearchBarProps> = ({ searchTerm, onSearchChange, config, onConfigChange }) => {
+  const { t } = useTranslation();
   const [showFilters, setShowFilters] = useState(false);
   const filterRef = useRef<HTMLDivElement>(null);
 
@@ -54,7 +56,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ searchTerm, onSearchChange, confi
           value={searchTerm}
           onChange={(e) => onSearchChange(e.target.value)}
           className="block w-full pl-10 pr-20 py-2 border border-slate-200 rounded-lg leading-5 bg-slate-50 text-slate-900 placeholder-slate-500 focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-100 focus:border-blue-400 sm:text-sm transition-all shadow-sm"
-          placeholder="Suchen..."
+          placeholder={t('searchBar.placeholder')}
         />
 
         <div className="absolute inset-y-0 right-0 flex items-center pr-2 gap-1">
@@ -71,7 +73,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ searchTerm, onSearchChange, confi
             className={`p-1.5 rounded-md transition-colors ${
               showFilters ? 'bg-blue-100 text-blue-600' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-200'
             }`}
-            title="Suchfilter"
+            title={t('searchBar.filters')}
           >
             <SlidersHorizontal className="h-4 w-4" />
           </button>
@@ -81,7 +83,9 @@ const SearchBar: React.FC<SearchBarProps> = ({ searchTerm, onSearchChange, confi
       {/* Advanced Filter Popover */}
       {showFilters && (
         <div className="absolute top-full right-0 mt-2 w-64 bg-white rounded-xl shadow-xl border border-slate-200 p-4 z-50 animate-in fade-in slide-in-from-top-2">
-          <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Suchfelder</h3>
+          <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">
+            {t('searchBar.searchFields')}
+          </h3>
 
           <div className="space-y-2 mb-4">
             <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer hover:bg-slate-50 p-1 rounded">
@@ -91,7 +95,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ searchTerm, onSearchChange, confi
                 onChange={() => handleToggle('searchSender')}
                 className="rounded text-blue-600 focus:ring-blue-500 border-slate-300"
               />
-              Absender
+              {t('searchBar.sender')}
             </label>
             <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer hover:bg-slate-50 p-1 rounded">
               <input
@@ -100,7 +104,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ searchTerm, onSearchChange, confi
                 onChange={() => handleToggle('searchSubject')}
                 className="rounded text-blue-600 focus:ring-blue-500 border-slate-300"
               />
-              Betreff
+              {t('searchBar.subject')}
             </label>
             <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer hover:bg-slate-50 p-1 rounded">
               <input
@@ -109,12 +113,12 @@ const SearchBar: React.FC<SearchBarProps> = ({ searchTerm, onSearchChange, confi
                 onChange={() => handleToggle('searchBody')}
                 className="rounded text-blue-600 focus:ring-blue-500 border-slate-300"
               />
-              Inhalt (Body)
+              {t('searchBar.body')}
             </label>
           </div>
 
           <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3 pt-3 border-t border-slate-100">
-            Logik
+            {t('searchBar.logic')}
           </h3>
           <div className="flex bg-slate-100 p-1 rounded-lg">
             <button
@@ -123,7 +127,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ searchTerm, onSearchChange, confi
                 config.logic === 'AND' ? 'bg-white shadow text-blue-600' : 'text-slate-500 hover:text-slate-700'
               }`}
             >
-              UND (Alle)
+              {t('searchBar.and')}
             </button>
             <button
               onClick={() => onConfigChange({ ...config, logic: 'OR' })}
@@ -131,7 +135,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ searchTerm, onSearchChange, confi
                 config.logic === 'OR' ? 'bg-white shadow text-blue-600' : 'text-slate-500 hover:text-slate-700'
               }`}
             >
-              ODER
+              {t('searchBar.or')}
             </button>
           </div>
         </div>

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Email } from '../types';
 import { BrainCircuit, Trash2, Mail, MailOpen, Star, Paperclip, Folder } from './Icon';
 import { formatEmailDate } from '../utils/formatEmailDate';
@@ -31,6 +32,7 @@ const EmailList: React.FC<EmailListProps> = ({
   onLoadMore,
   hasMore,
 }) => {
+  const { t } = useTranslation();
   const [visibleCount, setVisibleCount] = React.useState(50);
 
   // Reset visible count when list changes (e.g. folder change)
@@ -54,8 +56,8 @@ const EmailList: React.FC<EmailListProps> = ({
       >
         <div className="text-center">
           <Folder className="w-16 h-16 mx-auto mb-4 opacity-20" />
-          <h3 className="text-lg font-medium text-slate-600 mb-2">Keine Emails</h3>
-          <p className="text-sm text-slate-400">Dieser Ordner enthält noch keine Emails.</p>
+          <h3 className="text-lg font-medium text-slate-600 mb-2">{t('emailList.noEmails')}</h3>
+          <p className="text-sm text-slate-400">{t('emailList.emptyFolder')}</p>
         </div>
       </div>
     );
@@ -64,7 +66,9 @@ const EmailList: React.FC<EmailListProps> = ({
   return (
     <div className="w-80 md:w-96 flex-shrink-0 bg-white border-r border-slate-200 flex flex-col h-full overflow-hidden">
       <div className="p-4 border-b border-slate-100 flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-slate-800">Emails ({emails.length})</h2>
+        <h2 className="text-lg font-semibold text-slate-800">
+          {t('emailList.emails')} ({emails.length})
+        </h2>
       </div>
       <div
         className="flex-1 overflow-y-auto"
@@ -123,7 +127,7 @@ const EmailList: React.FC<EmailListProps> = ({
                       onToggleRead(email.id);
                     }}
                     className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-slate-200 rounded-full"
-                    title={email.isRead ? 'Als ungelesen markieren' : 'Als gelesen markieren'}
+                    title={email.isRead ? t('emailList.markUnread') : t('emailList.markRead')}
                   >
                     {email.isRead ? <MailOpen className="w-4 h-4" /> : <Mail className="w-4 h-4" />}
                   </button>
@@ -133,7 +137,7 @@ const EmailList: React.FC<EmailListProps> = ({
                       onDeleteEmail(email.id);
                     }}
                     className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-full"
-                    title="Löschen"
+                    title={t('emailList.delete')}
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -150,7 +154,7 @@ const EmailList: React.FC<EmailListProps> = ({
                       ? 'text-yellow-400 opacity-100'
                       : 'text-slate-400 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto focus-visible:opacity-100 focus-visible:pointer-events-auto hover:bg-slate-200 hover:text-yellow-400'
                   }`}
-                  title={email.isFlagged ? 'Markierung entfernen' : 'Markieren'}
+                  title={email.isFlagged ? t('emailList.unflag') : t('emailList.flag')}
                 >
                   <Star className={`w-4 h-4 ${email.isFlagged ? 'fill-current' : ''}`} />
                 </button>
@@ -194,7 +198,7 @@ const EmailList: React.FC<EmailListProps> = ({
               }}
               className="px-6 py-2 bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-full text-sm font-medium transition-colors border border-slate-200 shadow-sm hover:shadow-md w-full"
             >
-              Mehr laden...
+              {t('emailList.loadMore')}
             </button>
           </div>
         )}

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Email, Attachment } from '../types';
 import { CategoryIcon, BrainCircuit, Paperclip } from './Icon';
 import { sanitizeHtml } from '../utils/sanitizeHtml';
@@ -9,6 +10,7 @@ interface EmailViewProps {
 }
 
 const EmailView: React.FC<EmailViewProps> = ({ email }) => {
+  const { t } = useTranslation();
   const [showHtml, setShowHtml] = useState(true);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [_isLoadingAttachments, setIsLoadingAttachments] = useState(false);
@@ -114,25 +116,25 @@ const EmailView: React.FC<EmailViewProps> = ({ email }) => {
           .openExternal(anchor.href)
           .then((result) => {
             if (!result.success) {
-              setLinkError(result.message || 'Link konnte nicht geöffnet werden');
+              setLinkError(result.message || t('emailView.linkError'));
             }
           })
           .catch(() => {
-            setLinkError('Link konnte nicht geöffnet werden');
+            setLinkError(t('emailView.linkError'));
           });
       }
     };
     doc.addEventListener('click', handler);
     iframeClickHandlerRef.current = { doc, handler };
-  }, []);
+  }, [t]);
 
   if (!email) {
     return (
       <div data-testid="empty-state" className="flex-1 bg-slate-50 flex items-center justify-center text-slate-400">
         <div className="text-center">
           <CategoryIcon category={'INBOX'} className="w-16 h-16 mx-auto mb-4 opacity-20" />
-          <h3 className="text-lg font-medium text-slate-600 mb-2">Keine Email ausgewählt</h3>
-          <p className="text-sm text-slate-400">Wähle eine Email aus der Liste aus, um den Inhalt anzuzeigen.</p>
+          <h3 className="text-lg font-medium text-slate-600 mb-2">{t('emailView.noEmailSelected')}</h3>
+          <p className="text-sm text-slate-400">{t('emailView.selectEmail')}</p>
         </div>
       </div>
     );
@@ -143,7 +145,7 @@ const EmailView: React.FC<EmailViewProps> = ({ email }) => {
     return (
       <div className="flex-1 flex flex-col items-center justify-center text-slate-400 bg-slate-50">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-2"></div>
-        <p>Lade Inhalt...</p>
+        <p>{t('emailView.loadingContent')}</p>
       </div>
     );
   }
@@ -158,7 +160,7 @@ const EmailView: React.FC<EmailViewProps> = ({ email }) => {
 
       const result = await window.electron.openAttachment(attachmentId);
       if (!result.success) {
-        setLinkError(result.message || 'Failed to open attachment');
+        setLinkError(result.message || t('emailView.attachmentError'));
       }
     }
   };
@@ -186,7 +188,7 @@ const EmailView: React.FC<EmailViewProps> = ({ email }) => {
                 onClick={() => setLinkError(null)}
                 className="inline-flex rounded-md p-1.5 text-red-500 hover:bg-red-100 focus:outline-none"
               >
-                <span className="sr-only">Dismiss</span>
+                <span className="sr-only">{t('emailView.dismiss')}</span>
                 <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                   <path
                     fillRule="evenodd"
@@ -271,14 +273,14 @@ const EmailView: React.FC<EmailViewProps> = ({ email }) => {
               onClick={() => setShowHtml(false)}
               className={`px-3 py-1 ${!showHtml ? 'bg-blue-100 text-blue-700 font-medium' : 'text-slate-500 hover:bg-slate-50'}`}
             >
-              Text
+              {t('emailView.showText')}
             </button>
             <div className="w-[1px] bg-slate-200"></div>
             <button
               onClick={() => setShowHtml(true)}
               className={`px-3 py-1 ${showHtml ? 'bg-blue-100 text-blue-700 font-medium' : 'text-slate-500 hover:bg-slate-50'}`}
             >
-              HTML
+              {t('emailView.showHtml')}
             </button>
           </div>
         </div>
@@ -287,13 +289,15 @@ const EmailView: React.FC<EmailViewProps> = ({ email }) => {
       {/* Load Images Banner */}
       {showHtml && hasHtml && !imagesLoaded && blockedImageCount > 0 && (
         <div className="mx-6 mt-2 flex items-center justify-between bg-amber-50 border border-amber-200 rounded-lg px-4 py-2 flex-shrink-0">
-          <span className="text-sm text-amber-800">{blockedImageCount} externe Bilder blockiert</span>
+          <span className="text-sm text-amber-800">
+            {t('emailView.blockedImages', { count: blockedImageCount })}
+          </span>
           <button
             type="button"
             onClick={() => setImagesLoaded(true)}
             className="text-sm font-medium text-amber-700 hover:text-amber-900 bg-amber-100 hover:bg-amber-200 px-3 py-1 rounded transition-colors"
           >
-            Bilder laden
+            {t('emailView.loadImages')}
           </button>
         </div>
       )}
@@ -305,7 +309,7 @@ const EmailView: React.FC<EmailViewProps> = ({ email }) => {
             isSanitizing || !iframeSrcDoc ? (
               <div className="flex-1 flex flex-col items-center justify-center text-slate-400">
                 <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mb-2"></div>
-                <p className="text-sm">Bereite Ansicht vor...</p>
+                <p className="text-sm">{t('emailView.preparingView')}</p>
               </div>
             ) : (
               <iframe

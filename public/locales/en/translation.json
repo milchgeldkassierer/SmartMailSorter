@@ -99,7 +99,7 @@
   "topBar": {
     "searchResults": "Search results",
     "onlyUnsorted": "Only unsorted",
-    "sortBy": "Sort by",
+    "sortBy": "Sort by {{field}}",
     "sortFields": {
       "date": "Date",
       "sender": "Sender",
@@ -111,12 +111,42 @@
     },
     "fetchEmails": "Fetch emails"
   },
+  "searchBar": {
+    "placeholder": "Search...",
+    "filters": "Search filters",
+    "searchFields": "Search fields",
+    "sender": "Sender",
+    "subject": "Subject",
+    "body": "Body",
+    "logic": "Logic",
+    "and": "AND (All)",
+    "or": "OR"
+  },
   "emailList": {
     "noEmails": "No emails",
+    "emptyFolder": "This folder doesn't contain any emails yet.",
+    "emails": "Emails",
     "loading": "Loading...",
-    "selectEmail": "Select an email"
+    "selectEmail": "Select an email",
+    "markRead": "Mark as read",
+    "markUnread": "Mark as unread",
+    "delete": "Delete",
+    "flag": "Flag",
+    "unflag": "Remove flag",
+    "loadMore": "Load more..."
   },
   "emailView": {
+    "noEmailSelected": "No email selected",
+    "selectEmail": "Select an email from the list to view its content.",
+    "loadingContent": "Loading content...",
+    "linkError": "Could not open link",
+    "attachmentError": "Could not open attachment",
+    "dismiss": "Dismiss",
+    "showText": "Text",
+    "showHtml": "HTML",
+    "blockedImages": "{{count}} external images blocked",
+    "loadImages": "Load images",
+    "preparingView": "Preparing view...",
     "from": "From",
     "to": "To",
     "cc": "CC",
