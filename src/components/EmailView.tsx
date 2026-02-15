@@ -18,6 +18,7 @@ const EmailView: React.FC<EmailViewProps> = ({ email }) => {
   const [iframeSrcDoc, setIframeSrcDoc] = useState('');
   const [isSanitizing, setIsSanitizing] = useState(false);
   const [blockedImageCount, setBlockedImageCount] = useState(0);
+  const iframeClickHandlerRef = useRef<{ doc: Document; handler: (e: MouseEvent) => void } | null>(null);
 
   useEffect(() => {
     if (email && email.hasAttachments && window.electron) {
@@ -53,6 +54,7 @@ const EmailView: React.FC<EmailViewProps> = ({ email }) => {
     if (!email?.bodyHtml) {
       setIframeSrcDoc('');
       setBlockedImageCount(0);
+      setIsSanitizing(false);
       return;
     }
 
@@ -63,20 +65,26 @@ const EmailView: React.FC<EmailViewProps> = ({ email }) => {
     // Yield to the browser so the header/spinner can paint first
     const timeoutId = setTimeout(() => {
       if (cancelled) return;
-      let html = sanitizeHtml(htmlSource);
+      try {
+        let html = sanitizeHtml(htmlSource);
 
-      if (cancelled) return;
+        if (cancelled) return;
 
-      if (!imagesLoaded) {
-        const matches = html.match(/<img\s[^>]*?src\s*=\s*["']https?:\/\//gi);
-        setBlockedImageCount(matches?.length ?? 0);
-        html = blockRemoteImages(html);
-      } else {
-        setBlockedImageCount(0);
+        if (!imagesLoaded) {
+          const matches = html.match(/<img\s[^>]*?src\s*=\s*["'](?:https?:)?\/\//gi);
+          setBlockedImageCount(matches?.length ?? 0);
+          html = blockRemoteImages(html);
+        } else {
+          setBlockedImageCount(0);
+        }
+
+        setIframeSrcDoc(buildIframeDoc(html));
+      } catch (err) {
+        console.error('Failed to sanitize email HTML:', err);
+        setIframeSrcDoc('');
+      } finally {
+        if (!cancelled) setIsSanitizing(false);
       }
-
-      setIframeSrcDoc(buildIframeDoc(html));
-      setIsSanitizing(false);
     }, 0);
 
     return () => {
@@ -88,8 +96,16 @@ const EmailView: React.FC<EmailViewProps> = ({ email }) => {
   // Intercept link clicks inside iframe to open in external browser
   const handleIframeLoad = useCallback(() => {
     const iframe = iframeRef.current;
-    if (!iframe?.contentDocument?.body) return;
-    iframe.contentDocument.addEventListener('click', (e: MouseEvent) => {
+    const doc = iframe?.contentDocument;
+    if (!doc?.body) return;
+
+    // Remove previous listener if any
+    if (iframeClickHandlerRef.current) {
+      const { doc: prevDoc, handler } = iframeClickHandlerRef.current;
+      prevDoc.removeEventListener('click', handler);
+    }
+
+    const handler = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
       const anchor = target.closest('a');
       if (anchor?.href && window.electron?.openExternal) {
@@ -105,7 +121,9 @@ const EmailView: React.FC<EmailViewProps> = ({ email }) => {
             setLinkError('Link konnte nicht geöffnet werden');
           });
       }
-    });
+    };
+    doc.addEventListener('click', handler);
+    iframeClickHandlerRef.current = { doc, handler };
   }, []);
 
   if (!email) {
@@ -270,6 +288,7 @@ const EmailView: React.FC<EmailViewProps> = ({ email }) => {
         <div className="mx-6 mt-2 flex items-center justify-between bg-amber-50 border border-amber-200 rounded-lg px-4 py-2 flex-shrink-0">
           <span className="text-sm text-amber-800">{blockedImageCount} externe Bilder blockiert</span>
           <button
+            type="button"
             onClick={() => setImagesLoaded(true)}
             className="text-sm font-medium text-amber-700 hover:text-amber-900 bg-amber-100 hover:bg-amber-200 px-3 py-1 rounded transition-colors"
           >

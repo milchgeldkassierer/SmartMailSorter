@@ -1,12 +1,12 @@
 /** Strip remote image src attributes, keeping data: URIs for inline images */
 export function blockRemoteImages(html: string): string {
-  // Block <img> src attributes pointing to remote URLs
+  // Block <img> src attributes pointing to remote URLs (including protocol-relative URLs)
   let result = html.replace(
-    /<img\s([^>]*?)src\s*=\s*["'](https?:\/\/[^"']*)["']/gi,
+    /<img\s([^>]*?)src\s*=\s*["']((?:https?:)?\/\/[^"']*)["']/gi,
     "<img $1data-blocked-src=\"$2\" src=\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20'%3E%3C/svg%3E\""
   );
-  // Strip CSS url() references to remote resources in style attributes
-  result = result.replace(/url\s*\(\s*["']?(https?:\/\/[^"')]+)["']?\s*\)/gi, 'url()');
+  // Strip CSS url() references to remote resources in style attributes (including protocol-relative URLs)
+  result = result.replace(/url\s*\(\s*["']?((?:https?:)?\/\/[^"')]+)["']?\s*\)/gi, 'url()');
   return result;
 }
 

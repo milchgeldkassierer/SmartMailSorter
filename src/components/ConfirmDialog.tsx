@@ -16,6 +16,10 @@ interface ConfirmDialogProps {
   cancelText?: string;
   defaultValue?: string;
   placeholder?: string;
+  // Auto-focus input for prompt dialogs. Defaults to true for better UX.
+  // While autoFocus can disrupt screen reader navigation, for modal prompt
+  // dialogs it's standard UX practice. Can be disabled if strict a11y is required.
+  autoFocusInput?: boolean;
 }
 
 const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
@@ -30,6 +34,7 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   cancelText = 'Abbrechen',
   defaultValue = '',
   placeholder = '',
+  autoFocusInput = true,
 }) => {
   const [inputValue, setInputValue] = useState(defaultValue);
 
@@ -136,7 +141,7 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
               onKeyDown={handleKeyDown}
               placeholder={placeholder}
               className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              autoFocus
+              autoFocus={autoFocusInput}
             />
           )}
         </div>
