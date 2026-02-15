@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import TopBar from '../TopBar';
 import { SearchConfig } from '../SearchBar';
-import { DefaultEmailCategory } from '../../types';
+import { DefaultEmailCategory, SortConfig } from '../../types';
 
 describe('TopBar', () => {
   const defaultSearchConfig: SearchConfig = {
@@ -12,6 +12,11 @@ describe('TopBar', () => {
     logic: 'AND',
   };
 
+  const defaultSortConfig: SortConfig = {
+    field: 'date',
+    direction: 'desc',
+  };
+
   const defaultProps = {
     selectedCategory: DefaultEmailCategory.INBOX,
     filteredEmailsCount: 10,
@@ -19,6 +24,8 @@ describe('TopBar', () => {
     onSearchChange: vi.fn(),
     searchConfig: defaultSearchConfig,
     onSearchConfigChange: vi.fn(),
+    sortConfig: defaultSortConfig,
+    onSortConfigChange: vi.fn(),
     showUnsortedOnly: false,
     onToggleUnsorted: vi.fn(),
     onSync: vi.fn(),
@@ -184,6 +191,135 @@ describe('TopBar', () => {
       fireEvent.click(absenderCheckbox);
 
       expect(onSearchConfigChange).toHaveBeenCalled();
+    });
+  });
+
+  describe('Sort Integration', () => {
+    it('should render all sort field buttons', () => {
+      render(<TopBar {...defaultProps} />);
+      expect(screen.getByTitle('Sortieren nach Datum')).toBeInTheDocument();
+      expect(screen.getByTitle('Sortieren nach Absender')).toBeInTheDocument();
+      expect(screen.getByTitle('Sortieren nach Betreff')).toBeInTheDocument();
+    });
+
+    it('should render sort direction toggle', () => {
+      render(<TopBar {...defaultProps} />);
+      const directionButton = screen.getByTitle('Absteigend');
+      expect(directionButton).toBeInTheDocument();
+    });
+
+    it('should call onSortConfigChange when date sort button is clicked', () => {
+      const onSortConfigChange = vi.fn();
+      render(<TopBar {...defaultProps} onSortConfigChange={onSortConfigChange} />);
+
+      const dateButton = screen.getByTitle('Sortieren nach Datum');
+      fireEvent.click(dateButton);
+
+      expect(onSortConfigChange).toHaveBeenCalledWith({
+        field: 'date',
+        direction: 'desc',
+      });
+    });
+
+    it('should call onSortConfigChange when sender sort button is clicked', () => {
+      const onSortConfigChange = vi.fn();
+      render(<TopBar {...defaultProps} onSortConfigChange={onSortConfigChange} />);
+
+      const senderButton = screen.getByTitle('Sortieren nach Absender');
+      fireEvent.click(senderButton);
+
+      expect(onSortConfigChange).toHaveBeenCalledWith({
+        field: 'sender',
+        direction: 'desc',
+      });
+    });
+
+    it('should call onSortConfigChange when subject sort button is clicked', () => {
+      const onSortConfigChange = vi.fn();
+      render(<TopBar {...defaultProps} onSortConfigChange={onSortConfigChange} />);
+
+      const subjectButton = screen.getByTitle('Sortieren nach Betreff');
+      fireEvent.click(subjectButton);
+
+      expect(onSortConfigChange).toHaveBeenCalledWith({
+        field: 'subject',
+        direction: 'desc',
+      });
+    });
+
+    it('should apply active styles to the selected sort field', () => {
+      render(<TopBar {...defaultProps} sortConfig={{ field: 'sender', direction: 'asc' }} />);
+      const senderButton = screen.getByTitle('Sortieren nach Absender');
+      expect(senderButton).toHaveClass('bg-blue-100', 'text-blue-700', 'font-medium');
+    });
+
+    it('should apply inactive styles to non-selected sort fields', () => {
+      render(<TopBar {...defaultProps} sortConfig={{ field: 'date', direction: 'asc' }} />);
+      const senderButton = screen.getByTitle('Sortieren nach Absender');
+      expect(senderButton).toHaveClass('bg-white', 'text-slate-500');
+    });
+
+    it('should toggle sort direction from desc to asc', () => {
+      const onSortConfigChange = vi.fn();
+      render(
+        <TopBar
+          {...defaultProps}
+          sortConfig={{ field: 'date', direction: 'desc' }}
+          onSortConfigChange={onSortConfigChange}
+        />
+      );
+
+      const directionButton = screen.getByTitle('Absteigend');
+      fireEvent.click(directionButton);
+
+      expect(onSortConfigChange).toHaveBeenCalledWith({
+        field: 'date',
+        direction: 'asc',
+      });
+    });
+
+    it('should toggle sort direction from asc to desc', () => {
+      const onSortConfigChange = vi.fn();
+      render(
+        <TopBar
+          {...defaultProps}
+          sortConfig={{ field: 'date', direction: 'asc' }}
+          onSortConfigChange={onSortConfigChange}
+        />
+      );
+
+      const directionButton = screen.getByTitle('Aufsteigend');
+      fireEvent.click(directionButton);
+
+      expect(onSortConfigChange).toHaveBeenCalledWith({
+        field: 'date',
+        direction: 'desc',
+      });
+    });
+
+    it('should display correct title for descending sort', () => {
+      render(<TopBar {...defaultProps} sortConfig={{ field: 'date', direction: 'desc' }} />);
+      expect(screen.getByTitle('Absteigend')).toBeInTheDocument();
+    });
+
+    it('should display correct title for ascending sort', () => {
+      render(<TopBar {...defaultProps} sortConfig={{ field: 'date', direction: 'asc' }} />);
+      expect(screen.getByTitle('Aufsteigend')).toBeInTheDocument();
+    });
+
+    it('should pass sortConfig to component', () => {
+      const customSortConfig: SortConfig = {
+        field: 'subject',
+        direction: 'asc',
+      };
+      render(<TopBar {...defaultProps} sortConfig={customSortConfig} />);
+
+      // Subject button should be active
+      const subjectButton = screen.getByTitle('Sortieren nach Betreff');
+      expect(subjectButton).toHaveClass('bg-blue-100', 'text-blue-700');
+
+      // Direction should show ascending
+      expect(screen.getByTitle('Aufsteigend')).toBeInTheDocument();
     });
   });
 

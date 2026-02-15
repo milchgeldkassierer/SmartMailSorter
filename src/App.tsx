@@ -36,6 +36,8 @@ const App: React.FC = () => {
     setSearchTerm,
     searchConfig,
     setSearchConfig,
+    sortConfig,
+    setSortConfig,
     showUnsortedOnly,
     setShowUnsortedOnly,
     currentEmails,
@@ -347,6 +349,8 @@ const App: React.FC = () => {
           onSearchChange={setSearchTerm}
           searchConfig={searchConfig}
           onSearchConfigChange={setSearchConfig}
+          sortConfig={sortConfig}
+          onSortConfigChange={setSortConfig}
           showUnsortedOnly={showUnsortedOnly}
           onToggleUnsorted={() => setShowUnsortedOnly(!showUnsortedOnly)}
           onSync={syncAccount}

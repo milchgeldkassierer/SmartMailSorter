@@ -819,4 +819,178 @@ describe('useEmails', () => {
       expect(result.current.displayedEmails).toHaveLength(100);
     });
   });
+
+  describe('Sort Functionality', () => {
+    it('should initialize with default sort config (date, desc)', () => {
+      const { result } = renderHook(() => useEmails(defaultParams));
+      expect(result.current.sortConfig).toEqual({
+        field: 'date',
+        direction: 'desc',
+      });
+    });
+
+    it('should sort emails by date in descending order (newest first)', () => {
+      const { result } = renderHook(() => useEmails(defaultParams));
+
+      act(() => {
+        result.current.setData({
+          'account-1': {
+            emails: [mockEmail1, mockEmail2, mockEmail3],
+            categories: [],
+          },
+        });
+        result.current.setSortConfig({ field: 'date', direction: 'desc' });
+      });
+
+      expect(result.current.filteredEmails[0]).toEqual(mockEmail3);
+      expect(result.current.filteredEmails[1]).toEqual(mockEmail2);
+      expect(result.current.filteredEmails[2]).toEqual(mockEmail1);
+    });
+
+    it('should sort emails by date in ascending order (oldest first)', () => {
+      const { result } = renderHook(() => useEmails(defaultParams));
+
+      act(() => {
+        result.current.setData({
+          'account-1': {
+            emails: [mockEmail3, mockEmail1, mockEmail2],
+            categories: [],
+          },
+        });
+        result.current.setSortConfig({ field: 'date', direction: 'asc' });
+      });
+
+      expect(result.current.filteredEmails[0]).toEqual(mockEmail1);
+      expect(result.current.filteredEmails[1]).toEqual(mockEmail2);
+      expect(result.current.filteredEmails[2]).toEqual(mockEmail3);
+    });
+
+    it('should sort emails by sender in ascending order (A-Z)', () => {
+      const { result } = renderHook(() => useEmails(defaultParams));
+
+      act(() => {
+        result.current.setData({
+          'account-1': {
+            emails: [mockEmail2, mockEmail3, mockEmail1],
+            categories: [],
+          },
+        });
+        result.current.setSortConfig({ field: 'sender', direction: 'asc' });
+      });
+
+      expect(result.current.filteredEmails[0]).toEqual(mockEmail3);
+      expect(result.current.filteredEmails[1]).toEqual(mockEmail2);
+      expect(result.current.filteredEmails[2]).toEqual(mockEmail1);
+    });
+
+    it('should sort emails by sender in descending order (Z-A)', () => {
+      const { result } = renderHook(() => useEmails(defaultParams));
+
+      act(() => {
+        result.current.setData({
+          'account-1': {
+            emails: [mockEmail1, mockEmail2, mockEmail3],
+            categories: [],
+          },
+        });
+        result.current.setSortConfig({ field: 'sender', direction: 'desc' });
+      });
+
+      expect(result.current.filteredEmails[0]).toEqual(mockEmail1);
+      expect(result.current.filteredEmails[1]).toEqual(mockEmail2);
+      expect(result.current.filteredEmails[2]).toEqual(mockEmail3);
+    });
+
+    it('should sort emails by subject in ascending order (A-Z)', () => {
+      const { result } = renderHook(() => useEmails(defaultParams));
+
+      act(() => {
+        result.current.setData({
+          'account-1': {
+            emails: [mockEmail3, mockEmail1, mockEmail2],
+            categories: [],
+          },
+        });
+        result.current.setSortConfig({ field: 'subject', direction: 'asc' });
+      });
+
+      expect(result.current.filteredEmails[0]).toEqual(mockEmail2);
+      expect(result.current.filteredEmails[1]).toEqual(mockEmail3);
+      expect(result.current.filteredEmails[2]).toEqual(mockEmail1);
+    });
+
+    it('should sort emails by subject in descending order (Z-A)', () => {
+      const { result } = renderHook(() => useEmails(defaultParams));
+
+      act(() => {
+        result.current.setData({
+          'account-1': {
+            emails: [mockEmail1, mockEmail2, mockEmail3],
+            categories: [],
+          },
+        });
+        result.current.setSortConfig({ field: 'subject', direction: 'desc' });
+      });
+
+      expect(result.current.filteredEmails[0]).toEqual(mockEmail1);
+      expect(result.current.filteredEmails[1]).toEqual(mockEmail3);
+      expect(result.current.filteredEmails[2]).toEqual(mockEmail2);
+    });
+
+    it('should maintain sort order when filtering by category', () => {
+      const { result } = renderHook(() => useEmails(defaultParams));
+
+      act(() => {
+        result.current.setData({
+          'account-1': {
+            emails: [mockEmail1, mockEmail2, mockEmail3],
+            categories: [],
+          },
+        });
+        result.current.setSortConfig({ field: 'sender', direction: 'asc' });
+      });
+
+      expect(result.current.filteredEmails[0].sender).toBe('Bob Johnson');
+      expect(result.current.filteredEmails[1].sender).toBe('Jane Smith');
+      expect(result.current.filteredEmails[2].sender).toBe('John Doe');
+    });
+
+    it('should maintain sort order when searching', () => {
+      const { result } = renderHook(() => useEmails(defaultParams));
+
+      act(() => {
+        result.current.setData({
+          'account-1': {
+            emails: [mockEmail1, mockEmail2, mockEmail3],
+            categories: [],
+          },
+        });
+        result.current.setSortConfig({ field: 'date', direction: 'asc' });
+        result.current.setSearchTerm('email');
+      });
+
+      expect(result.current.filteredEmails[0]).toEqual(mockEmail1);
+    });
+
+    it('should apply sort to displayed emails (pagination)', () => {
+      const { result } = renderHook(() => useEmails(defaultParams));
+      const emailA: Email = { ...mockEmail1, id: 'a', sender: 'Alpha', date: '2024-01-01T10:00:00Z' };
+      const emailB: Email = { ...mockEmail2, id: 'b', sender: 'Beta', date: '2024-01-02T10:00:00Z' };
+      const emailC: Email = { ...mockEmail3, id: 'c', sender: 'Charlie', date: '2024-01-03T10:00:00Z' };
+
+      act(() => {
+        result.current.setData({
+          'account-1': {
+            emails: [emailC, emailA, emailB],
+            categories: [],
+          },
+        });
+        result.current.setSortConfig({ field: 'sender', direction: 'asc' });
+      });
+
+      expect(result.current.displayedEmails[0].sender).toBe('Alpha');
+      expect(result.current.displayedEmails[1].sender).toBe('Beta');
+      expect(result.current.displayedEmails[2].sender).toBe('Charlie');
+    });
+  });
 });

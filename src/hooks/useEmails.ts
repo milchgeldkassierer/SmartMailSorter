@@ -9,6 +9,7 @@ import {
   SPAM_FOLDER,
   TRASH_FOLDER,
   FLAGGED_FOLDER,
+  SortConfig,
 } from '../types';
 import { SearchConfig } from '../components/SearchBar';
 
@@ -27,6 +28,7 @@ interface UseEmailsReturn {
   selectedCategory: string;
   searchTerm: string;
   searchConfig: SearchConfig;
+  sortConfig: SortConfig;
   showUnsortedOnly: boolean;
 
   // Computed
@@ -44,6 +46,7 @@ interface UseEmailsReturn {
   setSelectedCategory: (category: string) => void;
   setSearchTerm: (term: string) => void;
   setSearchConfig: (config: SearchConfig) => void;
+  setSortConfig: (config: SortConfig) => void;
   setShowUnsortedOnly: (value: boolean) => void;
 
   // Helper Functions
@@ -160,6 +163,12 @@ export const useEmails = ({ activeAccountId, accounts: _accounts }: UseEmailsPar
     logic: 'AND',
   });
 
+  // Sort State
+  const [sortConfig, setSortConfig] = useState<SortConfig>({
+    field: 'date',
+    direction: 'desc',
+  });
+
   // Filter State
   const [showUnsortedOnly, setShowUnsortedOnly] = useState(false);
 
@@ -181,8 +190,31 @@ export const useEmails = ({ activeAccountId, accounts: _accounts }: UseEmailsPar
     // 2. Apply search filter
     const searchFiltered = categoryFiltered.filter((email) => matchesSearchTerm(email, searchTerm, searchConfig));
 
-    return searchFiltered;
-  }, [currentEmails, selectedCategory, searchTerm, searchConfig, showUnsortedOnly, currentCategories]);
+    // 3. Apply sort
+    const sorted = [...searchFiltered].sort((a, b) => {
+      let comparison = 0;
+
+      switch (sortConfig.field) {
+        case 'date':
+          comparison = a.date.localeCompare(b.date);
+          break;
+        case 'sender':
+          comparison = a.sender.localeCompare(b.sender);
+          break;
+        case 'subject':
+          comparison = a.subject.localeCompare(b.subject);
+          break;
+        default: {
+          const _exhaustive: never = sortConfig.field;
+          throw new Error(`Unhandled sort field: ${_exhaustive}`);
+        }
+      }
+
+      return sortConfig.direction === 'asc' ? comparison : -comparison;
+    });
+
+    return sorted;
+  }, [currentEmails, selectedCategory, searchTerm, searchConfig, showUnsortedOnly, currentCategories, sortConfig]);
 
   // Pagination
   const displayedEmails = filteredEmails.slice(0, visibleCount);
@@ -244,7 +276,7 @@ export const useEmails = ({ activeAccountId, accounts: _accounts }: UseEmailsPar
   // Reset pagination when filter/category changes
   useEffect(() => {
     resetPagination();
-  }, [selectedCategory, searchTerm, showUnsortedOnly, activeAccountId]);
+  }, [selectedCategory, searchTerm, showUnsortedOnly, activeAccountId, sortConfig]);
 
   return {
     // State
@@ -253,6 +285,7 @@ export const useEmails = ({ activeAccountId, accounts: _accounts }: UseEmailsPar
     selectedCategory,
     searchTerm,
     searchConfig,
+    sortConfig,
     showUnsortedOnly,
 
     // Computed
@@ -270,6 +303,7 @@ export const useEmails = ({ activeAccountId, accounts: _accounts }: UseEmailsPar
     setSelectedCategory,
     setSearchTerm,
     setSearchConfig,
+    setSortConfig,
     setShowUnsortedOnly,
 
     // Helper Functions
