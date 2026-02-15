@@ -196,7 +196,7 @@ export const useEmails = ({ activeAccountId, accounts: _accounts }: UseEmailsPar
 
       switch (sortConfig.field) {
         case 'date':
-          comparison = new Date(a.date).getTime() - new Date(b.date).getTime();
+          comparison = a.date.localeCompare(b.date);
           break;
         case 'sender':
           comparison = a.sender.localeCompare(b.sender);
