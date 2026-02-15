@@ -9,17 +9,9 @@ import {
   SPAM_FOLDER,
   TRASH_FOLDER,
   FLAGGED_FOLDER,
+  SortConfig,
 } from '../types';
 import { SearchConfig } from '../components/SearchBar';
-
-// Sort configuration type
-export type SortField = 'date' | 'sender' | 'subject';
-export type SortDirection = 'asc' | 'desc';
-
-export interface SortConfig {
-  field: SortField;
-  direction: SortDirection;
-}
 
 // Standard folder name constants
 const STANDARD_EXCLUDED_FOLDERS = [SENT_FOLDER, SPAM_FOLDER, TRASH_FOLDER] as const;

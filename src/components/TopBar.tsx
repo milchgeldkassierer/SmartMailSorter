@@ -65,8 +65,6 @@ const TopBar: React.FC<TopBarProps> = ({
     });
   };
 
-  const SortFieldIcon = getSortFieldIcon(sortConfig.field);
-
   return (
     <div className="h-16 border-b border-slate-200 bg-white flex items-center justify-between px-6 flex-shrink-0">
       <div className="flex items-center gap-4 flex-1">
@@ -117,12 +115,11 @@ const TopBar: React.FC<TopBarProps> = ({
             const isActive = sortConfig.field === field;
             return (
               <button
+                type="button"
                 key={field}
                 onClick={() => handleSortFieldChange(field)}
                 className={`text-xs px-2.5 py-1.5 transition-colors flex items-center gap-1.5 ${
-                  isActive
-                    ? 'bg-blue-100 text-blue-700 font-medium'
-                    : 'bg-white text-slate-500 hover:bg-slate-50'
+                  isActive ? 'bg-blue-100 text-blue-700 font-medium' : 'bg-white text-slate-500 hover:bg-slate-50'
                 }`}
                 title={`Sortieren nach ${getSortFieldLabel(field)}`}
               >
@@ -135,15 +132,12 @@ const TopBar: React.FC<TopBarProps> = ({
 
         {/* Sort Direction Toggle */}
         <button
+          type="button"
           onClick={handleSortDirectionToggle}
           className="text-sm text-slate-500 hover:text-blue-600 flex items-center gap-1 px-2.5 py-1.5 rounded-md border border-slate-200 hover:bg-slate-50 transition-colors"
           title={sortConfig.direction === 'asc' ? 'Aufsteigend' : 'Absteigend'}
         >
-          {sortConfig.direction === 'asc' ? (
-            <ChevronUp className="w-4 h-4" />
-          ) : (
-            <ChevronDown className="w-4 h-4" />
-          )}
+          {sortConfig.direction === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
         </button>
 
         <button

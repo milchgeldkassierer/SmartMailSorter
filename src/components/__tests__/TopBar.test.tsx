@@ -261,7 +261,13 @@ describe('TopBar', () => {
 
     it('should toggle sort direction from desc to asc', () => {
       const onSortConfigChange = vi.fn();
-      render(<TopBar {...defaultProps} sortConfig={{ field: 'date', direction: 'desc' }} onSortConfigChange={onSortConfigChange} />);
+      render(
+        <TopBar
+          {...defaultProps}
+          sortConfig={{ field: 'date', direction: 'desc' }}
+          onSortConfigChange={onSortConfigChange}
+        />
+      );
 
       const directionButton = screen.getByTitle('Absteigend');
       fireEvent.click(directionButton);
@@ -274,7 +280,13 @@ describe('TopBar', () => {
 
     it('should toggle sort direction from asc to desc', () => {
       const onSortConfigChange = vi.fn();
-      render(<TopBar {...defaultProps} sortConfig={{ field: 'date', direction: 'asc' }} onSortConfigChange={onSortConfigChange} />);
+      render(
+        <TopBar
+          {...defaultProps}
+          sortConfig={{ field: 'date', direction: 'asc' }}
+          onSortConfigChange={onSortConfigChange}
+        />
+      );
 
       const directionButton = screen.getByTitle('Aufsteigend');
       fireEvent.click(directionButton);
