@@ -174,7 +174,7 @@ const EmailList: React.FC<EmailListProps> = ({
                   {displayName(email.sender)}
                 </span>
                 <span className="text-xs text-slate-400 whitespace-nowrap flex-shrink-0 ml-auto group-hover:invisible">
-                  {formatEmailDate(new Date(email.date).getTime())}
+                  {formatEmailDate(new Date(email.date).getTime()) ?? ''}
                 </span>
               </div>
 

@@ -49,19 +49,11 @@ export function formatEmailDate(timestamp: number | null | undefined): string | 
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const emailStart = new Date(emailDate.getFullYear(), emailDate.getMonth(), emailDate.getDate());
 
-  // Calculate day difference
-  const dayDiff = Math.floor((todayStart.getTime() - emailStart.getTime()) / (24 * 60 * 60 * 1000));
+  // Calculate day difference (Math.round handles DST transitions where midnight-to-midnight can be 23 or 25 hours)
+  const dayDiff = Math.round((todayStart.getTime() - emailStart.getTime()) / (24 * 60 * 60 * 1000));
 
-  // Handle future dates (treat as today)
-  if (dayDiff < 0) {
-    // Format as time HH:MM
-    const hours = emailDate.getHours().toString().padStart(2, '0');
-    const minutes = emailDate.getMinutes().toString().padStart(2, '0');
-    return `${hours}:${minutes}`;
-  }
-
-  // Today: Show time (HH:MM)
-  if (dayDiff === 0) {
+  // Today or future dates: Show time (HH:MM)
+  if (dayDiff <= 0) {
     const hours = emailDate.getHours().toString().padStart(2, '0');
     const minutes = emailDate.getMinutes().toString().padStart(2, '0');
     return `${hours}:${minutes}`;
