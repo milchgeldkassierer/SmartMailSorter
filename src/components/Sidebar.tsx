@@ -16,6 +16,7 @@ import {
 } from './Icon';
 import { ImapAccount, DefaultEmailCategory, Category, SYSTEM_FOLDERS, FLAGGED_FOLDER } from '../types';
 import { formatTimeAgo } from '../utils/formatTimeAgo';
+import { useDialogContext } from '../contexts/DialogContext';
 
 interface SidebarProps {
   selectedCategory: string;
@@ -53,6 +54,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   const [newCategoryName, setNewCategoryName] = useState('');
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; category: string } | null>(null);
+  const dialog = useDialogContext();
 
   const activeAccount = accounts.find((a) => a.id === activeAccountId) || accounts[0];
 
@@ -337,10 +339,18 @@ const Sidebar: React.FC<SidebarProps> = ({
             contextMenu.category !== FLAGGED_FOLDER && (
               <>
                 <button
-                  onClick={() => {
-                    const newName = prompt('Neuer Name:', contextMenu.category);
-                    if (newName && newName.trim()) onRenameCategory(contextMenu.category, newName.trim());
+                  onClick={async () => {
+                    const category = contextMenu.category;
                     setContextMenu(null);
+                    const newName = await dialog.prompt({
+                      title: 'Kategorie umbenennen',
+                      message: 'Geben Sie einen neuen Namen ein:',
+                      defaultValue: category,
+                      confirmText: 'Umbenennen',
+                      cancelText: 'Abbrechen',
+                      variant: 'info',
+                    });
+                    if (newName && newName.trim()) onRenameCategory(category, newName.trim());
                   }}
                   className="w-full text-left px-3 py-2 text-sm text-slate-300 hover:bg-slate-700 flex items-center gap-2"
                 >
@@ -348,11 +358,19 @@ const Sidebar: React.FC<SidebarProps> = ({
                 </button>
                 <div className="h-px bg-slate-700 my-1" />
                 <button
-                  onClick={() => {
-                    if (confirm(`Ordner '${contextMenu.category}' wirklich löschen?`)) {
-                      onDeleteCategory(contextMenu.category);
-                    }
+                  onClick={async () => {
+                    const category = contextMenu.category;
                     setContextMenu(null);
+                    const confirmed = await dialog.confirm({
+                      title: 'Kategorie löschen',
+                      message: `Möchten Sie die Kategorie '${category}' wirklich löschen?`,
+                      confirmText: 'Löschen',
+                      cancelText: 'Abbrechen',
+                      variant: 'danger',
+                    });
+                    if (confirmed) {
+                      onDeleteCategory(category);
+                    }
                   }}
                   className="w-full text-left px-3 py-2 text-sm text-red-400 hover:bg-red-900/30 flex items-center gap-2"
                 >
@@ -363,9 +381,14 @@ const Sidebar: React.FC<SidebarProps> = ({
             )}
 
           <button
-            onClick={() => {
-              alert('Icon-Auswahl folgt bald!');
+            onClick={async () => {
               setContextMenu(null);
+              await dialog.alert({
+                title: 'Funktion in Entwicklung',
+                message: 'Die Icon-Auswahl wird bald verfügbar sein!',
+                confirmText: 'OK',
+                variant: 'info',
+              });
             }}
             className="w-full text-left px-3 py-2 text-sm text-slate-300 hover:bg-slate-700 flex items-center gap-2"
           >

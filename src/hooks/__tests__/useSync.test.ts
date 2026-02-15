@@ -3,6 +3,12 @@ import { renderHook, act } from '@testing-library/react';
 import { useSync } from '../useSync';
 import { ImapAccount, Email, INBOX_FOLDER } from '../../types';
 
+// Mock dialog passed as prop
+const mockDialogAlert = vi.fn();
+const mockDialog = {
+  alert: mockDialogAlert,
+};
+
 describe('useSync', () => {
   const mockAccount1: ImapAccount = {
     id: 'account-1',
@@ -61,6 +67,9 @@ describe('useSync', () => {
     mockElectron.syncAccount.mockResolvedValue(undefined);
     mockElectron.getEmails.mockResolvedValue([mockEmail1, mockEmail2]);
     mockElectron.getAccounts.mockResolvedValue([mockAccount1, mockAccount2]);
+
+    // Reset dialog mocks
+    mockDialogAlert.mockResolvedValue(undefined);
   });
 
   describe('Initial State', () => {
@@ -69,6 +78,7 @@ describe('useSync', () => {
         useSync({
           activeAccountId: 'account-1',
           accounts: [mockAccount1],
+          dialog: mockDialog,
         })
       );
       expect(result.current.isSyncing).toBe(false);
@@ -79,6 +89,7 @@ describe('useSync', () => {
         useSync({
           activeAccountId: 'account-1',
           accounts: [mockAccount1],
+          dialog: mockDialog,
         })
       );
       expect(typeof result.current.syncAccount).toBe('function');
@@ -89,6 +100,7 @@ describe('useSync', () => {
         useSync({
           activeAccountId: 'account-1',
           accounts: [mockAccount1],
+          dialog: mockDialog,
         })
       );
       expect(result.current).toHaveProperty('isSyncing');
@@ -102,6 +114,7 @@ describe('useSync', () => {
         useSync({
           activeAccountId: 'account-1',
           accounts: [mockAccount1],
+          dialog: mockDialog,
         })
       );
 
@@ -124,6 +137,7 @@ describe('useSync', () => {
         useSync({
           activeAccountId: 'account-1',
           accounts: [mockAccount1, mockAccount2],
+          dialog: mockDialog,
         })
       );
 
@@ -140,6 +154,7 @@ describe('useSync', () => {
         useSync({
           activeAccountId: 'account-1',
           accounts: [mockAccount1],
+          dialog: mockDialog,
         })
       );
 
@@ -156,6 +171,7 @@ describe('useSync', () => {
         useSync({
           activeAccountId: 'account-1',
           accounts: [mockAccount1],
+          dialog: mockDialog,
         })
       );
 
@@ -176,6 +192,7 @@ describe('useSync', () => {
           activeAccountId: 'account-1',
           accounts: [mockAccount1],
           onAccountsUpdate,
+          dialog: mockDialog,
         })
       );
 
@@ -197,6 +214,7 @@ describe('useSync', () => {
           activeAccountId: 'account-1',
           accounts: [mockAccount1],
           onDataUpdate,
+          dialog: mockDialog,
         })
       );
 
@@ -218,6 +236,7 @@ describe('useSync', () => {
           accounts: [mockAccount1],
           onAccountsUpdate,
           onDataUpdate,
+          dialog: mockDialog,
         })
       );
 
@@ -234,6 +253,7 @@ describe('useSync', () => {
         useSync({
           activeAccountId: 'account-1',
           accounts: [mockAccount1],
+          dialog: mockDialog,
         })
       );
 
@@ -251,6 +271,7 @@ describe('useSync', () => {
         useSync({
           activeAccountId: 'account-1',
           accounts: [mockAccount1],
+          dialog: mockDialog,
         })
       );
 
@@ -267,13 +288,13 @@ describe('useSync', () => {
   describe('Error Handling', () => {
     it('should set isSyncing to false on error', async () => {
       mockElectron.syncAccount.mockRejectedValue(new Error('Sync failed'));
-      const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
       const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
       const { result } = renderHook(() =>
         useSync({
           activeAccountId: 'account-1',
           accounts: [mockAccount1],
+          dialog: mockDialog,
         })
       );
 
@@ -283,7 +304,6 @@ describe('useSync', () => {
 
       expect(result.current.isSyncing).toBe(false);
 
-      alertSpy.mockRestore();
       consoleErrorSpy.mockRestore();
     });
 
@@ -291,12 +311,12 @@ describe('useSync', () => {
       const error = new Error('Sync failed');
       mockElectron.syncAccount.mockRejectedValue(error);
       const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-      const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
 
       const { result } = renderHook(() =>
         useSync({
           activeAccountId: 'account-1',
           accounts: [mockAccount1],
+          dialog: mockDialog,
         })
       );
 
@@ -307,18 +327,17 @@ describe('useSync', () => {
       expect(consoleErrorSpy).toHaveBeenCalledWith('Failed to sync account:', error);
 
       consoleErrorSpy.mockRestore();
-      alertSpy.mockRestore();
     });
 
     it('should show alert on sync failure', async () => {
       mockElectron.syncAccount.mockRejectedValue(new Error('Sync failed'));
-      const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
       const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
       const { result } = renderHook(() =>
         useSync({
           activeAccountId: 'account-1',
           accounts: [mockAccount1],
+          dialog: mockDialog,
         })
       );
 
@@ -326,21 +345,24 @@ describe('useSync', () => {
         await result.current.syncAccount();
       });
 
-      expect(alertSpy).toHaveBeenCalledWith('Synchronisierung fehlgeschlagen. Bitte versuchen Sie es erneut.');
+      expect(mockDialogAlert).toHaveBeenCalledWith({
+        title: 'Synchronisierungsfehler',
+        message: 'Synchronisierung fehlgeschlagen. Bitte versuchen Sie es erneut.',
+        variant: 'danger',
+      });
 
-      alertSpy.mockRestore();
       consoleErrorSpy.mockRestore();
     });
 
     it('should handle error during getEmails', async () => {
       mockElectron.getEmails.mockRejectedValue(new Error('Failed to get emails'));
-      const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
       const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
       const { result } = renderHook(() =>
         useSync({
           activeAccountId: 'account-1',
           accounts: [mockAccount1],
+          dialog: mockDialog,
         })
       );
 
@@ -350,21 +372,20 @@ describe('useSync', () => {
 
       expect(result.current.isSyncing).toBe(false);
       expect(consoleErrorSpy).toHaveBeenCalled();
-      expect(alertSpy).toHaveBeenCalled();
+      expect(mockDialogAlert).toHaveBeenCalled();
 
-      alertSpy.mockRestore();
       consoleErrorSpy.mockRestore();
     });
 
     it('should handle error during getAccounts', async () => {
       mockElectron.getAccounts.mockRejectedValue(new Error('Failed to get accounts'));
-      const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
       const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
       const { result } = renderHook(() =>
         useSync({
           activeAccountId: 'account-1',
           accounts: [mockAccount1],
+          dialog: mockDialog,
         })
       );
 
@@ -374,9 +395,8 @@ describe('useSync', () => {
 
       expect(result.current.isSyncing).toBe(false);
       expect(consoleErrorSpy).toHaveBeenCalled();
-      expect(alertSpy).toHaveBeenCalled();
+      expect(mockDialogAlert).toHaveBeenCalled();
 
-      alertSpy.mockRestore();
       consoleErrorSpy.mockRestore();
     });
   });
@@ -389,6 +409,7 @@ describe('useSync', () => {
         useSync({
           activeAccountId: 'account-1',
           accounts: [mockAccount1],
+          dialog: mockDialog,
         })
       );
 
@@ -404,6 +425,7 @@ describe('useSync', () => {
         useSync({
           activeAccountId: '',
           accounts: [mockAccount1],
+          dialog: mockDialog,
         })
       );
 
@@ -420,6 +442,7 @@ describe('useSync', () => {
         useSync({
           activeAccountId: 'non-existent-account',
           accounts: [mockAccount1],
+          dialog: mockDialog,
         })
       );
 
@@ -437,6 +460,7 @@ describe('useSync', () => {
         useSync({
           activeAccountId: 'account-1',
           accounts: [],
+          dialog: mockDialog,
         })
       );
 
@@ -455,6 +479,7 @@ describe('useSync', () => {
         initialProps: {
           activeAccountId: 'account-1',
           accounts: [mockAccount1, mockAccount2],
+          dialog: mockDialog,
         },
       });
 
@@ -463,6 +488,7 @@ describe('useSync', () => {
       rerender({
         activeAccountId: 'account-2',
         accounts: [mockAccount1, mockAccount2],
+        dialog: mockDialog,
       });
 
       expect(result.current.syncAccount).not.toBe(firstSyncAccount);
@@ -473,6 +499,7 @@ describe('useSync', () => {
         initialProps: {
           activeAccountId: 'account-1',
           accounts: [mockAccount1],
+          dialog: mockDialog,
         },
       });
 
@@ -481,6 +508,7 @@ describe('useSync', () => {
       rerender({
         activeAccountId: 'account-1',
         accounts: [mockAccount1, mockAccount2],
+        dialog: mockDialog,
       });
 
       expect(result.current.syncAccount).not.toBe(firstSyncAccount);
@@ -495,6 +523,7 @@ describe('useSync', () => {
           activeAccountId: 'account-1',
           accounts: [mockAccount1],
           onAccountsUpdate: onAccountsUpdate1,
+          dialog: mockDialog,
         },
       });
 
@@ -504,6 +533,7 @@ describe('useSync', () => {
         activeAccountId: 'account-1',
         accounts: [mockAccount1],
         onAccountsUpdate: onAccountsUpdate2,
+        dialog: mockDialog,
       });
 
       expect(result.current.syncAccount).not.toBe(firstSyncAccount);
@@ -516,6 +546,7 @@ describe('useSync', () => {
         useSync({
           activeAccountId: 'account-1',
           accounts: [mockAccount1],
+          dialog: mockDialog,
         })
       );
 
@@ -542,6 +573,7 @@ describe('useSync', () => {
         initialProps: {
           activeAccountId: 'account-1',
           accounts: [mockAccount1, mockAccount2],
+          dialog: mockDialog,
         },
       });
 
@@ -558,6 +590,7 @@ describe('useSync', () => {
         rerender({
           activeAccountId: 'account-2',
           accounts: [mockAccount1, mockAccount2],
+          dialog: mockDialog,
         });
       });
 
