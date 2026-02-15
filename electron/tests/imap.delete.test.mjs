@@ -269,7 +269,7 @@ describe('IMAP Delete Operations', () => {
     it('should return object with success:true on successful delete', async () => {
       const result = await imap.deleteEmail(testAccount, 1001, INBOX_FOLDER);
 
-      expect(result).toEqual({ success: true });
+      expect(result).toEqual({ success: true, movedToTrash: false });
     });
 
     it('should return object with success:false and error on UID error', async () => {

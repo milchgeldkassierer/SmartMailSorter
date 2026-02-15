@@ -1,5 +1,6 @@
 import React, { createContext, useContext } from 'react';
-import { useDialog, UseDialogReturn } from '../hooks/useDialog';
+import { useDialog, type UseDialogReturn } from '../hooks/useDialog';
+export type { UseDialogReturn };
 import ConfirmDialog from '../components/ConfirmDialog';
 
 const DialogContext = createContext<UseDialogReturn | null>(null);
