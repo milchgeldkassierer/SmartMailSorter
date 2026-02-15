@@ -144,6 +144,16 @@ function createSchema() {
   } catch (e) {
     logger.error('Failed to sync categories from emails:', e);
   }
+
+  // Create Notification Settings Table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS notification_settings (
+      accountId TEXT PRIMARY KEY,
+      enabled INTEGER DEFAULT 1,
+      mutedCategories TEXT DEFAULT '[]',
+      FOREIGN KEY(accountId) REFERENCES accounts(id) ON DELETE CASCADE
+    )
+  `);
 }
 
 function migratePasswordEncryption() {
@@ -530,6 +540,34 @@ function close() {
   }
 }
 
+// --- Notification Settings Methods ---
+
+function getNotificationSettings(accountId) {
+  const settings = db.prepare('SELECT enabled, mutedCategories FROM notification_settings WHERE accountId = ?').get(accountId);
+
+  if (!settings) {
+    // Return defaults if no settings exist yet
+    return {
+      enabled: true,
+      mutedCategories: [],
+    };
+  }
+
+  return {
+    enabled: Boolean(settings.enabled),
+    mutedCategories: JSON.parse(settings.mutedCategories || '[]'),
+  };
+}
+
+function saveNotificationSettings(accountId, settings) {
+  const mutedCategoriesJson = JSON.stringify(settings.mutedCategories || []);
+  const stmt = db.prepare(`
+    INSERT OR REPLACE INTO notification_settings (accountId, enabled, mutedCategories)
+    VALUES (?, ?, ?)
+  `);
+  return stmt.run(accountId, settings.enabled ? 1 : 0, mutedCategoriesJson);
+}
+
 module.exports = {
   init,
   close,
@@ -584,6 +622,10 @@ module.exports = {
   },
   migrateFolder,
   resetDb,
+
+  // Notification Settings Methods
+  getNotificationSettings,
+  saveNotificationSettings,
 };
 
 function migrateFolder(oldName, newName) {
