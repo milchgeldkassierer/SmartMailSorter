@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { ImapAccount, Email } from '../types';
+import { DialogVariant } from '../components/ConfirmDialog';
 
 interface UseSyncParams {
   activeAccountId: string;
@@ -7,7 +8,7 @@ interface UseSyncParams {
   onAccountsUpdate?: (accounts: ImapAccount[]) => void;
   onDataUpdate?: (accountId: string, data: { emails: Email[] }) => void;
   dialog: {
-    alert: (config: { title: string; message: string; variant?: string }) => Promise<void>;
+    alert: (config: { title: string; message: string; variant?: DialogVariant }) => Promise<void>;
   };
 }
 
