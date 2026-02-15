@@ -62,21 +62,50 @@ describe('EmailList', () => {
     it('should not render empty state message when loading', () => {
       render(<EmailList {...defaultProps} isLoading={true} emails={[]} />);
 
-      expect(screen.queryByText('Keine Emails in diesem Ordner.')).not.toBeInTheDocument();
+      expect(screen.queryByText('Keine Emails')).not.toBeInTheDocument();
     });
   });
 
   describe('Empty State', () => {
-    it('should render empty state message when no emails', () => {
+    it('should render empty state icon when no emails', () => {
       render(<EmailList {...defaultProps} emails={[]} />);
 
-      expect(screen.getByText('Keine Emails in diesem Ordner.')).toBeInTheDocument();
+      // Folder icon should be present with specific styling
+      const icon = document.querySelector('svg.w-16.h-16.opacity-20');
+      expect(icon).toBeInTheDocument();
+    });
+
+    it('should render empty state heading when no emails', () => {
+      render(<EmailList {...defaultProps} emails={[]} />);
+
+      expect(screen.getByText('Keine Emails')).toBeInTheDocument();
+    });
+
+    it('should render empty state description when no emails', () => {
+      render(<EmailList {...defaultProps} emails={[]} />);
+
+      expect(screen.getByText('Dieser Ordner enthält noch keine Emails.')).toBeInTheDocument();
+    });
+
+    it('should center align empty state content', () => {
+      render(<EmailList {...defaultProps} emails={[]} />);
+
+      const emptyStateContainer = screen.getByText('Keine Emails').closest('div');
+      expect(emptyStateContainer).toHaveClass('text-center');
     });
 
     it('should not render email count header when empty', () => {
       render(<EmailList {...defaultProps} emails={[]} />);
 
       expect(screen.queryByText(/Emails \(/)).not.toBeInTheDocument();
+    });
+
+    it('should apply proper styling to empty state container', () => {
+      const { container } = render(<EmailList {...defaultProps} emails={[]} />);
+
+      // Should have the empty state container
+      const emptyStateRoot = container.querySelector('[data-testid="empty-state"]');
+      expect(emptyStateRoot).toBeInTheDocument();
     });
   });
 

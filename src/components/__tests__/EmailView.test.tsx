@@ -39,10 +39,31 @@ describe('EmailView', () => {
   });
 
   describe('Empty State', () => {
-    it('should render placeholder when no email is selected', () => {
+    it('should render empty state icon when no email is selected', () => {
       render(<EmailView email={null} />);
 
-      expect(screen.getByText('Wähle eine Email aus, um Details zu sehen.')).toBeInTheDocument();
+      // CategoryIcon should be present with specific styling
+      const icon = document.querySelector('svg.w-16.h-16.opacity-20');
+      expect(icon).toBeInTheDocument();
+    });
+
+    it('should render empty state heading when no email is selected', () => {
+      render(<EmailView email={null} />);
+
+      expect(screen.getByText('Keine Email ausgewählt')).toBeInTheDocument();
+    });
+
+    it('should render empty state description when no email is selected', () => {
+      render(<EmailView email={null} />);
+
+      expect(screen.getByText('Wähle eine Email aus der Liste aus, um den Inhalt anzuzeigen.')).toBeInTheDocument();
+    });
+
+    it('should center align empty state content', () => {
+      render(<EmailView email={null} />);
+
+      const emptyStateContainer = screen.getByText('Keine Email ausgewählt').closest('div');
+      expect(emptyStateContainer).toHaveClass('text-center');
     });
 
     it('should not render any email content when email is null', () => {
@@ -52,12 +73,12 @@ describe('EmailView', () => {
       expect(screen.queryByText('John Doe')).not.toBeInTheDocument();
     });
 
-    it('should render CategoryIcon with INBOX category in placeholder', () => {
-      render(<EmailView email={null} />);
+    it('should apply proper styling to empty state container', () => {
+      const { container } = render(<EmailView email={null} />);
 
-      // The icon should be rendered (we can verify the container exists)
-      const placeholder = screen.getByText('Wähle eine Email aus, um Details zu sehen.');
-      expect(placeholder).toBeInTheDocument();
+      // Should have the empty state container
+      const emptyStateRoot = container.querySelector('[data-testid="empty-state"]');
+      expect(emptyStateRoot).toBeInTheDocument();
     });
   });
 
@@ -425,16 +446,16 @@ describe('EmailView', () => {
       expect(screen.getByText('This is the plain text email body.')).toBeInTheDocument();
     });
 
-    it('should render HTML body when available and showHtml is true', () => {
+    it('should render HTML body in iframe when available and showHtml is true', () => {
       const email = createEmail({
         body: 'Plain text',
         bodyHtml: '<strong>Bold HTML content</strong>',
       });
       render(<EmailView email={email} />);
 
-      // The HTML should be rendered with dangerouslySetInnerHTML
-      const htmlContainer = document.querySelector('[class*="prose"]');
-      expect(htmlContainer?.innerHTML).toContain('<strong>Bold HTML content</strong>');
+      // When showHtml is true (default) and bodyHtml is provided, content is rendered via iframe
+      const iframe = document.querySelector('iframe[title="Email content"]');
+      expect(iframe).toBeInTheDocument();
     });
 
     it('should render plain text when showHtml is false', () => {
@@ -610,7 +631,7 @@ describe('EmailView', () => {
 
       rerender(<EmailView email={null} />);
 
-      expect(screen.getByText('Wähle eine Email aus, um Details zu sehen.')).toBeInTheDocument();
+      expect(screen.getByText('Wähle eine Email aus der Liste aus, um den Inhalt anzuzeigen.')).toBeInTheDocument();
       expect(screen.queryByText('Test Subject')).not.toBeInTheDocument();
     });
   });
