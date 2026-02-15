@@ -45,12 +45,12 @@ export function formatEmailDate(timestamp: number | null | undefined): string | 
     return null;
   }
 
-  // Get start of today (00:00:00) for accurate day comparison
-  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const emailStart = new Date(emailDate.getFullYear(), emailDate.getMonth(), emailDate.getDate());
+  // Use UTC midnights for day comparison so DST transitions don't skew the 24-hour division
+  const todayUtc = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+  const emailUtc = Date.UTC(emailDate.getFullYear(), emailDate.getMonth(), emailDate.getDate());
 
-  // Calculate day difference (Math.round handles DST transitions where midnight-to-midnight can be 23 or 25 hours)
-  const dayDiff = Math.round((todayStart.getTime() - emailStart.getTime()) / (24 * 60 * 60 * 1000));
+  // Calculate calendar-day difference
+  const dayDiff = Math.floor((todayUtc - emailUtc) / (24 * 60 * 60 * 1000));
 
   // Today or future dates: Show time (HH:MM)
   if (dayDiff <= 0) {

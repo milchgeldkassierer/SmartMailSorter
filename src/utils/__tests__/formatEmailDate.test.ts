@@ -1,7 +1,17 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest';
 import { formatEmailDate } from '../formatEmailDate';
 
 describe('formatEmailDate', () => {
+  // Freeze system time so tests relying on "today", "yesterday", specific weekdays, etc.
+  // don't break when real time moves past the expected windows.
+  beforeAll(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-02-11T12:00:00'));
+  });
+
+  afterAll(() => {
+    vi.useRealTimers();
+  });
   describe('Edge Cases', () => {
     it('should handle null input', () => {
       const result = formatEmailDate(null);
@@ -169,15 +179,14 @@ describe('formatEmailDate', () => {
     });
 
     it('should return correct day name for specific weekdays', () => {
-      // This test creates a date for a known weekday
-      // February 10, 2026 is a Tuesday (Dienstag)
-      const tuesday = new Date(2026, 1, 10, 14, 30).getTime();
-      const result = formatEmailDate(tuesday);
-      expect(result).toBe('Dienstag');
+      // Frozen time is Feb 11 (Wed). Feb 8 is 3 days ago → Sunday (Sonntag)
+      const sunday = new Date(2026, 1, 8, 14, 30).getTime();
+      const result = formatEmailDate(sunday);
+      expect(result).toBe('Sonntag');
     });
 
     it('should return correct day name for Monday', () => {
-      // February 9, 2026 is a Monday (Montag)
+      // Frozen time is Feb 11 (Wed). Feb 9 is 2 days ago → Monday (Montag)
       const monday = new Date(2026, 1, 9, 10, 0).getTime();
       const result = formatEmailDate(monday);
       expect(result).toBe('Montag');
