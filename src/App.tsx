@@ -13,6 +13,7 @@ import { useCategories } from './hooks/useCategories';
 import { useSelection } from './hooks/useSelection';
 import { useBatchOperations } from './hooks/useBatchOperations';
 import { useSync } from './hooks/useSync';
+import { useDialogContext } from './contexts/DialogContext';
 import TopBar from './components/TopBar';
 import BatchActionBar from './components/BatchActionBar';
 import ProgressBar from './components/ProgressBar';
@@ -23,6 +24,7 @@ const App: React.FC = () => {
     useAccounts();
   const { aiSettings, setAiSettings } = useAISettings();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const dialog = useDialogContext();
 
   const {
     setData,
@@ -177,6 +179,7 @@ const App: React.FC = () => {
     onUpdateEmails: (updateFn) => updateActiveAccountData((prev) => ({ ...prev, emails: updateFn(prev.emails) })),
     onUpdateCategories: (categories) => updateActiveAccountData((prev) => ({ ...prev, categories })),
     onOpenSettings: () => setIsSettingsOpen(true),
+    dialog,
   });
 
   const { isSyncing, syncAccount } = useSync({
@@ -185,6 +188,7 @@ const App: React.FC = () => {
     onAccountsUpdate: setAccounts,
     onDataUpdate: (accountId, { emails }) =>
       setData((prev: Record<string, AccountData>) => ({ ...prev, [accountId]: { ...prev[accountId], emails } })),
+    dialog,
   });
 
   // Load initial data
@@ -206,10 +210,15 @@ const App: React.FC = () => {
         }
       } catch (error) {
         console.error('Failed to initialize app:', error);
-        alert('Fehler beim Laden der Daten');
+        await dialog.alert({
+          title: 'Fehler',
+          message: 'Fehler beim Laden der Daten',
+          variant: 'danger',
+        });
       }
     })();
-  }, [setAccounts, setActiveAccountId, setData, setIsAuthenticated]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [setAccounts, setActiveAccountId, setData, setIsAuthenticated, dialog.alert]);
 
   // Fetch emails when switching accounts
   useEffect(() => {
@@ -226,10 +235,15 @@ const App: React.FC = () => {
         }));
       } catch (error) {
         console.error('Failed to switch account:', error);
-        alert('Fehler beim Laden des Kontos');
+        await dialog.alert({
+          title: 'Fehler',
+          message: 'Fehler beim Laden des Kontos',
+          variant: 'danger',
+        });
       }
     })();
-  }, [activeAccountId, autoDiscoverFolders, setData]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeAccountId, autoDiscoverFolders, setData, dialog.alert]);
 
   const handleAddAccount = async (newAccount: ImapAccount) => {
     if (window.electron) {
@@ -248,7 +262,11 @@ const App: React.FC = () => {
         }));
         setIsAuthenticated(true);
       } catch {
-        alert('Konto konnte nicht hinzugefügt werden. Prüfe die Daten.');
+        await dialog.alert({
+          title: 'Fehler',
+          message: 'Konto konnte nicht hinzugefügt werden. Prüfe die Daten.',
+          variant: 'danger',
+        });
       } finally {
         setIsConnecting(false);
       }

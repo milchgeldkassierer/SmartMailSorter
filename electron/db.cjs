@@ -519,8 +519,20 @@ function renameSmartCategory(oldName, newName) {
   return { success: true };
 }
 
+function close() {
+  if (db) {
+    try {
+      db.close();
+    } catch (_e) {
+      // Ignore close errors
+    }
+    db = null;
+  }
+}
+
 module.exports = {
   init,
+  close,
   getAccounts,
   getAccountWithPassword,
   addAccount,

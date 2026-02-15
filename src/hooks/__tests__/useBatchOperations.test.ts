@@ -49,6 +49,11 @@ describe('useBatchOperations', () => {
     apiKey: 'test-key',
   };
 
+  const mockDialog = {
+    confirm: vi.fn().mockResolvedValue(true),
+    alert: vi.fn().mockResolvedValue(undefined),
+  };
+
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -68,6 +73,7 @@ describe('useBatchOperations', () => {
           onUpdateEmails: vi.fn(),
           onUpdateCategories: vi.fn(),
           onOpenSettings: vi.fn(),
+          dialog: mockDialog,
         })
       );
 
@@ -94,6 +100,7 @@ describe('useBatchOperations', () => {
           onUpdateEmails: vi.fn(),
           onUpdateCategories: vi.fn(),
           onOpenSettings: vi.fn(),
+          dialog: mockDialog,
         })
       );
 
@@ -128,6 +135,7 @@ describe('useBatchOperations', () => {
           onUpdateEmails: vi.fn(),
           onUpdateCategories: vi.fn(),
           onOpenSettings: vi.fn(),
+          dialog: mockDialog,
         })
       );
 
@@ -162,6 +170,7 @@ describe('useBatchOperations', () => {
           onUpdateEmails: vi.fn(),
           onUpdateCategories: vi.fn(),
           onOpenSettings: vi.fn(),
+          dialog: mockDialog,
         })
       );
 
@@ -195,6 +204,7 @@ describe('useBatchOperations', () => {
           onUpdateEmails: vi.fn(),
           onUpdateCategories: vi.fn(),
           onOpenSettings: vi.fn(),
+          dialog: mockDialog,
         })
       );
 
@@ -206,7 +216,8 @@ describe('useBatchOperations', () => {
     });
 
     it('should display error alert on failure', async () => {
-      const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
+      const dialogAlert = vi.fn().mockResolvedValue(undefined);
+      const testDialog = { ...mockDialog, alert: dialogAlert };
       const onToggleRead = vi.fn().mockRejectedValue(new Error('Network error'));
       const onClearSelection = vi.fn();
       const unreadEmail: Email = { ...mockEmail1, isRead: false };
@@ -224,6 +235,7 @@ describe('useBatchOperations', () => {
           onUpdateEmails: vi.fn(),
           onUpdateCategories: vi.fn(),
           onOpenSettings: vi.fn(),
+          dialog: testDialog,
         })
       );
 
@@ -231,8 +243,11 @@ describe('useBatchOperations', () => {
         await result.current.handleBatchMarkRead();
       });
 
-      expect(alertSpy).toHaveBeenCalledWith('Einige Emails konnten nicht aktualisiert werden');
-      alertSpy.mockRestore();
+      expect(dialogAlert).toHaveBeenCalledWith({
+        title: 'Fehler',
+        message: 'Einige Emails konnten nicht aktualisiert werden',
+        variant: 'danger',
+      });
     });
 
     it('should do nothing when selectedIds is empty', async () => {
@@ -252,6 +267,7 @@ describe('useBatchOperations', () => {
           onUpdateEmails: vi.fn(),
           onUpdateCategories: vi.fn(),
           onOpenSettings: vi.fn(),
+          dialog: mockDialog,
         })
       );
 
@@ -283,6 +299,7 @@ describe('useBatchOperations', () => {
           onUpdateEmails: vi.fn(),
           onUpdateCategories: vi.fn(),
           onOpenSettings: vi.fn(),
+          dialog: mockDialog,
         })
       );
 
@@ -302,7 +319,8 @@ describe('useBatchOperations', () => {
     it('should not clear selection on failure', async () => {
       const onToggleRead = vi.fn().mockRejectedValue(new Error('Failed'));
       const onClearSelection = vi.fn();
-      const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
+      const dialogAlert = vi.fn().mockResolvedValue(undefined);
+      const testDialog = { ...mockDialog, alert: dialogAlert };
       const unreadEmail: Email = { ...mockEmail1, isRead: false };
 
       const { result } = renderHook(() =>
@@ -318,6 +336,7 @@ describe('useBatchOperations', () => {
           onUpdateEmails: vi.fn(),
           onUpdateCategories: vi.fn(),
           onOpenSettings: vi.fn(),
+          dialog: testDialog,
         })
       );
 
@@ -327,8 +346,7 @@ describe('useBatchOperations', () => {
 
       // Selection should NOT be cleared on failure
       expect(onClearSelection).not.toHaveBeenCalled();
-      expect(alertSpy).toHaveBeenCalled();
-      alertSpy.mockRestore();
+      expect(dialogAlert).toHaveBeenCalled();
     });
   });
 
@@ -347,6 +365,7 @@ describe('useBatchOperations', () => {
           onUpdateEmails: vi.fn(),
           onUpdateCategories: vi.fn(),
           onOpenSettings: vi.fn(),
+          dialog: mockDialog,
         })
       );
 
@@ -373,6 +392,7 @@ describe('useBatchOperations', () => {
           onUpdateEmails: vi.fn(),
           onUpdateCategories: vi.fn(),
           onOpenSettings: vi.fn(),
+          dialog: mockDialog,
         })
       );
 
@@ -407,6 +427,7 @@ describe('useBatchOperations', () => {
           onUpdateEmails: vi.fn(),
           onUpdateCategories: vi.fn(),
           onOpenSettings: vi.fn(),
+          dialog: mockDialog,
         })
       );
 
@@ -441,6 +462,7 @@ describe('useBatchOperations', () => {
           onUpdateEmails: vi.fn(),
           onUpdateCategories: vi.fn(),
           onOpenSettings: vi.fn(),
+          dialog: mockDialog,
         })
       );
 
@@ -474,6 +496,7 @@ describe('useBatchOperations', () => {
           onUpdateEmails: vi.fn(),
           onUpdateCategories: vi.fn(),
           onOpenSettings: vi.fn(),
+          dialog: mockDialog,
         })
       );
 
@@ -485,7 +508,8 @@ describe('useBatchOperations', () => {
     });
 
     it('should display error alert on failure', async () => {
-      const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
+      const dialogAlert = vi.fn().mockResolvedValue(undefined);
+      const testDialog = { ...mockDialog, alert: dialogAlert };
       const onToggleFlag = vi.fn().mockRejectedValue(new Error('Network error'));
       const onClearSelection = vi.fn();
       const unflaggedEmail: Email = { ...mockEmail1, isFlagged: false };
@@ -503,6 +527,7 @@ describe('useBatchOperations', () => {
           onUpdateEmails: vi.fn(),
           onUpdateCategories: vi.fn(),
           onOpenSettings: vi.fn(),
+          dialog: testDialog,
         })
       );
 
@@ -510,8 +535,11 @@ describe('useBatchOperations', () => {
         await result.current.handleBatchFlag();
       });
 
-      expect(alertSpy).toHaveBeenCalledWith('Einige Emails konnten nicht aktualisiert werden');
-      alertSpy.mockRestore();
+      expect(dialogAlert).toHaveBeenCalledWith({
+        title: 'Fehler',
+        message: 'Einige Emails konnten nicht aktualisiert werden',
+        variant: 'danger',
+      });
     });
 
     it('should do nothing when selectedIds is empty', async () => {
@@ -531,6 +559,7 @@ describe('useBatchOperations', () => {
           onUpdateEmails: vi.fn(),
           onUpdateCategories: vi.fn(),
           onOpenSettings: vi.fn(),
+          dialog: mockDialog,
         })
       );
 
@@ -562,6 +591,7 @@ describe('useBatchOperations', () => {
           onUpdateEmails: vi.fn(),
           onUpdateCategories: vi.fn(),
           onOpenSettings: vi.fn(),
+          dialog: mockDialog,
         })
       );
 
@@ -581,7 +611,8 @@ describe('useBatchOperations', () => {
     it('should not clear selection on failure', async () => {
       const onToggleFlag = vi.fn().mockRejectedValue(new Error('Failed'));
       const onClearSelection = vi.fn();
-      const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
+      const dialogAlert = vi.fn().mockResolvedValue(undefined);
+      const testDialog = { ...mockDialog, alert: dialogAlert };
       const unflaggedEmail: Email = { ...mockEmail1, isFlagged: false };
 
       const { result } = renderHook(() =>
@@ -597,6 +628,7 @@ describe('useBatchOperations', () => {
           onUpdateEmails: vi.fn(),
           onUpdateCategories: vi.fn(),
           onOpenSettings: vi.fn(),
+          dialog: testDialog,
         })
       );
 
@@ -606,8 +638,7 @@ describe('useBatchOperations', () => {
 
       // Selection should NOT be cleared on failure
       expect(onClearSelection).not.toHaveBeenCalled();
-      expect(alertSpy).toHaveBeenCalled();
-      alertSpy.mockRestore();
+      expect(dialogAlert).toHaveBeenCalled();
     });
   });
 
@@ -626,6 +657,7 @@ describe('useBatchOperations', () => {
           onUpdateEmails: vi.fn(),
           onUpdateCategories: vi.fn(),
           onOpenSettings: vi.fn(),
+          dialog: mockDialog,
         })
       );
 
@@ -652,6 +684,7 @@ describe('useBatchOperations', () => {
           onUpdateEmails: vi.fn(),
           onUpdateCategories: vi.fn(),
           onOpenSettings: vi.fn(),
+          dialog: mockDialog,
         })
       );
 
