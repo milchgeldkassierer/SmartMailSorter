@@ -161,7 +161,7 @@ const App: React.FC = () => {
     onSelectEmail: handleSelectEmail,
   });
 
-  const { isSorting, sortProgress, canSmartSort, handleBatchDelete, handleBatchSmartSort, handleBatchMarkRead } =
+  const { isSorting, sortProgress, canSmartSort, handleBatchDelete, handleBatchSmartSort, handleBatchMarkRead, handleBatchFlag } =
     useBatchOperations({
       selectedIds,
       currentEmails,
@@ -169,6 +169,7 @@ const App: React.FC = () => {
       aiSettings,
       onDeleteEmail: handleDeleteEmail,
       onToggleRead: handleToggleRead,
+      onToggleFlag: handleToggleFlag,
       onClearSelection: clearSelection,
       onUpdateEmails: (updateFn) => updateActiveAccountData((prev) => ({ ...prev, emails: updateFn(prev.emails) })),
       onUpdateCategories: (categories) => updateActiveAccountData((prev) => ({ ...prev, categories })),
@@ -334,6 +335,7 @@ const App: React.FC = () => {
           onBatchDelete={handleBatchDelete}
           onBatchSmartSort={handleBatchSmartSort}
           onBatchMarkRead={handleBatchMarkRead}
+          onBatchFlag={handleBatchFlag}
           canSmartSort={canSmartSort}
           aiSettings={aiSettings}
         />
