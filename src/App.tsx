@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { DefaultEmailCategory, ImapAccount, Category, AccountData, FLAGGED_FOLDER, SYSTEM_FOLDERS } from './types';
+import { DefaultEmailCategory, ImapAccount, Category, AccountData, FLAGGED_FOLDER, SYSTEM_FOLDERS, TRASH_FOLDER } from './types';
 import Sidebar from './components/Sidebar';
 import EmailList from './components/EmailList';
 import EmailView from './components/EmailView';
@@ -77,16 +77,16 @@ const App: React.FC = () => {
   const handleDeleteEmail = async (id: string) => {
     const emailToDelete = currentEmails.find((e) => e.id === id);
     if (!emailToDelete) return;
-    const isAlreadyInTrash = emailToDelete.folder === 'Papierkorb';
+    const isAlreadyInTrash = emailToDelete.folder === TRASH_FOLDER;
 
     if (isAlreadyInTrash) {
-      // Permanently delete if already in Papierkorb
+      // Permanently delete if already in trash
       updateActiveAccountData((prev) => ({ ...prev, emails: prev.emails.filter((e) => e.id !== id) }));
     } else {
-      // Move to Papierkorb in local state
+      // Move to trash in local state
       updateActiveAccountData((prev) => ({
         ...prev,
-        emails: prev.emails.map((e) => (e.id === id ? { ...e, folder: 'Papierkorb' } : e)),
+        emails: prev.emails.map((e) => (e.id === id ? { ...e, folder: TRASH_FOLDER } : e)),
       }));
     }
     if (selectedEmailId === id) setSelectedEmailId(null);
@@ -231,11 +231,10 @@ const App: React.FC = () => {
           previousState: previousStates,
           description: `${emailIds.length} Email(s) markiert`,
           execute: () => {
-            previousStates.forEach((prev, id) => {
-              const email = currentEmails.find((e) => e.id === id);
-              if (email && email.isFlagged !== prev.isFlagged) {
-                handleToggleFlag(id).catch(() => {});
-              }
+            // Unconditionally toggle back — each email was toggled once,
+            // so toggling again restores the previous state.
+            previousStates.forEach((_prev, id) => {
+              handleToggleFlag(id).catch(() => {});
             });
           },
         });

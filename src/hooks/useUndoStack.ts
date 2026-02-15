@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 
 export interface UndoAction {
   type: 'move-category' | 'move-folder' | 'toggle-flag';
@@ -19,6 +19,8 @@ const MAX_STACK_SIZE = 20;
 
 export const useUndoStack = (): UseUndoStackReturn => {
   const [stack, setStack] = useState<UndoAction[]>([]);
+  const stackRef = useRef<UndoAction[]>([]);
+  stackRef.current = stack;
 
   const pushAction = useCallback((action: UndoAction) => {
     setStack((prev) => {
@@ -31,17 +33,15 @@ export const useUndoStack = (): UseUndoStackReturn => {
   }, []);
 
   const undo = useCallback(() => {
-    setStack((prev) => {
-      if (prev.length === 0) return prev;
-      const next = [...prev];
-      const action = next.pop()!;
-      try {
-        action.execute();
-      } catch {
-        // Silently handle undo failures
-      }
-      return next;
-    });
+    const current = stackRef.current;
+    if (current.length === 0) return;
+    const action = current[current.length - 1];
+    setStack((prev) => (prev.length === 0 ? prev : prev.slice(0, -1)));
+    try {
+      action.execute();
+    } catch {
+      // Silently handle undo failures
+    }
   }, []);
 
   const canUndo = stack.length > 0;

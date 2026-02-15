@@ -15,6 +15,7 @@ const db = require('./db.cjs');
 const imap = require('./imap.cjs');
 const { sanitizeFilename } = require('./utils/security.cjs');
 const { createCspHeaderHandler } = require('./utils/csp-config.cjs');
+const { TRASH_FOLDER } = require('./folderConstants.cjs');
 
 const isDev = !app.isPackaged;
 
@@ -230,8 +231,8 @@ app.whenReady().then(() => {
     const result = await imap.deleteEmail(accountWithPassword, uid, folder);
     if (result.success) {
       if (result.movedToTrash) {
-        // Move to Papierkorb in DB instead of deleting
-        db.updateEmailFolder(emailId, 'Papierkorb');
+        // Move to trash in DB instead of deleting
+        db.updateEmailFolder(emailId, TRASH_FOLDER);
       } else {
         // Permanently deleted (was already in Trash or no Trash folder found)
         db.deleteEmail(emailId);
@@ -272,12 +273,12 @@ app.whenReady().then(() => {
     return result;
   });
 
-  ipcMain.handle('move-email', (event, { emailId, category, targetType }) => {
-    if (targetType === 'folder') {
-      return db.updateEmailFolder(emailId, category);
+  ipcMain.handle('move-email', (event, { emailId, target, type }) => {
+    if (type === 'folder') {
+      return db.updateEmailFolder(emailId, target);
     }
     // Default: smart category move
-    return db.updateEmailSmartCategory(emailId, category, null, null, 0);
+    return db.updateEmailSmartCategory(emailId, target, null, null, 0);
   });
 
   ipcMain.handle('update-email-smart-category', (event, { emailId, category, summary, reasoning, confidence }) => {
