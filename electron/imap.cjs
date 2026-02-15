@@ -18,6 +18,7 @@ const {
   TRASH_FOLDER,
 } = require('./folderConstants.cjs');
 const logger = require('./utils/logger.cjs');
+const notifications = require('./notifications.cjs');
 
 logger.info('IMAP Module Loaded: Version LargeScaleSync_v1');
 
@@ -208,6 +209,11 @@ async function processMessages(client, messages, account, targetCategory) {
 
         saveEmail(email);
         savedCount++;
+
+        // Trigger notification for new unread emails
+        if (!email.isRead) {
+          notifications.showNotification(email, account.id);
+        }
       } catch (parseErr) {
         logger.error(`[IMAP] Failed to parse message UID ${currentUid}:`, parseErr.message);
         // Save Error Placeholder
