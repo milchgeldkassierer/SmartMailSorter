@@ -16,8 +16,8 @@
     "test:components:watch": "vitest --config vitest.config.components.ts",
     "test:all": "npm run rebuild:node && vitest run && vitest run --config vitest.config.components.ts",
     "test:all:coverage": "npm run rebuild:node && vitest run --coverage && vitest run --config vitest.config.components.ts --coverage",
-    "test:workspace": "npm run rebuild:node && vitest run --workspace vitest.workspace.ts",
-    "test:workspace:coverage": "npm run rebuild:node && vitest run --workspace vitest.workspace.ts --coverage",
+    "test:workspace": "npm run rebuild:node && vitest run",
+    "test:workspace:coverage": "npm run rebuild:node && vitest run --coverage",
     "build": "vite build",
     "preview": "vite preview",
     "lint": "eslint .",
@@ -26,7 +26,7 @@
     "format:check": "prettier --check .",
     "rebuild:node": "npm rebuild better-sqlite3",
     "rebuild:electron": "electron-rebuild -f -m node_modules/better-sqlite3",
-    "electron:dev": "npm run rebuild:electron && concurrently \"npm run dev\" \"wait-on tcp:3000 && electron .\"",
+    "electron:dev": "npm run rebuild:electron && concurrently --kill-others \"npm run dev\" \"wait-on tcp:3000 && electron .\"",
     "electron:build": "npm run build && electron-builder"
   },
   "dependencies": {

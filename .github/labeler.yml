@@ -1,0 +1,43 @@
+electron:
+  - changed-files:
+      - any-glob-to-any-file: 'electron/**'
+
+frontend:
+  - changed-files:
+      - any-glob-to-any-file: 'src/**'
+
+components:
+  - changed-files:
+      - any-glob-to-any-file: 'src/components/**'
+
+ci:
+  - changed-files:
+      - any-glob-to-any-file: '.github/**'
+
+config:
+  - changed-files:
+      - any-glob-to-any-file:
+          - '*.config.*'
+          - 'tsconfig*.json'
+          - '.prettierrc*'
+          - '.eslintrc*'
+          - 'eslint.config.*'
+
+tests:
+  - changed-files:
+      - any-glob-to-any-file:
+          - '**/*.test.*'
+          - '**/*.spec.*'
+          - 'vitest.*'
+
+documentation:
+  - changed-files:
+      - any-glob-to-any-file:
+          - '**/*.md'
+          - 'docs/**'
+
+dependencies:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'package.json'
+          - 'package-lock.json'

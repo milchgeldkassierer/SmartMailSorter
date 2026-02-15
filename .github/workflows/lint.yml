@@ -1,0 +1,40 @@
+name: Lint
+
+on:
+  pull_request:
+    branches: [master]
+
+concurrency:
+  group: lint-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  typescript:
+    name: TypeScript
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run lint
+      - run: npx tsc --noEmit
+
+  lint-complete:
+    name: Lint Complete
+    if: always()
+    needs: [typescript]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check all lint jobs
+        run: |
+          if [[ "${{ needs.typescript.result }}" != "success" ]]; then
+            echo "typescript result: ${{ needs.typescript.result }}"
+            exit 1
+          fi
+          echo "All lint jobs passed successfully"

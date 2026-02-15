@@ -11,7 +11,7 @@ interface UseSelectionReturn {
   handleSelection: (id: string, multi: boolean, range: boolean) => void;
   handleRowClick: (id: string, e: React.MouseEvent) => void;
   handleToggleSelection: (id: string, shiftKey?: boolean) => void;
-  handleSelectAll: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  handleSelectAll: () => void;
   clearSelection: () => void;
 }
 
