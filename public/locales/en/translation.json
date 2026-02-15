@@ -88,6 +88,8 @@
     "saveSettings": "Save settings"
   },
   "generalTab": {
+    "language": "Language",
+    "selectLanguage": "Select language",
     "dataManagement": "Data Management",
     "resetDatabase": "Completely reset database & restart",
     "resetDatabaseTitle": "Reset database",

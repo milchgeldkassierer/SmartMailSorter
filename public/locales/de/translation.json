@@ -88,6 +88,8 @@
     "saveSettings": "Einstellungen speichern"
   },
   "generalTab": {
+    "language": "Sprache",
+    "selectLanguage": "Sprache auswählen",
     "dataManagement": "Datenverwaltung",
     "resetDatabase": "Datenbank komplett zurücksetzen & neu starten",
     "resetDatabaseTitle": "Datenbank zurücksetzen",
