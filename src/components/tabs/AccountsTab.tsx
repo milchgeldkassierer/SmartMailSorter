@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ImapAccount } from '../../types';
 import { PlusCircle, Trash2, Server, CheckCircle, AlertCircle, RefreshCw } from '../Icon';
 
@@ -9,6 +10,7 @@ interface AccountsTabProps {
 }
 
 const AccountsTab: React.FC<AccountsTabProps> = ({ accounts, onAddAccount, onRemoveAccount }) => {
+  const { t } = useTranslation();
   const [isAdding, setIsAdding] = useState(false);
 
   // New Account Form State
@@ -31,7 +33,7 @@ const AccountsTab: React.FC<AccountsTabProps> = ({ accounts, onAddAccount, onRem
 
     if (!window.electron) {
       setTestStatus('error');
-      setTestMessage('Web Mode: Test nicht möglich');
+      setTestMessage(t('accountsTab.webModeTestNotPossible'));
       return;
     }
 
@@ -57,11 +59,11 @@ const AccountsTab: React.FC<AccountsTabProps> = ({ accounts, onAddAccount, onRem
         setTestStatus('success');
       } else {
         setTestStatus('error');
-        setTestMessage(result.error || 'Verbindung fehlgeschlagen');
+        setTestMessage(result.error || t('accountsTab.connectionFailed'));
       }
     } catch {
       setTestStatus('error');
-      setTestMessage('Fehler beim Testen');
+      setTestMessage(t('accountsTab.testingError'));
     }
   };
 
@@ -115,26 +117,26 @@ const AccountsTab: React.FC<AccountsTabProps> = ({ accounts, onAddAccount, onRem
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h3 className="font-semibold text-slate-800">Verbundene Konten</h3>
+        <h3 className="font-semibold text-slate-800">{t('accountsTab.connectedAccounts')}</h3>
         {!isAdding && (
           <button
             onClick={() => setIsAdding(true)}
             className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700 font-medium"
           >
             <PlusCircle className="w-4 h-4" />
-            Konto hinzufügen
+            {t('accountsTab.addAccount')}
           </button>
         )}
       </div>
 
       {isAdding && (
         <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-4 animate-in fade-in slide-in-from-top-4">
-          <h4 className="text-sm font-semibold text-slate-700">Neues Konto verbinden</h4>
+          <h4 className="text-sm font-semibold text-slate-700">{t('accountsTab.connectNewAccount')}</h4>
 
           {/* Provider Selection */}
           <div className="grid grid-cols-2 gap-4 mb-2">
             <div className="col-span-2">
-              <label className="block text-xs text-slate-500 mb-1">Anbieter</label>
+              <label className="block text-xs text-slate-500 mb-1">{t('accountsTab.provider')}</label>
               <div className="flex gap-2">
                 {['gmx', 'webde', 'gmail', 'other'].map((p) => (
                   <button
@@ -163,7 +165,7 @@ const AccountsTab: React.FC<AccountsTabProps> = ({ accounts, onAddAccount, onRem
                         : 'bg-white border-slate-300 text-slate-600 hover:bg-slate-50'
                     }`}
                   >
-                    {p === 'gmx' ? 'GMX' : p === 'webde' ? 'Web.de' : p === 'gmail' ? 'Gmail' : 'Andere'}
+                    {t(`accountsTab.providers.${p}`)}
                   </button>
                 ))}
               </div>
@@ -172,32 +174,32 @@ const AccountsTab: React.FC<AccountsTabProps> = ({ accounts, onAddAccount, onRem
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs text-slate-500 mb-1">Name (Anzeige)</label>
+              <label className="block text-xs text-slate-500 mb-1">{t('accountsTab.displayName')}</label>
               <input
                 type="text"
                 className="w-full bg-white border border-slate-300 rounded px-3 py-2 text-sm text-slate-900 focus:border-blue-500 outline-none placeholder-slate-400"
-                placeholder="z.B. Arbeit"
+                placeholder={t('accountsTab.displayNamePlaceholder')}
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
               />
             </div>
             <div>
-              <label className="block text-xs text-slate-500 mb-1">Email Adresse</label>
+              <label className="block text-xs text-slate-500 mb-1">{t('accountsTab.emailAddress')}</label>
               <input
                 type="email"
                 className="w-full bg-white border border-slate-300 rounded px-3 py-2 text-sm text-slate-900 focus:border-blue-500 outline-none placeholder-slate-400"
-                placeholder="name@gmx.de"
+                placeholder={t('accountsTab.emailPlaceholder')}
                 value={newEmail}
                 onChange={(e) => setNewEmail(e.target.value)}
               />
             </div>
 
             <div className="col-span-2">
-              <label className="block text-xs text-slate-500 mb-1">Passwort</label>
+              <label className="block text-xs text-slate-500 mb-1">{t('accountsTab.password')}</label>
               <input
                 type="password"
                 className="w-full bg-white border border-slate-300 rounded px-3 py-2 text-sm text-slate-900 focus:border-blue-500 outline-none placeholder-slate-400"
-                placeholder="Email Passwort"
+                placeholder={t('accountsTab.passwordPlaceholder')}
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
               />
@@ -206,17 +208,17 @@ const AccountsTab: React.FC<AccountsTabProps> = ({ accounts, onAddAccount, onRem
             {newProvider === 'other' && (
               <>
                 <div>
-                  <label className="block text-xs text-slate-500 mb-1">IMAP Server</label>
+                  <label className="block text-xs text-slate-500 mb-1">{t('accountsTab.imapServer')}</label>
                   <input
                     type="text"
                     className="w-full bg-white border border-slate-300 rounded px-3 py-2 text-sm text-slate-900 focus:border-blue-500 outline-none placeholder-slate-400"
-                    placeholder="imap.example.com"
+                    placeholder={t('accountsTab.imapServerPlaceholder')}
                     value={newHost}
                     onChange={(e) => setNewHost(e.target.value)}
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-slate-500 mb-1">Port</label>
+                  <label className="block text-xs text-slate-500 mb-1">{t('accountsTab.port')}</label>
                   <input
                     type="number"
                     className="w-full bg-white border border-slate-300 rounded px-3 py-2 text-sm text-slate-900 focus:border-blue-500 outline-none placeholder-slate-400"
@@ -234,7 +236,7 @@ const AccountsTab: React.FC<AccountsTabProps> = ({ accounts, onAddAccount, onRem
                 {testStatus === 'testing' && <RefreshCw className="w-4 h-4 animate-spin text-blue-600" />}
                 {testStatus === 'success' && (
                   <div className="flex items-center gap-1 text-green-600 text-sm">
-                    <CheckCircle className="w-4 h-4" /> <span>Verbunden</span>
+                    <CheckCircle className="w-4 h-4" /> <span>{t('accountsTab.connectionSuccess')}</span>
                   </div>
                 )}
                 {testStatus === 'error' && (
@@ -249,20 +251,20 @@ const AccountsTab: React.FC<AccountsTabProps> = ({ accounts, onAddAccount, onRem
                   disabled={!newEmail || !newPassword || testStatus === 'testing'}
                   className="px-3 py-2 text-sm text-blue-600 hover:bg-blue-50 border border-blue-200 rounded hover:border-blue-300 transition-colors disabled:opacity-50"
                 >
-                  Verbindung testen
+                  {t('accountsTab.testConnection')}
                 </button>
                 <button
                   onClick={handleCancelAdd}
                   className="px-4 py-2 text-sm text-slate-600 hover:bg-slate-200 rounded"
                 >
-                  Abbrechen
+                  {t('common.cancel')}
                 </button>
                 <button
                   onClick={handleSaveAccount}
                   disabled={!newEmail || !newPassword}
                   className="px-4 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
                 >
-                  Speichern & Verbinden
+                  {t('accountsTab.saveAndConnect')}
                 </button>
               </div>
             </div>
@@ -295,7 +297,7 @@ const AccountsTab: React.FC<AccountsTabProps> = ({ accounts, onAddAccount, onRem
               <button
                 onClick={() => onRemoveAccount(acc.id)}
                 className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                title="Konto entfernen"
+                title={t('accountsTab.removeAccount')}
               >
                 <Trash2 className="w-4 h-4" />
               </button>

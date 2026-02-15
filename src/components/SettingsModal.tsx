@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ImapAccount, AISettings } from '../types';
 import { X, Sparkles } from './Icon';
 import AccountsTab from './tabs/AccountsTab';
@@ -25,6 +26,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   aiSettings,
   onSaveAISettings,
 }) => {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<'accounts' | 'smartsort' | 'general'>('accounts');
 
   if (!isOpen) return null;
@@ -34,7 +36,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-slate-100">
-          <h2 className="text-xl font-bold text-slate-800">Einstellungen</h2>
+          <h2 className="text-xl font-bold text-slate-800">{t('settingsModal.title')}</h2>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600">
             <X className="w-6 h-6" />
           </button>
@@ -49,7 +51,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                 activeTab === 'accounts' ? 'bg-blue-100 text-blue-700' : 'text-slate-600 hover:bg-slate-100'
               }`}
             >
-              IMAP Konten
+              {t('settingsModal.tabs.accounts')}
             </button>
             <button
               onClick={() => setActiveTab('smartsort')}
@@ -58,7 +60,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
               }`}
             >
               <Sparkles className="w-3 h-3" />
-              Smart Sort
+              {t('settingsModal.tabs.smartSort')}
             </button>
             <button
               onClick={() => setActiveTab('general')}
@@ -66,7 +68,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                 activeTab === 'general' ? 'bg-blue-100 text-blue-700' : 'text-slate-600 hover:bg-slate-100'
               }`}
             >
-              Allgemein
+              {t('settingsModal.tabs.general')}
             </button>
           </div>
 
