@@ -71,24 +71,21 @@ export const useDialog = (): UseDialogReturn => {
     });
   }, []);
 
-  const handleConfirm = useCallback(
-    (value?: string) => {
-      setDialogState((prev) => {
-        if (resolveRef.current) {
-          if (prev.type === 'confirm') {
-            resolveRef.current(true);
-          } else if (prev.type === 'prompt') {
-            resolveRef.current(value || null);
-          } else {
-            resolveRef.current(undefined);
-          }
-          resolveRef.current = null;
+  const handleConfirm = useCallback((value?: string) => {
+    setDialogState((prev) => {
+      if (resolveRef.current) {
+        if (prev.type === 'confirm') {
+          resolveRef.current(true);
+        } else if (prev.type === 'prompt') {
+          resolveRef.current(value || null);
+        } else {
+          resolveRef.current(undefined);
         }
-        return { ...prev, isOpen: false };
-      });
-    },
-    []
-  );
+        resolveRef.current = null;
+      }
+      return { ...prev, isOpen: false };
+    });
+  }, []);
 
   const handleClose = useCallback(() => {
     closeDialog();
