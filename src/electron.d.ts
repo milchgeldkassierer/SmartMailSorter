@@ -7,6 +7,8 @@ import {
   Attachment,
   Category,
   AISettings,
+  NotificationSettings,
+  NotificationOperationResult,
 } from './types';
 
 export {};
@@ -72,6 +74,10 @@ declare global {
       // AI Settings (safeStorage)
       saveAISettings: (settings: AISettings) => Promise<{ success: boolean; encrypted?: boolean; warning?: string }>;
       loadAISettings: () => Promise<AISettings | null>;
+
+      // Notification Settings
+      saveNotificationSettings: (settings: NotificationSettings) => Promise<NotificationOperationResult>;
+      loadNotificationSettings: () => Promise<NotificationSettings | null>;
     };
   }
 }
