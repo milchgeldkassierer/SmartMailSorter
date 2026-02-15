@@ -26,7 +26,7 @@
     "format:check": "prettier --check .",
     "rebuild:node": "npm rebuild better-sqlite3",
     "rebuild:electron": "electron-rebuild -f -m node_modules/better-sqlite3",
-    "electron:dev": "npm run rebuild:electron && concurrently \"npm run dev\" \"wait-on tcp:3000 && electron .\"",
+    "electron:dev": "npm run rebuild:electron && concurrently --kill-others \"npm run dev\" \"wait-on tcp:3000 && electron .\"",
     "electron:build": "npm run build && electron-builder"
   },
   "dependencies": {
