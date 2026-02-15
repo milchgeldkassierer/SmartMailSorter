@@ -1,3 +1,20 @@
 {
-   "signedContributors": []
+  "signedContributors": [
+    {
+      "name": "milchgeldkassierer",
+      "id": 139758955,
+      "comment_id": 3904976013,
+      "created_at": "2026-02-15T18:41:32Z",
+      "repoId": 1145891011,
+      "pullRequestNo": 45
+    },
+    {
+      "name": "milchgeldkassierer",
+      "id": 139758955,
+      "comment_id": 3904999721,
+      "created_at": "2026-02-15T18:55:18Z",
+      "repoId": 1145891011,
+      "pullRequestNo": 45
+    }
+  ]
 }
