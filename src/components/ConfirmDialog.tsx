@@ -110,7 +110,8 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   };
 
   const variantStyles = getVariantStyles();
-  const defaultConfirmText = type === 'alert' ? 'OK' : confirmText || (variant === 'danger' ? 'Löschen' : 'Bestätigen');
+  const defaultConfirmText =
+    confirmText || (type === 'alert' ? 'OK' : variant === 'danger' ? 'Löschen' : 'Bestätigen');
 
   return (
     <div

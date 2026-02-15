@@ -128,6 +128,12 @@ describe('ConfirmDialog - Integration Tests', () => {
         expect(screen.getByText('OK')).toBeInTheDocument();
       });
 
+      it('should allow custom confirm text for alerts', () => {
+        render(<ConfirmDialog {...defaultProps} type="alert" confirmText="Weiter" />);
+        expect(screen.getByText('Weiter')).toBeInTheDocument();
+        expect(screen.queryByText('OK')).not.toBeInTheDocument();
+      });
+
       it('should call onConfirm when OK button clicked', () => {
         render(<ConfirmDialog {...defaultProps} type="alert" />);
         const okButton = screen.getByText('OK');
