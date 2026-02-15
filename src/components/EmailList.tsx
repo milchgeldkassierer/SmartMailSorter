@@ -148,7 +148,7 @@ const EmailList: React.FC<EmailListProps> = ({
                   className={`p-1.5 rounded-full transition-all ${
                     email.isFlagged
                       ? 'text-yellow-400 opacity-100'
-                      : 'text-slate-400 opacity-0 group-hover:opacity-100 hover:bg-slate-200 hover:text-yellow-400'
+                      : 'text-slate-400 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto focus-visible:opacity-100 focus-visible:pointer-events-auto hover:bg-slate-200 hover:text-yellow-400'
                   }`}
                   title={email.isFlagged ? 'Markierung entfernen' : 'Markieren'}
                 >
