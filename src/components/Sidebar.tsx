@@ -16,8 +16,7 @@ import {
 } from './Icon';
 import { ImapAccount, DefaultEmailCategory, Category, SYSTEM_FOLDERS, FLAGGED_FOLDER } from '../types';
 import { formatTimeAgo } from '../utils/formatTimeAgo';
-import { useDialog } from '../hooks/useDialog';
-import ConfirmDialog from './ConfirmDialog';
+import { useDialogContext } from '../contexts/DialogContext';
 
 interface SidebarProps {
   selectedCategory: string;
@@ -55,7 +54,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   const [newCategoryName, setNewCategoryName] = useState('');
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; category: string } | null>(null);
-  const dialog = useDialog();
+  const dialog = useDialogContext();
 
   const activeAccount = accounts.find((a) => a.id === activeAccountId) || accounts[0];
 
@@ -448,21 +447,6 @@ const Sidebar: React.FC<SidebarProps> = ({
           <span>Logout</span>
         </button>
       </div>
-
-      {/* Confirm Dialog */}
-      <ConfirmDialog
-        isOpen={dialog.isOpen}
-        onClose={dialog.handleClose}
-        onConfirm={dialog.handleConfirm}
-        title={dialog.dialogState.title}
-        message={dialog.dialogState.message}
-        type={dialog.dialogState.type}
-        variant={dialog.dialogState.variant}
-        confirmText={dialog.dialogState.confirmText}
-        cancelText={dialog.dialogState.cancelText}
-        defaultValue={dialog.dialogState.defaultValue}
-        placeholder={dialog.dialogState.placeholder}
-      />
     </div>
   );
 };

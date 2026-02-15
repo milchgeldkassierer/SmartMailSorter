@@ -13,11 +13,10 @@ import { useCategories } from './hooks/useCategories';
 import { useSelection } from './hooks/useSelection';
 import { useBatchOperations } from './hooks/useBatchOperations';
 import { useSync } from './hooks/useSync';
-import { useDialog } from './hooks/useDialog';
+import { useDialogContext } from './contexts/DialogContext';
 import TopBar from './components/TopBar';
 import BatchActionBar from './components/BatchActionBar';
 import ProgressBar from './components/ProgressBar';
-import ConfirmDialog from './components/ConfirmDialog';
 
 const App: React.FC = () => {
   const { setIsAuthenticated, setIsConnecting } = useAuth();
@@ -25,7 +24,7 @@ const App: React.FC = () => {
     useAccounts();
   const { aiSettings, setAiSettings } = useAISettings();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const dialog = useDialog();
+  const dialog = useDialogContext();
 
   const {
     setData,
@@ -403,20 +402,6 @@ const App: React.FC = () => {
           onSaveAISettings={setAiSettings}
         />
       </div>
-
-      <ConfirmDialog
-        isOpen={dialog.isOpen}
-        title={dialog.dialogState.title}
-        message={dialog.dialogState.message}
-        type={dialog.dialogState.type}
-        variant={dialog.dialogState.variant}
-        confirmText={dialog.dialogState.confirmText}
-        cancelText={dialog.dialogState.cancelText}
-        defaultValue={dialog.dialogState.defaultValue}
-        placeholder={dialog.dialogState.placeholder}
-        onConfirm={dialog.handleConfirm}
-        onClose={dialog.handleClose}
-      />
     </div>
   );
 };

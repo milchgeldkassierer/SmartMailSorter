@@ -61,8 +61,9 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
       } else {
         onConfirm();
       }
+    } else {
+      onClose();
     }
-    onClose();
   };
 
   const handleOverlayClick = (e: React.MouseEvent) => {
@@ -71,7 +72,7 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
     }
   };
 
-  const handleKeyPress = (e: KeyboardEvent<HTMLInputElement>) => {
+  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && type === 'prompt') {
       e.preventDefault();
       handleConfirm();
@@ -133,7 +134,7 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
               type="text"
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
-              onKeyPress={handleKeyPress}
+              onKeyDown={handleKeyDown}
               placeholder={placeholder}
               className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               autoFocus

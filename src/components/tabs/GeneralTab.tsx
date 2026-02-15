@@ -1,10 +1,9 @@
 import React from 'react';
 import { Trash2 } from '../Icon';
-import { useDialog } from '../../hooks/useDialog';
-import ConfirmDialog from '../ConfirmDialog';
+import { useDialogContext } from '../../contexts/DialogContext';
 
 const GeneralTab: React.FC = () => {
-  const dialog = useDialog();
+  const dialog = useDialogContext();
 
   const handleResetDatabase = async () => {
     const confirmed = await dialog.confirm({
@@ -31,21 +30,6 @@ const GeneralTab: React.FC = () => {
         <Trash2 className="w-4 h-4" />
         Datenbank komplett zurücksetzen & neu starten
       </button>
-
-      {/* Confirm Dialog */}
-      <ConfirmDialog
-        isOpen={dialog.isOpen}
-        onClose={dialog.handleClose}
-        onConfirm={dialog.handleConfirm}
-        title={dialog.dialogState.title}
-        message={dialog.dialogState.message}
-        type={dialog.dialogState.type}
-        variant={dialog.dialogState.variant}
-        confirmText={dialog.dialogState.confirmText}
-        cancelText={dialog.dialogState.cancelText}
-        defaultValue={dialog.dialogState.defaultValue}
-        placeholder={dialog.dialogState.placeholder}
-      />
     </div>
   );
 };

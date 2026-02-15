@@ -5,10 +5,14 @@ import { sanitizeHtml } from '../utils/sanitizeHtml';
 
 /** Strip remote image src attributes, keeping data: URIs for inline images */
 function blockRemoteImages(html: string): string {
-  return html.replace(
+  // Block <img> src attributes pointing to remote URLs
+  let result = html.replace(
     /<img\s([^>]*?)src\s*=\s*["'](https?:\/\/[^"']*)["']/gi,
     "<img $1data-blocked-src=\"$2\" src=\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20'%3E%3C/svg%3E\""
   );
+  // Strip CSS url() references to remote resources in style attributes
+  result = result.replace(/url\s*\(\s*["']?(https?:\/\/[^"')]+)["']?\s*\)/gi, 'url()');
+  return result;
 }
 
 /** Build a full HTML document for the iframe */
@@ -101,7 +105,7 @@ const EmailView: React.FC<EmailViewProps> = ({ email }) => {
       cancelled = true;
       clearTimeout(timeoutId);
     };
-  }, [email?.bodyHtml, imagesLoaded]);
+  }, [email?.id, email?.bodyHtml, imagesLoaded]);
 
   // Intercept link clicks inside iframe to open in external browser
   const handleIframeLoad = useCallback(() => {
@@ -112,7 +116,11 @@ const EmailView: React.FC<EmailViewProps> = ({ email }) => {
       const anchor = target.closest('a');
       if (anchor?.href && window.electron?.openExternal) {
         e.preventDefault();
-        window.electron.openExternal(anchor.href);
+        window.electron.openExternal(anchor.href).then((result) => {
+          if (!result.success) {
+            setLinkError(result.message || 'Link konnte nicht geöffnet werden');
+          }
+        });
       }
     });
   }, []);

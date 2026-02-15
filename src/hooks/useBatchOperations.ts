@@ -1,14 +1,7 @@
 import { useState } from 'react';
 import { Email, AISettings, DefaultEmailCategory, SortResult, Category } from '../types';
 import { categorizeBatchWithAI } from '../services/geminiService';
-
-interface DialogConfig {
-  title: string;
-  message: string;
-  variant?: 'info' | 'warning' | 'danger';
-  confirmText?: string;
-  cancelText?: string;
-}
+import { DialogConfig } from './useDialog';
 
 interface UseBatchOperationsProps {
   selectedIds: Set<string>;
