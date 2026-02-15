@@ -46,7 +46,10 @@ const EmailList: React.FC<EmailListProps> = ({
 
   if (emails.length === 0) {
     return (
-      <div className="w-80 md:w-96 flex-shrink-0 bg-white border-r border-slate-200 flex flex-col items-center justify-center p-8 text-slate-400">
+      <div
+        data-testid="empty-state"
+        className="w-80 md:w-96 flex-shrink-0 bg-white border-r border-slate-200 flex flex-col items-center justify-center p-8 text-slate-400"
+      >
         <div className="text-center">
           <Folder className="w-16 h-16 mx-auto mb-4 opacity-20" />
           <h3 className="text-lg font-medium text-slate-600 mb-2">Keine Emails</h3>

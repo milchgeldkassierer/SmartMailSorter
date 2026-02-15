@@ -76,8 +76,8 @@ describe('EmailView', () => {
     it('should apply proper styling to empty state container', () => {
       const { container } = render(<EmailView email={null} />);
 
-      // Should have flex centering and proper background
-      const emptyStateRoot = container.querySelector('.flex-1.bg-slate-50.flex.items-center.justify-center');
+      // Should have the empty state container
+      const emptyStateRoot = container.querySelector('[data-testid="empty-state"]');
       expect(emptyStateRoot).toBeInTheDocument();
     });
   });

@@ -128,7 +128,7 @@ const EmailView: React.FC<EmailViewProps> = ({ email }) => {
 
   if (!email) {
     return (
-      <div className="flex-1 bg-slate-50 flex items-center justify-center text-slate-400">
+      <div data-testid="empty-state" className="flex-1 bg-slate-50 flex items-center justify-center text-slate-400">
         <div className="text-center">
           <CategoryIcon category={'INBOX'} className="w-16 h-16 mx-auto mb-4 opacity-20" />
           <h3 className="text-lg font-medium text-slate-600 mb-2">Keine Email ausgewählt</h3>
