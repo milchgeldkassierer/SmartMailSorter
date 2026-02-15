@@ -2,7 +2,7 @@ name: Lint
 
 on:
   pull_request:
-    branches: [main]
+    branches: [master]
 
 concurrency:
   group: lint-${{ github.event.pull_request.number || github.ref }}
