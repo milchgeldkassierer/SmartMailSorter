@@ -34,6 +34,10 @@ interface SidebarProps {
   // Category Actions
   onDeleteCategory: (cat: string) => void;
   onRenameCategory: (oldName: string, newName: string) => void;
+  // Drag & Drop Props
+  onDropEmails?: (emailIds: string[], targetCategory: string, targetType: 'folder' | 'smart') => void;
+  dropTargetCategory?: string | null;
+  isDraggingEmails?: boolean;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({
@@ -49,6 +53,9 @@ const Sidebar: React.FC<SidebarProps> = ({
   onOpenSettings,
   onDeleteCategory,
   onRenameCategory,
+  onDropEmails,
+  dropTargetCategory,
+  isDraggingEmails,
 }) => {
   const [isAdding, setIsAdding] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
@@ -97,7 +104,33 @@ const Sidebar: React.FC<SidebarProps> = ({
   // physicalFolders.sort... already done
   // otherCustom.sort... already done
 
-  const renderCategoryItem = (cat: string, displayName: string, icon: LucideIcon, depth = 0) => {
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleDrop = (e: React.DragEvent, category: string, targetType: 'folder' | 'smart') => {
+    e.preventDefault();
+    const emailIdsJson = e.dataTransfer.getData('application/x-email-ids');
+    if (emailIdsJson && onDropEmails) {
+      try {
+        const emailIds = JSON.parse(emailIdsJson) as string[];
+        onDropEmails(emailIds, category, targetType);
+      } catch {
+        // Invalid data, ignore
+      }
+    }
+  };
+
+  const getDropTargetClasses = (cat: string) => {
+    if (!isDraggingEmails) return '';
+    if (dropTargetCategory === cat) {
+      return 'ring-2 ring-blue-500 bg-blue-900/20 scale-[1.02] transition-all';
+    }
+    return 'ring-2 ring-dashed ring-slate-600 transition-all';
+  };
+
+  const renderCategoryItem = (cat: string, displayName: string, icon: LucideIcon, depth = 0, targetType: 'folder' | 'smart' = 'smart') => {
     const isSelected = selectedCategory === cat;
     const count = counts[cat] || 0;
 
@@ -106,10 +139,22 @@ const Sidebar: React.FC<SidebarProps> = ({
         key={cat}
         onClick={() => onSelectCategory(cat)}
         onContextMenu={(e) => handleContextMenu(e, cat)}
+        onDragOver={handleDragOver}
+        onDragEnter={(e) => {
+          e.preventDefault();
+          // State is managed by parent via dropTargetCategory prop
+        }}
+        onDragLeave={(e) => {
+          const related = e.relatedTarget as Node | null;
+          if (related && e.currentTarget.contains(related)) return;
+        }}
+        onDrop={(e) => handleDrop(e, cat, targetType)}
+        aria-dropeffect={isDraggingEmails ? 'move' : 'none'}
         className={`
             flex items-center justify-between px-3 py-2 mx-2 rounded-md cursor-pointer transition-colors group relative
             ${isSelected ? 'bg-blue-600 text-white shadow-md' : 'hover:bg-slate-800 text-slate-400 hover:text-slate-200'}
             ${depth > 0 ? 'ml-6 border-l border-slate-700 pl-3' : ''}
+            ${getDropTargetClasses(cat)}
           `}
       >
         <div className="flex items-center gap-3 overflow-hidden">
@@ -235,9 +280,17 @@ const Sidebar: React.FC<SidebarProps> = ({
                 <React.Fragment key={cat}>
                   <button
                     onClick={() => onSelectCategory(cat)}
+                    onDragOver={handleDragOver}
+                    onDragEnter={(e) => e.preventDefault()}
+                    onDragLeave={(e) => {
+                      const related = e.relatedTarget as Node | null;
+                      if (related && e.currentTarget.contains(related)) return;
+                    }}
+                    onDrop={(e) => handleDrop(e, cat, 'folder')}
+                    aria-dropeffect={isDraggingEmails ? 'move' : 'none'}
                     className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                       isActive ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'
-                    }`}
+                    } ${getDropTargetClasses(cat)}`}
                   >
                     <div className="flex items-center gap-3">
                       <CategoryIcon
@@ -261,7 +314,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                   {cat === DefaultEmailCategory.INBOX && physicalFolders.length > 0 && (
                     <div className="mt-1 mb-1">
                       {physicalFolders.map((c) =>
-                        renderCategoryItem(c.name, c.name.replace('Posteingang/', ''), FolderOpen, 1)
+                        renderCategoryItem(c.name, c.name.replace('Posteingang/', ''), FolderOpen, 1, 'folder')
                       )}
                     </div>
                   )}
@@ -298,6 +351,34 @@ const Sidebar: React.FC<SidebarProps> = ({
               <div className="mb-2">
                 <div className="px-3 text-[10px] text-slate-500 font-semibold uppercase mb-1">KI Kategorien</div>
                 {smartCategories.map((category) => renderCategoryItem(category.name, category.name, Folder))}
+              </div>
+            )}
+
+            {/* Create new category drop zone (visible only when dragging) */}
+            {isDraggingEmails && (
+              <div
+                onDragOver={handleDragOver}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  const emailIdsJson = e.dataTransfer.getData('application/x-email-ids');
+                  if (emailIdsJson && onDropEmails) {
+                    try {
+                      const emailIds = JSON.parse(emailIdsJson) as string[];
+                      onDropEmails(emailIds, '__new_category__', 'smart');
+                    } catch {
+                      // Invalid data, ignore
+                    }
+                  }
+                }}
+                aria-dropeffect="move"
+                className={`flex items-center gap-3 px-3 py-2 mx-2 rounded-md border-2 border-dashed transition-all ${
+                  dropTargetCategory === '__new_category__'
+                    ? 'border-blue-500 bg-blue-900/20 text-blue-300'
+                    : 'border-slate-600 text-slate-500'
+                }`}
+              >
+                <PlusCircle className="w-4 h-4" />
+                <span className="text-sm">Neue Kategorie erstellen</span>
               </div>
             )}
 
