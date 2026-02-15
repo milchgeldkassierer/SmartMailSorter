@@ -55,35 +55,39 @@ export const useDialog = (): UseDialogReturn => {
   }, []);
 
   const closeDialog = useCallback(() => {
-    setDialogState((prev) => ({ ...prev, isOpen: false }));
-    // Reject/resolve with default value when closing without explicit action
-    if (resolveRef.current) {
-      if (dialogState.type === 'confirm') {
-        resolveRef.current(false);
-      } else if (dialogState.type === 'prompt') {
-        resolveRef.current(null);
-      } else {
-        resolveRef.current(undefined);
-      }
-      resolveRef.current = null;
-    }
-  }, [dialogState.type]);
-
-  const handleConfirm = useCallback(
-    (value?: string) => {
+    setDialogState((prev) => {
+      // Reject/resolve with default value when closing without explicit action
       if (resolveRef.current) {
-        if (dialogState.type === 'confirm') {
-          resolveRef.current(true);
-        } else if (dialogState.type === 'prompt') {
-          resolveRef.current(value || null);
+        if (prev.type === 'confirm') {
+          resolveRef.current(false);
+        } else if (prev.type === 'prompt') {
+          resolveRef.current(null);
         } else {
           resolveRef.current(undefined);
         }
         resolveRef.current = null;
       }
-      setDialogState((prev) => ({ ...prev, isOpen: false }));
+      return { ...prev, isOpen: false };
+    });
+  }, []);
+
+  const handleConfirm = useCallback(
+    (value?: string) => {
+      setDialogState((prev) => {
+        if (resolveRef.current) {
+          if (prev.type === 'confirm') {
+            resolveRef.current(true);
+          } else if (prev.type === 'prompt') {
+            resolveRef.current(value || null);
+          } else {
+            resolveRef.current(undefined);
+          }
+          resolveRef.current = null;
+        }
+        return { ...prev, isOpen: false };
+      });
     },
-    [dialogState.type]
+    []
   );
 
   const handleClose = useCallback(() => {
