@@ -103,6 +103,7 @@ const EmailList: React.FC<EmailListProps> = ({
         <h2 className="text-lg font-semibold text-slate-800">Emails ({emails.length})</h2>
       </div>
       <div
+        role="list"
         className="flex-1 overflow-y-auto"
         onScroll={(e) => {
           const target = e.currentTarget;
@@ -120,6 +121,7 @@ const EmailList: React.FC<EmailListProps> = ({
           return (
             <div
               key={email.id}
+              role="listitem"
               draggable={!!onDragStart}
               onDragStart={(e) => handleDragStart(email.id, e)}
               onDragEnd={handleDragEnd}

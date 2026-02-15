@@ -38,6 +38,9 @@ interface SidebarProps {
   onDropEmails?: (emailIds: string[], targetCategory: string, targetType: 'folder' | 'smart') => void;
   dropTargetCategory?: string | null;
   isDraggingEmails?: boolean;
+  // Accessibility: move selected emails via context menu
+  selectedEmailCount?: number;
+  onMoveSelectedToCategory?: (targetCategory: string, targetType: 'folder' | 'smart') => void;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({
@@ -56,6 +59,8 @@ const Sidebar: React.FC<SidebarProps> = ({
   onDropEmails,
   dropTargetCategory,
   isDraggingEmails,
+  selectedEmailCount,
+  onMoveSelectedToCategory,
 }) => {
   const [isAdding, setIsAdding] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
@@ -460,6 +465,25 @@ const Sidebar: React.FC<SidebarProps> = ({
                 <div className="h-px bg-slate-700 my-1" />
               </>
             )}
+
+          {selectedEmailCount != null && selectedEmailCount > 0 && onMoveSelectedToCategory && (
+            <>
+              <button
+                onClick={() => {
+                  const category = contextMenu.category;
+                  const catObj = categories.find((c) => c.name === category);
+                  const targetType: 'folder' | 'smart' = catObj?.type === 'folder' ? 'folder' : 'smart';
+                  setContextMenu(null);
+                  onMoveSelectedToCategory(category, targetType);
+                }}
+                className="w-full text-left px-3 py-2 text-sm text-blue-400 hover:bg-blue-900/30 flex items-center gap-2"
+              >
+                <Folder className="w-4 h-4" />
+                <span>Ausgewählte hierher verschieben ({selectedEmailCount})</span>
+              </button>
+              <div className="h-px bg-slate-700 my-1" />
+            </>
+          )}
 
           <button
             onClick={async () => {
