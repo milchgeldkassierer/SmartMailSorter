@@ -155,59 +155,47 @@ export const useBatchOperations = ({
     }
   };
 
-  const handleBatchMarkRead = async () => {
-    if (selectedIds.size === 0) return;
+  const createBatchToggleHandler = (
+    getState: (email: Email) => boolean,
+    toggleFn: (id: string) => Promise<void>,
+    errorMsg: string
+  ) => {
+    return async () => {
+      if (selectedIds.size === 0) return;
 
-    // Determine target read state: if any selected email is unread, mark all as read; else mark all as unread
-    const selectedEmails = currentEmails.filter((e) => selectedIds.has(e.id));
-    const hasUnread = selectedEmails.some((e) => !e.isRead);
-    const targetReadState = hasUnread;
+      const selectedEmails = currentEmails.filter((e) => selectedIds.has(e.id));
+      const hasInactive = selectedEmails.some((e) => !getState(e));
+      const targetState = hasInactive;
 
-    const ids = Array.from(selectedIds);
-    try {
-      // Toggle read status for each email
-      // Only toggle if the email's current state doesn't match target state
-      await Promise.all(
-        ids.map(async (id) => {
-          const email = currentEmails.find((e) => e.id === id);
-          if (email && email.isRead !== targetReadState) {
-            await onToggleRead(id);
-          }
-        })
-      );
-      onClearSelection();
-    } catch (error) {
-      console.error('Failed to update read status:', error);
-      alert('Einige Emails konnten nicht aktualisiert werden');
-    }
+      const ids = Array.from(selectedIds);
+      try {
+        await Promise.all(
+          ids.map(async (id) => {
+            const email = currentEmails.find((e) => e.id === id);
+            if (email && getState(email) !== targetState) {
+              await toggleFn(id);
+            }
+          })
+        );
+        onClearSelection();
+      } catch (error) {
+        console.error(errorMsg, error);
+        alert('Einige Emails konnten nicht aktualisiert werden');
+      }
+    };
   };
 
-  const handleBatchFlag = async () => {
-    if (selectedIds.size === 0) return;
+  const handleBatchMarkRead = createBatchToggleHandler(
+    (email) => email.isRead,
+    onToggleRead,
+    'Failed to update read status:'
+  );
 
-    // Determine target flag state: if any selected email is unflagged, flag all; else unflag all
-    const selectedEmails = currentEmails.filter((e) => selectedIds.has(e.id));
-    const hasUnflagged = selectedEmails.some((e) => !e.isFlagged);
-    const targetFlagState = hasUnflagged;
-
-    const ids = Array.from(selectedIds);
-    try {
-      // Toggle flag status for each email
-      // Only toggle if the email's current state doesn't match target state
-      await Promise.all(
-        ids.map(async (id) => {
-          const email = currentEmails.find((e) => e.id === id);
-          if (email && email.isFlagged !== targetFlagState) {
-            await onToggleFlag(id);
-          }
-        })
-      );
-      onClearSelection();
-    } catch (error) {
-      console.error('Failed to update flag status:', error);
-      alert('Einige Emails konnten nicht aktualisiert werden');
-    }
-  };
+  const handleBatchFlag = createBatchToggleHandler(
+    (email) => email.isFlagged,
+    onToggleFlag,
+    'Failed to update flag status:'
+  );
 
   const handleBatchSmartSort = async () => {
     if (selectedIds.size === 0) return;
