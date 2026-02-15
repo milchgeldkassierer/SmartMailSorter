@@ -37,11 +37,11 @@ describe('Content Security Policy Configuration', () => {
 
       // Verify CSP header was added
       expect(capturedResponse).toBeDefined();
-      expect(capturedResponse.responseHeaders).toBeDefined();
-      expect(capturedResponse.responseHeaders['Content-Security-Policy']).toBeDefined();
-      expect(Array.isArray(capturedResponse.responseHeaders['Content-Security-Policy'])).toBe(true);
+      expect(capturedResponse!.responseHeaders).toBeDefined();
+      expect(capturedResponse!.responseHeaders['Content-Security-Policy']).toBeDefined();
+      expect(Array.isArray(capturedResponse!.responseHeaders['Content-Security-Policy'])).toBe(true);
 
-      const cspHeader = capturedResponse.responseHeaders['Content-Security-Policy'][0];
+      const cspHeader = capturedResponse!.responseHeaders['Content-Security-Policy'][0];
       expect(cspHeader).toContain("default-src 'self'");
       expect(cspHeader).toContain("script-src 'self'");
       expect(cspHeader).toContain('https://cdn.tailwindcss.com');
@@ -71,7 +71,7 @@ describe('Content Security Policy Configuration', () => {
 
       cspHandler(mockDetails, mockCallback);
 
-      const cspHeader = capturedResponse.responseHeaders['Content-Security-Policy'][0];
+      const cspHeader = capturedResponse!.responseHeaders['Content-Security-Policy'][0];
 
       // Development mode should allow localhost and unsafe directives for hot reload
       expect(cspHeader).toContain("default-src 'self'");
@@ -93,7 +93,7 @@ describe('Content Security Policy Configuration', () => {
         capturedResponse = response;
       });
 
-      const cspHeader = capturedResponse.responseHeaders['Content-Security-Policy'][0];
+      const cspHeader = capturedResponse!.responseHeaders['Content-Security-Policy'][0];
       const directives = cspHeader.split('; ');
 
       // Verify all critical directives are present
@@ -122,7 +122,7 @@ describe('Content Security Policy Configuration', () => {
         capturedResponse = response;
       });
 
-      const cspHeader = capturedResponse.responseHeaders['Content-Security-Policy'][0];
+      const cspHeader = capturedResponse!.responseHeaders['Content-Security-Policy'][0];
 
       // Production should NOT include unsafe-eval (blocks eval() to prevent XSS)
       expect(cspHeader).not.toContain("'unsafe-eval'");
@@ -146,12 +146,12 @@ describe('Content Security Policy Configuration', () => {
       });
 
       // Verify original headers are preserved
-      expect(capturedResponse.responseHeaders['content-type']).toEqual(['text/html']);
-      expect(capturedResponse.responseHeaders['x-custom-header']).toEqual(['custom-value']);
-      expect(capturedResponse.responseHeaders['cache-control']).toEqual(['no-cache']);
+      expect(capturedResponse!.responseHeaders['content-type']).toEqual(['text/html']);
+      expect(capturedResponse!.responseHeaders['x-custom-header']).toEqual(['custom-value']);
+      expect(capturedResponse!.responseHeaders['cache-control']).toEqual(['no-cache']);
 
       // And CSP header is added
-      expect(capturedResponse.responseHeaders['Content-Security-Policy']).toBeDefined();
+      expect(capturedResponse!.responseHeaders['Content-Security-Policy']).toBeDefined();
     });
   });
 
@@ -166,7 +166,7 @@ describe('Content Security Policy Configuration', () => {
         capturedResponse = response;
       });
 
-      const cspHeader = capturedResponse.responseHeaders['Content-Security-Policy'][0];
+      const cspHeader = capturedResponse!.responseHeaders['Content-Security-Policy'][0];
       const scriptSrcDirective = cspHeader.split('; ').find((d: string) => d.startsWith('script-src'));
 
       // Should allow self and necessary external CDNs
@@ -187,7 +187,7 @@ describe('Content Security Policy Configuration', () => {
         capturedResponse = response;
       });
 
-      const cspHeader = capturedResponse.responseHeaders['Content-Security-Policy'][0];
+      const cspHeader = capturedResponse!.responseHeaders['Content-Security-Policy'][0];
       const imgSrcDirective = cspHeader.split('; ').find((d: string) => d.startsWith('img-src'));
 
       // Should allow both 'self' and 'data:' for images (base64 encoded images)
@@ -205,7 +205,7 @@ describe('Content Security Policy Configuration', () => {
         capturedResponse = response;
       });
 
-      const cspHeader = capturedResponse.responseHeaders['Content-Security-Policy'][0];
+      const cspHeader = capturedResponse!.responseHeaders['Content-Security-Policy'][0];
       const styleSrcDirective = cspHeader.split('; ').find((d: string) => d.startsWith('style-src'));
 
       // Styles often need unsafe-inline for framework-generated styles
@@ -224,7 +224,7 @@ describe('Content Security Policy Configuration', () => {
         capturedResponse = response;
       });
 
-      const cspHeader = capturedResponse.responseHeaders['Content-Security-Policy'][0];
+      const cspHeader = capturedResponse!.responseHeaders['Content-Security-Policy'][0];
 
       // Development needs localhost for Vite dev server
       expect(cspHeader).toContain('http://localhost:3000');
@@ -243,7 +243,7 @@ describe('Content Security Policy Configuration', () => {
         capturedResponse = response;
       });
 
-      const cspHeader = capturedResponse.responseHeaders['Content-Security-Policy'][0];
+      const cspHeader = capturedResponse!.responseHeaders['Content-Security-Policy'][0];
 
       // Development may need unsafe-eval for dev tools and source maps
       expect(cspHeader).toContain("'unsafe-eval'");
@@ -261,7 +261,7 @@ describe('Content Security Policy Configuration', () => {
         capturedResponse = response;
       });
 
-      const cspHeaderArray = capturedResponse.responseHeaders['Content-Security-Policy'];
+      const cspHeaderArray = capturedResponse!.responseHeaders['Content-Security-Policy'];
 
       // Should be an array with one element
       expect(Array.isArray(cspHeaderArray)).toBe(true);
@@ -287,7 +287,7 @@ describe('Content Security Policy Configuration', () => {
         capturedResponse = response;
       });
 
-      const cspHeader = capturedResponse.responseHeaders['Content-Security-Policy'][0];
+      const cspHeader = capturedResponse!.responseHeaders['Content-Security-Policy'][0];
 
       // Well-formed CSP should not end with semicolon
       expect(cspHeader.endsWith(';')).toBe(false);

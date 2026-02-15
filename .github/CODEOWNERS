@@ -1,0 +1,10 @@
+# CODEOWNERS - defines who can approve changes
+# Docs: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Global rule - owner must approve all changes
+* @milchgeldkassierer
+
+# Specific protection for critical files
+/.github/ @milchgeldkassierer
+/package.json @milchgeldkassierer
+/package-lock.json @milchgeldkassierer

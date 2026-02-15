@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { DefaultEmailCategory, ImapAccount, Category, AccountData } from './types';
+import { DefaultEmailCategory, ImapAccount, Category, AccountData, FLAGGED_FOLDER, SYSTEM_FOLDERS } from './types';
 import Sidebar from './components/Sidebar';
 import EmailList from './components/EmailList';
 import EmailView from './components/EmailView';
@@ -75,28 +75,24 @@ const App: React.FC = () => {
     const emailToDelete = currentEmails.find((e) => e.id === id);
     updateActiveAccountData((prev) => ({ ...prev, emails: prev.emails.filter((e) => e.id !== id) }));
     if (selectedEmailId === id) setSelectedEmailId(null);
-    if (!window.electron || !activeAccountId) return;
-    if (emailToDelete?.uid) {
-      const account = accounts.find((a) => a.id === activeAccountId);
-      if (!account) return;
-      try {
-        await window.electron.deleteEmail({
-          account,
-          emailId: id,
-          uid: emailToDelete.uid,
-          folder: emailToDelete.folder,
-        });
-      } catch (error) {
-        console.error('Failed to delete email:', error);
-        // Rollback: restore email to state
-        if (emailToDelete) {
-          updateActiveAccountData((prev) => ({
-            ...prev,
-            emails: [...prev.emails, emailToDelete].sort(
-              (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-            ),
-          }));
-        }
+    if (!window.electron || !activeAccountId || !emailToDelete?.uid) return;
+    try {
+      await window.electron.deleteEmail({
+        accountId: activeAccountId,
+        emailId: id,
+        uid: emailToDelete.uid,
+        folder: emailToDelete.folder,
+      });
+    } catch (error) {
+      console.error('Failed to delete email:', error);
+      // Rollback: restore email to state
+      if (emailToDelete) {
+        updateActiveAccountData((prev) => ({
+          ...prev,
+          emails: [...prev.emails, emailToDelete].sort(
+            (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+          ),
+        }));
       }
     }
   };
@@ -109,26 +105,23 @@ const App: React.FC = () => {
       ...prev,
       emails: prev.emails.map((e) => (e.id === id ? { ...e, isRead: !e.isRead } : e)),
     }));
-    if (window.electron && activeAccountId) {
-      if (email.uid) {
-        const account = accounts.find((a) => a.id === activeAccountId);
-        if (!account) return;
-        try {
-          await window.electron.updateEmailRead({
-            account,
-            emailId: id,
-            uid: email.uid,
-            isRead: !previousReadState,
-            folder: email.folder,
-          });
-        } catch (error) {
-          console.error('Failed to update read status:', error);
-          // Rollback optimistic update
-          updateActiveAccountData((prev) => ({
-            ...prev,
-            emails: prev.emails.map((e) => (e.id === id ? { ...e, isRead: previousReadState } : e)),
-          }));
-        }
+    if (window.electron && activeAccountId && email.uid) {
+      try {
+        await window.electron.updateEmailRead({
+          accountId: activeAccountId,
+          emailId: id,
+          uid: email.uid,
+          isRead: !previousReadState,
+          folder: email.folder,
+        });
+      } catch (error) {
+        console.error('Failed to update read status:', error);
+        // Rollback optimistic update
+        updateActiveAccountData((prev) => ({
+          ...prev,
+          emails: prev.emails.map((e) => (e.id === id ? { ...e, isRead: previousReadState } : e)),
+        }));
+        throw error;
       }
     }
   };
@@ -141,26 +134,23 @@ const App: React.FC = () => {
       ...prev,
       emails: prev.emails.map((e) => (e.id === id ? { ...e, isFlagged: !e.isFlagged } : e)),
     }));
-    if (window.electron && activeAccountId) {
-      if (email.uid) {
-        const account = accounts.find((a) => a.id === activeAccountId);
-        if (!account) return;
-        try {
-          await window.electron.updateEmailFlag({
-            account,
-            emailId: id,
-            uid: email.uid,
-            isFlagged: !previousFlagState,
-            folder: email.folder,
-          });
-        } catch (error) {
-          console.error('Failed to update flag status:', error);
-          // Rollback optimistic update
-          updateActiveAccountData((prev) => ({
-            ...prev,
-            emails: prev.emails.map((e) => (e.id === id ? { ...e, isFlagged: previousFlagState } : e)),
-          }));
-        }
+    if (window.electron && activeAccountId && email.uid) {
+      try {
+        await window.electron.updateEmailFlag({
+          accountId: activeAccountId,
+          emailId: id,
+          uid: email.uid,
+          isFlagged: !previousFlagState,
+          folder: email.folder,
+        });
+      } catch (error) {
+        console.error('Failed to update flag status:', error);
+        // Rollback optimistic update
+        updateActiveAccountData((prev) => ({
+          ...prev,
+          emails: prev.emails.map((e) => (e.id === id ? { ...e, isFlagged: previousFlagState } : e)),
+        }));
+        throw error;
       }
     }
   };
@@ -170,20 +160,28 @@ const App: React.FC = () => {
     onSelectEmail: handleSelectEmail,
   });
 
-  const { isSorting, sortProgress, canSmartSort, handleBatchDelete, handleBatchSmartSort, handleBatchMarkRead } =
-    useBatchOperations({
-      selectedIds,
-      currentEmails,
-      currentCategories,
-      aiSettings,
-      onDeleteEmail: handleDeleteEmail,
-      onToggleRead: handleToggleRead,
-      onClearSelection: clearSelection,
-      onUpdateEmails: (updateFn) => updateActiveAccountData((prev) => ({ ...prev, emails: updateFn(prev.emails) })),
-      onUpdateCategories: (categories) => updateActiveAccountData((prev) => ({ ...prev, categories })),
-      onOpenSettings: () => setIsSettingsOpen(true),
-      dialog,
-    });
+  const {
+    isSorting,
+    sortProgress,
+    canSmartSort,
+    handleBatchDelete,
+    handleBatchSmartSort,
+    handleBatchMarkRead,
+    handleBatchFlag,
+  } = useBatchOperations({
+    selectedIds,
+    currentEmails,
+    currentCategories,
+    aiSettings,
+    onDeleteEmail: handleDeleteEmail,
+    onToggleRead: handleToggleRead,
+    onToggleFlag: handleToggleFlag,
+    onClearSelection: clearSelection,
+    onUpdateEmails: (updateFn) => updateActiveAccountData((prev) => ({ ...prev, emails: updateFn(prev.emails) })),
+    onUpdateCategories: (categories) => updateActiveAccountData((prev) => ({ ...prev, categories })),
+    onOpenSettings: () => setIsSettingsOpen(true),
+    dialog,
+  });
 
   const { isSyncing, syncAccount } = useSync({
     activeAccountId,
@@ -298,6 +296,8 @@ const App: React.FC = () => {
           if (cat === DefaultEmailCategory.INBOX) setShowUnsortedOnly(false);
         }}
         onAddCategory={async (newCategory) => {
+          const reservedNames = [...SYSTEM_FOLDERS, FLAGGED_FOLDER];
+          if (reservedNames.includes(newCategory)) return;
           if (!currentCategories.some((c) => c.name === newCategory)) {
             updateActiveAccountData((prev) => ({
               ...prev,
@@ -329,6 +329,8 @@ const App: React.FC = () => {
           await deleteCategory(cat);
         }}
         onRenameCategory={async (oldName, newName) => {
+          const reservedNames = [...SYSTEM_FOLDERS, FLAGGED_FOLDER];
+          if (reservedNames.includes(newName)) return;
           updateActiveAccountData((prev) => ({
             ...prev,
             categories: prev.categories.map((c: Category) => (c.name === oldName ? { ...c, name: newName } : c)),
@@ -359,6 +361,7 @@ const App: React.FC = () => {
           onBatchDelete={handleBatchDelete}
           onBatchSmartSort={handleBatchSmartSort}
           onBatchMarkRead={handleBatchMarkRead}
+          onBatchFlag={handleBatchFlag}
           canSmartSort={canSmartSort}
           aiSettings={aiSettings}
         />
@@ -373,8 +376,8 @@ const App: React.FC = () => {
             onRowClick={handleRowClick}
             onToggleSelection={handleToggleSelection}
             onDeleteEmail={handleDeleteEmail}
-            onToggleRead={handleToggleRead}
-            onToggleFlag={handleToggleFlag}
+            onToggleRead={(id) => handleToggleRead(id).catch(() => {})}
+            onToggleFlag={(id) => handleToggleFlag(id).catch(() => {})}
             isLoading={false}
             onLoadMore={loadMoreEmails}
             hasMore={canLoadMore}
