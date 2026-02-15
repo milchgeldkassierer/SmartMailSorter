@@ -2,6 +2,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import Sidebar from '../Sidebar';
 import { ImapAccount, DefaultEmailCategory, INBOX_FOLDER, SENT_FOLDER, SPAM_FOLDER, TRASH_FOLDER } from '../../types';
+import { DialogProvider } from '../../contexts/DialogContext';
+
+// Helper to render with DialogProvider
+const renderWithDialog = (ui: React.ReactElement) => render(<DialogProvider>{ui}</DialogProvider>);
 
 describe('Sidebar', () => {
   const mockAccounts: ImapAccount[] = [
@@ -64,12 +68,12 @@ describe('Sidebar', () => {
 
   describe('Rendering', () => {
     it('should render the sidebar container', () => {
-      render(<Sidebar {...defaultProps} />);
+      renderWithDialog(<Sidebar {...defaultProps} />);
       expect(screen.getByText('Ordner')).toBeInTheDocument();
     });
 
     it('should render all standard folder categories', () => {
-      render(<Sidebar {...defaultProps} />);
+      renderWithDialog(<Sidebar {...defaultProps} />);
       expect(screen.getByText(INBOX_FOLDER)).toBeInTheDocument();
       expect(screen.getByText(SENT_FOLDER)).toBeInTheDocument();
       expect(screen.getByText(SPAM_FOLDER)).toBeInTheDocument();
@@ -77,48 +81,48 @@ describe('Sidebar', () => {
     });
 
     it('should render smart categories section', () => {
-      render(<Sidebar {...defaultProps} />);
+      renderWithDialog(<Sidebar {...defaultProps} />);
       expect(screen.getByText('Intelligentes Postfach')).toBeInTheDocument();
     });
 
     it('should render AI categories', () => {
-      render(<Sidebar {...defaultProps} />);
+      renderWithDialog(<Sidebar {...defaultProps} />);
       expect(screen.getByText('KI Kategorien')).toBeInTheDocument();
       expect(screen.getByText('Rechnungen')).toBeInTheDocument();
       expect(screen.getByText('Newsletter')).toBeInTheDocument();
     });
 
     it('should render "Sonstiges" category', () => {
-      render(<Sidebar {...defaultProps} />);
+      renderWithDialog(<Sidebar {...defaultProps} />);
       expect(screen.getByText('Sonstiges')).toBeInTheDocument();
     });
 
     it('should render category counts when greater than 0', () => {
-      render(<Sidebar {...defaultProps} />);
+      renderWithDialog(<Sidebar {...defaultProps} />);
       expect(screen.getByText('25')).toBeInTheDocument(); // Posteingang count
       expect(screen.getByText('10')).toBeInTheDocument(); // Gesendet count
       expect(screen.getByText('5')).toBeInTheDocument(); // Spam count
     });
 
     it('should not render count for categories with 0 count', () => {
-      render(<Sidebar {...defaultProps} />);
+      renderWithDialog(<Sidebar {...defaultProps} />);
       // Papierkorb has no count defined, so 0 - should not show
       const countElements = screen.queryAllByText('0');
       expect(countElements).toHaveLength(0);
     });
 
     it('should render storage info in footer', () => {
-      render(<Sidebar {...defaultProps} />);
+      renderWithDialog(<Sidebar {...defaultProps} />);
       expect(screen.getByText('Speicher')).toBeInTheDocument();
     });
 
     it('should render logout button', () => {
-      render(<Sidebar {...defaultProps} />);
+      renderWithDialog(<Sidebar {...defaultProps} />);
       expect(screen.getByText('Logout')).toBeInTheDocument();
     });
 
     it('should render settings button in footer', () => {
-      render(<Sidebar {...defaultProps} />);
+      renderWithDialog(<Sidebar {...defaultProps} />);
       const settingsButtons = screen.getAllByTitle('Einstellungen');
       expect(settingsButtons.length).toBeGreaterThan(0);
     });
@@ -126,14 +130,14 @@ describe('Sidebar', () => {
 
   describe('Category Selection', () => {
     it('should highlight the selected category', () => {
-      render(<Sidebar {...defaultProps} selectedCategory="Posteingang" />);
+      renderWithDialog(<Sidebar {...defaultProps} selectedCategory="Posteingang" />);
       const inboxButton = screen.getByRole('button', { name: /Posteingang/i });
       expect(inboxButton).toHaveClass('bg-blue-600');
     });
 
     it('should call onSelectCategory when clicking a standard folder', () => {
       const onSelectCategory = vi.fn();
-      render(<Sidebar {...defaultProps} onSelectCategory={onSelectCategory} />);
+      renderWithDialog(<Sidebar {...defaultProps} onSelectCategory={onSelectCategory} />);
 
       const gesendetButton = screen.getByRole('button', { name: /Gesendet/i });
       fireEvent.click(gesendetButton);
@@ -143,7 +147,7 @@ describe('Sidebar', () => {
 
     it('should call onSelectCategory when clicking Spam', () => {
       const onSelectCategory = vi.fn();
-      render(<Sidebar {...defaultProps} onSelectCategory={onSelectCategory} />);
+      renderWithDialog(<Sidebar {...defaultProps} onSelectCategory={onSelectCategory} />);
 
       const spamButton = screen.getByRole('button', { name: /Spam/i });
       fireEvent.click(spamButton);
@@ -153,7 +157,7 @@ describe('Sidebar', () => {
 
     it('should call onSelectCategory when clicking Papierkorb', () => {
       const onSelectCategory = vi.fn();
-      render(<Sidebar {...defaultProps} onSelectCategory={onSelectCategory} />);
+      renderWithDialog(<Sidebar {...defaultProps} onSelectCategory={onSelectCategory} />);
 
       const trashButton = screen.getByRole('button', { name: /Papierkorb/i });
       fireEvent.click(trashButton);
@@ -163,7 +167,7 @@ describe('Sidebar', () => {
 
     it('should call onSelectCategory when clicking a smart category', () => {
       const onSelectCategory = vi.fn();
-      render(<Sidebar {...defaultProps} onSelectCategory={onSelectCategory} />);
+      renderWithDialog(<Sidebar {...defaultProps} onSelectCategory={onSelectCategory} />);
 
       const rechnungenItem = screen.getByText('Rechnungen');
       fireEvent.click(rechnungenItem);
@@ -173,7 +177,7 @@ describe('Sidebar', () => {
 
     it('should call onSelectCategory when clicking Sonstiges', () => {
       const onSelectCategory = vi.fn();
-      render(<Sidebar {...defaultProps} onSelectCategory={onSelectCategory} />);
+      renderWithDialog(<Sidebar {...defaultProps} onSelectCategory={onSelectCategory} />);
 
       const sonstigesItem = screen.getByText('Sonstiges');
       fireEvent.click(sonstigesItem);
@@ -184,24 +188,24 @@ describe('Sidebar', () => {
 
   describe('Account Switching', () => {
     it('should display active account name and email', () => {
-      render(<Sidebar {...defaultProps} />);
+      renderWithDialog(<Sidebar {...defaultProps} />);
       expect(screen.getByText('Work Account')).toBeInTheDocument();
       expect(screen.getByText('work@example.com')).toBeInTheDocument();
     });
 
     it('should display account initial in avatar', () => {
-      render(<Sidebar {...defaultProps} />);
+      renderWithDialog(<Sidebar {...defaultProps} />);
       expect(screen.getByText('W')).toBeInTheDocument();
     });
 
     it('should not show account dropdown by default', () => {
-      render(<Sidebar {...defaultProps} />);
+      renderWithDialog(<Sidebar {...defaultProps} />);
       // The manage accounts button is only visible when dropdown is open
       expect(screen.queryByText('Konten verwalten')).not.toBeInTheDocument();
     });
 
     it('should show account dropdown when account button is clicked', () => {
-      render(<Sidebar {...defaultProps} />);
+      renderWithDialog(<Sidebar {...defaultProps} />);
 
       const accountButton = screen.getByText('Work Account').closest('button');
       fireEvent.click(accountButton!);
@@ -211,7 +215,7 @@ describe('Sidebar', () => {
     });
 
     it('should hide account dropdown when clicked again', () => {
-      render(<Sidebar {...defaultProps} />);
+      renderWithDialog(<Sidebar {...defaultProps} />);
 
       const accountButton = screen.getByText('Work Account').closest('button');
       fireEvent.click(accountButton!);
@@ -223,7 +227,7 @@ describe('Sidebar', () => {
 
     it('should call onSwitchAccount when selecting a different account', () => {
       const onSwitchAccount = vi.fn();
-      render(<Sidebar {...defaultProps} onSwitchAccount={onSwitchAccount} />);
+      renderWithDialog(<Sidebar {...defaultProps} onSwitchAccount={onSwitchAccount} />);
 
       const accountButton = screen.getByText('Work Account').closest('button');
       fireEvent.click(accountButton!);
@@ -236,7 +240,7 @@ describe('Sidebar', () => {
 
     it('should close dropdown after switching account', () => {
       const onSwitchAccount = vi.fn();
-      render(<Sidebar {...defaultProps} onSwitchAccount={onSwitchAccount} />);
+      renderWithDialog(<Sidebar {...defaultProps} onSwitchAccount={onSwitchAccount} />);
 
       const accountButton = screen.getByText('Work Account').closest('button');
       fireEvent.click(accountButton!);
@@ -249,7 +253,7 @@ describe('Sidebar', () => {
 
     it('should call onOpenSettings when clicking "Konten verwalten"', () => {
       const onOpenSettings = vi.fn();
-      render(<Sidebar {...defaultProps} onOpenSettings={onOpenSettings} />);
+      renderWithDialog(<Sidebar {...defaultProps} onOpenSettings={onOpenSettings} />);
 
       const accountButton = screen.getByText('Work Account').closest('button');
       fireEvent.click(accountButton!);
@@ -261,7 +265,7 @@ describe('Sidebar', () => {
     });
 
     it('should close dropdown after clicking manage accounts', () => {
-      render(<Sidebar {...defaultProps} />);
+      renderWithDialog(<Sidebar {...defaultProps} />);
 
       const accountButton = screen.getByText('Work Account').closest('button');
       fireEvent.click(accountButton!);
@@ -273,13 +277,13 @@ describe('Sidebar', () => {
     });
 
     it('should display "Kein Konto" when no active account', () => {
-      render(<Sidebar {...defaultProps} accounts={[]} activeAccountId="" />);
+      renderWithDialog(<Sidebar {...defaultProps} accounts={[]} activeAccountId="" />);
       expect(screen.getByText('Kein Konto')).toBeInTheDocument();
       expect(screen.getByText('Bitte einrichten')).toBeInTheDocument();
     });
 
     it('should show all accounts in dropdown', () => {
-      render(<Sidebar {...defaultProps} />);
+      renderWithDialog(<Sidebar {...defaultProps} />);
 
       const accountButton = screen.getByText('Work Account').closest('button');
       fireEvent.click(accountButton!);
@@ -294,7 +298,7 @@ describe('Sidebar', () => {
 
   describe('Context Menu', () => {
     it('should open context menu on right-click of a category item', () => {
-      render(<Sidebar {...defaultProps} />);
+      renderWithDialog(<Sidebar {...defaultProps} />);
 
       // Find the Rechnungen category item container (the parent div with onClick/onContextMenu)
       const rechnungenText = screen.getByText('Rechnungen');
@@ -307,7 +311,7 @@ describe('Sidebar', () => {
     });
 
     it('should show category name in context menu header', () => {
-      render(<Sidebar {...defaultProps} />);
+      renderWithDialog(<Sidebar {...defaultProps} />);
 
       const rechnungenText = screen.getByText('Rechnungen');
       const categoryItem = rechnungenText.closest('div[class*="cursor-pointer"]');
@@ -319,7 +323,7 @@ describe('Sidebar', () => {
     });
 
     it('should show rename option for custom categories', () => {
-      render(<Sidebar {...defaultProps} />);
+      renderWithDialog(<Sidebar {...defaultProps} />);
 
       // Use 'Meine Projekte' - a truly custom category not in DefaultEmailCategory
       const customCategoryText = screen.getByText('Meine Projekte');
@@ -330,7 +334,7 @@ describe('Sidebar', () => {
     });
 
     it('should show delete option for custom categories', () => {
-      render(<Sidebar {...defaultProps} />);
+      renderWithDialog(<Sidebar {...defaultProps} />);
 
       // Use 'Meine Projekte' - a truly custom category not in DefaultEmailCategory
       const customCategoryText = screen.getByText('Meine Projekte');
@@ -341,7 +345,7 @@ describe('Sidebar', () => {
     });
 
     it('should show icon change option', () => {
-      render(<Sidebar {...defaultProps} />);
+      renderWithDialog(<Sidebar {...defaultProps} />);
 
       const rechnungenText = screen.getByText('Rechnungen');
       const categoryItem = rechnungenText.closest('div[class*="cursor-pointer"]');
@@ -351,7 +355,7 @@ describe('Sidebar', () => {
     });
 
     it('should close context menu on global click', async () => {
-      render(<Sidebar {...defaultProps} />);
+      renderWithDialog(<Sidebar {...defaultProps} />);
 
       // Use 'Meine Projekte' - a truly custom category not in DefaultEmailCategory
       const customCategoryText = screen.getByText('Meine Projekte');
@@ -371,7 +375,7 @@ describe('Sidebar', () => {
     });
 
     it('should not show rename/delete for default categories', () => {
-      render(<Sidebar {...defaultProps} />);
+      renderWithDialog(<Sidebar {...defaultProps} />);
 
       // Sonstiges is rendered via renderCategoryItem which has the context menu handler
       const sonstigesText = screen.getByText('Sonstiges');
@@ -388,13 +392,13 @@ describe('Sidebar', () => {
 
   describe('Add Category', () => {
     it('should render add category button', () => {
-      render(<Sidebar {...defaultProps} />);
+      renderWithDialog(<Sidebar {...defaultProps} />);
       const addButton = screen.getByTitle('Neuen Ordner erstellen');
       expect(addButton).toBeInTheDocument();
     });
 
     it('should show input field when add button is clicked', () => {
-      render(<Sidebar {...defaultProps} />);
+      renderWithDialog(<Sidebar {...defaultProps} />);
 
       const addButton = screen.getByTitle('Neuen Ordner erstellen');
       fireEvent.click(addButton);
@@ -404,7 +408,7 @@ describe('Sidebar', () => {
     });
 
     it('should focus input when shown', () => {
-      render(<Sidebar {...defaultProps} />);
+      renderWithDialog(<Sidebar {...defaultProps} />);
 
       const addButton = screen.getByTitle('Neuen Ordner erstellen');
       fireEvent.click(addButton);
@@ -415,7 +419,7 @@ describe('Sidebar', () => {
 
     it('should call onAddCategory when form is submitted with valid name', () => {
       const onAddCategory = vi.fn();
-      render(<Sidebar {...defaultProps} onAddCategory={onAddCategory} />);
+      renderWithDialog(<Sidebar {...defaultProps} onAddCategory={onAddCategory} />);
 
       const addButton = screen.getByTitle('Neuen Ordner erstellen');
       fireEvent.click(addButton);
@@ -432,7 +436,7 @@ describe('Sidebar', () => {
 
     it('should trim whitespace from category name', () => {
       const onAddCategory = vi.fn();
-      render(<Sidebar {...defaultProps} onAddCategory={onAddCategory} />);
+      renderWithDialog(<Sidebar {...defaultProps} onAddCategory={onAddCategory} />);
 
       const addButton = screen.getByTitle('Neuen Ordner erstellen');
       fireEvent.click(addButton);
@@ -448,7 +452,7 @@ describe('Sidebar', () => {
 
     it('should not call onAddCategory when name is empty', () => {
       const onAddCategory = vi.fn();
-      render(<Sidebar {...defaultProps} onAddCategory={onAddCategory} />);
+      renderWithDialog(<Sidebar {...defaultProps} onAddCategory={onAddCategory} />);
 
       const addButton = screen.getByTitle('Neuen Ordner erstellen');
       fireEvent.click(addButton);
@@ -464,7 +468,7 @@ describe('Sidebar', () => {
 
     it('should not call onAddCategory when name is only whitespace', () => {
       const onAddCategory = vi.fn();
-      render(<Sidebar {...defaultProps} onAddCategory={onAddCategory} />);
+      renderWithDialog(<Sidebar {...defaultProps} onAddCategory={onAddCategory} />);
 
       const addButton = screen.getByTitle('Neuen Ordner erstellen');
       fireEvent.click(addButton);
@@ -480,7 +484,7 @@ describe('Sidebar', () => {
 
     it('should hide input after successful submission', () => {
       const onAddCategory = vi.fn();
-      render(<Sidebar {...defaultProps} onAddCategory={onAddCategory} />);
+      renderWithDialog(<Sidebar {...defaultProps} onAddCategory={onAddCategory} />);
 
       const addButton = screen.getByTitle('Neuen Ordner erstellen');
       fireEvent.click(addButton);
@@ -496,7 +500,7 @@ describe('Sidebar', () => {
 
     it('should clear input value after successful submission', () => {
       const onAddCategory = vi.fn();
-      render(<Sidebar {...defaultProps} onAddCategory={onAddCategory} />);
+      renderWithDialog(<Sidebar {...defaultProps} onAddCategory={onAddCategory} />);
 
       // First submission
       const addButton = screen.getByTitle('Neuen Ordner erstellen');
@@ -520,7 +524,7 @@ describe('Sidebar', () => {
   describe('Footer Actions', () => {
     it('should call onOpenSettings when settings button is clicked', () => {
       const onOpenSettings = vi.fn();
-      render(<Sidebar {...defaultProps} onOpenSettings={onOpenSettings} />);
+      renderWithDialog(<Sidebar {...defaultProps} onOpenSettings={onOpenSettings} />);
 
       const settingsButton = screen.getByTitle('Einstellungen');
       fireEvent.click(settingsButton);
@@ -530,7 +534,7 @@ describe('Sidebar', () => {
 
     it('should call onReset when logout button is clicked', () => {
       const onReset = vi.fn();
-      render(<Sidebar {...defaultProps} onReset={onReset} />);
+      renderWithDialog(<Sidebar {...defaultProps} onReset={onReset} />);
 
       const logoutButton = screen.getByText('Logout');
       fireEvent.click(logoutButton);
@@ -541,7 +545,7 @@ describe('Sidebar', () => {
 
   describe('Storage Visualization', () => {
     it('should display storage usage for active account', () => {
-      render(<Sidebar {...defaultProps} />);
+      renderWithDialog(<Sidebar {...defaultProps} />);
       // Storage display shows "MB / GB" format
       expect(screen.getByText(/MB/)).toBeInTheDocument();
     });
@@ -554,7 +558,7 @@ describe('Sidebar', () => {
         color: 'red',
       };
 
-      render(<Sidebar {...defaultProps} accounts={[accountWithoutStorage]} activeAccountId="acc-3" />);
+      renderWithDialog(<Sidebar {...defaultProps} accounts={[accountWithoutStorage]} activeAccountId="acc-3" />);
 
       expect(screen.getByText('Unbekannt')).toBeInTheDocument();
     });
@@ -562,14 +566,14 @@ describe('Sidebar', () => {
 
   describe('Physical Folders', () => {
     it('should render physical folders under inbox', () => {
-      render(<Sidebar {...defaultProps} />);
+      renderWithDialog(<Sidebar {...defaultProps} />);
       // Work/Projects is a physical folder
       expect(screen.getByText('Work/Projects')).toBeInTheDocument();
     });
 
     it('should call onSelectCategory when clicking a physical folder', () => {
       const onSelectCategory = vi.fn();
-      render(<Sidebar {...defaultProps} onSelectCategory={onSelectCategory} />);
+      renderWithDialog(<Sidebar {...defaultProps} onSelectCategory={onSelectCategory} />);
 
       const folderItem = screen.getByText('Work/Projects');
       fireEvent.click(folderItem);
@@ -580,21 +584,21 @@ describe('Sidebar', () => {
 
   describe('Edge Cases', () => {
     it('should handle empty categories array', () => {
-      render(<Sidebar {...defaultProps} categories={[]} />);
+      renderWithDialog(<Sidebar {...defaultProps} categories={[]} />);
       expect(screen.getByText('Ordner')).toBeInTheDocument();
       // Standard folders should still render
       expect(screen.getByText('Posteingang')).toBeInTheDocument();
     });
 
     it('should handle empty counts object', () => {
-      render(<Sidebar {...defaultProps} counts={{}} />);
+      renderWithDialog(<Sidebar {...defaultProps} counts={{}} />);
       // No count badges should be displayed
       const countElements = screen.queryAllByText(/^\d+$/);
       expect(countElements).toHaveLength(0);
     });
 
     it('should handle single account correctly', () => {
-      render(<Sidebar {...defaultProps} accounts={[mockAccounts[0]]} activeAccountId="acc-1" />);
+      renderWithDialog(<Sidebar {...defaultProps} accounts={[mockAccounts[0]]} activeAccountId="acc-1" />);
 
       const accountButton = screen.getByText('Work Account').closest('button');
       fireEvent.click(accountButton!);
@@ -604,7 +608,7 @@ describe('Sidebar', () => {
     });
 
     it('should fall back to first account if activeAccountId not found', () => {
-      render(<Sidebar {...defaultProps} activeAccountId="non-existent-id" />);
+      renderWithDialog(<Sidebar {...defaultProps} activeAccountId="non-existent-id" />);
       // Should display first account (Work Account)
       expect(screen.getByText('Work Account')).toBeInTheDocument();
     });
@@ -612,20 +616,20 @@ describe('Sidebar', () => {
 
   describe('Accessibility', () => {
     it('should have accessible buttons for categories', () => {
-      render(<Sidebar {...defaultProps} />);
+      renderWithDialog(<Sidebar {...defaultProps} />);
 
       const buttons = screen.getAllByRole('button');
       expect(buttons.length).toBeGreaterThan(0);
     });
 
     it('should have title attribute on add category button', () => {
-      render(<Sidebar {...defaultProps} />);
+      renderWithDialog(<Sidebar {...defaultProps} />);
       const addButton = screen.getByTitle('Neuen Ordner erstellen');
       expect(addButton).toHaveAttribute('title', 'Neuen Ordner erstellen');
     });
 
     it('should have title attribute on settings button', () => {
-      render(<Sidebar {...defaultProps} />);
+      renderWithDialog(<Sidebar {...defaultProps} />);
       const settingsButton = screen.getByTitle('Einstellungen');
       expect(settingsButton).toHaveAttribute('title', 'Einstellungen');
     });

@@ -125,6 +125,10 @@ export function sanitizeHtml(html: string | null | undefined): string {
       // Safe styling attributes (DOMPurify will sanitize style content)
       'class',
       'id',
+      // Inline styles - DOMPurify sanitizes dangerous CSS like expression() and url(javascript:).
+      // Note: when 'Load Images' is enabled, CSS url() in styles can enable tracking pixels
+      // (e.g., background-image: url(https://tracker/pixel)) similarly to <img> tags.
+      'style',
       // Text direction
       'dir',
       // Time element
@@ -256,7 +260,6 @@ export function sanitizeHtml(html: string | null | undefined): string {
       'onstorage',
       'onunload',
       // Data attributes that could be misused
-      'style', // Block inline styles entirely to prevent CSS injection
       'formaction',
       'action',
       'ping',

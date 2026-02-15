@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Email, Attachment } from '../types';
 import { CategoryIcon, BrainCircuit, Paperclip } from './Icon';
 import { sanitizeHtml } from '../utils/sanitizeHtml';
+import { blockRemoteImages, buildIframeDoc } from '../utils/emailHtml';
 
 interface EmailViewProps {
   email: Email | null;
@@ -12,6 +13,12 @@ const EmailView: React.FC<EmailViewProps> = ({ email }) => {
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [_isLoadingAttachments, setIsLoadingAttachments] = useState(false);
   const [linkError, setLinkError] = useState<string | null>(null);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const [imagesLoaded, setImagesLoaded] = useState(false);
+  const [iframeSrcDoc, setIframeSrcDoc] = useState('');
+  const [isSanitizing, setIsSanitizing] = useState(false);
+  const [blockedImageCount, setBlockedImageCount] = useState(0);
+  const iframeClickHandlerRef = useRef<{ doc: Document; handler: (e: MouseEvent) => void } | null>(null);
 
   useEffect(() => {
     if (email && email.hasAttachments && window.electron) {
@@ -24,7 +31,6 @@ const EmailView: React.FC<EmailViewProps> = ({ email }) => {
     } else {
       setAttachments([]);
     }
-    // Reset view to HTML preference on email switch
     setShowHtml(true);
   }, [email]);
 
@@ -35,6 +41,90 @@ const EmailView: React.FC<EmailViewProps> = ({ email }) => {
       return () => clearTimeout(timeoutId);
     }
   }, [linkError]);
+
+  // Reset state when switching emails
+  useEffect(() => {
+    setImagesLoaded(false);
+    setIframeSrcDoc('');
+    setBlockedImageCount(0);
+  }, [email?.id]);
+
+  // Async sanitization — does NOT block the React render
+  useEffect(() => {
+    if (!email?.bodyHtml) {
+      setIframeSrcDoc('');
+      setBlockedImageCount(0);
+      setIsSanitizing(false);
+      return;
+    }
+
+    setIsSanitizing(true);
+    const htmlSource = email.bodyHtml;
+    let cancelled = false;
+
+    // Yield to the browser so the header/spinner can paint first
+    const timeoutId = setTimeout(() => {
+      if (cancelled) return;
+      try {
+        let html = sanitizeHtml(htmlSource);
+
+        if (cancelled) return;
+
+        if (!imagesLoaded) {
+          const matches = html.match(/<img\s[^>]*?src\s*=\s*["'](?:https?:)?\/\//gi);
+          setBlockedImageCount(matches?.length ?? 0);
+          html = blockRemoteImages(html);
+        } else {
+          setBlockedImageCount(0);
+        }
+
+        setIframeSrcDoc(buildIframeDoc(html));
+      } catch (err) {
+        console.error('Failed to sanitize email HTML:', err);
+        setIframeSrcDoc('');
+      } finally {
+        if (!cancelled) setIsSanitizing(false);
+      }
+    }, 0);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timeoutId);
+    };
+  }, [email?.id, email?.bodyHtml, imagesLoaded]);
+
+  // Intercept link clicks inside iframe to open in external browser
+  const handleIframeLoad = useCallback(() => {
+    const iframe = iframeRef.current;
+    const doc = iframe?.contentDocument;
+    if (!doc?.body) return;
+
+    // Remove previous listener if any
+    if (iframeClickHandlerRef.current) {
+      const { doc: prevDoc, handler } = iframeClickHandlerRef.current;
+      prevDoc.removeEventListener('click', handler);
+    }
+
+    const handler = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      const anchor = target.closest('a');
+      if (anchor?.href && window.electron?.openExternal) {
+        e.preventDefault();
+        window.electron
+          .openExternal(anchor.href)
+          .then((result) => {
+            if (!result.success) {
+              setLinkError(result.message || 'Link konnte nicht geöffnet werden');
+            }
+          })
+          .catch(() => {
+            setLinkError('Link konnte nicht geöffnet werden');
+          });
+      }
+    };
+    doc.addEventListener('click', handler);
+    iframeClickHandlerRef.current = { doc, handler };
+  }, []);
 
   if (!email) {
     return (
@@ -60,22 +150,6 @@ const EmailView: React.FC<EmailViewProps> = ({ email }) => {
   // Toggle availability
   const hasHtml = !!email.bodyHtml;
 
-  // Handle clicks on links in email HTML content to open in external browser
-  const handleLinkClick = async (e: React.MouseEvent) => {
-    const target = e.target as HTMLElement;
-    const anchor = target.closest('a');
-    if (anchor && anchor.href && window.electron?.openExternal) {
-      e.preventDefault();
-      setLinkError(null);
-
-      const result = await window.electron.openExternal(anchor.href);
-      if (!result.success) {
-        // Show user-friendly error message
-        setLinkError(result.message || 'Failed to open link');
-      }
-    }
-  };
-
   // Handle clicks on attachment items to open in system default application
   const handleAttachmentClick = async (attachmentId: string) => {
     if (window.electron?.openAttachment) {
@@ -83,7 +157,6 @@ const EmailView: React.FC<EmailViewProps> = ({ email }) => {
 
       const result = await window.electron.openAttachment(attachmentId);
       if (!result.success) {
-        // Show user-friendly error message
         setLinkError(result.message || 'Failed to open attachment');
       }
     }
@@ -210,17 +283,41 @@ const EmailView: React.FC<EmailViewProps> = ({ email }) => {
         </div>
       )}
 
+      {/* Load Images Banner */}
+      {showHtml && hasHtml && !imagesLoaded && blockedImageCount > 0 && (
+        <div className="mx-6 mt-2 flex items-center justify-between bg-amber-50 border border-amber-200 rounded-lg px-4 py-2 flex-shrink-0">
+          <span className="text-sm text-amber-800">{blockedImageCount} externe Bilder blockiert</span>
+          <button
+            type="button"
+            onClick={() => setImagesLoaded(true)}
+            className="text-sm font-medium text-amber-700 hover:text-amber-900 bg-amber-100 hover:bg-amber-200 px-3 py-1 rounded transition-colors"
+          >
+            Bilder laden
+          </button>
+        </div>
+      )}
+
       {/* Body */}
-      <div className="flex-1 overflow-y-auto p-6 pt-2">
-        <div className="bg-white p-8 rounded-lg shadow-sm border border-slate-100 min-h-[50%]">
+      <div className="flex-1 overflow-hidden p-6 pt-2">
+        <div className="bg-white rounded-lg shadow-sm border border-slate-100 h-full flex flex-col">
           {showHtml && email.bodyHtml ? (
-            <div
-              className="prose prose-slate max-w-none font-sans text-slate-800"
-              onClick={handleLinkClick}
-              dangerouslySetInnerHTML={{ __html: sanitizeHtml(email.bodyHtml) }}
-            />
+            isSanitizing || !iframeSrcDoc ? (
+              <div className="flex-1 flex flex-col items-center justify-center text-slate-400">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mb-2"></div>
+                <p className="text-sm">Bereite Ansicht vor...</p>
+              </div>
+            ) : (
+              <iframe
+                ref={iframeRef}
+                srcDoc={iframeSrcDoc}
+                onLoad={handleIframeLoad}
+                sandbox="allow-same-origin"
+                className="w-full flex-1 border-0"
+                title="Email content"
+              />
+            )
           ) : (
-            <div className="prose prose-slate max-w-none whitespace-pre-wrap font-sans text-slate-800">
+            <div className="prose prose-slate max-w-none whitespace-pre-wrap font-sans text-slate-800 p-8 overflow-y-auto flex-1">
               {email.body}
             </div>
           )}

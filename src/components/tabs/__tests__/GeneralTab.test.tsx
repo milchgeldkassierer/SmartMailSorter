@@ -1,18 +1,18 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import GeneralTab from '../GeneralTab';
+import { DialogProvider } from '../../../contexts/DialogContext';
+
+// Helper to render with DialogProvider
+const renderWithDialog = (ui: React.ReactElement) => render(<DialogProvider>{ui}</DialogProvider>);
 
 describe('GeneralTab', () => {
-  let confirmSpy: ReturnType<typeof vi.spyOn>;
   let reloadMock: ReturnType<typeof vi.fn>;
   let mockElectron: { resetDb: ReturnType<typeof vi.fn> };
   let originalLocation: Location;
 
   beforeEach(() => {
     vi.clearAllMocks();
-
-    // Mock window.confirm
-    confirmSpy = vi.spyOn(window, 'confirm');
 
     // Mock window.location.reload
     reloadMock = vi.fn();
@@ -31,7 +31,6 @@ describe('GeneralTab', () => {
   });
 
   afterEach(() => {
-    confirmSpy.mockRestore();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (window as any).location = originalLocation;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -40,31 +39,31 @@ describe('GeneralTab', () => {
 
   describe('Rendering', () => {
     it('should render the component title', () => {
-      render(<GeneralTab />);
+      renderWithDialog(<GeneralTab />);
       expect(screen.getByText('Datenverwaltung')).toBeInTheDocument();
     });
 
     it('should render the reset button', () => {
-      render(<GeneralTab />);
+      renderWithDialog(<GeneralTab />);
       const resetButton = screen.getByText('Datenbank komplett zurücksetzen & neu starten');
       expect(resetButton).toBeInTheDocument();
     });
 
     it('should render reset button with trash icon', () => {
-      render(<GeneralTab />);
+      renderWithDialog(<GeneralTab />);
       const resetButton = screen.getByText('Datenbank komplett zurücksetzen & neu starten');
       const icon = resetButton.querySelector('svg');
       expect(icon).toBeInTheDocument();
     });
 
     it('should render title as h3 element', () => {
-      render(<GeneralTab />);
+      renderWithDialog(<GeneralTab />);
       const title = screen.getByText('Datenverwaltung');
       expect(title.tagName).toBe('H3');
     });
 
     it('should render reset button with correct styling classes', () => {
-      render(<GeneralTab />);
+      renderWithDialog(<GeneralTab />);
       const resetButton = screen.getByText('Datenbank komplett zurücksetzen & neu starten');
       expect(resetButton).toHaveClass('bg-red-50');
       expect(resetButton).toHaveClass('text-red-600');
@@ -72,79 +71,119 @@ describe('GeneralTab', () => {
     });
 
     it('should render with center alignment', () => {
-      const { container } = render(<GeneralTab />);
+      const { container } = renderWithDialog(<GeneralTab />);
       const wrapper = container.firstChild as HTMLElement;
       expect(wrapper).toHaveClass('text-center');
     });
   });
 
   describe('Reset Button Interaction', () => {
-    it('should show confirmation dialog when reset button is clicked', () => {
-      confirmSpy.mockReturnValue(false);
-      render(<GeneralTab />);
+    it('should show confirmation dialog when reset button is clicked', async () => {
+      renderWithDialog(<GeneralTab />);
 
       const resetButton = screen.getByText('Datenbank komplett zurücksetzen & neu starten');
       fireEvent.click(resetButton);
 
-      expect(confirmSpy).toHaveBeenCalledTimes(1);
-      expect(confirmSpy).toHaveBeenCalledWith('Achtung: Dies löscht alle gespeicherten Emails und Konten! Fortfahren?');
+      // Dialog should be visible
+      await waitFor(() => {
+        expect(screen.getByText('Datenbank zurücksetzen')).toBeInTheDocument();
+        expect(
+          screen.getByText('Achtung: Dies löscht alle gespeicherten Emails und Konten! Fortfahren?')
+        ).toBeInTheDocument();
+      });
     });
 
     it('should not reset database when user cancels confirmation', async () => {
-      confirmSpy.mockReturnValue(false);
-      render(<GeneralTab />);
+      renderWithDialog(<GeneralTab />);
 
       const resetButton = screen.getByText('Datenbank komplett zurücksetzen & neu starten');
       fireEvent.click(resetButton);
+
+      // Wait for dialog to appear
+      await waitFor(() => {
+        expect(screen.getByText('Datenbank zurücksetzen')).toBeInTheDocument();
+      });
+
+      // Click cancel button
+      const cancelButton = screen.getByText('Abbrechen');
+      fireEvent.click(cancelButton);
+
+      // Wait for dialog to close
+      await waitFor(() => {
+        expect(screen.queryByText('Datenbank zurücksetzen')).not.toBeInTheDocument();
+      });
 
       expect(mockElectron.resetDb).not.toHaveBeenCalled();
       expect(reloadMock).not.toHaveBeenCalled();
     });
 
     it('should call resetDb when user confirms', async () => {
-      confirmSpy.mockReturnValue(true);
-      render(<GeneralTab />);
+      renderWithDialog(<GeneralTab />);
 
       const resetButton = screen.getByText('Datenbank komplett zurücksetzen & neu starten');
       fireEvent.click(resetButton);
 
+      // Wait for dialog to appear
+      await waitFor(() => {
+        expect(screen.getByText('Datenbank zurücksetzen')).toBeInTheDocument();
+      });
+
+      // Click confirm button
+      const confirmButton = screen.getByText('Zurücksetzen');
+      fireEvent.click(confirmButton);
+
       // Wait for async operation
-      await vi.waitFor(() => {
+      await waitFor(() => {
         expect(mockElectron.resetDb).toHaveBeenCalledTimes(1);
       });
     });
 
     it('should reload page after successful reset', async () => {
-      confirmSpy.mockReturnValue(true);
-      render(<GeneralTab />);
+      renderWithDialog(<GeneralTab />);
 
       const resetButton = screen.getByText('Datenbank komplett zurücksetzen & neu starten');
       fireEvent.click(resetButton);
 
+      // Wait for dialog to appear
+      await waitFor(() => {
+        expect(screen.getByText('Datenbank zurücksetzen')).toBeInTheDocument();
+      });
+
+      // Click confirm button
+      const confirmButton = screen.getByText('Zurücksetzen');
+      fireEvent.click(confirmButton);
+
       // Wait for async operation
-      await vi.waitFor(() => {
+      await waitFor(() => {
         expect(mockElectron.resetDb).toHaveBeenCalledTimes(1);
         expect(reloadMock).toHaveBeenCalledTimes(1);
       });
     });
 
     it('should handle case when electron is not available', async () => {
-      confirmSpy.mockReturnValue(true);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       delete (window as any).electron;
-      render(<GeneralTab />);
+      renderWithDialog(<GeneralTab />);
 
       const resetButton = screen.getByText('Datenbank komplett zurücksetzen & neu starten');
       fireEvent.click(resetButton);
 
+      // Wait for dialog to appear
+      await waitFor(() => {
+        expect(screen.getByText('Datenbank zurücksetzen')).toBeInTheDocument();
+      });
+
+      // Click confirm button
+      const confirmButton = screen.getByText('Zurücksetzen');
+      fireEvent.click(confirmButton);
+
       // Should still reload even without electron
-      await vi.waitFor(() => {
+      await waitFor(() => {
         expect(reloadMock).toHaveBeenCalledTimes(1);
       });
     });
 
     it('should call resetDb before reload', async () => {
-      confirmSpy.mockReturnValue(true);
       const callOrder: string[] = [];
 
       mockElectron.resetDb.mockImplementation(async () => {
@@ -155,12 +194,21 @@ describe('GeneralTab', () => {
         callOrder.push('reload');
       });
 
-      render(<GeneralTab />);
+      renderWithDialog(<GeneralTab />);
 
       const resetButton = screen.getByText('Datenbank komplett zurücksetzen & neu starten');
       fireEvent.click(resetButton);
 
-      await vi.waitFor(() => {
+      // Wait for dialog to appear
+      await waitFor(() => {
+        expect(screen.getByText('Datenbank zurücksetzen')).toBeInTheDocument();
+      });
+
+      // Click confirm button
+      const confirmButton = screen.getByText('Zurücksetzen');
+      fireEvent.click(confirmButton);
+
+      await waitFor(() => {
         expect(callOrder).toEqual(['resetDb', 'reload']);
       });
     });
@@ -168,17 +216,25 @@ describe('GeneralTab', () => {
 
   describe('Electron API Integration', () => {
     it('should work in browser environment without electron', async () => {
-      confirmSpy.mockReturnValue(true);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       delete (window as any).electron;
 
-      render(<GeneralTab />);
+      renderWithDialog(<GeneralTab />);
 
       const resetButton = screen.getByText('Datenbank komplett zurücksetzen & neu starten');
       fireEvent.click(resetButton);
 
+      // Wait for dialog to appear
+      await waitFor(() => {
+        expect(screen.getByText('Datenbank zurücksetzen')).toBeInTheDocument();
+      });
+
+      // Click confirm button
+      const confirmButton = screen.getByText('Zurücksetzen');
+      fireEvent.click(confirmButton);
+
       // Should only reload without calling electron API
-      await vi.waitFor(() => {
+      await waitFor(() => {
         expect(reloadMock).toHaveBeenCalledTimes(1);
       });
     });
@@ -186,33 +242,48 @@ describe('GeneralTab', () => {
 
   describe('Button Behavior', () => {
     it('should be clickable', () => {
-      render(<GeneralTab />);
+      renderWithDialog(<GeneralTab />);
       const resetButton = screen.getByText('Datenbank komplett zurücksetzen & neu starten');
       expect(resetButton).toBeEnabled();
     });
 
     it('should respond to multiple clicks correctly', async () => {
-      confirmSpy.mockReturnValueOnce(false).mockReturnValueOnce(true);
-
-      render(<GeneralTab />);
+      renderWithDialog(<GeneralTab />);
       const resetButton = screen.getByText('Datenbank komplett zurücksetzen & neu starten');
 
       // First click - user cancels
       fireEvent.click(resetButton);
-      expect(confirmSpy).toHaveBeenCalledTimes(1);
+
+      // Wait for dialog to appear
+      await waitFor(() => {
+        expect(screen.getByText('Datenbank zurücksetzen')).toBeInTheDocument();
+      });
+
+      // Click cancel button
+      const cancelButton = screen.getByText('Abbrechen');
+      fireEvent.click(cancelButton);
+
       expect(mockElectron.resetDb).not.toHaveBeenCalled();
 
       // Second click - user confirms
       fireEvent.click(resetButton);
-      expect(confirmSpy).toHaveBeenCalledTimes(2);
 
-      await vi.waitFor(() => {
+      // Wait for dialog to appear again
+      await waitFor(() => {
+        expect(screen.getByText('Datenbank zurücksetzen')).toBeInTheDocument();
+      });
+
+      // Click confirm button
+      const confirmButton = screen.getByText('Zurücksetzen');
+      fireEvent.click(confirmButton);
+
+      await waitFor(() => {
         expect(mockElectron.resetDb).toHaveBeenCalledTimes(1);
       });
     });
 
     it('should maintain hover state classes', () => {
-      render(<GeneralTab />);
+      renderWithDialog(<GeneralTab />);
       const resetButton = screen.getByText('Datenbank komplett zurücksetzen & neu starten');
       expect(resetButton).toHaveClass('hover:bg-red-100');
     });
@@ -220,19 +291,19 @@ describe('GeneralTab', () => {
 
   describe('Accessibility', () => {
     it('should render button as button element', () => {
-      render(<GeneralTab />);
+      renderWithDialog(<GeneralTab />);
       const resetButton = screen.getByText('Datenbank komplett zurücksetzen & neu starten');
       expect(resetButton.tagName).toBe('BUTTON');
     });
 
     it('should have proper text content for screen readers', () => {
-      render(<GeneralTab />);
+      renderWithDialog(<GeneralTab />);
       const resetButton = screen.getByText('Datenbank komplett zurücksetzen & neu starten');
       expect(resetButton.textContent).toContain('Datenbank komplett zurücksetzen & neu starten');
     });
 
     it('should render with visible text', () => {
-      render(<GeneralTab />);
+      renderWithDialog(<GeneralTab />);
       const title = screen.getByText('Datenverwaltung');
       expect(title).toBeVisible();
     });
