@@ -9,6 +9,7 @@ interface UseBatchOperationsProps {
   aiSettings: AISettings;
   onDeleteEmail: (id: string) => Promise<void>;
   onToggleRead: (id: string) => Promise<void>;
+  onToggleFlag: (id: string) => Promise<void>;
   onClearSelection: () => void;
   onUpdateEmails: (updateFn: (emails: Email[]) => Email[]) => void;
   onUpdateCategories: (categories: Category[]) => void;
@@ -24,6 +25,7 @@ interface UseBatchOperationsReturn {
   handleBatchDelete: () => Promise<void>;
   handleBatchSmartSort: () => Promise<void>;
   handleBatchMarkRead: () => Promise<void>;
+  handleBatchFlag: () => Promise<void>;
 }
 
 export const useBatchOperations = ({
@@ -33,6 +35,7 @@ export const useBatchOperations = ({
   aiSettings,
   onDeleteEmail,
   onToggleRead,
+  onToggleFlag,
   onClearSelection,
   onUpdateEmails,
   onUpdateCategories,
@@ -179,6 +182,33 @@ export const useBatchOperations = ({
     }
   };
 
+  const handleBatchFlag = async () => {
+    if (selectedIds.size === 0) return;
+
+    // Determine target flag state: if any selected email is unflagged, flag all; else unflag all
+    const selectedEmails = currentEmails.filter((e) => selectedIds.has(e.id));
+    const hasUnflagged = selectedEmails.some((e) => !e.isFlagged);
+    const targetFlagState = hasUnflagged;
+
+    const ids = Array.from(selectedIds);
+    try {
+      // Toggle flag status for each email
+      // Only toggle if the email's current state doesn't match target state
+      await Promise.all(
+        ids.map(async (id) => {
+          const email = currentEmails.find((e) => e.id === id);
+          if (email && email.isFlagged !== targetFlagState) {
+            await onToggleFlag(id);
+          }
+        })
+      );
+      onClearSelection();
+    } catch (error) {
+      console.error('Failed to update flag status:', error);
+      alert('Einige Emails konnten nicht aktualisiert werden');
+    }
+  };
+
   const handleBatchSmartSort = async () => {
     if (selectedIds.size === 0) return;
     if (!aiSettings.apiKey) {
@@ -263,5 +293,6 @@ export const useBatchOperations = ({
     handleBatchDelete,
     handleBatchSmartSort,
     handleBatchMarkRead,
+    handleBatchFlag,
   };
 };
