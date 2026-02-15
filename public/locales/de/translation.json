@@ -1,0 +1,175 @@
+{
+  "common": {
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "delete": "Löschen",
+    "rename": "Umbenennen",
+    "ok": "OK",
+    "close": "Schließen",
+    "add": "Hinzufügen",
+    "edit": "Bearbeiten",
+    "remove": "Entfernen",
+    "test": "Testen",
+    "connect": "Verbinden",
+    "connected": "Verbunden",
+    "unknown": "Unbekannt",
+    "error": "Fehler",
+    "settings": "Einstellungen",
+    "logout": "Logout"
+  },
+  "sidebar": {
+    "noAccount": "Kein Konto",
+    "pleaseSetup": "Bitte einrichten",
+    "neverSynced": "Noch nie synchronisiert",
+    "manageAccounts": "Konten verwalten",
+    "folders": "Ordner",
+    "markings": "Markierungen",
+    "starred": "Markierte",
+    "smartMailbox": "Intelligentes Postfach",
+    "createNewFolder": "Neuen Ordner erstellen",
+    "aiCategories": "KI Kategorien",
+    "other": "Sonstiges",
+    "namePlaceholder": "Name...",
+    "storage": "Speicher",
+    "renameCategory": "Kategorie umbenennen",
+    "renameCategoryPrompt": "Geben Sie einen neuen Namen ein:",
+    "deleteCategory": "Kategorie löschen",
+    "deleteCategoryConfirm": "Möchten Sie die Kategorie '{{category}}' wirklich löschen?",
+    "featureInDevelopment": "Funktion in Entwicklung",
+    "iconSelectionComingSoon": "Die Icon-Auswahl wird bald verfügbar sein!",
+    "changeIcon": "Icon ändern"
+  },
+  "settingsModal": {
+    "title": "Einstellungen",
+    "tabs": {
+      "accounts": "IMAP Konten",
+      "smartSort": "Smart Sort",
+      "general": "Allgemein"
+    }
+  },
+  "accountsTab": {
+    "connectedAccounts": "Verbundene Konten",
+    "addAccount": "Konto hinzufügen",
+    "connectNewAccount": "Neues Konto verbinden",
+    "provider": "Anbieter",
+    "providers": {
+      "gmx": "GMX",
+      "webde": "Web.de",
+      "gmail": "Gmail",
+      "other": "Andere"
+    },
+    "displayName": "Name (Anzeige)",
+    "displayNamePlaceholder": "z.B. Arbeit",
+    "emailAddress": "Email Adresse",
+    "emailPlaceholder": "name@gmx.de",
+    "password": "Passwort",
+    "passwordPlaceholder": "Email Passwort",
+    "imapServer": "IMAP Server",
+    "imapServerPlaceholder": "imap.example.com",
+    "port": "Port",
+    "testConnection": "Verbindung testen",
+    "saveAndConnect": "Speichern & Verbinden",
+    "removeAccount": "Konto entfernen",
+    "connectionSuccess": "Verbunden",
+    "connectionFailed": "Verbindung fehlgeschlagen",
+    "testingError": "Fehler beim Testen",
+    "webModeTestNotPossible": "Web Mode: Test nicht möglich"
+  },
+  "smartSortTab": {
+    "title": "Smart Sort Konfiguration",
+    "description": "Wähle die KI, die deine Emails sortiert.",
+    "llmProvider": "LLM Anbieter",
+    "model": "Modell",
+    "apiKey": "API Key",
+    "apiKeyPlaceholder": "sk-...",
+    "apiKeyPlaceholderOptional": "Optional (verwendet Standard-Key)",
+    "geminiKeyInfo": "Für Google Gemini ist bereits ein Demo-Key hinterlegt. Du kannst ihn überschreiben.",
+    "apiKeyInfo": "Der API Key wird nur lokal im Browser für die Simulation verwendet.",
+    "saveSettings": "Einstellungen speichern"
+  },
+  "generalTab": {
+    "dataManagement": "Datenverwaltung",
+    "resetDatabase": "Datenbank komplett zurücksetzen & neu starten",
+    "resetDatabaseTitle": "Datenbank zurücksetzen",
+    "resetDatabaseConfirm": "Achtung: Dies löscht alle gespeicherten Emails und Konten! Fortfahren?",
+    "resetButton": "Zurücksetzen",
+    "resetError": "Datenbank konnte nicht zurückgesetzt werden:",
+    "unknownError": "Unbekannter Fehler"
+  },
+  "topBar": {
+    "searchResults": "Suchergebnisse",
+    "onlyUnsorted": "Nur unsortierte",
+    "sortBy": "Sortieren nach",
+    "sortFields": {
+      "date": "Datum",
+      "sender": "Absender",
+      "subject": "Betreff"
+    },
+    "sortDirection": {
+      "ascending": "Aufsteigend",
+      "descending": "Absteigend"
+    },
+    "fetchEmails": "Emails abrufen"
+  },
+  "emailList": {
+    "noEmails": "Keine Emails",
+    "loading": "Lädt...",
+    "selectEmail": "Wähle eine Email aus"
+  },
+  "emailView": {
+    "from": "Von",
+    "to": "An",
+    "cc": "CC",
+    "bcc": "BCC",
+    "date": "Datum",
+    "subject": "Betreff",
+    "attachments": "Anhänge",
+    "reply": "Antworten",
+    "forward": "Weiterleiten",
+    "delete": "Löschen",
+    "markAsRead": "Als gelesen markieren",
+    "markAsUnread": "Als ungelesen markieren",
+    "star": "Markieren",
+    "unstar": "Markierung entfernen"
+  },
+  "categories": {
+    "inbox": "Posteingang",
+    "sent": "Gesendet",
+    "drafts": "Entwürfe",
+    "trash": "Papierkorb",
+    "spam": "Spam",
+    "archive": "Archiv",
+    "starred": "Markiert",
+    "other": "Sonstiges"
+  },
+  "search": {
+    "placeholder": "Suchen...",
+    "searchIn": "Suchen in",
+    "all": "Alle",
+    "subject": "Betreff",
+    "from": "Absender",
+    "to": "Empfänger",
+    "body": "Nachricht"
+  },
+  "dialogs": {
+    "confirm": "Bestätigen",
+    "cancel": "Abbrechen",
+    "yes": "Ja",
+    "no": "Nein"
+  },
+  "timeAgo": {
+    "justNow": "Gerade eben",
+    "minuteAgo": "Vor einer Minute",
+    "minutesAgo": "Vor {{count}} Minuten",
+    "hourAgo": "Vor einer Stunde",
+    "hoursAgo": "Vor {{count}} Stunden",
+    "dayAgo": "Vor einem Tag",
+    "daysAgo": "Vor {{count}} Tagen",
+    "weekAgo": "Vor einer Woche",
+    "weeksAgo": "Vor {{count}} Wochen",
+    "monthAgo": "Vor einem Monat",
+    "monthsAgo": "Vor {{count}} Monaten",
+    "yearAgo": "Vor einem Jahr",
+    "yearsAgo": "Vor {{count}} Jahren"
+  }
+}
