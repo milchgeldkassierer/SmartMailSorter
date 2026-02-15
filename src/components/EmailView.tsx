@@ -131,7 +131,8 @@ const EmailView: React.FC<EmailViewProps> = ({ email }) => {
       <div className="flex-1 bg-slate-50 flex items-center justify-center text-slate-400">
         <div className="text-center">
           <CategoryIcon category={'INBOX'} className="w-16 h-16 mx-auto mb-4 opacity-20" />
-          <p>Wähle eine Email aus, um Details zu sehen.</p>
+          <h3 className="text-lg font-medium text-slate-600 mb-2">Keine Email ausgewählt</h3>
+          <p className="text-sm text-slate-400">Wähle eine Email aus der Liste aus, um den Inhalt anzuzeigen.</p>
         </div>
       </div>
     );
