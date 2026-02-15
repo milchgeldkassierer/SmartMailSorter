@@ -13,6 +13,10 @@ export const useDialogContext = (): UseDialogReturn => {
   return ctx;
 };
 
+export const useOptionalDialogContext = (): UseDialogReturn | null => {
+  return useContext(DialogContext);
+};
+
 export const DialogProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const dialog = useDialog();
 

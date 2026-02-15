@@ -38,9 +38,11 @@ export const useUndoStack = (): UseUndoStackReturn => {
     const action = current[current.length - 1];
     setStack((prev) => (prev.length === 0 ? prev : prev.slice(0, -1)));
     try {
-      action.execute();
+      Promise.resolve(action.execute()).catch(() => {
+        // Silently handle async undo failures
+      });
     } catch {
-      // Silently handle undo failures
+      // Silently handle sync undo failures
     }
   }, []);
 

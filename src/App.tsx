@@ -216,14 +216,16 @@ const App: React.FC = () => {
   const handleMoveToSmartCategory = useCallback(
     (emailIds: string[], category: string) => {
       if (category === FLAGGED_FOLDER) {
-        // Toggle flag for each email
-        const previousStates = new Map<string, { isFlagged?: boolean }>();
+        // Toggle flag for each email — store previous states including uid/folder for direct IPC undo
+        const previousStates = new Map<string, { isFlagged?: boolean; uid?: number; folder?: string }>();
         emailIds.forEach((id) => {
           const email = currentEmails.find((e) => e.id === id);
-          if (email) previousStates.set(id, { isFlagged: email.isFlagged });
+          if (email) previousStates.set(id, { isFlagged: email.isFlagged, uid: email.uid, folder: email.folder });
         });
 
-        emailIds.forEach((id) => handleToggleFlag(id).catch(() => {}));
+        emailIds.forEach((id) => {
+          void handleToggleFlag(id).catch(() => {});
+        });
 
         pushAction({
           type: 'toggle-flag',
@@ -231,10 +233,26 @@ const App: React.FC = () => {
           previousState: previousStates,
           description: `${emailIds.length} Email(s) markiert`,
           execute: () => {
-            // Unconditionally toggle back — each email was toggled once,
-            // so toggling again restores the previous state.
-            previousStates.forEach((_prev, id) => {
-              handleToggleFlag(id).catch(() => {});
+            // Restore previous flag states directly without re-querying currentEmails
+            updateActiveAccountData((prev) => ({
+              ...prev,
+              emails: prev.emails.map((e) => {
+                const prevState = previousStates.get(e.id);
+                return prevState ? { ...e, isFlagged: prevState.isFlagged ?? e.isFlagged } : e;
+              }),
+            }));
+            previousStates.forEach((prev, id) => {
+              if (window.electron && activeAccountId && prev.uid) {
+                void window.electron
+                  .updateEmailFlag({
+                    accountId: activeAccountId,
+                    emailId: id,
+                    uid: prev.uid,
+                    isFlagged: prev.isFlagged ?? false,
+                    folder: prev.folder,
+                  })
+                  .catch(() => {});
+              }
             });
           },
         });
@@ -286,7 +304,7 @@ const App: React.FC = () => {
         },
       });
     },
-    [currentEmails, updateActiveAccountData, handleToggleFlag, pushAction]
+    [currentEmails, updateActiveAccountData, handleToggleFlag, pushAction, activeAccountId]
   );
 
   const handleMoveToFolder = useCallback(
@@ -336,7 +354,7 @@ const App: React.FC = () => {
     [currentEmails, updateActiveAccountData, pushAction]
   );
 
-  const { isDragging, draggedEmailIds, dropTargetCategory, onEmailDragStart, onDragEnd } = useDragAndDrop({
+  const { isDragging, draggedEmailIds, dropTargetCategory, onEmailDragStart, onCategoryDragOver, onCategoryDragLeave, onDragEnd } = useDragAndDrop({
     onMoveToSmartCategory: handleMoveToSmartCategory,
     onMoveToFolder: handleMoveToFolder,
   });
@@ -498,6 +516,8 @@ const App: React.FC = () => {
         }}
         isDraggingEmails={isDragging}
         dropTargetCategory={dropTargetCategory}
+        onCategoryDragOver={onCategoryDragOver}
+        onCategoryDragLeave={onCategoryDragLeave}
         onDropEmails={(emailIds, targetCategory, targetType) => {
           if (targetType === 'folder') {
             handleMoveToFolder(emailIds, targetCategory);
@@ -566,6 +586,7 @@ const App: React.FC = () => {
         {canUndo && !undoToast && (
           <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50">
             <button
+              type="button"
               onClick={handleUndo}
               className="bg-gray-800 text-white px-4 py-2 rounded-lg shadow-lg text-sm hover:bg-gray-700 transition-colors flex items-center gap-2"
             >

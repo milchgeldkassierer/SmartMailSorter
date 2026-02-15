@@ -61,7 +61,7 @@ const EmailList: React.FC<EmailListProps> = ({
 
       // Set custom drag image
       if (dragImageRef.current) {
-        dragImageRef.current.textContent = count === 1 ? '1 Email' : `${count} Emails`;
+        dragImageRef.current.textContent = count === 1 ? '1 E-Mail' : `${count} E-Mails`;
         e.dataTransfer.setDragImage(dragImageRef.current, 0, 0);
       }
 

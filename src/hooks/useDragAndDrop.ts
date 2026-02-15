@@ -38,7 +38,7 @@ export const useDragAndDrop = (callbacks: DragAndDropCallbacks): UseDragAndDropR
     // Create custom drag image showing count
     if (ids.length > 1) {
       const dragImage = document.createElement('div');
-      dragImage.textContent = `${ids.length} emails`;
+      dragImage.textContent = ids.length === 1 ? '1 E-Mail' : `${ids.length} E-Mails`;
       dragImage.style.cssText =
         'position:absolute;top:-1000px;padding:8px 12px;background:#3b82f6;color:white;border-radius:6px;font-size:13px;font-weight:500;';
       document.body.appendChild(dragImage);
@@ -81,16 +81,22 @@ export const useDragAndDrop = (callbacks: DragAndDropCallbacks): UseDragAndDropR
     (categoryName: string, categoryType: string, event: React.DragEvent) => {
       event.preventDefault();
 
+      const resetState = { isDragging: false, draggedEmailIds: [], dropTargetCategory: null };
+
       let emailIds: string[] = [];
       try {
         const data = event.dataTransfer.getData('application/x-email-ids');
         emailIds = JSON.parse(data);
       } catch {
-        // Invalid drag data, ignore
+        // Invalid drag data — reset state and bail
+        setState(resetState);
         return;
       }
 
-      if (emailIds.length === 0) return;
+      if (emailIds.length === 0) {
+        setState(resetState);
+        return;
+      }
 
       if (categoryType === 'folder') {
         callbacks.onMoveToFolder(emailIds, categoryName);

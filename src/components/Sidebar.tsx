@@ -38,6 +38,8 @@ interface SidebarProps {
   onDropEmails?: (emailIds: string[], targetCategory: string, targetType: 'folder' | 'smart') => void;
   dropTargetCategory?: string | null;
   isDraggingEmails?: boolean;
+  onCategoryDragOver?: (categoryName: string, event: React.DragEvent) => void;
+  onCategoryDragLeave?: (event: React.DragEvent) => void;
   // Accessibility: move selected emails via context menu
   selectedEmailCount?: number;
   onMoveSelectedToCategory?: (targetCategory: string, targetType: 'folder' | 'smart') => void;
@@ -59,6 +61,8 @@ const Sidebar: React.FC<SidebarProps> = ({
   onDropEmails,
   dropTargetCategory,
   isDraggingEmails,
+  onCategoryDragOver,
+  onCategoryDragLeave,
   selectedEmailCount,
   onMoveSelectedToCategory,
 }) => {
@@ -109,9 +113,16 @@ const Sidebar: React.FC<SidebarProps> = ({
   // physicalFolders.sort... already done
   // otherCustom.sort... already done
 
-  const handleDragOver = (e: React.DragEvent) => {
+  const handleDragOver = (cat: string, e: React.DragEvent) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
+    onCategoryDragOver?.(cat, e);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    const related = e.relatedTarget as Node | null;
+    if (related && e.currentTarget.contains(related)) return;
+    onCategoryDragLeave?.(e);
   };
 
   const handleDrop = (e: React.DragEvent, category: string, targetType: 'folder' | 'smart') => {
@@ -150,15 +161,12 @@ const Sidebar: React.FC<SidebarProps> = ({
         key={cat}
         onClick={() => onSelectCategory(cat)}
         onContextMenu={(e) => handleContextMenu(e, cat)}
-        onDragOver={handleDragOver}
+        onDragOver={(e) => handleDragOver(cat, e)}
         onDragEnter={(e) => {
           e.preventDefault();
-          // State is managed by parent via dropTargetCategory prop
+          onCategoryDragOver?.(cat, e);
         }}
-        onDragLeave={(e) => {
-          const related = e.relatedTarget as Node | null;
-          if (related && e.currentTarget.contains(related)) return;
-        }}
+        onDragLeave={handleDragLeave}
         onDrop={(e) => handleDrop(e, cat, targetType)}
         aria-dropeffect={isDraggingEmails ? 'move' : 'none'}
         className={`
@@ -291,12 +299,12 @@ const Sidebar: React.FC<SidebarProps> = ({
                 <React.Fragment key={cat}>
                   <button
                     onClick={() => onSelectCategory(cat)}
-                    onDragOver={handleDragOver}
-                    onDragEnter={(e) => e.preventDefault()}
-                    onDragLeave={(e) => {
-                      const related = e.relatedTarget as Node | null;
-                      if (related && e.currentTarget.contains(related)) return;
+                    onDragOver={(e) => handleDragOver(cat, e)}
+                    onDragEnter={(e) => {
+                      e.preventDefault();
+                      onCategoryDragOver?.(cat, e);
                     }}
+                    onDragLeave={handleDragLeave}
                     onDrop={(e) => handleDrop(e, cat, 'folder')}
                     aria-dropeffect={isDraggingEmails ? 'move' : 'none'}
                     className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
@@ -367,8 +375,15 @@ const Sidebar: React.FC<SidebarProps> = ({
 
             {/* Create new category drop zone (visible only when dragging) */}
             {isDraggingEmails && (
-              <div
-                onDragOver={handleDragOver}
+              <button
+                type="button"
+                tabIndex={0}
+                onDragOver={(e) => handleDragOver('__new_category__', e)}
+                onDragEnter={(e) => {
+                  e.preventDefault();
+                  onCategoryDragOver?.('__new_category__', e);
+                }}
+                onDragLeave={handleDragLeave}
                 onDrop={(e) => {
                   e.preventDefault();
                   const emailIdsJson = e.dataTransfer.getData('application/x-email-ids');
@@ -390,7 +405,7 @@ const Sidebar: React.FC<SidebarProps> = ({
               >
                 <PlusCircle className="w-4 h-4" />
                 <span className="text-sm">Neue Kategorie erstellen</span>
-              </div>
+              </button>
             )}
 
             {/* Sonstiges */}
@@ -475,6 +490,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           {selectedEmailCount != null && selectedEmailCount > 0 && onMoveSelectedToCategory && (
             <>
               <button
+                type="button"
                 onClick={() => {
                   const category = contextMenu.category;
                   const catObj = categories.find((c) => c.name === category);

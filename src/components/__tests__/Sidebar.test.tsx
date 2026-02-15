@@ -708,7 +708,7 @@ describe('Sidebar', () => {
       const onDropEmails = vi.fn();
       renderWithDialog(<Sidebar {...defaultProps} {...dndProps} onDropEmails={onDropEmails} />);
 
-      const newCategoryZone = screen.getByText('Neue Kategorie erstellen').closest('div[class*="shadow-"]');
+      const newCategoryZone = screen.getByText('Neue Kategorie erstellen').closest('button');
       const emailIds = ['email-4'];
 
       fireEvent.drop(newCategoryZone!, {

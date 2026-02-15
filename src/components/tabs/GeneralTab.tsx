@@ -1,17 +1,9 @@
 import React from 'react';
 import { Trash2 } from '../Icon';
-import { useDialogContext, type UseDialogReturn } from '../../contexts/DialogContext';
-
-function useDialogSafe(): UseDialogReturn | null {
-  try {
-    return useDialogContext();
-  } catch {
-    return null;
-  }
-}
+import { useOptionalDialogContext } from '../../contexts/DialogContext';
 
 const GeneralTab: React.FC = () => {
-  const dialog = useDialogSafe();
+  const dialog = useOptionalDialogContext();
 
   const handleResetDatabase = async () => {
     let confirmed = false;
