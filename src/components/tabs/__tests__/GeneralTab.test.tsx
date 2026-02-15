@@ -1,6 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import GeneralTab from '../GeneralTab';
+import { DialogProvider } from '../../../contexts/DialogContext';
+
+// Helper to render with DialogProvider
+const renderWithDialog = (ui: React.ReactElement) => render(<DialogProvider>{ui}</DialogProvider>);
 
 describe('GeneralTab', () => {
   let reloadMock: ReturnType<typeof vi.fn>;
@@ -35,31 +39,31 @@ describe('GeneralTab', () => {
 
   describe('Rendering', () => {
     it('should render the component title', () => {
-      render(<GeneralTab />);
+      renderWithDialog(<GeneralTab />);
       expect(screen.getByText('Datenverwaltung')).toBeInTheDocument();
     });
 
     it('should render the reset button', () => {
-      render(<GeneralTab />);
+      renderWithDialog(<GeneralTab />);
       const resetButton = screen.getByText('Datenbank komplett zurücksetzen & neu starten');
       expect(resetButton).toBeInTheDocument();
     });
 
     it('should render reset button with trash icon', () => {
-      render(<GeneralTab />);
+      renderWithDialog(<GeneralTab />);
       const resetButton = screen.getByText('Datenbank komplett zurücksetzen & neu starten');
       const icon = resetButton.querySelector('svg');
       expect(icon).toBeInTheDocument();
     });
 
     it('should render title as h3 element', () => {
-      render(<GeneralTab />);
+      renderWithDialog(<GeneralTab />);
       const title = screen.getByText('Datenverwaltung');
       expect(title.tagName).toBe('H3');
     });
 
     it('should render reset button with correct styling classes', () => {
-      render(<GeneralTab />);
+      renderWithDialog(<GeneralTab />);
       const resetButton = screen.getByText('Datenbank komplett zurücksetzen & neu starten');
       expect(resetButton).toHaveClass('bg-red-50');
       expect(resetButton).toHaveClass('text-red-600');
@@ -67,7 +71,7 @@ describe('GeneralTab', () => {
     });
 
     it('should render with center alignment', () => {
-      const { container } = render(<GeneralTab />);
+      const { container } = renderWithDialog(<GeneralTab />);
       const wrapper = container.firstChild as HTMLElement;
       expect(wrapper).toHaveClass('text-center');
     });
@@ -75,7 +79,7 @@ describe('GeneralTab', () => {
 
   describe('Reset Button Interaction', () => {
     it('should show confirmation dialog when reset button is clicked', async () => {
-      render(<GeneralTab />);
+      renderWithDialog(<GeneralTab />);
 
       const resetButton = screen.getByText('Datenbank komplett zurücksetzen & neu starten');
       fireEvent.click(resetButton);
@@ -90,7 +94,7 @@ describe('GeneralTab', () => {
     });
 
     it('should not reset database when user cancels confirmation', async () => {
-      render(<GeneralTab />);
+      renderWithDialog(<GeneralTab />);
 
       const resetButton = screen.getByText('Datenbank komplett zurücksetzen & neu starten');
       fireEvent.click(resetButton);
@@ -114,7 +118,7 @@ describe('GeneralTab', () => {
     });
 
     it('should call resetDb when user confirms', async () => {
-      render(<GeneralTab />);
+      renderWithDialog(<GeneralTab />);
 
       const resetButton = screen.getByText('Datenbank komplett zurücksetzen & neu starten');
       fireEvent.click(resetButton);
@@ -135,7 +139,7 @@ describe('GeneralTab', () => {
     });
 
     it('should reload page after successful reset', async () => {
-      render(<GeneralTab />);
+      renderWithDialog(<GeneralTab />);
 
       const resetButton = screen.getByText('Datenbank komplett zurücksetzen & neu starten');
       fireEvent.click(resetButton);
@@ -159,7 +163,7 @@ describe('GeneralTab', () => {
     it('should handle case when electron is not available', async () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       delete (window as any).electron;
-      render(<GeneralTab />);
+      renderWithDialog(<GeneralTab />);
 
       const resetButton = screen.getByText('Datenbank komplett zurücksetzen & neu starten');
       fireEvent.click(resetButton);
@@ -190,7 +194,7 @@ describe('GeneralTab', () => {
         callOrder.push('reload');
       });
 
-      render(<GeneralTab />);
+      renderWithDialog(<GeneralTab />);
 
       const resetButton = screen.getByText('Datenbank komplett zurücksetzen & neu starten');
       fireEvent.click(resetButton);
@@ -215,7 +219,7 @@ describe('GeneralTab', () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       delete (window as any).electron;
 
-      render(<GeneralTab />);
+      renderWithDialog(<GeneralTab />);
 
       const resetButton = screen.getByText('Datenbank komplett zurücksetzen & neu starten');
       fireEvent.click(resetButton);
@@ -238,13 +242,13 @@ describe('GeneralTab', () => {
 
   describe('Button Behavior', () => {
     it('should be clickable', () => {
-      render(<GeneralTab />);
+      renderWithDialog(<GeneralTab />);
       const resetButton = screen.getByText('Datenbank komplett zurücksetzen & neu starten');
       expect(resetButton).toBeEnabled();
     });
 
     it('should respond to multiple clicks correctly', async () => {
-      render(<GeneralTab />);
+      renderWithDialog(<GeneralTab />);
       const resetButton = screen.getByText('Datenbank komplett zurücksetzen & neu starten');
 
       // First click - user cancels
@@ -279,7 +283,7 @@ describe('GeneralTab', () => {
     });
 
     it('should maintain hover state classes', () => {
-      render(<GeneralTab />);
+      renderWithDialog(<GeneralTab />);
       const resetButton = screen.getByText('Datenbank komplett zurücksetzen & neu starten');
       expect(resetButton).toHaveClass('hover:bg-red-100');
     });
@@ -287,19 +291,19 @@ describe('GeneralTab', () => {
 
   describe('Accessibility', () => {
     it('should render button as button element', () => {
-      render(<GeneralTab />);
+      renderWithDialog(<GeneralTab />);
       const resetButton = screen.getByText('Datenbank komplett zurücksetzen & neu starten');
       expect(resetButton.tagName).toBe('BUTTON');
     });
 
     it('should have proper text content for screen readers', () => {
-      render(<GeneralTab />);
+      renderWithDialog(<GeneralTab />);
       const resetButton = screen.getByText('Datenbank komplett zurücksetzen & neu starten');
       expect(resetButton.textContent).toContain('Datenbank komplett zurücksetzen & neu starten');
     });
 
     it('should render with visible text', () => {
-      render(<GeneralTab />);
+      renderWithDialog(<GeneralTab />);
       const title = screen.getByText('Datenverwaltung');
       expect(title).toBeVisible();
     });

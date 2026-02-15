@@ -61,7 +61,7 @@ export const useSync = ({
     } finally {
       setIsSyncing(false);
     }
-  }, [activeAccountId, accounts, onAccountsUpdate, onDataUpdate, dialog]);
+  }, [activeAccountId, accounts, onAccountsUpdate, onDataUpdate, dialog.alert]);
 
   return {
     isSyncing,
