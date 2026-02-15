@@ -226,11 +226,16 @@ app.whenReady().then(() => {
       logger.error(`[IPC delete-email] Account not found: ${accountId}`);
       return { success: false, error: 'Account not found' };
     }
-    // Delete from server FIRST
+    // Move to Trash on server (or permanently delete if already in Trash)
     const result = await imap.deleteEmail(accountWithPassword, uid, folder);
-    // Only delete from DB if server deletion succeeded
     if (result.success) {
-      db.deleteEmail(emailId);
+      if (result.movedToTrash) {
+        // Move to Papierkorb in DB instead of deleting
+        db.updateEmailFolder(emailId, 'Papierkorb');
+      } else {
+        // Permanently deleted (was already in Trash or no Trash folder found)
+        db.deleteEmail(emailId);
+      }
     }
     return result;
   });

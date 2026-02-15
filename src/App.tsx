@@ -76,7 +76,19 @@ const App: React.FC = () => {
 
   const handleDeleteEmail = async (id: string) => {
     const emailToDelete = currentEmails.find((e) => e.id === id);
-    updateActiveAccountData((prev) => ({ ...prev, emails: prev.emails.filter((e) => e.id !== id) }));
+    if (!emailToDelete) return;
+    const isAlreadyInTrash = emailToDelete.folder === 'Papierkorb';
+
+    if (isAlreadyInTrash) {
+      // Permanently delete if already in Papierkorb
+      updateActiveAccountData((prev) => ({ ...prev, emails: prev.emails.filter((e) => e.id !== id) }));
+    } else {
+      // Move to Papierkorb in local state
+      updateActiveAccountData((prev) => ({
+        ...prev,
+        emails: prev.emails.map((e) => (e.id === id ? { ...e, folder: 'Papierkorb' } : e)),
+      }));
+    }
     if (selectedEmailId === id) setSelectedEmailId(null);
     if (!window.electron || !activeAccountId || !emailToDelete?.uid) return;
     try {
@@ -88,13 +100,15 @@ const App: React.FC = () => {
       });
     } catch (error) {
       console.error('Failed to delete email:', error);
-      // Rollback: restore email to state
+      // Rollback: restore email to previous state
       if (emailToDelete) {
         updateActiveAccountData((prev) => ({
           ...prev,
-          emails: [...prev.emails, emailToDelete].sort(
-            (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-          ),
+          emails: isAlreadyInTrash
+            ? [...prev.emails, emailToDelete].sort(
+                (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+              )
+            : prev.emails.map((e) => (e.id === id ? emailToDelete : e)),
         }));
       }
     }

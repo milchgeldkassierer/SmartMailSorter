@@ -130,9 +130,9 @@ const Sidebar: React.FC<SidebarProps> = ({
   const getDropTargetClasses = (cat: string) => {
     if (!isDraggingEmails) return '';
     if (dropTargetCategory === cat) {
-      return 'ring-2 ring-blue-500 bg-blue-900/20 scale-[1.02] transition-all';
+      return 'bg-blue-600/20 shadow-[inset_0_0_0_2px_rgba(59,130,246,0.6)] scale-[1.02] transition-all duration-150';
     }
-    return 'ring-2 ring-dashed ring-slate-600 transition-all';
+    return 'bg-slate-800/30 shadow-[inset_0_0_0_1px_rgba(100,116,139,0.3)] transition-all duration-150';
   };
 
   const renderCategoryItem = (
@@ -382,10 +382,10 @@ const Sidebar: React.FC<SidebarProps> = ({
                   }
                 }}
                 aria-dropeffect="move"
-                className={`flex items-center gap-3 px-3 py-2 mx-2 rounded-md border-2 border-dashed transition-all ${
+                className={`flex items-center gap-3 px-3 py-2 mx-2 rounded-lg transition-all duration-150 ${
                   dropTargetCategory === '__new_category__'
-                    ? 'border-blue-500 bg-blue-900/20 text-blue-300'
-                    : 'border-slate-600 text-slate-500'
+                    ? 'bg-blue-600/20 shadow-[inset_0_0_0_2px_rgba(59,130,246,0.6)] text-blue-300'
+                    : 'bg-slate-800/40 shadow-[inset_0_0_0_1px_rgba(100,116,139,0.25)] text-slate-500'
                 }`}
               >
                 <PlusCircle className="w-4 h-4" />
