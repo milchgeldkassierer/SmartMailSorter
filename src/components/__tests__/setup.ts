@@ -239,6 +239,16 @@ beforeAll(async () => {
               tooltipApiKeyMissing: 'Bitte API Key in Einstellungen hinterlegen',
               tooltipSmartSort: 'Ausgewählte Mails mit AI sortieren',
             },
+            simulationStart: {
+              title: 'GMX AI Sorter',
+              subtitle: 'Intelligent Email Categorization Prototype',
+              simulationModeTitle: 'Simulation Mode:',
+              simulationModeDescription: 'Direct IMAP access is not possible from a browser. This app uses Gemini AI to generate realistic email data and demonstrate how the AI sorting algorithm functions.',
+              description: 'Klicken Sie auf "Verbinden", um den Simulator zu starten. Gemini generiert Beispiel-Emails und sortiert diese automatisch in die richtigen Ordner.',
+              connecting: 'Generiere Postfach...',
+              connectButton: 'Mit Demo-Postfach verbinden',
+              poweredBy: 'Powered by Gemini 3 Flash Preview',
+            },
             confirmDialog: {
               confirm: 'Bestätigen',
             },
@@ -475,6 +485,16 @@ beforeAll(async () => {
               tooltipApiKeyMissing: 'Please add API Key in settings',
               tooltipSmartSort: 'Sort selected emails with AI',
             },
+            simulationStart: {
+              title: 'GMX AI Sorter',
+              subtitle: 'Intelligent Email Categorization Prototype',
+              simulationModeTitle: 'Simulation Mode:',
+              simulationModeDescription: 'Direct IMAP access is not possible from a browser. This app uses Gemini AI to generate realistic email data and demonstrate how the AI sorting algorithm functions.',
+              description: 'Click "Connect" to start the simulator. Gemini will generate example emails and automatically sort them into the correct folders.',
+              connecting: 'Generating mailbox...',
+              connectButton: 'Connect with demo mailbox',
+              poweredBy: 'Powered by Gemini 3 Flash Preview',
+            },
             confirmDialog: {
               confirm: 'Confirm',
             },
@@ -511,8 +531,15 @@ beforeAll(async () => {
     });
 });
 
+// Ensure language is set to German before each test
+beforeEach(async () => {
+  await i18n.changeLanguage('de');
+});
+
 // Automatic cleanup after each test to prevent memory leaks
 // and ensure test isolation
-afterEach(() => {
+afterEach(async () => {
   cleanup();
+  // Reset language to German for next test
+  await i18n.changeLanguage('de');
 });
