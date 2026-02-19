@@ -386,7 +386,7 @@ app.whenReady().then(() => {
 
   // Notification Settings IPC handlers
   // Load notification settings (global + all accounts)
-  ipcMain.handle('load-notification-settings', async (event) => {
+  ipcMain.handle('load-notification-settings', async () => {
     const accounts = db.getAccounts();
     const accountSettings = {};
 
@@ -398,7 +398,13 @@ app.whenReady().then(() => {
 
     // Load global settings (stored with special accountId)
     const globalSettings = db.getNotificationSettings('GLOBAL');
-    const categorySettings = JSON.parse(globalSettings.mutedCategories || '{}');
+
+    // Convert mutedCategories array to categorySettings Record<string, boolean>
+    // Muted categories are stored as an array; frontend expects {category: false}
+    const categorySettings = {};
+    if (Array.isArray(globalSettings.mutedCategories)) {
+      globalSettings.mutedCategories.forEach(cat => { categorySettings[cat] = false; });
+    }
 
     return {
       enabled: globalSettings.enabled,
@@ -408,18 +414,23 @@ app.whenReady().then(() => {
   });
 
   // Save notification settings (global + per-account)
-  ipcMain.handle('save-notification-settings', async (event, settings) => {
+  ipcMain.handle('save-notification-settings', async (_event, settings) => {
+    // Convert categorySettings Record<string, boolean> to mutedCategories array
+    const mutedCategories = Object.entries(settings.categorySettings || {})
+      .filter(([, enabled]) => !enabled)
+      .map(([name]) => name);
+
     // Save global enabled + category settings
     db.saveNotificationSettings('GLOBAL', {
       enabled: settings.enabled,
-      mutedCategories: JSON.stringify(settings.categorySettings || {}),
+      mutedCategories,
     });
 
     // Save per-account settings
     for (const [accountId, enabled] of Object.entries(settings.accountSettings)) {
       db.saveNotificationSettings(accountId, {
         enabled,
-        mutedCategories: '[]',  // Categories are now global
+        mutedCategories: [],
       });
     }
 

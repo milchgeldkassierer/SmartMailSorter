@@ -553,9 +553,19 @@ function getNotificationSettings(accountId) {
     };
   }
 
+  let mutedCategories = [];
+  try {
+    mutedCategories = JSON.parse(settings.mutedCategories || '[]');
+    if (!Array.isArray(mutedCategories)) {
+      mutedCategories = [];
+    }
+  } catch (_e) {
+    // Fallback to empty array if stored value is corrupted
+  }
+
   return {
     enabled: Boolean(settings.enabled),
-    mutedCategories: JSON.parse(settings.mutedCategories || '[]'),
+    mutedCategories,
   };
 }
 

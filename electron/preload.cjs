@@ -1,5 +1,8 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
+// Track wrapper functions so listeners can be properly removed
+const notificationListenerMap = new Map();
+
 contextBridge.exposeInMainWorld('electron', {
   getAccounts: () => ipcRenderer.invoke('get-accounts'),
   addAccount: (account) => ipcRenderer.invoke('add-account', account),
@@ -36,10 +39,16 @@ contextBridge.exposeInMainWorld('electron', {
 
   // Event listeners
   onNotificationClicked: (callback) => {
-    ipcRenderer.on('notification-clicked', (event, data) => callback(data));
+    const wrapper = (_event, data) => callback(data);
+    notificationListenerMap.set(callback, wrapper);
+    ipcRenderer.on('notification-clicked', wrapper);
   },
   removeNotificationClickedListener: (callback) => {
-    ipcRenderer.removeListener('notification-clicked', callback);
+    const wrapper = notificationListenerMap.get(callback);
+    if (wrapper) {
+      ipcRenderer.removeListener('notification-clicked', wrapper);
+      notificationListenerMap.delete(callback);
+    }
   },
 
   // External links

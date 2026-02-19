@@ -8,7 +8,7 @@ const {
   getMaxUidForFolder: _getMaxUidForFolder,
   getAllUidsForFolder: _getAllUidsForFolder,
   deleteEmailsByUid: _deleteEmailsByUid,
-  getUnreadEmailCount,
+  getUnreadEmailCount: _getUnreadEmailCount,
   getTotalUnreadEmailCount,
 } = require('./db.cjs');
 // Add db just for direct calls if needed, though we imported migrateFolder directly

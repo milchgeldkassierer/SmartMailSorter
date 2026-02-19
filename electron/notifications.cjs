@@ -11,17 +11,23 @@ const logger = require('./utils/logger.cjs');
  */
 function shouldNotify(email, accountId) {
   try {
-    const settings = getNotificationSettings(accountId);
-
-    // Check if notifications are enabled for this account
-    if (!settings.enabled) {
-      logger.debug(`Notifications disabled for account ${accountId}`);
+    // Check global settings first
+    const globalSettings = getNotificationSettings('GLOBAL');
+    if (!globalSettings.enabled) {
+      logger.debug('Notifications globally disabled');
       return false;
     }
 
-    // Check if this category is muted
-    if (email.smartCategory && settings.mutedCategories.includes(email.smartCategory)) {
+    // Check if this category is globally muted
+    if (email.smartCategory && Array.isArray(globalSettings.mutedCategories) && globalSettings.mutedCategories.includes(email.smartCategory)) {
       logger.debug(`Notifications muted for category ${email.smartCategory}`);
+      return false;
+    }
+
+    // Check per-account settings
+    const accountSettings = getNotificationSettings(accountId);
+    if (!accountSettings.enabled) {
+      logger.debug(`Notifications disabled for account ${accountId}`);
       return false;
     }
 

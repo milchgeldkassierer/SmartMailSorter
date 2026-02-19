@@ -26,9 +26,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   aiSettings,
   onSaveAISettings,
 }) => {
-  const [activeTab, setActiveTab] = useState<'accounts' | 'smartsort' | 'notifications' | 'general'>(
-    'accounts',
-  );
+  const [activeTab, setActiveTab] = useState<'accounts' | 'smartsort' | 'notifications' | 'general'>('accounts');
 
   if (!isOpen) return null;
 

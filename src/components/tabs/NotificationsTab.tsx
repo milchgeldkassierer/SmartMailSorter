@@ -60,9 +60,7 @@ const NotificationsTab: React.FC<NotificationsTabProps> = ({ accounts }) => {
             )}
             <div>
               <h3 className="font-semibold text-slate-800">Desktop-Benachrichtigungen</h3>
-              <p className="text-xs text-slate-500 mt-1">
-                Benachrichtigungen bei neuen E-Mails anzeigen
-              </p>
+              <p className="text-xs text-slate-500 mt-1">Benachrichtigungen bei neuen E-Mails anzeigen</p>
             </div>
           </div>
           <button
@@ -158,9 +156,8 @@ const NotificationsTab: React.FC<NotificationsTabProps> = ({ accounts }) => {
       {/* Info Box */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
         <p className="text-xs text-blue-800">
-          <strong>Hinweis:</strong> Benachrichtigungen erscheinen nur bei neu eintreffenden E-Mails während
-          der IMAP-Synchronisation. Stelle sicher, dass Benachrichtigungen in deinen Systemeinstellungen
-          erlaubt sind.
+          <strong>Hinweis:</strong> Benachrichtigungen erscheinen nur bei neu eintreffenden E-Mails während der
+          IMAP-Synchronisation. Stelle sicher, dass Benachrichtigungen in deinen Systemeinstellungen erlaubt sind.
         </p>
       </div>
     </div>

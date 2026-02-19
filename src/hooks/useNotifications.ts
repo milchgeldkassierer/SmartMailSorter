@@ -19,6 +19,7 @@ export const useNotifications = (): UseNotificationsReturn => {
   const [isInitialized, setIsInitialized] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const userModifiedDuringLoad = useRef(false);
+  const isDirty = useRef(false);
 
   // Load settings from IPC on mount
   useEffect(() => {
@@ -41,11 +42,12 @@ export const useNotifications = (): UseNotificationsReturn => {
     loadSettings();
   }, []);
 
-  // Persist notification settings whenever they change (after initialization)
+  // Persist notification settings whenever they change (after initialization, only if user modified)
   useEffect(() => {
-    if (!isInitialized) {
+    if (!isInitialized || !isDirty.current) {
       return;
     }
+    isDirty.current = false;
 
     const saveSettings = async () => {
       try {
@@ -63,11 +65,12 @@ export const useNotifications = (): UseNotificationsReturn => {
     saveSettings();
   }, [notificationSettings, isInitialized]);
 
-  // Wrapper for setNotificationSettings that tracks user modifications during load
+  // Wrapper for setNotificationSettings that tracks user modifications
   const handleSetNotificationSettings = (settings: NotificationSettings) => {
     if (!isInitialized) {
       userModifiedDuringLoad.current = true;
     }
+    isDirty.current = true;
     setNotificationSettings(settings);
   };
 
