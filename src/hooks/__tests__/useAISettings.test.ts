@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { renderHook, act } from '@testing-library/react';
+import { renderHook, act, waitFor } from '@testing-library/react';
 import { useAISettings } from '../useAISettings';
 import { AISettings, LLMProvider, AVAILABLE_MODELS } from '../../types';
 
@@ -9,12 +9,9 @@ const mockLoadAISettings = vi.fn();
 const mockSaveAISettings = vi.fn();
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-(global as any).window = {
-  ...global.window,
-  electron: {
-    loadAISettings: mockLoadAISettings,
-    saveAISettings: mockSaveAISettings,
-  },
+(window as any).electron = {
+  loadAISettings: mockLoadAISettings,
+  saveAISettings: mockSaveAISettings,
 };
 
 describe('useAISettings', () => {
@@ -54,7 +51,7 @@ describe('useAISettings', () => {
       const { result } = renderHook(() => useAISettings());
 
       // Wait for the async load to complete
-      await vi.waitFor(() => {
+      await waitFor(() => {
         expect(result.current.aiSettings.provider).toBe(LLMProvider.GEMINI);
       });
 
@@ -68,14 +65,14 @@ describe('useAISettings', () => {
 
       const { result } = renderHook(() => useAISettings());
 
-      await vi.waitFor(() => {
+      await waitFor(() => {
         expect(result.current.aiSettings).toEqual(mockOpenAISettings);
       });
 
       expect(mockLoadAISettings).toHaveBeenCalledTimes(1);
     });
 
-    it('should provide all required properties and functions', () => {
+    it('should provide all required properties and functions', async () => {
       const { result } = renderHook(() => useAISettings());
 
       expect(result.current).toHaveProperty('aiSettings');
@@ -85,6 +82,11 @@ describe('useAISettings', () => {
       expect(result.current).toHaveProperty('saveStatus');
       expect(typeof result.current.setAiSettings).toBe('function');
       expect(typeof result.current.isLoading).toBe('boolean');
+
+      // Let async effects settle
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
     });
 
     it('should expose loading state correctly', async () => {
@@ -96,7 +98,7 @@ describe('useAISettings', () => {
       expect(result.current.isLoading).toBe(true);
 
       // After load completes, should not be loading
-      await vi.waitFor(() => {
+      await waitFor(() => {
         expect(result.current.isLoading).toBe(false);
       });
     });
@@ -115,7 +117,7 @@ describe('useAISettings', () => {
       });
 
       // Wait for async load to complete
-      await vi.waitFor(() => {
+      await waitFor(() => {
         expect(result.current.isLoading).toBe(false);
       });
 
@@ -130,7 +132,7 @@ describe('useAISettings', () => {
 
       const { result } = renderHook(() => useAISettings());
 
-      await vi.waitFor(() => {
+      await waitFor(() => {
         expect(result.current.aiSettings.provider).toBe(LLMProvider.GEMINI);
       });
 
@@ -146,7 +148,7 @@ describe('useAISettings', () => {
 
       const { result } = renderHook(() => useAISettings());
 
-      await vi.waitFor(() => {
+      await waitFor(() => {
         expect(result.current.aiSettings).toEqual(mockOpenAISettings);
       });
 
@@ -161,7 +163,7 @@ describe('useAISettings', () => {
 
       const { result } = renderHook(() => useAISettings());
 
-      await vi.waitFor(() => {
+      await waitFor(() => {
         expect(result.current.aiSettings.provider).toBe(LLMProvider.GEMINI);
       });
 
@@ -179,7 +181,7 @@ describe('useAISettings', () => {
 
       const { result } = renderHook(() => useAISettings());
 
-      await vi.waitFor(() => {
+      await waitFor(() => {
         expect(result.current.aiSettings).toEqual(mockOpenAISettings);
       });
 
@@ -195,7 +197,7 @@ describe('useAISettings', () => {
       mockLoadAISettings.mockResolvedValue(null);
       const { result } = renderHook(() => useAISettings());
 
-      await vi.waitFor(() => {
+      await waitFor(() => {
         expect(result.current.aiSettings.provider).toBe(LLMProvider.GEMINI);
       });
 
@@ -205,7 +207,7 @@ describe('useAISettings', () => {
 
       expect(result.current.aiSettings).toEqual(mockOpenAISettings);
 
-      await vi.waitFor(() => {
+      await waitFor(() => {
         expect(mockSaveAISettings).toHaveBeenCalledWith(mockOpenAISettings);
       });
     });
@@ -214,7 +216,7 @@ describe('useAISettings', () => {
       mockLoadAISettings.mockResolvedValue(null);
       const { result } = renderHook(() => useAISettings());
 
-      await vi.waitFor(() => {
+      await waitFor(() => {
         expect(result.current.aiSettings.provider).toBe(LLMProvider.GEMINI);
       });
 
@@ -224,7 +226,7 @@ describe('useAISettings', () => {
 
       expect(result.current.aiSettings).toEqual(mockAnthropicSettings);
 
-      await vi.waitFor(() => {
+      await waitFor(() => {
         expect(mockSaveAISettings).toHaveBeenCalledWith(mockAnthropicSettings);
       });
     });
@@ -233,7 +235,7 @@ describe('useAISettings', () => {
       mockLoadAISettings.mockResolvedValue(null);
       const { result } = renderHook(() => useAISettings());
 
-      await vi.waitFor(() => {
+      await waitFor(() => {
         expect(result.current.aiSettings.provider).toBe(LLMProvider.GEMINI);
       });
 
@@ -249,7 +251,7 @@ describe('useAISettings', () => {
       expect(result.current.aiSettings.provider).toBe(LLMProvider.GEMINI);
       expect(result.current.aiSettings.apiKey).toBe('new-api-key');
 
-      await vi.waitFor(() => {
+      await waitFor(() => {
         expect(mockSaveAISettings).toHaveBeenCalledWith(updatedSettings);
       });
     });
@@ -258,7 +260,7 @@ describe('useAISettings', () => {
       mockLoadAISettings.mockResolvedValue(null);
       const { result } = renderHook(() => useAISettings());
 
-      await vi.waitFor(() => {
+      await waitFor(() => {
         expect(result.current.aiSettings.provider).toBe(LLMProvider.GEMINI);
       });
 
@@ -282,7 +284,7 @@ describe('useAISettings', () => {
       mockLoadAISettings.mockResolvedValue(null);
       const { result } = renderHook(() => useAISettings());
 
-      await vi.waitFor(() => {
+      await waitFor(() => {
         expect(result.current.aiSettings.provider).toBe(LLMProvider.GEMINI);
       });
 
@@ -313,7 +315,7 @@ describe('useAISettings', () => {
       mockLoadAISettings.mockResolvedValue(null);
       const { result } = renderHook(() => useAISettings());
 
-      await vi.waitFor(() => {
+      await waitFor(() => {
         expect(result.current.aiSettings.provider).toBe(LLMProvider.GEMINI);
       });
 
@@ -340,7 +342,7 @@ describe('useAISettings', () => {
 
       const { result } = renderHook(() => useAISettings());
 
-      await vi.waitFor(() => {
+      await waitFor(() => {
         expect(result.current.aiSettings.provider).toBe(LLMProvider.GEMINI);
       });
 
@@ -350,11 +352,11 @@ describe('useAISettings', () => {
 
       expect(result.current.aiSettings).toEqual(mockOpenAISettings);
 
-      await vi.waitFor(() => {
+      await waitFor(() => {
         expect(consoleErrorSpy).toHaveBeenCalledWith('Failed to save AI settings', expect.any(Error));
       });
 
-      await vi.waitFor(() => {
+      await waitFor(() => {
         expect(result.current.saveError).toBe('IPC save error');
       });
 
@@ -367,7 +369,7 @@ describe('useAISettings', () => {
 
       const { result } = renderHook(() => useAISettings());
 
-      await vi.waitFor(() => {
+      await waitFor(() => {
         expect(result.current.isLoading).toBe(false);
       });
 
@@ -378,7 +380,7 @@ describe('useAISettings', () => {
         result.current.setAiSettings(mockOpenAISettings);
       });
 
-      await vi.waitFor(() => {
+      await waitFor(() => {
         expect(result.current.saveError).toBe('IPC save error');
       });
 
@@ -389,7 +391,7 @@ describe('useAISettings', () => {
         result.current.setAiSettings(mockGeminiSettings);
       });
 
-      await vi.waitFor(() => {
+      await waitFor(() => {
         expect(result.current.saveError).toBeNull();
       });
 
@@ -404,7 +406,7 @@ describe('useAISettings', () => {
 
       const { result } = renderHook(() => useAISettings());
 
-      await vi.waitFor(() => {
+      await waitFor(() => {
         expect(result.current.isLoading).toBe(false);
       });
 
@@ -412,7 +414,7 @@ describe('useAISettings', () => {
         result.current.setAiSettings(mockOpenAISettings);
       });
 
-      await vi.waitFor(() => {
+      await waitFor(() => {
         expect(result.current.saveStatus).toEqual({ encrypted: true, warning: undefined });
       });
     });
@@ -427,7 +429,7 @@ describe('useAISettings', () => {
 
       const { result } = renderHook(() => useAISettings());
 
-      await vi.waitFor(() => {
+      await waitFor(() => {
         expect(result.current.isLoading).toBe(false);
       });
 
@@ -435,7 +437,7 @@ describe('useAISettings', () => {
         result.current.setAiSettings(mockOpenAISettings);
       });
 
-      await vi.waitFor(() => {
+      await waitFor(() => {
         expect(result.current.saveStatus?.encrypted).toBe(false);
         expect(result.current.saveStatus?.warning).toBe('Settings stored unencrypted due to platform limitations');
       });
@@ -447,7 +449,7 @@ describe('useAISettings', () => {
       mockLoadAISettings.mockResolvedValue(null);
       const { result } = renderHook(() => useAISettings());
 
-      await vi.waitFor(() => {
+      await waitFor(() => {
         expect(result.current.aiSettings.provider).toBe(LLMProvider.GEMINI);
       });
 
@@ -455,7 +457,7 @@ describe('useAISettings', () => {
         result.current.setAiSettings(mockOpenAISettings);
       });
 
-      await vi.waitFor(() => {
+      await waitFor(() => {
         expect(mockSaveAISettings).toHaveBeenCalledWith(mockOpenAISettings);
       });
     });
@@ -464,7 +466,7 @@ describe('useAISettings', () => {
       mockLoadAISettings.mockResolvedValue(null);
       const { result } = renderHook(() => useAISettings());
 
-      await vi.waitFor(() => {
+      await waitFor(() => {
         expect(result.current.aiSettings.provider).toBe(LLMProvider.GEMINI);
       });
 
@@ -472,7 +474,7 @@ describe('useAISettings', () => {
         result.current.setAiSettings(mockGeminiSettings);
       });
 
-      await vi.waitFor(() => {
+      await waitFor(() => {
         expect(mockSaveAISettings).toHaveBeenCalledWith(mockGeminiSettings);
       });
 
@@ -482,7 +484,7 @@ describe('useAISettings', () => {
         result.current.setAiSettings(mockOpenAISettings);
       });
 
-      await vi.waitFor(() => {
+      await waitFor(() => {
         expect(mockSaveAISettings).toHaveBeenCalledWith(mockOpenAISettings);
       });
     });
@@ -495,7 +497,7 @@ describe('useAISettings', () => {
       // Should not have called save yet (still loading)
       expect(mockSaveAISettings).not.toHaveBeenCalled();
 
-      await vi.waitFor(() => {
+      await waitFor(() => {
         expect(result.current.aiSettings.provider).toBe(LLMProvider.GEMINI);
       });
 
@@ -510,7 +512,7 @@ describe('useAISettings', () => {
 
       renderHook(() => useAISettings());
 
-      await vi.waitFor(() => {
+      await waitFor(() => {
         // Migration save should have been called
         expect(mockSaveAISettings).toHaveBeenCalledWith(mockOpenAISettings);
       });
@@ -525,7 +527,7 @@ describe('useAISettings', () => {
       mockLoadAISettings.mockResolvedValue(null);
       const { result } = renderHook(() => useAISettings());
 
-      await vi.waitFor(() => {
+      await waitFor(() => {
         expect(result.current.aiSettings.provider).toBe(LLMProvider.GEMINI);
       });
 
@@ -546,7 +548,7 @@ describe('useAISettings', () => {
       mockLoadAISettings.mockResolvedValue(null);
       const { result } = renderHook(() => useAISettings());
 
-      await vi.waitFor(() => {
+      await waitFor(() => {
         expect(result.current.aiSettings.provider).toBe(LLMProvider.GEMINI);
       });
 
@@ -567,7 +569,7 @@ describe('useAISettings', () => {
       mockLoadAISettings.mockResolvedValue(null);
       const { result } = renderHook(() => useAISettings());
 
-      await vi.waitFor(() => {
+      await waitFor(() => {
         expect(result.current.aiSettings.provider).toBe(LLMProvider.GEMINI);
       });
 
@@ -590,7 +592,7 @@ describe('useAISettings', () => {
       mockLoadAISettings.mockResolvedValue(null);
       const { result } = renderHook(() => useAISettings());
 
-      await vi.waitFor(() => {
+      await waitFor(() => {
         expect(result.current.aiSettings.provider).toBe(LLMProvider.GEMINI);
       });
 
@@ -605,7 +607,7 @@ describe('useAISettings', () => {
 
       expect(result.current.aiSettings.apiKey).toBe('secure-api-key-123');
 
-      await vi.waitFor(() => {
+      await waitFor(() => {
         expect(mockSaveAISettings).toHaveBeenCalledWith(settingsWithKey);
       });
     });
@@ -614,7 +616,7 @@ describe('useAISettings', () => {
       mockLoadAISettings.mockResolvedValue(null);
       const { result } = renderHook(() => useAISettings());
 
-      await vi.waitFor(() => {
+      await waitFor(() => {
         expect(result.current.aiSettings.provider).toBe(LLMProvider.GEMINI);
       });
 
@@ -634,7 +636,7 @@ describe('useAISettings', () => {
       mockLoadAISettings.mockResolvedValue(mockGeminiSettings);
       const { result } = renderHook(() => useAISettings());
 
-      await vi.waitFor(() => {
+      await waitFor(() => {
         expect(result.current.aiSettings.apiKey).toBe('test-gemini-key');
       });
 
