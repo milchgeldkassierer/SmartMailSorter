@@ -212,9 +212,9 @@ async function processMessages(client, messages, account, targetCategory) {
         saveEmail(email);
         savedCount++;
 
-        // Trigger notification for new unread emails
+        // Queue notification for new unread emails (shown after AI categorization)
         if (!email.isRead) {
-          notifications.showNotification(email, account.id);
+          notifications.queueNotification(email, account.id);
         }
       } catch (parseErr) {
         logger.error(`[IMAP] Failed to parse message UID ${currentUid}:`, parseErr.message);

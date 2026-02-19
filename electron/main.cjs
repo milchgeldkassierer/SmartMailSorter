@@ -285,7 +285,10 @@ app.whenReady().then(() => {
   });
 
   ipcMain.handle('update-email-smart-category', (event, { emailId, category, summary, reasoning, confidence }) => {
-    return db.updateEmailSmartCategory(emailId, category, summary, reasoning, confidence);
+    const result = db.updateEmailSmartCategory(emailId, category, summary, reasoning, confidence);
+    // Show queued notification now that we have the AI category
+    notifications.processPendingNotification(emailId, category);
+    return result;
   });
 
   ipcMain.handle('save-email', (event, email) => db.saveEmail(email));
@@ -399,12 +402,13 @@ app.whenReady().then(() => {
     // Load global settings (stored with special accountId)
     const globalSettings = db.getNotificationSettings('GLOBAL');
 
-    // Convert mutedCategories array to categorySettings Record<string, boolean>
-    // Muted categories are stored as an array; frontend expects {category: false}
+    // Build categorySettings with all known categories (true = enabled, false = muted)
+    const allCategories = db.getCategories();
     const categorySettings = {};
-    if (Array.isArray(globalSettings.mutedCategories)) {
-      globalSettings.mutedCategories.forEach(cat => { categorySettings[cat] = false; });
-    }
+    allCategories.forEach(cat => {
+      categorySettings[cat.name] = !Array.isArray(globalSettings.mutedCategories) ||
+        !globalSettings.mutedCategories.includes(cat.name);
+    });
 
     return {
       enabled: globalSettings.enabled,

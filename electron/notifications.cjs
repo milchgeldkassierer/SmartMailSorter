@@ -123,8 +123,71 @@ function updateBadgeCount(count) {
   }
 }
 
+// --- Notification Queue ---
+// Emails arrive without smartCategory (AI categorization happens later).
+// Queue notifications so category-based muting can be applied after categorization.
+const FLUSH_DELAY_MS = 10000;
+const pendingNotifications = new Map(); // emailId -> { email, accountId, timer }
+
+/**
+ * Queue a notification for a new email. The notification will be shown
+ * after AI categorization updates it, or after a timeout if uncategorized.
+ */
+function queueNotification(email, accountId) {
+  // Quick checks that don't depend on category
+  try {
+    const globalSettings = getNotificationSettings('GLOBAL');
+    if (!globalSettings.enabled) return;
+    const accountSettings = getNotificationSettings(accountId);
+    if (!accountSettings.enabled) return;
+  } catch (_e) {
+    return;
+  }
+
+  // Set a fallback timer to show notification even if categorization never happens
+  const timer = setTimeout(() => {
+    const pending = pendingNotifications.get(email.id);
+    if (pending) {
+      pendingNotifications.delete(email.id);
+      showNotification(pending.email, pending.accountId);
+    }
+  }, FLUSH_DELAY_MS);
+
+  pendingNotifications.set(email.id, { email, accountId, timer });
+}
+
+/**
+ * Process a pending notification after AI categorization.
+ * Called when update-email-smart-category sets the category.
+ */
+function processPendingNotification(emailId, smartCategory) {
+  const pending = pendingNotifications.get(emailId);
+  if (!pending) return;
+
+  clearTimeout(pending.timer);
+  pendingNotifications.delete(emailId);
+
+  // Update email with the assigned category before showing
+  pending.email.smartCategory = smartCategory;
+  showNotification(pending.email, pending.accountId);
+}
+
+/**
+ * Flush all pending notifications immediately (e.g., when AI is disabled).
+ */
+function flushPendingNotifications() {
+  for (const [emailId, pending] of pendingNotifications) {
+    clearTimeout(pending.timer);
+    pendingNotifications.delete(emailId);
+    showNotification(pending.email, pending.accountId);
+  }
+}
+
 module.exports = {
   showNotification,
   shouldNotify,
   updateBadgeCount,
+  queueNotification,
+  processPendingNotification,
+  flushPendingNotifications,
 };

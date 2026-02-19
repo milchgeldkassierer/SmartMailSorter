@@ -3,6 +3,19 @@ import { ImapAccount, DefaultEmailCategory } from '../../types';
 import { useNotifications } from '../../hooks/useNotifications';
 import { Bell, BellOff } from '../Icon';
 
+const accountColorMap: Record<string, string> = {
+  blue: 'bg-blue-500',
+  green: 'bg-green-500',
+  purple: 'bg-purple-500',
+  red: 'bg-red-500',
+  yellow: 'bg-yellow-500',
+  orange: 'bg-orange-500',
+  pink: 'bg-pink-500',
+  teal: 'bg-teal-500',
+  cyan: 'bg-cyan-500',
+  indigo: 'bg-indigo-500',
+};
+
 interface NotificationsTabProps {
   accounts: ImapAccount[];
 }
@@ -64,6 +77,7 @@ const NotificationsTab: React.FC<NotificationsTabProps> = ({ accounts }) => {
             </div>
           </div>
           <button
+            type="button"
             onClick={handleGlobalToggle}
             className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
               notificationSettings.enabled ? 'bg-blue-600' : 'bg-slate-300'
@@ -93,13 +107,14 @@ const NotificationsTab: React.FC<NotificationsTabProps> = ({ accounts }) => {
                   className="flex items-center justify-between bg-slate-50 p-3 rounded-lg border border-slate-200"
                 >
                   <div className="flex items-center gap-3">
-                    <div className={`w-3 h-3 rounded-full bg-${account.color}-500`} />
+                    <div className={`w-3 h-3 rounded-full ${accountColorMap[account.color] || 'bg-slate-500'}`} />
                     <div>
                       <div className="text-sm font-medium text-slate-800">{account.name}</div>
                       <div className="text-xs text-slate-500">{account.email}</div>
                     </div>
                   </div>
                   <button
+                    type="button"
                     onClick={() => handleAccountToggle(account.id)}
                     disabled={!notificationSettings.enabled}
                     className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${

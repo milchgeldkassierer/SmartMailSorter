@@ -62,6 +62,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
               Smart Sort
             </button>
             <button
+              type="button"
               onClick={() => setActiveTab('notifications')}
               className={`w-full text-left px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
                 activeTab === 'notifications' ? 'bg-blue-100 text-blue-700' : 'text-slate-600 hover:bg-slate-100'
