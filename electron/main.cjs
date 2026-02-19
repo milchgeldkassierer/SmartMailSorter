@@ -20,6 +20,64 @@ const { TRASH_FOLDER } = require('./folderConstants.cjs');
 
 const isDev = !app.isPackaged;
 
+// Auto-sync state
+let autoSyncTimer = null;
+let isSyncing = false;
+
+function startAutoSync(intervalMinutes) {
+  stopAutoSync();
+  if (!intervalMinutes || intervalMinutes <= 0) {
+    logger.info('[AutoSync] Auto-sync disabled');
+    return;
+  }
+  const intervalMs = intervalMinutes * 60 * 1000;
+  logger.info(`[AutoSync] Starting auto-sync with interval: ${intervalMinutes} minutes`);
+  autoSyncTimer = setInterval(() => {
+    runAutoSync();
+  }, intervalMs);
+}
+
+function stopAutoSync() {
+  if (autoSyncTimer) {
+    clearInterval(autoSyncTimer);
+    autoSyncTimer = null;
+    logger.info('[AutoSync] Auto-sync timer stopped');
+  }
+}
+
+async function runAutoSync() {
+  if (isSyncing) {
+    logger.info('[AutoSync] Sync already in progress, skipping');
+    return;
+  }
+  isSyncing = true;
+  logger.info('[AutoSync] Starting automatic sync for all accounts');
+  try {
+    const accounts = db.getAccounts();
+    for (const account of accounts) {
+      try {
+        const accountWithPassword = db.getAccountWithPassword(account.id);
+        if (accountWithPassword) {
+          await imap.syncAccount(accountWithPassword);
+        }
+      } catch (error) {
+        logger.error(`[AutoSync] Failed to sync account ${account.id}:`, error);
+      }
+    }
+  } finally {
+    isSyncing = false;
+  }
+
+  // Notify all renderer windows
+  const windows = BrowserWindow.getAllWindows();
+  for (const win of windows) {
+    if (!win.isDestroyed()) {
+      win.webContents.send('auto-sync-completed');
+    }
+  }
+  logger.info('[AutoSync] Automatic sync completed');
+}
+
 function createWindow() {
   const win = new BrowserWindow({
     width: 1200,
@@ -204,13 +262,21 @@ app.whenReady().then(() => {
   });
 
   ipcMain.handle('sync-account', async (event, accountId) => {
+    if (isSyncing) {
+      return { success: false, error: 'Sync already in progress' };
+    }
     // Retrieve account with decrypted password for IMAP operations
     const accountWithPassword = db.getAccountWithPassword(accountId);
     if (!accountWithPassword) {
       logger.error(`[IPC sync-account] Account not found: ${accountId}`);
       return { success: false, error: 'Account not found' };
     }
-    return await imap.syncAccount(accountWithPassword);
+    isSyncing = true;
+    try {
+      return await imap.syncAccount(accountWithPassword);
+    } finally {
+      isSyncing = false;
+    }
   });
 
   ipcMain.handle('test-connection', async (event, account) => {
@@ -451,6 +517,24 @@ app.whenReady().then(() => {
     return notifications.updateBadgeCount(count);
   });
 
+  // Auto-sync IPC handlers
+  ipcMain.handle('get-auto-sync-interval', () => {
+    const value = db.getSetting('auto_sync_interval_minutes');
+    return value ? parseInt(value, 10) : 0;
+  });
+
+  ipcMain.handle('set-auto-sync-interval', (event, intervalMinutes) => {
+    db.setSetting('auto_sync_interval_minutes', String(intervalMinutes));
+    startAutoSync(intervalMinutes);
+    return { success: true };
+  });
+
+  // Start auto-sync with persisted interval
+  const savedInterval = db.getSetting('auto_sync_interval_minutes');
+  if (savedInterval) {
+    startAutoSync(parseInt(savedInterval, 10));
+  }
+
   createWindow();
 
   app.on('activate', () => {
@@ -465,8 +549,7 @@ app.on('window-all-closed', () => {
 
 app.on('before-quit', () => {
   logger.info('App is quitting, cleaning up resources...');
-  // Perform any cleanup here if needed in the future
-  // e.g., close database connections, cancel pending operations, etc.
+  stopAutoSync();
 });
 
 app.on('will-quit', () => {
