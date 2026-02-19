@@ -70,10 +70,10 @@ describe('GeneralTab', () => {
       expect(resetButton).toHaveClass('border-red-200');
     });
 
-    it('should render with center alignment', () => {
+    it('should render with proper layout spacing', () => {
       const { container } = renderWithDialog(<GeneralTab />);
       const wrapper = container.firstChild as HTMLElement;
-      expect(wrapper).toHaveClass('text-center');
+      expect(wrapper).toHaveClass('space-y-8');
     });
   });
 
