@@ -236,6 +236,60 @@ describe('useUndoStack', () => {
       expect(result.current.canUndo).toBe(true);
     });
 
+    it('should not trigger undo when focus is in an input element', () => {
+      const { result } = renderHook(() => useUndoStack());
+      const action = createMockAction();
+
+      act(() => {
+        result.current.pushAction(action);
+      });
+
+      const input = document.createElement('input');
+      document.body.appendChild(input);
+
+      act(() => {
+        const event = new KeyboardEvent('keydown', {
+          key: 'z',
+          ctrlKey: true,
+          shiftKey: false,
+          bubbles: true,
+        });
+        Object.defineProperty(event, 'target', { value: input });
+        window.dispatchEvent(event);
+      });
+
+      expect(action.execute).not.toHaveBeenCalled();
+      expect(result.current.canUndo).toBe(true);
+      document.body.removeChild(input);
+    });
+
+    it('should not trigger undo when focus is in a textarea element', () => {
+      const { result } = renderHook(() => useUndoStack());
+      const action = createMockAction();
+
+      act(() => {
+        result.current.pushAction(action);
+      });
+
+      const textarea = document.createElement('textarea');
+      document.body.appendChild(textarea);
+
+      act(() => {
+        const event = new KeyboardEvent('keydown', {
+          key: 'z',
+          ctrlKey: true,
+          shiftKey: false,
+          bubbles: true,
+        });
+        Object.defineProperty(event, 'target', { value: textarea });
+        window.dispatchEvent(event);
+      });
+
+      expect(action.execute).not.toHaveBeenCalled();
+      expect(result.current.canUndo).toBe(true);
+      document.body.removeChild(textarea);
+    });
+
     it('should clean up event listener on unmount', () => {
       const removeEventListenerSpy = vi.spyOn(window, 'removeEventListener');
       const { unmount } = renderHook(() => useUndoStack());

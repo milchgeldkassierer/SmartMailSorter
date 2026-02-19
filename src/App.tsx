@@ -1,5 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { DefaultEmailCategory, ImapAccount, Category, AccountData, FLAGGED_FOLDER, SYSTEM_FOLDERS, TRASH_FOLDER } from './types';
+import {
+  DefaultEmailCategory,
+  ImapAccount,
+  Category,
+  AccountData,
+  FLAGGED_FOLDER,
+  SYSTEM_FOLDERS,
+  TRASH_FOLDER,
+} from './types';
 import Sidebar from './components/Sidebar';
 import EmailList from './components/EmailList';
 import EmailView from './components/EmailView';
@@ -354,7 +362,15 @@ const App: React.FC = () => {
     [currentEmails, updateActiveAccountData, pushAction]
   );
 
-  const { isDragging, draggedEmailIds, dropTargetCategory, onEmailDragStart, onCategoryDragOver, onCategoryDragLeave, onDragEnd } = useDragAndDrop({
+  const {
+    isDragging,
+    draggedEmailIds,
+    dropTargetCategory,
+    onEmailDragStart,
+    onCategoryDragOver,
+    onCategoryDragLeave,
+    onDragEnd,
+  } = useDragAndDrop({
     onMoveToSmartCategory: handleMoveToSmartCategory,
     onMoveToFolder: handleMoveToFolder,
   });
@@ -518,7 +534,29 @@ const App: React.FC = () => {
         dropTargetCategory={dropTargetCategory}
         onCategoryDragOver={onCategoryDragOver}
         onCategoryDragLeave={onCategoryDragLeave}
-        onDropEmails={(emailIds, targetCategory, targetType) => {
+        onDropEmails={async (emailIds, targetCategory, targetType) => {
+          if (targetType === 'smart' && targetCategory === '__new_category__') {
+            const name = await dialog.prompt({
+              title: 'Neue Kategorie',
+              message: 'Name der neuen Kategorie:',
+              confirmText: 'Erstellen',
+              cancelText: 'Abbrechen',
+              variant: 'info',
+            });
+            if (!name || !name.trim()) return;
+            const trimmed = name.trim();
+            const reservedNames = [...SYSTEM_FOLDERS, FLAGGED_FOLDER];
+            if (reservedNames.includes(trimmed)) return;
+            if (!currentCategories.some((c) => c.name === trimmed)) {
+              updateActiveAccountData((prev) => ({
+                ...prev,
+                categories: [...prev.categories, { name: trimmed, type: 'custom' }],
+              }));
+              await addCategory(trimmed, 'custom');
+            }
+            handleMoveToSmartCategory(emailIds, trimmed);
+            return;
+          }
           if (targetType === 'folder') {
             handleMoveToFolder(emailIds, targetCategory);
           } else {
