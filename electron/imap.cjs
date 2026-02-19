@@ -8,6 +8,7 @@ const {
   getMaxUidForFolder: _getMaxUidForFolder,
   getAllUidsForFolder: _getAllUidsForFolder,
   deleteEmailsByUid: _deleteEmailsByUid,
+  getTotalUnreadEmailCount,
 } = require('./db.cjs');
 // Add db just for direct calls if needed, though we imported migrateFolder directly
 const db = require('./db.cjs');
@@ -18,6 +19,7 @@ const {
   TRASH_FOLDER,
 } = require('./folderConstants.cjs');
 const logger = require('./utils/logger.cjs');
+const notifications = require('./notifications.cjs');
 
 logger.info('IMAP Module Loaded: Version LargeScaleSync_v1');
 
@@ -208,6 +210,11 @@ async function processMessages(client, messages, account, targetCategory) {
 
         saveEmail(email);
         savedCount++;
+
+        // Queue notification for new unread emails (shown after AI categorization)
+        if (!email.isRead) {
+          notifications.queueNotification(email, account.id);
+        }
       } catch (parseErr) {
         logger.error(`[IMAP] Failed to parse message UID ${currentUid}:`, parseErr.message);
         // Save Error Placeholder
@@ -599,8 +606,12 @@ async function syncAccount(account) {
     const maxUid = _getMaxUidForFolder(account.id, INBOX_FOLDER);
     _updateAccountSync(account.id, maxUid, Date.now());
 
+    // Update badge count with total unread emails across all accounts
+    const unreadCount = getTotalUnreadEmailCount();
+    notifications.updateBadgeCount(unreadCount);
+
     await client.logout();
-    logger.info(`Sync completed. Total new messages: ${totalNew}`);
+    logger.info(`Sync completed. Total new messages: ${totalNew}, Total unread count: ${unreadCount}`);
     return { success: true, count: totalNew };
   } catch (error) {
     if (process.env.NODE_ENV !== 'test') {

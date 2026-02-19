@@ -1,5 +1,8 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
+// Track wrapper functions so listeners can be properly removed
+const notificationListenerMap = new Map();
+
 contextBridge.exposeInMainWorld('electron', {
   getAccounts: () => ipcRenderer.invoke('get-accounts'),
   addAccount: (account) => ipcRenderer.invoke('add-account', account),
@@ -28,6 +31,25 @@ contextBridge.exposeInMainWorld('electron', {
   // AI Settings
   saveAISettings: (settings) => ipcRenderer.invoke('ai-settings-save', settings),
   loadAISettings: () => ipcRenderer.invoke('ai-settings-load'),
+
+  // Notification Settings (Global + Per-Account)
+  loadNotificationSettings: () => ipcRenderer.invoke('load-notification-settings'),
+  saveNotificationSettings: (settings) => ipcRenderer.invoke('save-notification-settings', settings),
+  updateBadgeCount: (count) => ipcRenderer.invoke('update-badge-count', count),
+
+  // Event listeners
+  onNotificationClicked: (callback) => {
+    const wrapper = (_event, data) => callback(data);
+    notificationListenerMap.set(callback, wrapper);
+    ipcRenderer.on('notification-clicked', wrapper);
+  },
+  removeNotificationClickedListener: (callback) => {
+    const wrapper = notificationListenerMap.get(callback);
+    if (wrapper) {
+      ipcRenderer.removeListener('notification-clicked', wrapper);
+      notificationListenerMap.delete(callback);
+    }
+  },
 
   // External links
   openExternal: (url) => ipcRenderer.invoke('open-external-url', url),

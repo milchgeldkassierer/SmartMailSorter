@@ -7,6 +7,8 @@ import {
   Attachment,
   Category,
   AISettings,
+  NotificationSettings,
+  NotificationOperationResult,
 } from './types';
 
 export {};
@@ -76,6 +78,15 @@ declare global {
       // AI Settings (safeStorage)
       saveAISettings: (settings: AISettings) => Promise<{ success: boolean; encrypted?: boolean; warning?: string }>;
       loadAISettings: () => Promise<AISettings | null>;
+
+      // Notification Settings
+      loadNotificationSettings: () => Promise<NotificationSettings | null>;
+      saveNotificationSettings: (settings: NotificationSettings) => Promise<NotificationOperationResult>;
+      updateBadgeCount: (count: number) => Promise<void>;
+
+      // Event listeners
+      onNotificationClicked: (callback: (data: { emailId: string }) => void) => void;
+      removeNotificationClickedListener: (callback: (data: { emailId: string }) => void) => void;
     };
   }
 }
