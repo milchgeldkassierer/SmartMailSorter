@@ -84,6 +84,12 @@ declare global {
       saveNotificationSettings: (settings: NotificationSettings) => Promise<NotificationOperationResult>;
       updateBadgeCount: (count: number) => Promise<void>;
 
+      // Auto-Sync
+      getAutoSyncInterval: () => Promise<number>;
+      setAutoSyncInterval: (minutes: number) => Promise<void>;
+      onAutoSyncCompleted: (callback: () => void) => void;
+      removeAutoSyncCompletedListener: (callback: () => void) => void;
+
       // Event listeners
       onNotificationClicked: (callback: (data: { emailId: string }) => void) => void;
       removeNotificationClickedListener: (callback: (data: { emailId: string }) => void) => void;
