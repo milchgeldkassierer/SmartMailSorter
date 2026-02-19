@@ -348,7 +348,7 @@ const App: React.FC = () => {
             ...prev,
             emails: prev.emails.map((e) => {
               const prevState = previousStates.get(e.id);
-              return prevState ? { ...e, folder: prevState.folder! } : e;
+              return prevState && prevState.folder ? { ...e, folder: prevState.folder } : e;
             }),
           }));
           previousStates.forEach((prev, id) => {

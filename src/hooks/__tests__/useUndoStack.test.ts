@@ -144,6 +144,23 @@ describe('useUndoStack', () => {
       expect(action.execute).toHaveBeenCalled();
       expect(result.current.canUndo).toBe(false);
     });
+
+    it('should silently handle async execute failures', () => {
+      const { result } = renderHook(() => useUndoStack());
+      const action = createMockAction();
+      action.execute = vi.fn(() => Promise.reject(new Error('Async undo failed')));
+
+      act(() => {
+        result.current.pushAction(action);
+      });
+
+      act(() => {
+        result.current.undo();
+      });
+
+      expect(action.execute).toHaveBeenCalled();
+      expect(result.current.canUndo).toBe(false);
+    });
   });
 
   describe('Stack Limit', () => {
