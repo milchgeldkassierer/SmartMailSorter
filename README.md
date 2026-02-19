@@ -101,6 +101,19 @@ This application is designed for:
 - **Flag Filtering**: Quickly access flagged/marked emails
 - **Read/Unread Status**: Filter by read status for inbox management
 
+### 🌍 Multilingual Support
+
+- **Multiple Languages**: Full support for German (Deutsch) and English
+- **Easy Language Switching**: Switch languages instantly from Settings → General without restarting the app
+- **Locale-Aware Formatting**: Dates, times, and numbers automatically format according to selected language:
+  - **German**: DD.MM.YYYY, 24-hour time, comma decimal separator (1.234,56)
+  - **English**: MM/DD/YYYY, 12-hour time, period decimal separator (1,234.56)
+- **Comprehensive Translation**: All UI elements, categories, messages, and dialogs are fully translated
+- **Graceful Fallback**: Missing translation keys automatically fall back to German
+- **Community-Ready**: Open architecture for community-contributed translations (French, Spanish, Italian, etc.)
+- **Translation Guide**: See [docs/TRANSLATION_GUIDE.md](docs/TRANSLATION_GUIDE.md) to contribute translations for your language
+- **i18next Framework**: Built on industry-standard i18next with React integration for robust internationalization
+
 ## 🏗️ Architecture
 
 SmartMailSorter is built on a robust Electron architecture that separates concerns between the UI layer and system-level operations. This section provides a technical overview of how the application is structured and how data flows through the system.
