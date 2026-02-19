@@ -437,6 +437,33 @@ const App: React.FC = () => {
     };
   }, [currentEmails, setSelectedEmailId, setSelectedCategory]);
 
+  // Listen for auto-sync completed events and refresh data
+  useEffect(() => {
+    if (!window.electron) return;
+
+    const handleAutoSyncCompleted = async () => {
+      if (!activeAccountId) return;
+      try {
+        const emails = await window.electron.getEmails(activeAccountId);
+        const categories = await window.electron.getCategories();
+        setData((prev: Record<string, AccountData>) => ({
+          ...prev,
+          [activeAccountId]: { ...prev[activeAccountId], emails, categories },
+        }));
+      } catch (error) {
+        console.error('Failed to refresh after auto-sync:', error);
+      }
+    };
+
+    window.electron.onAutoSyncCompleted(handleAutoSyncCompleted);
+
+    return () => {
+      if (window.electron) {
+        window.electron.removeAutoSyncCompletedListener(handleAutoSyncCompleted);
+      }
+    };
+  }, [activeAccountId, setData]);
+
   // Fetch emails when switching accounts
   useEffect(() => {
     (async () => {
