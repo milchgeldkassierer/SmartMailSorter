@@ -16,6 +16,7 @@ const imap = require('./imap.cjs');
 const notifications = require('./notifications.cjs');
 const { sanitizeFilename } = require('./utils/security.cjs');
 const { createCspHeaderHandler } = require('./utils/csp-config.cjs');
+const { TRASH_FOLDER } = require('./folderConstants.cjs');
 
 const isDev = !app.isPackaged;
 
@@ -232,14 +233,16 @@ app.whenReady().then(() => {
       logger.error(`[IPC delete-email] Account not found: ${accountId}`);
       return { success: false, error: 'Account not found' };
     }
-    // Delete from server FIRST
+    // Move to Trash on server (or permanently delete if already in Trash)
     const result = await imap.deleteEmail(accountWithPassword, uid, folder);
-    // Only delete from DB if server deletion succeeded
     if (result.success) {
-      db.deleteEmail(emailId);
-      // Update badge count after deletion
-      const unreadCount = db.getTotalUnreadEmailCount();
-      notifications.updateBadgeCount(unreadCount);
+      if (result.movedToTrash) {
+        // Move to trash in DB instead of deleting
+        db.updateEmailFolder(emailId, TRASH_FOLDER);
+      } else {
+        // Permanently deleted (was already in Trash or no Trash folder found)
+        db.deleteEmail(emailId);
+      }
     }
     return result;
   });
@@ -279,9 +282,12 @@ app.whenReady().then(() => {
     return result;
   });
 
-  ipcMain.handle('move-email', (event, { emailId, category }) => {
-    // Move is local category change only (for now)
-    return db.updateEmailCategory(emailId, category, null, null, 0);
+  ipcMain.handle('move-email', (event, { emailId, target, type }) => {
+    if (type === 'folder') {
+      return db.updateEmailFolder(emailId, target);
+    }
+    // Default: smart category move
+    return db.updateEmailSmartCategory(emailId, target, null, null, 0);
   });
 
   ipcMain.handle('update-email-smart-category', (event, { emailId, category, summary, reasoning, confidence }) => {

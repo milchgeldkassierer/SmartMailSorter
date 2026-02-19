@@ -1,5 +1,6 @@
 import React, { createContext, useContext } from 'react';
-import { useDialog, UseDialogReturn } from '../hooks/useDialog';
+import { useDialog, type UseDialogReturn } from '../hooks/useDialog';
+export type { UseDialogReturn };
 import ConfirmDialog from '../components/ConfirmDialog';
 
 const DialogContext = createContext<UseDialogReturn | null>(null);
@@ -10,6 +11,10 @@ export const useDialogContext = (): UseDialogReturn => {
     throw new Error('useDialogContext must be used within a DialogProvider');
   }
   return ctx;
+};
+
+export const useOptionalDialogContext = (): UseDialogReturn | null => {
+  return useContext(DialogContext);
 };
 
 export const DialogProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {

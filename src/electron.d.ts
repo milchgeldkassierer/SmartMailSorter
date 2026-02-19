@@ -43,7 +43,11 @@ declare global {
         isFlagged: boolean;
         folder?: string;
       }) => Promise<EmailOperationResult>;
-      moveEmail: (data: { emailId: string; category: string }) => Promise<EmailOperationResult>;
+      moveEmail: (data: {
+        emailId: string;
+        target: string;
+        type: 'folder' | 'smartCategory';
+      }) => Promise<EmailOperationResult>;
       updateEmailSmartCategory: (data: {
         emailId: string;
         category: string;

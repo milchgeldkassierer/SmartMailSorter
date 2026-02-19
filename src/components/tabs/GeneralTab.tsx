@@ -1,18 +1,24 @@
 import React from 'react';
 import { Trash2 } from '../Icon';
-import { useDialogContext } from '../../contexts/DialogContext';
+import { useOptionalDialogContext } from '../../contexts/DialogContext';
 
 const GeneralTab: React.FC = () => {
-  const dialog = useDialogContext();
+  const dialog = useOptionalDialogContext();
 
   const handleResetDatabase = async () => {
-    const confirmed = await dialog.confirm({
-      title: 'Datenbank zurücksetzen',
-      message: 'Achtung: Dies löscht alle gespeicherten Emails und Konten! Fortfahren?',
-      confirmText: 'Zurücksetzen',
-      cancelText: 'Abbrechen',
-      variant: 'danger',
-    });
+    let confirmed = false;
+
+    if (dialog) {
+      confirmed = await dialog.confirm({
+        title: 'Datenbank zurücksetzen',
+        message: 'Achtung: Dies löscht alle gespeicherten Emails und Konten! Fortfahren?',
+        confirmText: 'Zurücksetzen',
+        cancelText: 'Abbrechen',
+        variant: 'danger',
+      });
+    } else {
+      confirmed = window.confirm('Achtung: Dies löscht alle gespeicherten Emails und Konten! Fortfahren?');
+    }
 
     if (confirmed) {
       try {
@@ -20,11 +26,16 @@ const GeneralTab: React.FC = () => {
         window.location.reload();
       } catch (error) {
         console.error('Failed to reset database:', error);
-        await dialog.alert({
-          title: 'Fehler',
-          message: `Datenbank konnte nicht zurückgesetzt werden: ${error instanceof Error ? error.message : 'Unbekannter Fehler'}`,
-          variant: 'danger',
-        });
+        const errorMessage = `Datenbank konnte nicht zurückgesetzt werden: ${error instanceof Error ? error.message : 'Unbekannter Fehler'}`;
+        if (dialog) {
+          await dialog.alert({
+            title: 'Fehler',
+            message: errorMessage,
+            variant: 'danger',
+          });
+        } else {
+          alert(errorMessage);
+        }
       }
     }
   };

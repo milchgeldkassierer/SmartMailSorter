@@ -657,18 +657,44 @@ async function deleteEmail(account, uid, dbFolder) {
       logger.warn(`[Delete] Could not map '${dbFolder}' to server path. Defaulting to INBOX.`);
     }
 
-    // Get mailbox lock for the target folder
-    const lock = await client.getMailboxLock(serverPath);
+    // Find the Trash folder on the server
+    const trashPath = await findServerFolderForDbName(client, TRASH_FOLDER);
 
-    try {
-      // Delete message using ImapFlow's messageDelete (marks as deleted and expunges)
-      await client.messageDelete(uid, { uid: true });
-    } finally {
-      lock.release();
+    // If email is already in Trash, permanently delete it
+    if (dbFolder === TRASH_FOLDER) {
+      const lock = await client.getMailboxLock(serverPath);
+      try {
+        await client.messageDelete(uid, { uid: true });
+      } finally {
+        lock.release();
+      }
+      await client.logout();
+      return { success: true, movedToTrash: false };
     }
 
-    await client.logout();
-    return { success: true };
+    // Move to Trash folder if found, otherwise fall back to permanent delete
+    if (trashPath) {
+      const lock = await client.getMailboxLock(serverPath);
+      try {
+        await client.messageMove(uid, trashPath, { uid: true });
+        logger.debug(`[Delete] Moved email UID ${uid} to Trash folder '${trashPath}'`);
+      } finally {
+        lock.release();
+      }
+      await client.logout();
+      return { success: true, movedToTrash: true };
+    } else {
+      // No Trash folder found on server, fall back to permanent delete
+      logger.warn(`[Delete] No Trash folder found on server, permanently deleting email UID ${uid}`);
+      const lock = await client.getMailboxLock(serverPath);
+      try {
+        await client.messageDelete(uid, { uid: true });
+      } finally {
+        lock.release();
+      }
+      await client.logout();
+      return { success: true, movedToTrash: false };
+    }
   } catch (error) {
     logger.error('Delete Error:', error);
     return { success: false, error: error.message };
