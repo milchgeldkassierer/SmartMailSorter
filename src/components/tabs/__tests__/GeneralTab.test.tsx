@@ -71,9 +71,10 @@ describe('GeneralTab', () => {
     });
 
     it('should render with center alignment', () => {
-      const { container } = renderWithDialog(<GeneralTab />);
-      const wrapper = container.firstChild as HTMLElement;
-      expect(wrapper).toHaveClass('text-center');
+      renderWithDialog(<GeneralTab />);
+      // Check that the sections inside have center alignment
+      const dataManagementSection = screen.getByText('Datenverwaltung').closest('div');
+      expect(dataManagementSection).toHaveClass('text-center');
     });
   });
 
