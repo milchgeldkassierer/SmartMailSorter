@@ -2,6 +2,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 // Track wrapper functions so listeners can be properly removed
 const notificationListenerMap = new Map();
+const autoSyncListenerMap = new Map();
 
 contextBridge.exposeInMainWorld('electron', {
   getAccounts: () => ipcRenderer.invoke('get-accounts'),
@@ -48,6 +49,22 @@ contextBridge.exposeInMainWorld('electron', {
     if (wrapper) {
       ipcRenderer.removeListener('notification-clicked', wrapper);
       notificationListenerMap.delete(callback);
+    }
+  },
+
+  // Auto-Sync Settings
+  getAutoSyncInterval: () => ipcRenderer.invoke('get-auto-sync-interval'),
+  setAutoSyncInterval: (minutes) => ipcRenderer.invoke('set-auto-sync-interval', minutes),
+  onAutoSyncCompleted: (callback) => {
+    const wrapper = (_event, data) => callback(data);
+    autoSyncListenerMap.set(callback, wrapper);
+    ipcRenderer.on('auto-sync-completed', wrapper);
+  },
+  removeAutoSyncCompletedListener: (callback) => {
+    const wrapper = autoSyncListenerMap.get(callback);
+    if (wrapper) {
+      ipcRenderer.removeListener('auto-sync-completed', wrapper);
+      autoSyncListenerMap.delete(callback);
     }
   },
 
