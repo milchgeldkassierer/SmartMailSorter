@@ -122,6 +122,19 @@ class MockImapFlow {
     return null;
   }
 
+  async messageMove(range, destination, options = {}) {
+    // Mock move: just remove from current mailbox (simulates move to destination)
+    const isUid = options.uid === true;
+    const uidList = isUid ? [parseInt(range)] : [range];
+
+    for (const uid of uidList) {
+      const index = global.__mockState.serverEmails.findIndex((e) => e.uid === uid);
+      if (index !== -1) {
+        global.__mockState.serverEmails.splice(index, 1);
+      }
+    }
+  }
+
   async messageDelete(range, options = {}) {
     const isUid = options.uid === true;
     const uidList = isUid ? [parseInt(range)] : [range];

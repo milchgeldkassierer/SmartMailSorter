@@ -427,6 +427,11 @@ function updateEmailSmartCategory(id, smartCategory, aiSummary, aiReasoning, con
   return stmt.run({ id, smartCategory, aiSummary, aiReasoning, confidence });
 }
 
+function updateEmailFolder(id, folder) {
+  const stmt = db.prepare('UPDATE emails SET folder = @folder WHERE id = @id');
+  return stmt.run({ id, folder });
+}
+
 function deleteEmail(id) {
   db.prepare('DELETE FROM emails WHERE id = ?').run(id);
 }
@@ -542,6 +547,7 @@ module.exports = {
   saveEmail,
   deleteAccountDn,
   updateEmailSmartCategory,
+  updateEmailFolder,
   updateAccountQuota,
   deleteEmail,
   deleteEmailsByUid,

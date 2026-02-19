@@ -776,4 +776,93 @@ describe('EmailList', () => {
       expect(emailRow).toHaveClass('hover:bg-slate-50');
     });
   });
+
+  describe('Drag and Drop', () => {
+    it('should set draggable attribute on email rows when onDragStart is provided', () => {
+      const onDragStart = vi.fn();
+      render(<EmailList {...defaultProps} onDragStart={onDragStart} />);
+
+      const emailRow = screen.getByText('John Doe').closest('div[class*="border-b"]');
+      expect(emailRow).toHaveAttribute('draggable', 'true');
+    });
+
+    it('should not set draggable attribute when onDragStart is not provided', () => {
+      render(<EmailList {...defaultProps} />);
+
+      const emailRow = screen.getByText('John Doe').closest('div[class*="border-b"]');
+      expect(emailRow).not.toHaveAttribute('draggable', 'true');
+    });
+
+    it('should call onDragStart with correct params on dragStart event', () => {
+      const onDragStart = vi.fn();
+      render(<EmailList {...defaultProps} onDragStart={onDragStart} />);
+
+      const emailRow = screen.getByText('John Doe').closest('div[class*="border-b"]');
+      const dataTransfer = {
+        setDragImage: vi.fn(),
+        effectAllowed: '',
+      };
+      fireEvent.dragStart(emailRow!, { dataTransfer });
+
+      expect(onDragStart).toHaveBeenCalledWith('email-1', expect.any(Set), expect.any(Object));
+    });
+
+    it('should drag all selected emails when dragging a selected email', () => {
+      const onDragStart = vi.fn();
+      const selectedIds = new Set(['email-1', 'email-2']);
+      render(<EmailList {...defaultProps} onDragStart={onDragStart} selectedIds={selectedIds} />);
+
+      const emailRow = screen.getByText('John Doe').closest('div[class*="border-b"]');
+      const dataTransfer = {
+        setDragImage: vi.fn(),
+        effectAllowed: '',
+      };
+      fireEvent.dragStart(emailRow!, { dataTransfer });
+
+      expect(onDragStart).toHaveBeenCalledWith('email-1', selectedIds, expect.any(Object));
+    });
+
+    it('should apply opacity styling when draggedEmailIds includes email id', () => {
+      const onDragStart = vi.fn();
+      render(<EmailList {...defaultProps} onDragStart={onDragStart} draggedEmailIds={['email-1']} />);
+
+      const emailRow = screen.getByText('John Doe').closest('div[class*="border-b"]');
+      expect(emailRow).toHaveClass('opacity-50');
+    });
+
+    it('should not apply opacity styling when email is not being dragged', () => {
+      const onDragStart = vi.fn();
+      render(<EmailList {...defaultProps} onDragStart={onDragStart} draggedEmailIds={['email-1']} />);
+
+      const emailRow = screen.getByText('Jane Smith').closest('div[class*="border-b"]');
+      expect(emailRow).not.toHaveClass('opacity-50');
+    });
+
+    it('should call onDragEnd on dragEnd event', () => {
+      const onDragStart = vi.fn();
+      const onDragEnd = vi.fn();
+      render(<EmailList {...defaultProps} onDragStart={onDragStart} onDragEnd={onDragEnd} />);
+
+      const emailRow = screen.getByText('John Doe').closest('div[class*="border-b"]');
+      fireEvent.dragEnd(emailRow!);
+
+      expect(onDragEnd).toHaveBeenCalled();
+    });
+
+    it('should set aria-grabbed attribute on dragged rows', () => {
+      const onDragStart = vi.fn();
+      render(<EmailList {...defaultProps} onDragStart={onDragStart} draggedEmailIds={['email-1']} />);
+
+      const emailRow = screen.getByText('John Doe').closest('div[class*="border-b"]');
+      expect(emailRow).toHaveAttribute('aria-grabbed', 'true');
+    });
+
+    it('should not set aria-grabbed on non-dragged rows', () => {
+      const onDragStart = vi.fn();
+      render(<EmailList {...defaultProps} onDragStart={onDragStart} draggedEmailIds={['email-1']} />);
+
+      const emailRow = screen.getByText('Jane Smith').closest('div[class*="border-b"]');
+      expect(emailRow).not.toHaveAttribute('aria-grabbed');
+    });
+  });
 });
