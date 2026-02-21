@@ -51,7 +51,7 @@ const BatchActionBar: React.FC<BatchActionBarProps> = ({
 
         {selectedIds.size > 0 && (
           <span className="text-sm font-medium text-slate-700 fade-in">
-            {selectedIds.size} {t('batchActionBar.selected')}
+            {t('batchActionBar.selectedCount', { count: selectedIds.size })}
           </span>
         )}
       </div>

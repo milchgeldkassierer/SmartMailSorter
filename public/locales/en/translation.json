@@ -156,7 +156,8 @@
     "flag": "Flag",
     "unflag": "Remove flag",
     "loadMore": "Load more...",
-    "dragCount": "{{count}} email(s)"
+    "dragCount_one": "{{count}} email",
+    "dragCount_other": "{{count}} emails"
   },
   "emailView": {
     "noEmailSelected": "No email selected",
@@ -229,6 +230,8 @@
   },
   "batchActionBar": {
     "selected": "selected",
+    "selectedCount_one": "{{count}} selected",
+    "selectedCount_other": "{{count}} selected",
     "markAsRead": "Mark as read",
     "markAsUnread": "Mark as unread",
     "flag": "Flag",

@@ -38,20 +38,20 @@ describe('formatTimeAgo', () => {
   });
 
   describe('Seconds Range (< 1 minute)', () => {
-    it('should format timestamps less than 1 minute as "vor wenigen Sekunden"', () => {
+    it('should format timestamps less than 1 minute as "Gerade eben"', () => {
       const now = Date.now();
       const timestamp = now - 30 * 1000; // 30 seconds ago
       const result = formatTimeAgo(timestamp);
       expect(result).toBe('Gerade eben');
     });
 
-    it('should format 0 seconds as "vor wenigen Sekunden"', () => {
+    it('should format 0 seconds as "Gerade eben"', () => {
       const now = Date.now();
       const result = formatTimeAgo(now);
       expect(result).toBe('Gerade eben');
     });
 
-    it('should format 59 seconds as "vor wenigen Sekunden"', () => {
+    it('should format 59 seconds as "Gerade eben"', () => {
       const now = Date.now();
       const timestamp = now - 59 * 1000; // 59 seconds ago
       const result = formatTimeAgo(timestamp);

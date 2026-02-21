@@ -1,11 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import type { ReactElement } from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import SettingsModal from '../SettingsModal';
 import { ImapAccount, AISettings, LLMProvider } from '../../types';
 import { DialogProvider } from '../../contexts/DialogContext';
 
 // Helper to render with DialogProvider
-const renderWithDialog = (ui: React.ReactElement) => render(<DialogProvider>{ui}</DialogProvider>);
+const renderWithDialog = (ui: ReactElement) => render(<DialogProvider>{ui}</DialogProvider>);
 
 describe('SettingsModal - Integration Tests', () => {
   const mockAccounts: ImapAccount[] = [

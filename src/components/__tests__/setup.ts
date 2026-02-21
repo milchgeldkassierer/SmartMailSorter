@@ -161,7 +161,8 @@ beforeAll(async () => {
             flag: 'Markieren',
             unflag: 'Markierung entfernen',
             loadMore: 'Mehr laden...',
-            dragCount: '{{count}} E-Mail(s)',
+            dragCount_one: '{{count}} E-Mail',
+            dragCount_other: '{{count}} E-Mails',
           },
           emailView: {
             noEmailSelected: 'Keine Email ausgewählt',
@@ -234,6 +235,8 @@ beforeAll(async () => {
           },
           batchActionBar: {
             selected: 'ausgewählt',
+            selectedCount_one: '{{count}} ausgewählt',
+            selectedCount_other: '{{count}} ausgewählt',
             markAsRead: 'Als gelesen',
             markAsUnread: 'Als ungelesen',
             flag: 'Markieren',
@@ -414,7 +417,8 @@ beforeAll(async () => {
             flag: 'Flag',
             unflag: 'Remove flag',
             loadMore: 'Load more...',
-            dragCount: '{{count}} email(s)',
+            dragCount_one: '{{count}} email',
+            dragCount_other: '{{count}} emails',
           },
           emailView: {
             noEmailSelected: 'No email selected',
@@ -487,6 +491,8 @@ beforeAll(async () => {
           },
           batchActionBar: {
             selected: 'selected',
+            selectedCount_one: '{{count}} selected',
+            selectedCount_other: '{{count}} selected',
             markAsRead: 'Mark as read',
             markAsUnread: 'Mark as unread',
             flag: 'Flag',

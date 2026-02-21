@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   DefaultEmailCategory,
   ImapAccount,
@@ -28,6 +29,7 @@ import BatchActionBar from './components/BatchActionBar';
 import ProgressBar from './components/ProgressBar';
 
 const App: React.FC = () => {
+  const { ready } = useTranslation();
   const { accounts, activeAccountId, setAccounts, setActiveAccountId, addAccount, removeAccount, switchAccount } =
     useAccounts();
   const { aiSettings, setAiSettings } = useAISettings();
@@ -518,6 +520,14 @@ const App: React.FC = () => {
       }));
     }
   };
+
+  if (!ready) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-white">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen bg-white overflow-hidden font-sans">

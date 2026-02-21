@@ -188,8 +188,9 @@
     "flag": "",
     "unflag": "",
     "loadMore": "",
-    "dragCount": "",
-    "_comment_dragCount": "Keep {{count}} placeholder - it will be replaced with the number of dragged emails"
+    "dragCount_one": "",
+    "dragCount_other": "",
+    "_comment_dragCount": "Keep {{count}} placeholder - it will be replaced with the number of dragged emails. Use _one for singular and _other for plural forms."
   },
   "emailView": {
     "noEmailSelected": "",
@@ -225,6 +226,7 @@
     "aiAnalysis": ""
   },
   "categories": {
+    "_comment": "These lowercase category keys are for generic folder labels in the sidebar UI. The separate categories.json namespace file uses UPPERCASE keys (e.g., INBOX, SENT) for AI-assigned email category names. Both need to be translated.",
     "inbox": "",
     "sent": "",
     "drafts": "",
@@ -272,6 +274,9 @@
   },
   "batchActionBar": {
     "selected": "",
+    "selectedCount_one": "",
+    "selectedCount_other": "",
+    "_comment_selectedCount": "Keep {{count}} placeholder - it will be replaced with the number of selected emails. Use _one for singular and _other for plural forms.",
     "markAsRead": "",
     "markAsUnread": "",
     "flag": "",

@@ -21,7 +21,7 @@ SmartMailSorter's i18n implementation is built on the following structure:
 
 ### Locale File Structure
 
-```
+```text
 public/locales/
 ├── de/                          # German (default language)
 │   ├── translation.json         # Main UI strings

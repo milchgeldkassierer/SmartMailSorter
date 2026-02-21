@@ -156,7 +156,8 @@
     "flag": "Markieren",
     "unflag": "Markierung entfernen",
     "loadMore": "Mehr laden...",
-    "dragCount": "{{count}} E-Mail(s)"
+    "dragCount_one": "{{count}} E-Mail",
+    "dragCount_other": "{{count}} E-Mails"
   },
   "emailView": {
     "noEmailSelected": "Keine Email ausgewählt",
@@ -229,6 +230,8 @@
   },
   "batchActionBar": {
     "selected": "ausgewählt",
+    "selectedCount_one": "{{count}} ausgewählt",
+    "selectedCount_other": "{{count}} ausgewählt",
     "markAsRead": "Als gelesen",
     "markAsUnread": "Als ungelesen",
     "flag": "Markieren",
