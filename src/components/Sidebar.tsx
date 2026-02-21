@@ -297,7 +297,9 @@ const Sidebar: React.FC<SidebarProps> = ({
       <div className="flex-1 overflow-y-auto py-4 px-3 space-y-6">
         {/* Standard Folders Group */}
         <div>
-          <div className="px-3 mb-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">{t('sidebar.folders')}</div>
+          <div className="px-3 mb-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">
+            {t('sidebar.folders')}
+          </div>
           <div className="space-y-1">
             {SYSTEM_FOLDERS.map((cat) => {
               const isActive = selectedCategory === cat;
@@ -353,7 +355,9 @@ const Sidebar: React.FC<SidebarProps> = ({
 
         {/* Flagged/Starred Virtual View */}
         <div>
-          <div className="px-3 mb-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">{t('sidebar.markings')}</div>
+          <div className="px-3 mb-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">
+            {t('sidebar.markings')}
+          </div>
           <div className="space-y-1">{renderCategoryItem(FLAGGED_FOLDER, t('sidebar.starred'), Star)}</div>
         </div>
 
@@ -376,8 +380,12 @@ const Sidebar: React.FC<SidebarProps> = ({
             {/* Smart Categories */}
             {smartCategories.length > 0 && (
               <div className="mb-2">
-                <div className="px-3 text-[10px] text-slate-500 font-semibold uppercase mb-1">{t('sidebar.aiCategories')}</div>
-                {smartCategories.map((category) => renderCategoryItem(category.name, getCategoryDisplayName(category.name), Folder))}
+                <div className="px-3 text-[10px] text-slate-500 font-semibold uppercase mb-1">
+                  {t('sidebar.aiCategories')}
+                </div>
+                {smartCategories.map((category) =>
+                  renderCategoryItem(category.name, getCategoryDisplayName(category.name), Folder)
+                )}
               </div>
             )}
 
@@ -542,8 +550,15 @@ const Sidebar: React.FC<SidebarProps> = ({
           {activeAccount && activeAccount.storageTotal ? (
             <span>
               {formatNumber((activeAccount.storageUsed || 0) / 1024, { maximumFractionDigits: 0 })} MB /{' '}
-              {formatNumber(activeAccount.storageTotal / 1024 / 1024, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} GB (
-              {formatNumber(((activeAccount.storageUsed || 0) / activeAccount.storageTotal) * 100, { maximumFractionDigits: 0 })}%)
+              {formatNumber(activeAccount.storageTotal / 1024 / 1024, {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}{' '}
+              GB (
+              {formatNumber(((activeAccount.storageUsed || 0) / activeAccount.storageTotal) * 100, {
+                maximumFractionDigits: 0,
+              })}
+              %)
             </span>
           ) : (
             <span>{t('common.unknown')}</span>

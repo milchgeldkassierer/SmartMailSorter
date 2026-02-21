@@ -1,9 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import {
-  SUPPORTED_LANGUAGES,
-  LANGUAGE_LABELS,
-  type SupportedLanguage,
-} from '../i18n';
+import { SUPPORTED_LANGUAGES, LANGUAGE_LABELS, type SupportedLanguage } from '../i18n';
 
 interface UseLanguageReturn {
   currentLanguage: SupportedLanguage;

@@ -145,9 +145,7 @@ const GeneralTab: React.FC = () => {
       {/* Automatische Synchronisation */}
       <div className="space-y-4">
         <h3 className="font-semibold text-slate-800">{t('generalTab.autoSync')}</h3>
-        <p className="text-sm text-slate-500">
-          {t('generalTab.autoSyncDescription')}
-        </p>
+        <p className="text-sm text-slate-500">{t('generalTab.autoSyncDescription')}</p>
         <div className="flex items-center gap-4">
           <button
             type="button"

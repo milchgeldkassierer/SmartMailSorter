@@ -171,9 +171,7 @@ const NotificationsTab: React.FC<NotificationsTabProps> = ({ accounts }) => {
       </div>
 
       {/* Info Box */}
-      <p className="text-xs text-slate-400">
-        {t('notificationsTab.infoNote')}
-      </p>
+      <p className="text-xs text-slate-400">{t('notificationsTab.infoNote')}</p>
     </div>
   );
 };

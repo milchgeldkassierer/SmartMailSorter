@@ -65,10 +65,6 @@ export const i18nConfig = {
 };
 
 // Initialize i18next
-i18n
-  .use(Backend)
-  .use(LanguageDetector)
-  .use(initReactI18next)
-  .init(i18nConfig);
+i18n.use(Backend).use(LanguageDetector).use(initReactI18next).init(i18nConfig);
 
 export default i18n;

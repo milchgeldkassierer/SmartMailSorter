@@ -110,10 +110,7 @@ export function formatTimeAgo(timestamp: number | null | undefined): string | nu
  * }); // "15.02.2026, 14:30" (DE) or "02/15/2026, 2:30 PM" (EN)
  * ```
  */
-export function formatDate(
-  timestamp: number | null | undefined,
-  options?: Intl.DateTimeFormatOptions
-): string | null {
+export function formatDate(timestamp: number | null | undefined, options?: Intl.DateTimeFormatOptions): string | null {
   // Handle null/undefined/invalid input
   if (timestamp == null || typeof timestamp !== 'number' || isNaN(timestamp)) {
     return null;
@@ -136,7 +133,7 @@ export function formatDate(
     // Format the date using Intl.DateTimeFormat
     const formatter = new Intl.DateTimeFormat(locale, formatOptions);
     return formatter.format(new Date(timestamp));
-  } catch (error) {
+  } catch {
     // Fallback to ISO format if formatting fails
     return new Date(timestamp).toLocaleDateString();
   }
@@ -190,10 +187,7 @@ export function formatDateTime(timestamp: number | null | undefined): string | n
  * // "1.235" (DE) or "1,235" (EN)
  * ```
  */
-export function formatNumber(
-  value: number | null | undefined,
-  options?: Intl.NumberFormatOptions
-): string | null {
+export function formatNumber(value: number | null | undefined, options?: Intl.NumberFormatOptions): string | null {
   // Handle null/undefined/invalid input
   if (value == null || typeof value !== 'number' || isNaN(value)) {
     return null;
@@ -206,7 +200,7 @@ export function formatNumber(
     // Format the number using Intl.NumberFormat
     const formatter = new Intl.NumberFormat(locale, options);
     return formatter.format(value);
-  } catch (error) {
+  } catch {
     // Fallback to string conversion if formatting fails
     return value.toString();
   }

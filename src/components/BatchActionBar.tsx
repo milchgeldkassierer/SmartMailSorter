@@ -93,9 +93,7 @@ const BatchActionBar: React.FC<BatchActionBarProps> = ({
                 ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white border-transparent hover:shadow-md hover:from-blue-700 hover:to-indigo-700'
                 : 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed'
             }`}
-            title={
-              !aiSettings.apiKey ? t('batchActionBar.tooltipApiKeyMissing') : t('batchActionBar.tooltipSmartSort')
-            }
+            title={!aiSettings.apiKey ? t('batchActionBar.tooltipApiKeyMissing') : t('batchActionBar.tooltipSmartSort')}
           >
             <BrainCircuit className="w-3.5 h-3.5" />
             <span>{t('batchActionBar.smartSort')}</span>

@@ -138,7 +138,9 @@ const TopBar: React.FC<TopBarProps> = ({
           type="button"
           onClick={handleSortDirectionToggle}
           className="text-sm text-slate-500 hover:text-blue-600 flex items-center gap-1 px-2.5 py-1.5 rounded-md border border-slate-200 hover:bg-slate-50 transition-colors"
-          title={sortConfig.direction === 'asc' ? t('topBar.sortDirection.ascending') : t('topBar.sortDirection.descending')}
+          title={
+            sortConfig.direction === 'asc' ? t('topBar.sortDirection.ascending') : t('topBar.sortDirection.descending')
+          }
         >
           {sortConfig.direction === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
         </button>

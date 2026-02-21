@@ -113,7 +113,8 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
 
   const variantStyles = getVariantStyles();
   const defaultConfirmText =
-    confirmText || (type === 'alert' ? t('common.ok') : variant === 'danger' ? t('common.delete') : t('confirmDialog.confirm'));
+    confirmText ||
+    (type === 'alert' ? t('common.ok') : variant === 'danger' ? t('common.delete') : t('confirmDialog.confirm'));
 
   return (
     <div

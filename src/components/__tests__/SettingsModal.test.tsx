@@ -238,7 +238,11 @@ describe('SettingsModal - Integration Tests', () => {
 
       // Update another prop (not isOpen)
       const newAccounts = [...mockAccounts, { ...mockAccounts[0], id: 'acc-3' }];
-      rerender(<DialogProvider><SettingsModal {...defaultProps} accounts={newAccounts} /></DialogProvider>);
+      rerender(
+        <DialogProvider>
+          <SettingsModal {...defaultProps} accounts={newAccounts} />
+        </DialogProvider>
+      );
 
       // Should still be on General tab
       expect(screen.getByText('Datenverwaltung')).toBeInTheDocument();
@@ -252,11 +256,19 @@ describe('SettingsModal - Integration Tests', () => {
       expect(screen.getByText('Smart Sort Konfiguration')).toBeInTheDocument();
 
       // Close modal
-      rerender(<DialogProvider><SettingsModal {...defaultProps} isOpen={false} /></DialogProvider>);
+      rerender(
+        <DialogProvider>
+          <SettingsModal {...defaultProps} isOpen={false} />
+        </DialogProvider>
+      );
       expect(screen.queryByText('Einstellungen')).not.toBeInTheDocument();
 
       // Reopen modal - should still be on Smart Sort tab (state persists)
-      rerender(<DialogProvider><SettingsModal {...defaultProps} isOpen={true} /></DialogProvider>);
+      rerender(
+        <DialogProvider>
+          <SettingsModal {...defaultProps} isOpen={true} />
+        </DialogProvider>
+      );
       expect(screen.getByText('Smart Sort Konfiguration')).toBeInTheDocument();
     });
 
