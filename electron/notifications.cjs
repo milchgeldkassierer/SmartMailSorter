@@ -217,4 +217,5 @@ module.exports = {
   queueNotification,
   processPendingNotification,
   flushPendingNotifications,
+  getMutedCategories,
 };

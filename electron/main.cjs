@@ -68,16 +68,15 @@ async function runAutoSync() {
     }
   } finally {
     isSyncing = false;
-  }
-
-  // Notify all renderer windows
-  const windows = BrowserWindow.getAllWindows();
-  for (const win of windows) {
-    if (!win.isDestroyed()) {
-      win.webContents.send('auto-sync-completed');
+    // Notify all renderer windows (always, even on failure, so UI can recover)
+    const windows = BrowserWindow.getAllWindows();
+    for (const win of windows) {
+      if (!win.isDestroyed()) {
+        win.webContents.send('auto-sync-completed');
+      }
     }
+    logger.info('[AutoSync] Automatic sync completed');
   }
-  logger.info('[AutoSync] Automatic sync completed');
 }
 
 function createWindow() {
@@ -265,7 +264,7 @@ app.whenReady().then(() => {
 
   ipcMain.handle('sync-account', async (event, accountId) => {
     if (isSyncing) {
-      return { success: false, error: 'Sync already in progress' };
+      return { success: false, error: 'SYNC_IN_PROGRESS', message: 'Eine Synchronisation läuft bereits. Bitte warten.' };
     }
     // Retrieve account with decrypted password for IMAP operations
     const accountWithPassword = db.getAccountWithPassword(accountId);
@@ -290,6 +289,7 @@ app.whenReady().then(() => {
   });
 
   ipcMain.handle('reset-db', () => {
+    stopAutoSync();
     db.resetDb();
     return true;
   });
@@ -475,15 +475,7 @@ app.whenReady().then(() => {
 
     // Load global settings from app_settings (not notification_settings, which has FK constraint)
     const globalEnabled = db.getSetting('notifications_enabled');
-    const mutedCategoriesJson = db.getSetting('notifications_muted_categories');
-    let mutedCategories = [];
-    if (mutedCategoriesJson) {
-      try {
-        mutedCategories = JSON.parse(mutedCategoriesJson);
-      } catch (error) {
-        logger.warn('[Notifications] Invalid muted categories JSON, defaulting to empty list', error);
-      }
-    }
+    const mutedCategories = notifications.getMutedCategories();
 
     // Build categorySettings with all known categories (true = enabled, false = muted)
     const allCategories = db.getCategories();

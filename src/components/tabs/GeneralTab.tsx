@@ -2,13 +2,17 @@ import React, { useState, useEffect } from 'react';
 import { Trash2 } from '../Icon';
 import { useOptionalDialogContext } from '../../contexts/DialogContext';
 
-const MIN_SYNC_INTERVAL = 5;
-const MAX_SYNC_INTERVAL = 30;
+const SYNC_INTERVAL_OPTIONS = [
+  { value: 5, label: '5 Minuten' },
+  { value: 10, label: '10 Minuten' },
+  { value: 15, label: '15 Minuten' },
+  { value: 30, label: '30 Minuten' },
+];
+const DEFAULT_SYNC_INTERVAL = 5;
 
 const GeneralTab: React.FC = () => {
   const dialog = useOptionalDialogContext();
   const [autoSyncInterval, setAutoSyncInterval] = useState<number>(0);
-  const [inputValue, setInputValue] = useState<string>('');
 
   useEffect(() => {
     if (window.electron?.getAutoSyncInterval) {
@@ -22,10 +26,6 @@ const GeneralTab: React.FC = () => {
         });
     }
   }, []);
-
-  useEffect(() => {
-    setInputValue(autoSyncInterval > 0 ? String(autoSyncInterval) : '');
-  }, [autoSyncInterval]);
 
   const updateInterval = (value: number) => {
     const previousValue = autoSyncInterval;
@@ -42,34 +42,12 @@ const GeneralTab: React.FC = () => {
     if (autoSyncInterval > 0) {
       updateInterval(0);
     } else {
-      updateInterval(5);
+      updateInterval(DEFAULT_SYNC_INTERVAL);
     }
   };
 
-  const handleDecrement = () => {
-    if (autoSyncInterval > MIN_SYNC_INTERVAL) {
-      updateInterval(autoSyncInterval - 1);
-    }
-  };
-
-  const handleIncrement = () => {
-    if (autoSyncInterval < MAX_SYNC_INTERVAL) {
-      updateInterval(autoSyncInterval + 1);
-    }
-  };
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setInputValue(e.target.value);
-  };
-
-  const handleInputBlur = () => {
-    const parsed = parseInt(inputValue, 10);
-    if (inputValue === '' || isNaN(parsed)) {
-      updateInterval(MIN_SYNC_INTERVAL);
-    } else {
-      const clamped = Math.max(MIN_SYNC_INTERVAL, Math.min(MAX_SYNC_INTERVAL, parsed));
-      updateInterval(clamped);
-    }
+  const handleIntervalChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    updateInterval(Number(e.target.value));
   };
 
   const handleResetDatabase = async () => {
@@ -134,36 +112,21 @@ const GeneralTab: React.FC = () => {
           </button>
           {autoSyncInterval > 0 && (
             <div className="flex items-center gap-2">
-              <span className="text-sm text-slate-600">Alle</span>
-              <div className="flex items-center border border-slate-300 rounded-lg overflow-hidden">
-                <button
-                  type="button"
-                  onClick={handleDecrement}
-                  disabled={autoSyncInterval <= MIN_SYNC_INTERVAL}
-                  className="px-2 py-1.5 text-slate-600 hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                >
-                  −
-                </button>
-                <input
-                  type="number"
-                  min={MIN_SYNC_INTERVAL}
-                  max={MAX_SYNC_INTERVAL}
-                  value={inputValue}
-                  onChange={handleInputChange}
-                  onBlur={handleInputBlur}
-                  aria-label="Synchronisationsintervall in Minuten"
-                  className="w-12 text-center text-sm text-slate-700 border-x border-slate-300 py-1.5 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                />
-                <button
-                  type="button"
-                  onClick={handleIncrement}
-                  disabled={autoSyncInterval >= MAX_SYNC_INTERVAL}
-                  className="px-2 py-1.5 text-slate-600 hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                >
-                  +
-                </button>
-              </div>
-              <span className="text-sm text-slate-600">Minuten</span>
+              <label htmlFor="auto-sync-interval" className="text-sm text-slate-600">
+                Alle
+              </label>
+              <select
+                id="auto-sync-interval"
+                value={autoSyncInterval}
+                onChange={handleIntervalChange}
+                className="px-3 py-1.5 border border-slate-300 rounded-lg text-sm text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                {SYNC_INTERVAL_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
             </div>
           )}
           {autoSyncInterval === 0 && <span className="text-sm text-slate-500">Deaktiviert</span>}

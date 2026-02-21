@@ -38,7 +38,11 @@ export const useSync = ({
       // Trigger backend sync - pass only accountId for security
       const syncResult = await window.electron.syncAccount(activeAccountId);
 
-      if (syncResult && !syncResult.success && syncResult.error === 'Sync already in progress') {
+      if (syncResult && !syncResult.success && syncResult.error === 'SYNC_IN_PROGRESS') {
+        await dialogAlert({
+          title: 'Synchronisation',
+          message: syncResult.message || 'Eine Synchronisation läuft bereits. Bitte warten.',
+        });
         return;
       }
 
