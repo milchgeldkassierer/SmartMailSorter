@@ -70,11 +70,10 @@ describe('GeneralTab', () => {
       expect(resetButton).toHaveClass('border-red-200');
     });
 
-    it('should render with center alignment', () => {
-      renderWithDialog(<GeneralTab />);
-      // Check that the sections inside have center alignment
-      const dataManagementSection = screen.getByText('Datenverwaltung').closest('div');
-      expect(dataManagementSection).toHaveClass('text-center');
+    it('should render with proper layout spacing', () => {
+      const { container } = renderWithDialog(<GeneralTab />);
+      const wrapper = container.firstChild as HTMLElement;
+      expect(wrapper).toHaveClass('space-y-6');
     });
   });
 

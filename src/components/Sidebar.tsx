@@ -3,7 +3,7 @@ import type { LucideIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import {
   CategoryIcon,
-  LogOut,
+  Trash2,
   Settings,
   ChevronDown,
   ChevronUp,
@@ -25,8 +25,6 @@ interface SidebarProps {
   onAddCategory: (cat: string) => void;
   categories: Category[];
   counts: Record<string, number>;
-  onReset: () => void;
-
   // Account Props
   accounts: ImapAccount[];
   activeAccountId: string;
@@ -52,7 +50,6 @@ const Sidebar: React.FC<SidebarProps> = ({
   onAddCategory,
   categories,
   counts,
-  onReset,
   accounts,
   activeAccountId,
   onSwitchAccount,
@@ -492,7 +489,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                   }}
                   className="w-full text-left px-3 py-2 text-sm text-red-400 hover:bg-red-900/30 flex items-center gap-2"
                 >
-                  <LogOut className="w-4 h-4" /> <span>{t('common.delete')}</span>
+                  <Trash2 className="w-4 h-4" /> <span>{t('common.delete')}</span>
                 </button>
                 <div className="h-px bg-slate-700 my-1" />
               </>
@@ -576,13 +573,6 @@ const Sidebar: React.FC<SidebarProps> = ({
           title={t('common.settings')}
         >
           <Settings className="w-5 h-5" />
-        </button>
-        <button
-          onClick={onReset}
-          className="flex-1 flex items-center justify-center gap-2 text-sm text-slate-400 hover:text-white px-3 py-2 hover:bg-slate-800 rounded-lg transition-colors"
-        >
-          <LogOut className="w-4 h-4" />
-          <span>Logout</span>
         </button>
       </div>
     </div>

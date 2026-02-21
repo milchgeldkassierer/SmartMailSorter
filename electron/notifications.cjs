@@ -1,6 +1,21 @@
 const { Notification, app, BrowserWindow } = require('electron');
-const { getNotificationSettings } = require('./db.cjs');
+const { getNotificationSettings, getSetting } = require('./db.cjs');
 const logger = require('./utils/logger.cjs');
+
+/**
+ * Safely parse muted categories JSON from settings, returning [] on failure.
+ */
+function getMutedCategories() {
+  const json = getSetting('notifications_muted_categories');
+  if (!json) return [];
+  try {
+    const parsed = JSON.parse(json);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (_e) {
+    logger.warn('[Notifications] Invalid muted categories JSON, defaulting to []');
+    return [];
+  }
+}
 
 /**
  * Check if a notification should be shown for an email based on user settings
@@ -11,15 +26,22 @@ const logger = require('./utils/logger.cjs');
  */
 function shouldNotify(email, accountId) {
   try {
-    // Check global settings first
-    const globalSettings = getNotificationSettings('GLOBAL');
-    if (!globalSettings.enabled) {
+    // Check global settings first (stored in app_settings)
+    const globalEnabled = getSetting('notifications_enabled');
+    if (globalEnabled === '0') {
       logger.debug('Notifications globally disabled');
       return false;
     }
 
-    // Check if this category is globally muted
-    if (email.smartCategory && Array.isArray(globalSettings.mutedCategories) && globalSettings.mutedCategories.includes(email.smartCategory)) {
+    // Check if this category/folder is globally muted
+    const mutedCategories = getMutedCategories();
+    // Check IMAP folder (e.g. Spam, Papierkorb)
+    if (email.folder && mutedCategories.includes(email.folder)) {
+      logger.debug(`Notifications muted for folder ${email.folder}`);
+      return false;
+    }
+    // Check AI-assigned smart category (e.g. Rechnungen, Newsletter)
+    if (email.smartCategory && mutedCategories.includes(email.smartCategory)) {
       logger.debug(`Notifications muted for category ${email.smartCategory}`);
       return false;
     }
@@ -134,12 +156,17 @@ const pendingNotifications = new Map(); // emailId -> { email, accountId, timer 
  * after AI categorization updates it, or after a timeout if uncategorized.
  */
 function queueNotification(email, accountId) {
-  // Quick checks that don't depend on category
+  // Quick checks that don't depend on AI category
   try {
-    const globalSettings = getNotificationSettings('GLOBAL');
-    if (!globalSettings.enabled) return;
+    const globalEnabled = getSetting('notifications_enabled');
+    if (globalEnabled === '0') return;
     const accountSettings = getNotificationSettings(accountId);
     if (!accountSettings.enabled) return;
+    // Skip immediately if the IMAP folder is muted (e.g. Spam, Papierkorb)
+    if (email.folder) {
+      const mutedCategories = getMutedCategories();
+      if (mutedCategories.includes(email.folder)) return;
+    }
   } catch (_e) {
     return;
   }
@@ -190,4 +217,5 @@ module.exports = {
   queueNotification,
   processPendingNotification,
   flushPendingNotifications,
+  getMutedCategories,
 };

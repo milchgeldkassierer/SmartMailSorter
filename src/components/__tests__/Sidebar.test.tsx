@@ -53,7 +53,6 @@ describe('Sidebar', () => {
     onAddCategory: vi.fn(),
     categories: mockCategories,
     counts: mockCounts,
-    onReset: vi.fn(),
     accounts: mockAccounts,
     activeAccountId: 'acc-1',
     onSwitchAccount: vi.fn(),
@@ -114,11 +113,6 @@ describe('Sidebar', () => {
     it('should render storage info in footer', () => {
       renderWithDialog(<Sidebar {...defaultProps} />);
       expect(screen.getByText('Speicher')).toBeInTheDocument();
-    });
-
-    it('should render logout button', () => {
-      renderWithDialog(<Sidebar {...defaultProps} />);
-      expect(screen.getByText('Logout')).toBeInTheDocument();
     });
 
     it('should render settings button in footer', () => {
@@ -530,16 +524,6 @@ describe('Sidebar', () => {
       fireEvent.click(settingsButton);
 
       expect(onOpenSettings).toHaveBeenCalled();
-    });
-
-    it('should call onReset when logout button is clicked', () => {
-      const onReset = vi.fn();
-      renderWithDialog(<Sidebar {...defaultProps} onReset={onReset} />);
-
-      const logoutButton = screen.getByText('Logout');
-      fireEvent.click(logoutButton);
-
-      expect(onReset).toHaveBeenCalled();
     });
   });
 

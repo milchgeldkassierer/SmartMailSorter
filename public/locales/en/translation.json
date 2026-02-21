@@ -107,6 +107,12 @@
     "resetDatabaseTitle": "Reset database",
     "resetDatabaseConfirm": "Warning: This will delete all saved emails and accounts! Continue?",
     "resetButton": "Reset",
+    "autoSync": "Automatic Synchronization",
+    "autoSyncDescription": "Set the interval for automatic email synchronization.",
+    "every": "Every",
+    "minutes": "minutes",
+    "syncIntervalLabel": "Sync interval in minutes",
+    "disabled": "Disabled",
     "resetError": "Database could not be reset:",
     "unknownError": "Unknown error"
   },

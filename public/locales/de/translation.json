@@ -107,6 +107,12 @@
     "resetDatabaseTitle": "Datenbank zurücksetzen",
     "resetDatabaseConfirm": "Achtung: Dies löscht alle gespeicherten Emails und Konten! Fortfahren?",
     "resetButton": "Zurücksetzen",
+    "autoSync": "Automatische Synchronisation",
+    "autoSyncDescription": "Lege fest, in welchem Intervall E-Mails automatisch synchronisiert werden sollen.",
+    "every": "Alle",
+    "minutes": "Minuten",
+    "syncIntervalLabel": "Synchronisationsintervall in Minuten",
+    "disabled": "Deaktiviert",
     "resetError": "Datenbank konnte nicht zurückgesetzt werden:",
     "unknownError": "Unbekannter Fehler"
   },

@@ -154,6 +154,14 @@ function createSchema() {
       FOREIGN KEY(accountId) REFERENCES accounts(id) ON DELETE CASCADE
     )
   `);
+
+  // Create App Settings Table (key-value store for application-wide settings)
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS app_settings (
+      key TEXT PRIMARY KEY,
+      value TEXT
+    )
+  `);
 }
 
 function migratePasswordEncryption() {
@@ -473,8 +481,12 @@ function updateEmailFlagStatus(id, isFlagged) {
 }
 
 function resetDb() {
+  db.exec('DROP TABLE IF EXISTS attachments');
+  db.exec('DROP TABLE IF EXISTS notification_settings');
   db.exec('DROP TABLE IF EXISTS emails');
+  db.exec('DROP TABLE IF EXISTS categories');
   db.exec('DROP TABLE IF EXISTS accounts');
+  db.exec('DELETE FROM app_settings');
   createSchema(); // Re-create tables immediately
 }
 
@@ -543,6 +555,18 @@ function close() {
     }
     db = null;
   }
+}
+
+// --- App Settings Methods ---
+
+function getSetting(key) {
+  const row = db.prepare('SELECT value FROM app_settings WHERE key = ?').get(key);
+  return row ? row.value : null;
+}
+
+function setSetting(key, value) {
+  const stmt = db.prepare('INSERT OR REPLACE INTO app_settings (key, value) VALUES (?, ?)');
+  return stmt.run(key, value);
 }
 
 // --- Notification Settings Methods ---
@@ -658,6 +682,10 @@ module.exports = {
   // Notification Settings Methods
   getNotificationSettings,
   saveNotificationSettings,
+
+  // App Settings Methods
+  getSetting,
+  setSetting,
 };
 
 function migrateFolder(oldName, newName) {

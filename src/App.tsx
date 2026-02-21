@@ -13,7 +13,6 @@ import EmailList from './components/EmailList';
 import EmailView from './components/EmailView';
 import SettingsModal from './components/SettingsModal';
 import { generateDemoEmails } from './services/geminiService';
-import { useAuth } from './hooks/useAuth';
 import { useAccounts } from './hooks/useAccounts';
 import { useAISettings } from './hooks/useAISettings';
 import { useEmails } from './hooks/useEmails';
@@ -29,7 +28,6 @@ import BatchActionBar from './components/BatchActionBar';
 import ProgressBar from './components/ProgressBar';
 
 const App: React.FC = () => {
-  const { setIsAuthenticated, setIsConnecting } = useAuth();
   const { accounts, activeAccountId, setAccounts, setActiveAccountId, addAccount, removeAccount, switchAccount } =
     useAccounts();
   const { aiSettings, setAiSettings } = useAISettings();
@@ -394,11 +392,9 @@ const App: React.FC = () => {
         if (loadedAccounts.length > 0) {
           setAccounts(loadedAccounts);
           setActiveAccountId(loadedAccounts[0].id);
-          setIsAuthenticated(true);
           const emails = await window.electron.getEmails(loadedAccounts[0].id);
           setData({ [loadedAccounts[0].id]: { emails, categories: savedCategories } });
         } else {
-          setIsAuthenticated(true);
           setIsSettingsOpen(true);
         }
       } catch (error) {
@@ -411,7 +407,7 @@ const App: React.FC = () => {
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [setAccounts, setActiveAccountId, setData, setIsAuthenticated, dialog.alert]);
+  }, [setAccounts, setActiveAccountId, setData, dialog.alert]);
 
   // Handle notification clicks
   useEffect(() => {
@@ -436,6 +432,33 @@ const App: React.FC = () => {
       }
     };
   }, [currentEmails, setSelectedEmailId, setSelectedCategory]);
+
+  // Listen for auto-sync completed events and refresh data
+  useEffect(() => {
+    if (!window.electron) return;
+
+    const handleAutoSyncCompleted = async () => {
+      if (!activeAccountId) return;
+      try {
+        const emails = await window.electron.getEmails(activeAccountId);
+        const categories = await window.electron.getCategories();
+        setData((prev: Record<string, AccountData>) => ({
+          ...prev,
+          [activeAccountId]: { ...prev[activeAccountId], emails, categories },
+        }));
+      } catch (error) {
+        console.error('Failed to refresh after auto-sync:', error);
+      }
+    };
+
+    window.electron.onAutoSyncCompleted(handleAutoSyncCompleted);
+
+    return () => {
+      if (window.electron) {
+        window.electron.removeAutoSyncCompletedListener(handleAutoSyncCompleted);
+      }
+    };
+  }, [activeAccountId, setData]);
 
   // Fetch emails when switching accounts
   useEffect(() => {
@@ -464,7 +487,6 @@ const App: React.FC = () => {
 
   const handleAddAccount = async (newAccount: ImapAccount) => {
     if (window.electron) {
-      setIsConnecting(true);
       try {
         await window.electron.addAccount(newAccount);
         addAccount(newAccount);
@@ -477,15 +499,12 @@ const App: React.FC = () => {
             categories: Object.values(DefaultEmailCategory).map((c) => ({ name: c, type: 'system' })),
           },
         }));
-        setIsAuthenticated(true);
       } catch {
         await dialog.alert({
           title: 'Fehler',
           message: 'Konto konnte nicht hinzugefügt werden. Prüfe die Daten.',
           variant: 'danger',
         });
-      } finally {
-        setIsConnecting(false);
       }
     } else {
       addAccount(newAccount);
@@ -524,7 +543,6 @@ const App: React.FC = () => {
         }}
         categories={currentCategories}
         counts={categoryCounts}
-        onReset={() => setIsAuthenticated(false)}
         accounts={accounts}
         activeAccountId={activeAccountId}
         onSwitchAccount={(id) => {
@@ -670,7 +688,6 @@ const App: React.FC = () => {
               return rest;
             });
             if (window.electron) await window.electron.deleteAccount(id);
-            if (accounts.length === 1) setIsAuthenticated(false);
           }}
           aiSettings={aiSettings}
           onSaveAISettings={setAiSettings}

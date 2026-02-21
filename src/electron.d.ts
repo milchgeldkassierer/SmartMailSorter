@@ -22,7 +22,7 @@ declare global {
       getEmails: (accountId: string) => Promise<Email[]>;
       syncAccount: (accountId: string) => Promise<SyncResult>;
       testConnection: (account: ImapAccount) => Promise<{ success: boolean; error?: string }>;
-      resetDb: () => Promise<boolean>;
+      resetDb: () => Promise<{ success: boolean; error?: string; message?: string } | boolean>;
       deleteEmail: (data: {
         accountId: string;
         emailId: string;
@@ -83,6 +83,12 @@ declare global {
       loadNotificationSettings: () => Promise<NotificationSettings | null>;
       saveNotificationSettings: (settings: NotificationSettings) => Promise<NotificationOperationResult>;
       updateBadgeCount: (count: number) => Promise<void>;
+
+      // Auto-Sync
+      getAutoSyncInterval: () => Promise<number>;
+      setAutoSyncInterval: (minutes: number) => Promise<{ success: boolean; error?: string }>;
+      onAutoSyncCompleted: (callback: () => void) => void;
+      removeAutoSyncCompletedListener: (callback: () => void) => void;
 
       // Event listeners
       onNotificationClicked: (callback: (data: { emailId: string }) => void) => void;
