@@ -12,6 +12,7 @@ import '@testing-library/jest-dom/vitest';
 // Initialize i18next for testing with inline resources
 // This avoids the need to load translation files during tests
 beforeAll(async () => {
+  if (i18n.isInitialized) return;
   await i18n.use(initReactI18next).init({
     lng: 'de', // Default to German for tests
     fallbackLng: 'de',

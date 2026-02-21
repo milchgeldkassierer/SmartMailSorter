@@ -211,7 +211,7 @@ SmartMailSorter uses `i18next-http-backend` to load translations dynamically fro
    export const LANGUAGE_LABELS: Record<SupportedLanguage, string> = {
      de: 'Deutsch',
      en: 'English',
-     fr: 'Français',  // Add your language's native name
+     fr: 'Français', // Add your language's native name
    };
    ```
 
@@ -292,7 +292,7 @@ Once you've tested your translation and verified it works correctly:
    - Go to your fork on GitHub
    - Click "Pull Request" → "New Pull Request"
    - Set base repository to the original SmartMailSorter repo
-   - Set base branch to `main`
+   - Set base branch to `master`
    - Set compare branch to your `translation/add-<language-code>` branch
    - Fill in the PR template with:
      - **Title**: `feat: Add <Language Name> translation (<language-code>)`
@@ -321,12 +321,13 @@ Once you've tested your translation and verified it works correctly:
 
 ### 3. Placeholder Handling
 
-Placeholders are dynamic values that get replaced at runtime. They must remain unchanged:
+Placeholders are dynamic values that are replaced at runtime. They must remain unchanged:
 
 - ✅ **Correct**: `"Êtes-vous sûr de vouloir supprimer '{{category}}' ?"` (French)
 - ❌ **Incorrect**: `"Êtes-vous sûr de vouloir supprimer '{{catégorie}}' ?"` (placeholder changed)
 
 Common placeholders:
+
 - `{{count}}` - Numbers (e.g., email count, storage amounts)
 - `{{category}}` - Category names
 - `{{field}}` - Field names
@@ -336,6 +337,7 @@ Common placeholders:
 ### 4. Brand Names and Technical Terms
 
 **Keep these unchanged** unless your language has an official localization:
+
 - **Brand names**: GMX, Web.de, Gmail, Google Gemini, Electron, React
 - **Technical acronyms**: IMAP, SMTP, API, HTML, CSS, JSON, SSL/TLS
 - **File formats**: .json, .md, .txt
@@ -352,6 +354,7 @@ i18next will automatically format dates and times based on your locale, but ensu
 ### 6. Number Formatting
 
 Different locales use different decimal and thousands separators:
+
 - English: `1,234.56`
 - German: `1.234,56`
 - French: `1 234,56`
@@ -383,6 +386,7 @@ If your language has significant regional differences (e.g., Brazilian Portugues
 ### Formality Levels
 
 Choose the appropriate formality level for your language:
+
 - **Formal "you"**: German (Sie), French (vous), Spanish (usted) - often used in professional software
 - **Informal "you"**: German (du), French (tu), Spanish (tú) - often used in casual apps
 
@@ -397,8 +401,9 @@ Choose the appropriate formality level for your language:
    ```json
    // Wrong - changed key names
    {
-     "commun": {  // Should be "common"
-       "sauvegarder": "Enregistrer"  // Should be "save"
+     "commun": {
+       // Should be "common"
+       "sauvegarder": "Enregistrer" // Should be "save"
      }
    }
    ```
@@ -417,7 +422,7 @@ Choose the appropriate formality level for your language:
    {
      "common": {
        "save": "Enregistrer",
-       "myNewKey": "Some value"  // Don't add new keys
+       "myNewKey": "Some value" // Don't add new keys
      }
    }
    ```
@@ -428,7 +433,7 @@ Choose the appropriate formality level for your language:
    // Wrong - left in English
    {
      "common": {
-       "save": "Save",  // Should be translated
+       "save": "Save", // Should be translated
        "cancel": "Annuler"
      }
    }
@@ -497,6 +502,7 @@ If you're unsure how to translate a specific string:
 ## Translation Credits
 
 Contributors who submit translations will be credited in:
+
 - The project README.md in a "Contributors" section
 - The CHANGELOG.md for the release that includes your translation
 - Git commit history (make sure to use your real name and email)
