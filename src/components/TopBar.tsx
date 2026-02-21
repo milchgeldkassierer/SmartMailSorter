@@ -2,7 +2,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import SearchBar, { SearchConfig } from './SearchBar';
 import { RefreshCw, Search, Filter, ChevronUp, ChevronDown, Clock, Mail, FileText } from './Icon';
-import { DefaultEmailCategory, SortConfig, SortField } from '../types';
+import { DefaultEmailCategory, SortConfig, SortField, FolderTranslationKey, CategoryTranslationKey } from '../types';
 
 interface TopBarProps {
   selectedCategory: string;
@@ -33,7 +33,17 @@ const TopBar: React.FC<TopBarProps> = ({
   onSync,
   isSorting,
 }) => {
-  const { t } = useTranslation();
+  const { t } = useTranslation(['translation', 'categories']);
+
+  const getCategoryDisplayName = (categoryName: string): string => {
+    const translationKey =
+      FolderTranslationKey[categoryName] ||
+      CategoryTranslationKey[categoryName as DefaultEmailCategory] ||
+      categoryName;
+    const key = `categories.${translationKey}`;
+    const translated = t(key, { ns: 'categories', defaultValue: categoryName });
+    return translated === key ? categoryName : translated;
+  };
 
   const getSortFieldLabel = (field: SortField): string => {
     switch (field) {
@@ -74,7 +84,7 @@ const TopBar: React.FC<TopBarProps> = ({
         {!searchTerm ? (
           <div className="flex items-center gap-4">
             <h2 className="text-xl font-semibold text-slate-800 flex items-center gap-2 min-w-[150px]">
-              {selectedCategory}
+              {getCategoryDisplayName(selectedCategory)}
               <span className="ml-2 text-sm font-normal text-slate-500">({filteredEmailsCount})</span>
             </h2>
 

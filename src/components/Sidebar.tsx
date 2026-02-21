@@ -20,6 +20,7 @@ import {
   DefaultEmailCategory,
   Category,
   SYSTEM_FOLDERS,
+  INBOX_FOLDER,
   FLAGGED_FOLDER,
   FolderTranslationKey,
   CategoryTranslationKey,
@@ -356,7 +357,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                   {cat === DefaultEmailCategory.INBOX && physicalFolders.length > 0 && (
                     <div className="mt-1 mb-1">
                       {physicalFolders.map((c) =>
-                        renderCategoryItem(c.name, c.name.replace('Posteingang/', ''), FolderOpen, 1, 'folder')
+                        renderCategoryItem(c.name, c.name.replace(`${INBOX_FOLDER}/`, ''), FolderOpen, 1, 'folder')
                       )}
                     </div>
                   )}
