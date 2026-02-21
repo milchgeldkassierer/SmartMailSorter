@@ -272,17 +272,17 @@ export const categorizeBatchWithAI = async (
 
   const prompt = `
       Du bist ein strenger Email-Sortierer. Sortiere die folgenden ${emails.length} Emails.
-      
+
       Eingabedaten (JSON):
       ${JSON.stringify(inputs, null, 2)}
-      
+
       EXISTIERENDE KATEGORIEN: ${targetCategories.join(', ')}.
-      
+
       REGELN:
       1. PRÜFE zuerst, ob die Email in eine der EXISTIERENDEN Kategorien passt. Das hat HÖCHSTE Priorität.
       2. NUR wenn absolut nichts passt, schlage eine NEUE, sprechende Kategorie vor (1 Wort, z.B. "Reisen").
       3. Vermeide "Sonstiges".
-      
+
       Antworte als JSON Array von Objekten. Jedes Objekt MUSS die 'id' der entsprechenden Email enthalten.
     `;
 
@@ -326,5 +326,73 @@ export const categorizeBatchWithAI = async (
       reasoning: 'Batch API Error: ' + String(error),
       confidence: 0,
     }));
+  }
+};
+
+/**
+ * Parse natural language search query and convert to search operators
+ * @param query Natural language query in German (e.g., "Rechnungen von letztem Monat")
+ * @param settings AI settings for the LLM provider
+ * @returns Search query string with operators (e.g., "category:Rechnungen after:2026-01-01")
+ */
+export const parseNaturalLanguageQuery = async (query: string, settings: AISettings): Promise<string> => {
+  if (!query || query.trim() === '') {
+    return '';
+  }
+
+  const schema: Schema = {
+    type: Type.OBJECT,
+    properties: {
+      query: {
+        type: Type.STRING,
+        description: 'Formatted search query with operators',
+      },
+    },
+    required: ['query'],
+  };
+
+  const systemInstruction = `Du bist ein Such-Query-Übersetzer für ein Email-System.
+
+Deine Aufgabe: Wandle natürlichsprachige deutsche Suchanfragen in strukturierte Such-Operatoren um.
+
+VERFÜGBARE OPERATOREN:
+- from:EMAIL_ODER_NAME - Suche nach Absender
+- to:EMAIL_ODER_NAME - Suche nach Empfänger
+- subject:TEXT - Suche im Betreff
+- category:KATEGORIE - Suche in Kategorie (z.B. Rechnungen, Newsletter, Spam, Privat, Geschäftlich)
+- has:attachment - Nur Emails mit Anhängen
+- before:YYYY-MM-DD - Emails vor diesem Datum
+- after:YYYY-MM-DD - Emails nach diesem Datum
+
+REGELN:
+1. Erkenne die Absicht des Benutzers und wähle die passenden Operatoren
+2. Für Zeitangaben wie "letzter Monat", "diese Woche", berechne das entsprechende Datum (heute ist ${new Date().toISOString().split('T')[0]})
+3. Wenn keine Operatoren passen, gib den Suchtext als Freitext zurück
+4. Kombiniere mehrere Operatoren mit Leerzeichen
+5. Verwende keine Anführungszeichen um Werte, es sei denn der Wert enthält Leerzeichen
+
+BEISPIELE:
+- "Rechnungen von letztem Monat" → "category:Rechnungen after:2026-01-01"
+- "Emails von Amazon" → "from:amazon"
+- "Newsletter mit Anhängen" → "category:Newsletter has:attachment"
+- "Betreff Rechnung" → "subject:Rechnung"
+- "vor Januar 2026" → "before:2026-01-01"
+- "meeting notes" → "meeting notes" (kein Operator)
+
+Antworte NUR mit dem JSON-Objekt mit dem "query" Feld.`;
+
+  const prompt = `Wandle diese Suchanfrage um: "${query}"`;
+
+  try {
+    const result = await callLLM(prompt, systemInstruction, schema, settings);
+
+    if (typeof result === 'object' && result !== null && 'query' in result) {
+      const queryResult = result as { query: string };
+      return queryResult.query || '';
+    }
+
+    return '';
+  } catch (error) {
+    throw error;
   }
 };
