@@ -32,6 +32,7 @@ coverage/
 
 # Auto Claude data directory
 .auto-claude/
+.claude
 .claude/
 
 # Auto Claude generated files

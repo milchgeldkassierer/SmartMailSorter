@@ -8,6 +8,7 @@ const MAX_SYNC_INTERVAL = 30;
 const GeneralTab: React.FC = () => {
   const dialog = useOptionalDialogContext();
   const [autoSyncInterval, setAutoSyncInterval] = useState<number>(0);
+  const [inputValue, setInputValue] = useState<string>('');
 
   useEffect(() => {
     if (window.electron?.getAutoSyncInterval) {
@@ -21,6 +22,10 @@ const GeneralTab: React.FC = () => {
         });
     }
   }, []);
+
+  useEffect(() => {
+    setInputValue(autoSyncInterval > 0 ? String(autoSyncInterval) : '');
+  }, [autoSyncInterval]);
 
   const updateInterval = (value: number) => {
     const previousValue = autoSyncInterval;
@@ -54,18 +59,16 @@ const GeneralTab: React.FC = () => {
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const raw = e.target.value;
-    if (raw === '') {
-      // Allow empty temporarily; value will be clamped on blur
-      return;
-    }
-    const value = Math.max(MIN_SYNC_INTERVAL, Math.min(MAX_SYNC_INTERVAL, parseInt(raw, 10) || MIN_SYNC_INTERVAL));
-    updateInterval(value);
+    setInputValue(e.target.value);
   };
 
-  const handleInputBlur = (e: React.FocusEvent<HTMLInputElement>) => {
-    if (e.target.value === '' || isNaN(parseInt(e.target.value, 10))) {
+  const handleInputBlur = () => {
+    const parsed = parseInt(inputValue, 10);
+    if (inputValue === '' || isNaN(parsed)) {
       updateInterval(MIN_SYNC_INTERVAL);
+    } else {
+      const clamped = Math.max(MIN_SYNC_INTERVAL, Math.min(MAX_SYNC_INTERVAL, parsed));
+      updateInterval(clamped);
     }
   };
 
@@ -145,7 +148,7 @@ const GeneralTab: React.FC = () => {
                   type="number"
                   min={MIN_SYNC_INTERVAL}
                   max={MAX_SYNC_INTERVAL}
-                  value={autoSyncInterval}
+                  value={inputValue}
                   onChange={handleInputChange}
                   onBlur={handleInputBlur}
                   aria-label="Synchronisationsintervall in Minuten"
