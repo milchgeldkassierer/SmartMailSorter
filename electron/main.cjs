@@ -396,6 +396,13 @@ app.whenReady().then(() => {
     return db.renameSmartCategory(oldName, newName);
   });
 
+  // Advanced Search IPC handlers
+  ipcMain.handle('search-emails', (event, query, accountId) => db.searchEmails(query, accountId));
+  ipcMain.handle('get-filters', () => db.getSavedFilters());
+  ipcMain.handle('save-filter', (event, id, name, query) => db.addSavedFilter(id, name, query));
+  ipcMain.handle('delete-filter', (event, id) => db.deleteSavedFilter(id));
+  ipcMain.handle('get-search-history', () => db.getSearchHistory());
+
   // AI Settings safeStorage IPC handlers
   const AI_SETTINGS_FILE = path.join(app.getPath('userData'), 'ai-settings.encrypted');
   const AI_SETTINGS_FILE_PLAINTEXT = path.join(app.getPath('userData'), 'ai-settings.json');

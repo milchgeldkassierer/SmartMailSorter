@@ -29,6 +29,13 @@ contextBridge.exposeInMainWorld('electron', {
   deleteSmartCategory: (categoryName) => ipcRenderer.invoke('delete-smart-category', categoryName),
   renameSmartCategory: (data) => ipcRenderer.invoke('rename-smart-category', data),
 
+  // Advanced Search
+  searchEmails: (query, accountId) => ipcRenderer.invoke('search-emails', query, accountId),
+  getSavedFilters: () => ipcRenderer.invoke('get-filters'),
+  saveFilter: (id, name, query) => ipcRenderer.invoke('save-filter', id, name, query),
+  deleteFilter: (id) => ipcRenderer.invoke('delete-filter', id),
+  getSearchHistory: () => ipcRenderer.invoke('get-search-history'),
+
   // AI Settings
   saveAISettings: (settings) => ipcRenderer.invoke('ai-settings-save', settings),
   loadAISettings: () => ipcRenderer.invoke('ai-settings-load'),
