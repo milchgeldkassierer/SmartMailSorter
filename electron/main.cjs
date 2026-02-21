@@ -402,25 +402,11 @@ app.whenReady().then(() => {
 
   // Advanced Search IPC handlers
   ipcMain.handle('search-emails', (event, query, accountId) => {
-    const results = db.searchEmails(query, accountId);
-
-    // Auto-record search history for non-empty queries
-    if (query && query.trim()) {
-      const crypto = require('crypto');
-      const searchId = crypto.randomUUID();
-      db.addSearchHistory(searchId, query.trim());
-    }
-
-    return results;
+    return db.searchEmails(query, accountId);
   });
   ipcMain.handle('get-filters', () => db.getSavedFilters());
   ipcMain.handle('save-filter', (event, id, name, query) => {
-    // Check if filter exists — use UPDATE for edits, INSERT for new
-    const existing = db.getSavedFilters().find((f) => f.id === id);
-    if (existing) {
-      return db.updateSavedFilter(id, name, query);
-    }
-    return db.addSavedFilter(id, name, query);
+    return db.upsertSavedFilter(id, name, query);
   });
   ipcMain.handle('delete-filter', (event, id) => db.deleteSavedFilter(id));
   ipcMain.handle('get-search-history', () => db.getSearchHistory());
@@ -519,7 +505,12 @@ app.whenReady().then(() => {
   function fetchWithTimeout(url, options, timeoutMs = 15000) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
-    return fetch(url, { ...options, signal: controller.signal }).finally(() => clearTimeout(timer));
+    return fetch(url, { ...options, signal: controller.signal })
+      .catch((err) => {
+        if (err.name === 'AbortError') throw new Error(`Request timed out after ${timeoutMs / 1000}s`);
+        throw err;
+      })
+      .finally(() => clearTimeout(timer));
   }
 
   /** Load AI settings from encrypted or plaintext file */
@@ -545,6 +536,7 @@ app.whenReady().then(() => {
 
   /** Call Google Gemini API and return parsed JSON */
   async function callGeminiApi(settings, systemInstruction, userPrompt) {
+    if (!/^[a-zA-Z0-9._-]+$/.test(settings.model)) throw new Error('Invalid model name');
     const response = await fetchWithTimeout(
       `https://generativelanguage.googleapis.com/v1beta/models/${settings.model}:generateContent?key=${settings.apiKey}`,
       {
@@ -566,7 +558,7 @@ app.whenReady().then(() => {
     );
     if (!response.ok) {
       const errorBody = await response.text();
-      throw new Error(`Gemini API error (${response.status}): ${errorBody}`);
+      throw new Error(`Gemini API error (${response.status}): ${errorBody.slice(0, 200)}`);
     }
     const data = await response.json();
     const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
@@ -590,7 +582,7 @@ app.whenReady().then(() => {
     });
     if (!response.ok) {
       const errorBody = await response.text();
-      throw new Error(`OpenAI API error (${response.status}): ${errorBody}`);
+      throw new Error(`OpenAI API error (${response.status}): ${errorBody.slice(0, 200)}`);
     }
     const data = await response.json();
     const content = data.choices?.[0]?.message?.content;
@@ -616,7 +608,7 @@ app.whenReady().then(() => {
     });
     if (!response.ok) {
       const errorBody = await response.text();
-      throw new Error(`Anthropic API error (${response.status}): ${errorBody}`);
+      throw new Error(`Anthropic API error (${response.status}): ${errorBody.slice(0, 200)}`);
     }
     const data = await response.json();
     const content = data.content?.[0]?.text;
@@ -638,6 +630,9 @@ app.whenReady().then(() => {
     try {
       if (!query || typeof query !== 'string' || query.trim() === '') {
         return '';
+      }
+      if (query.length > 500) {
+        throw new Error('Search query too long (max 500 characters)');
       }
 
       const settings = loadAISettings();
@@ -685,7 +680,7 @@ Antworte NUR mit dem JSON-Objekt mit dem "query" Feld.`;
       return '';
     } catch (error) {
       logger.error('[NL Search] Failed to parse natural language query:', error);
-      throw error;
+      throw new Error('AI query conversion failed');
     }
   });
 

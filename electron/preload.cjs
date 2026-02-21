@@ -35,7 +35,7 @@ contextBridge.exposeInMainWorld('electron', {
   saveFilter: (id, name, query) => ipcRenderer.invoke('save-filter', id, name, query),
   deleteFilter: (id) => ipcRenderer.invoke('delete-filter', id),
   getSearchHistory: () => ipcRenderer.invoke('get-search-history'),
-  saveSearchHistory: (id, query) => ipcRenderer.invoke('save-search-history', id, query),
+  addSearchHistory: (id, query) => ipcRenderer.invoke('save-search-history', id, query),
   clearSearchHistory: () => ipcRenderer.invoke('clear-search-history'),
 
   // AI Settings

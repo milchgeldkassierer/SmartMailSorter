@@ -29,7 +29,7 @@ const MAX_HISTORY_ITEMS = 10;
 const OPERATOR_SUGGESTIONS: OperatorSuggestion[] = [
   { operator: 'from:', description: 'searchBar.operators.from', example: 'from:amazon' },
   { operator: 'subject:', description: 'searchBar.operators.subject', example: 'subject:invoice' },
-  { operator: 'category:', description: 'searchBar.operators.category', example: 'category:Rechnungen' },
+  { operator: 'category:', description: 'searchBar.operators.category', example: 'category:Newsletter' },
   { operator: 'has:attachment', description: 'searchBar.operators.hasAttachment', example: 'has:attachment' },
   { operator: 'before:', description: 'searchBar.operators.before', example: 'before:2026-01-01' },
   { operator: 'after:', description: 'searchBar.operators.after', example: 'after:2026-01-01' },
@@ -133,8 +133,11 @@ const SearchBar: React.FC<SearchBarProps> = ({ searchTerm, onSearchChange, confi
 
     setSearchHistory(newHistory);
 
-    // The backend IPC handler auto-records history via search-emails,
-    // so no separate save call is needed here.
+    // Persist to backend explicitly (only called on intentional actions)
+    if (window.electron?.addSearchHistory) {
+      const id = crypto.randomUUID();
+      window.electron.addSearchHistory(id, query.trim());
+    }
   };
 
   const handleSearchChange = (term: string) => {

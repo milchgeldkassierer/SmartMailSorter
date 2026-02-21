@@ -760,6 +760,16 @@ function updateSavedFilter(id, name, query) {
   return { success: true, changes: info.changes };
 }
 
+/** Insert or update a saved filter in a single statement. */
+function upsertSavedFilter(id, name, query) {
+  const createdAt = Date.now();
+  const stmt = db.prepare(
+    'INSERT INTO saved_filters (id, name, query, createdAt) VALUES (?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET name = excluded.name, query = excluded.query'
+  );
+  const info = stmt.run(id, name, query, createdAt);
+  return { success: true, changes: info.changes };
+}
+
 /** Delete a saved search filter by id. */
 function deleteSavedFilter(id) {
   const stmt = db.prepare('DELETE FROM saved_filters WHERE id = ?');
@@ -778,25 +788,29 @@ function getSearchHistory() {
 function addSearchHistory(id, query) {
   const timestamp = Date.now();
 
-  // Deduplicate: remove existing entries with the same query so repeated searches move to the top
-  db.prepare('DELETE FROM search_history WHERE query = ?').run(query);
+  const run = db.transaction(() => {
+    // Deduplicate: remove existing entries with the same query so repeated searches move to the top
+    db.prepare('DELETE FROM search_history WHERE query = ?').run(query);
 
-  const stmt = db.prepare('INSERT INTO search_history (id, query, timestamp) VALUES (?, ?, ?)');
-  const info = stmt.run(id, query, timestamp);
+    const stmt = db.prepare('INSERT INTO search_history (id, query, timestamp) VALUES (?, ?, ?)');
+    const info = stmt.run(id, query, timestamp);
 
-  // Keep only the last 20 entries
-  db.prepare(
+    // Keep only the last 20 entries
+    db.prepare(
+      `
+      DELETE FROM search_history
+      WHERE id NOT IN (
+        SELECT id FROM search_history
+        ORDER BY timestamp DESC
+        LIMIT 20
+      )
     `
-    DELETE FROM search_history
-    WHERE id NOT IN (
-      SELECT id FROM search_history
-      ORDER BY timestamp DESC
-      LIMIT 20
-    )
-  `
-  ).run();
+    ).run();
 
-  return { success: true, changes: info.changes };
+    return { success: true, changes: info.changes };
+  });
+
+  return run();
 }
 
 /** Delete all search history entries. */
@@ -877,6 +891,7 @@ module.exports = {
   getSavedFilters,
   addSavedFilter,
   updateSavedFilter,
+  upsertSavedFilter,
   deleteSavedFilter,
 
   // Search History Methods
