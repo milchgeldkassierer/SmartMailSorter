@@ -195,7 +195,7 @@ export const generateDemoEmails = async (count: number = 5, settings?: AISetting
       prompt,
       'You are a data generator.',
       emailSchema,
-      settings || { provider: LLMProvider.GEMINI, model: 'gemini-3-flash-preview', apiKey: '' }
+      settings || { provider: LLMProvider.GEMINI, model: 'gemini-2.5-flash', apiKey: '' }
     );
     return (Array.isArray(rawData) ? rawData : [])
       .filter((item: unknown): item is object => typeof item === 'object' && item !== null)

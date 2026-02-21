@@ -563,7 +563,8 @@ Antworte NUR mit dem JSON-Objekt mit dem "query" Feld.`;
       let result;
 
       // Call AI provider based on settings
-      if (settings.provider === 'gemini') {
+      const providerLower = settings.provider.toLowerCase();
+      if (providerLower.includes('gemini')) {
         // Google Gemini API
         const response = await fetch(
           `https://generativelanguage.googleapis.com/v1beta/models/${settings.model}:generateContent?key=${settings.apiKey}`,
@@ -605,7 +606,7 @@ Antworte NUR mit dem JSON-Objekt mit dem "query" Feld.`;
         // Clean markdown formatting
         const cleanText = text.replace(/```json/g, '').replace(/```/g, '').trim();
         result = JSON.parse(cleanText);
-      } else if (settings.provider === 'openai') {
+      } else if (providerLower.includes('openai')) {
         // OpenAI API
         const response = await fetch('https://api.openai.com/v1/chat/completions', {
           method: 'POST',
@@ -636,8 +637,42 @@ Antworte NUR mit dem JSON-Objekt mit dem "query" Feld.`;
         }
 
         result = JSON.parse(content);
+      } else if (providerLower.includes('anthropic')) {
+        // Anthropic Claude API
+        const response = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': settings.apiKey,
+            'anthropic-version': '2023-06-01',
+          },
+          body: JSON.stringify({
+            model: settings.model,
+            max_tokens: 256,
+            system: systemInstruction,
+            messages: [
+              { role: 'user', content: userPrompt },
+            ],
+          }),
+        });
+
+        if (!response.ok) {
+          const errorBody = await response.text();
+          throw new Error(`Anthropic API error (${response.status}): ${errorBody}`);
+        }
+
+        const data = await response.json();
+        const content = data.content?.[0]?.text;
+
+        if (!content) {
+          throw new Error('Anthropic returned empty response');
+        }
+
+        // Clean markdown formatting
+        const cleanContent = content.replace(/```json/g, '').replace(/```/g, '').trim();
+        result = JSON.parse(cleanContent);
       } else {
-        throw new Error('Unknown AI provider');
+        throw new Error(`Unknown AI provider: ${settings.provider}`);
       }
 
       // Extract query from result
