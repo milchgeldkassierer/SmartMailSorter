@@ -70,6 +70,16 @@ function createSchema() {
     )
   `);
 
+  // Create indexes for search performance
+  db.exec('CREATE INDEX IF NOT EXISTS idx_emails_accountId ON emails(accountId)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_emails_senderEmail ON emails(senderEmail)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_emails_subject ON emails(subject)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_emails_date ON emails(date)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_emails_folder ON emails(folder)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_emails_smartCategory ON emails(smartCategory)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_emails_hasAttachments ON emails(hasAttachments)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_emails_accountId_date ON emails(accountId, date)');
+
   // Create Attachments Table
   db.exec(`
     CREATE TABLE IF NOT EXISTS attachments (
