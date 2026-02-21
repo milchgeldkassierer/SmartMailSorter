@@ -40,7 +40,11 @@
     "iconSelectionComingSoon": "Die Icon-Auswahl wird bald verfügbar sein!",
     "changeIcon": "Icon ändern",
     "createNewCategory": "Neue Kategorie erstellen",
-    "moveSelectedHere": "Ausgewählte hierher verschieben ({{count}})"
+    "moveSelectedHere": "Ausgewählte hierher verschieben ({{count}})",
+    "savedFilters": "Gespeicherte Filter",
+    "createNewFilter": "Neuen Filter erstellen",
+    "deleteFilter": "Filter löschen",
+    "deleteFilterConfirm": "Möchten Sie den Filter '{{name}}' wirklich löschen?"
   },
   "settingsModal": {
     "title": "Einstellungen",

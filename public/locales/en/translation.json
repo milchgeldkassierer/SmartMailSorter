@@ -40,7 +40,11 @@
     "iconSelectionComingSoon": "Icon selection will be available soon!",
     "changeIcon": "Change icon",
     "createNewCategory": "Create new category",
-    "moveSelectedHere": "Move selected here ({{count}})"
+    "moveSelectedHere": "Move selected here ({{count}})",
+    "savedFilters": "Saved Filters",
+    "createNewFilter": "Create new filter",
+    "deleteFilter": "Delete filter",
+    "deleteFilterConfirm": "Are you sure you want to delete the filter '{{name}}'?"
   },
   "settingsModal": {
     "title": "Settings",
