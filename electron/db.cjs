@@ -172,6 +172,15 @@ function createSchema() {
       createdAt INTEGER NOT NULL
     )
   `);
+
+  // Create Search History Table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS search_history (
+      id TEXT PRIMARY KEY,
+      query TEXT NOT NULL,
+      timestamp INTEGER NOT NULL
+    )
+  `);
 }
 
 function migratePasswordEncryption() {
@@ -654,6 +663,36 @@ function deleteSavedFilter(id) {
   return { success: true, changes: info.changes };
 }
 
+// --- Search History Methods ---
+
+function getSearchHistory() {
+  return db.prepare('SELECT id, query, timestamp FROM search_history ORDER BY timestamp DESC LIMIT 20').all();
+}
+
+function addSearchHistory(id, query) {
+  const timestamp = Date.now();
+  const stmt = db.prepare('INSERT INTO search_history (id, query, timestamp) VALUES (?, ?, ?)');
+  const info = stmt.run(id, query, timestamp);
+
+  // Keep only the last 20 entries
+  db.prepare(`
+    DELETE FROM search_history
+    WHERE id NOT IN (
+      SELECT id FROM search_history
+      ORDER BY timestamp DESC
+      LIMIT 20
+    )
+  `).run();
+
+  return { success: true, changes: info.changes };
+}
+
+function clearSearchHistory() {
+  const stmt = db.prepare('DELETE FROM search_history');
+  const info = stmt.run();
+  return { success: true, changes: info.changes };
+}
+
 module.exports = {
   init,
   close,
@@ -725,6 +764,11 @@ module.exports = {
   addSavedFilter,
   updateSavedFilter,
   deleteSavedFilter,
+
+  // Search History Methods
+  getSearchHistory,
+  addSearchHistory,
+  clearSearchHistory,
 };
 
 function migrateFolder(oldName, newName) {

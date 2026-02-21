@@ -29,6 +29,12 @@ interface SavedFilter {
   createdAt: number;
 }
 
+interface SearchHistory {
+  id: string;
+  query: string;
+  timestamp: number;
+}
+
 interface DbModule {
   init: (path: string) => void;
   addAccount: (account: Partial<ImapAccount> & { id: string; username?: string; password?: string }) => void;
@@ -40,6 +46,9 @@ interface DbModule {
   addSavedFilter: (id: string, name: string, query: string) => { success: boolean; changes: number };
   updateSavedFilter: (id: string, name: string, query: string) => { success: boolean; changes: number };
   deleteSavedFilter: (id: string) => { success: boolean; changes: number };
+  getSearchHistory: () => SearchHistory[];
+  addSearchHistory: (id: string, query: string) => { success: boolean; changes: number };
+  clearSearchHistory: () => { success: boolean; changes: number };
 }
 
 // Import the database module under test
@@ -205,6 +214,71 @@ describe('Database Module', () => {
 
     it('should handle deleting non-existent filter', () => {
       const result = db.deleteSavedFilter('non-existent');
+
+      expect(result.success).toBe(true);
+      expect(result.changes).toBe(0);
+    });
+  });
+
+  describe('Search History', () => {
+    it('should add and retrieve search history', () => {
+      const result = db.addSearchHistory('search1', 'from:amazon');
+
+      expect(result.success).toBe(true);
+      expect(result.changes).toBe(1);
+
+      const history = db.getSearchHistory();
+      expect(history).toHaveLength(1);
+      expect(history[0].id).toBe('search1');
+      expect(history[0].query).toBe('from:amazon');
+      expect(history[0].timestamp).toBeGreaterThan(0);
+    });
+
+    it('should return search history ordered by timestamp DESC', () => {
+      db.addSearchHistory('search2', 'query1');
+      db.addSearchHistory('search3', 'query2');
+
+      const history = db.getSearchHistory();
+
+      expect(history.length).toBeGreaterThanOrEqual(2);
+      // Most recent should be first
+      expect(history[0].timestamp).toBeGreaterThanOrEqual(history[history.length - 1].timestamp);
+    });
+
+    it('should limit search history to last 20 entries', () => {
+      // Add 25 search queries
+      for (let i = 1; i <= 25; i++) {
+        db.addSearchHistory(`search-${i}`, `query ${i}`);
+      }
+
+      const history = db.getSearchHistory();
+      // Should only keep the last 20
+      expect(history.length).toBeLessThanOrEqual(20);
+    });
+
+    it('should clear all search history', () => {
+      db.addSearchHistory('search4', 'query1');
+      db.addSearchHistory('search5', 'query2');
+
+      let history = db.getSearchHistory();
+      expect(history.length).toBeGreaterThan(0);
+
+      const result = db.clearSearchHistory();
+
+      expect(result.success).toBe(true);
+      expect(result.changes).toBeGreaterThan(0);
+
+      history = db.getSearchHistory();
+      expect(history).toEqual([]);
+    });
+
+    it('should return empty array when no search history exists', () => {
+      const history = db.getSearchHistory();
+      expect(history).toEqual([]);
+    });
+
+    it('should handle clearing empty search history', () => {
+      const result = db.clearSearchHistory();
 
       expect(result.success).toBe(true);
       expect(result.changes).toBe(0);
