@@ -448,7 +448,7 @@ If you need to add a new external CDN or API endpoint:
 
 **Important**: Never add `'unsafe-inline'` to `script-src` or `'unsafe-eval'` in production, as this defeats the purpose of CSP and allows XSS attacks.
 
-**Note on Password Storage**: Account passwords are currently stored in plaintext in SQLite for development convenience. **For production use, implement Electron's `safeStorage` API** to encrypt passwords using OS-level credential storage (Keychain on macOS, Credential Vault on Windows, Secret Service on Linux).
+**Note on Password Storage**: Account passwords are encrypted using Electron's `safeStorage` API, which leverages OS-level credential storage (Keychain on macOS, Credential Vault on Windows, Secret Service on Linux) to ensure credentials are securely protected.
 
 ## ⚙️ Configuration
 
@@ -484,7 +484,7 @@ CREATE TABLE accounts (
   imapHost TEXT,                    -- IMAP server hostname
   imapPort INTEGER,                 -- IMAP port (typically 993 for SSL)
   username TEXT,                    -- IMAP username
-  password TEXT,                    -- IMAP password (plaintext in dev)
+  password TEXT,                    -- IMAP password (encrypted using safeStorage)
   color TEXT,                       -- UI color identifier
   lastSyncUid INTEGER DEFAULT 0,    -- Last synced email UID (for incremental sync)
   storageUsed INTEGER DEFAULT 0,    -- Used storage in bytes
@@ -647,7 +647,7 @@ set API_KEY=your_gemini_api_key_here
 npm start
 ```
 
-**Security Note:** API keys are stored in the SQLite database or read from environment variables. For production deployments, consider using Electron's `safeStorage` API or system keychains for enhanced security.
+**Security Note:** API keys and credentials are encrypted using Electron's `safeStorage` API, which leverages OS-level credential storage for enhanced security. Environment variables can also be used as an alternative configuration method.
 
 #### AI Model Selection Guide
 
