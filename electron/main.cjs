@@ -397,11 +397,24 @@ app.whenReady().then(() => {
   });
 
   // Advanced Search IPC handlers
-  ipcMain.handle('search-emails', (event, query, accountId) => db.searchEmails(query, accountId));
+  ipcMain.handle('search-emails', (event, query, accountId) => {
+    const results = db.searchEmails(query, accountId);
+
+    // Auto-record search history for non-empty queries
+    if (query && query.trim()) {
+      const crypto = require('crypto');
+      const searchId = crypto.randomUUID();
+      db.addSearchHistory(searchId, query.trim());
+    }
+
+    return results;
+  });
   ipcMain.handle('get-filters', () => db.getSavedFilters());
   ipcMain.handle('save-filter', (event, id, name, query) => db.addSavedFilter(id, name, query));
   ipcMain.handle('delete-filter', (event, id) => db.deleteSavedFilter(id));
   ipcMain.handle('get-search-history', () => db.getSearchHistory());
+  ipcMain.handle('save-search-history', (event, id, query) => db.addSearchHistory(id, query));
+  ipcMain.handle('clear-search-history', () => db.clearSearchHistory());
 
   // AI Settings safeStorage IPC handlers
   const AI_SETTINGS_FILE = path.join(app.getPath('userData'), 'ai-settings.encrypted');
