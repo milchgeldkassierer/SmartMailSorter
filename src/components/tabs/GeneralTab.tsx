@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Trash2 } from '../Icon';
 import { useOptionalDialogContext } from '../../contexts/DialogContext';
 
-const MIN_SYNC_INTERVAL = 5;
+const MIN_SYNC_INTERVAL = 2;
 const MAX_SYNC_INTERVAL = 30;
 
 const GeneralTab: React.FC = () => {

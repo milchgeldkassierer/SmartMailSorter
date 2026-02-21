@@ -538,7 +538,7 @@ app.whenReady().then(() => {
   });
 
   // Auto-sync IPC handlers
-  const MIN_SYNC_INTERVAL = 5;
+  const MIN_SYNC_INTERVAL = 2;
   const MAX_SYNC_INTERVAL = 30;
   function sanitizeSyncInterval(value) {
     const parsed = Math.round(Number(value));
