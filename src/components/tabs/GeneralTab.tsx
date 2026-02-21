@@ -88,7 +88,18 @@ const GeneralTab: React.FC = () => {
 
     if (confirmed) {
       try {
-        if (window.electron) await window.electron.resetDb();
+        if (window.electron) {
+          const result = await window.electron.resetDb();
+          if (result && typeof result === 'object' && !result.success) {
+            const msg = result.message || 'Datenbank konnte nicht zurückgesetzt werden.';
+            if (dialog) {
+              await dialog.alert({ title: 'Hinweis', message: msg });
+            } else {
+              alert(msg);
+            }
+            return;
+          }
+        }
         window.location.reload();
       } catch (error) {
         console.error('Failed to reset database:', error);

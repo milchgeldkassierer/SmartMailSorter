@@ -300,7 +300,7 @@ app.whenReady().then(() => {
     }
     stopAutoSync();
     db.resetDb();
-    return true;
+    return { success: true };
   });
 
   ipcMain.handle('delete-email', async (event, { accountId, emailId, uid, folder }) => {
@@ -583,6 +583,10 @@ app.on('window-all-closed', () => {
 
 app.on('before-quit', () => {
   logger.info('App is quitting, cleaning up resources...');
+  if (autoSyncDebounceTimer) {
+    clearTimeout(autoSyncDebounceTimer);
+    autoSyncDebounceTimer = null;
+  }
   stopAutoSync();
 });
 

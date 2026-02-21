@@ -22,7 +22,7 @@ declare global {
       getEmails: (accountId: string) => Promise<Email[]>;
       syncAccount: (accountId: string) => Promise<SyncResult>;
       testConnection: (account: ImapAccount) => Promise<{ success: boolean; error?: string }>;
-      resetDb: () => Promise<boolean>;
+      resetDb: () => Promise<{ success: boolean; error?: string; message?: string } | boolean>;
       deleteEmail: (data: {
         accountId: string;
         emailId: string;
