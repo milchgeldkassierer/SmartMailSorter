@@ -10,8 +10,8 @@ import {
   TRASH_FOLDER,
   FLAGGED_FOLDER,
   SortConfig,
+  SearchConfig,
 } from '../types';
-import { SearchConfig } from '../components/SearchBar';
 
 // Standard folder name constants
 const STANDARD_EXCLUDED_FOLDERS = [SENT_FOLDER, SPAM_FOLDER, TRASH_FOLDER] as const;

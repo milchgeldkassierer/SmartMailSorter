@@ -107,6 +107,24 @@ export interface SortConfig {
   direction: 'asc' | 'desc';
 }
 
+// Search Configuration Types
+export interface SearchConfig {
+  // Basic field search flags (for free text search)
+  searchSender: boolean;
+  searchSubject: boolean;
+  searchBody: boolean;
+  logic: 'AND' | 'OR';
+
+  // Advanced search operators (optional)
+  from?: string;
+  to?: string;
+  subject?: string;
+  category?: string;
+  hasAttachment?: boolean;
+  before?: string; // ISO date string
+  after?: string; // ISO date string
+}
+
 // AI Specific Types
 export enum LLMProvider {
   GEMINI = 'Google Gemini',

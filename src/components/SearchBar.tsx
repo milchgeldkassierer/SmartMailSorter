@@ -1,13 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Search, SlidersHorizontal, X } from './Icon';
+import { SearchConfig } from '../types';
 
-export interface SearchConfig {
-  searchSender: boolean;
-  searchSubject: boolean;
-  searchBody: boolean;
-  logic: 'AND' | 'OR';
-}
+// Re-export for backward compatibility
+export type { SearchConfig };
 
 interface SearchBarProps {
   searchTerm: string;
