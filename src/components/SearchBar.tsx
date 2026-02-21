@@ -249,6 +249,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ searchTerm, onSearchChange, confi
               <button
                 onClick={() => onSearchChange('')}
                 className="p-1 hover:bg-slate-200 rounded-full text-slate-400 hover:text-slate-600"
+                aria-label={t('searchBar.clearSearch', 'Clear search')}
               >
                 <X className="h-3 w-3" />
               </button>

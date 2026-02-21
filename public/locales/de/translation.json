@@ -157,7 +157,8 @@
       "hasAttachment": "E-Mails mit Anhängen",
       "before": "E-Mails vor Datum",
       "after": "E-Mails nach Datum"
-    }
+    },
+    "clearSearch": "Suche löschen"
   },
   "emailList": {
     "noEmails": "Keine Emails",

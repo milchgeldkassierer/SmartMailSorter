@@ -3,7 +3,7 @@
  *
  * Parses search queries with operators like:
  * - from:sender
- * - to:recipient
+ * - to:recipient (parsed but not filtered — no recipient column in emails table)
  * - subject:text
  * - category:name
  * - has:attachment
@@ -191,8 +191,12 @@ function buildSearchWhereClause(parsedQuery, accountId = null) {
     params.push(`%${parsedQuery.subject}%`);
   }
 
-  // To filter: not implemented yet (no recipient column in emails table).
-  // The to: operator is parsed but silently ignored for now.
+  // To filter: not implemented — the emails table has no recipient column.
+  // The to: operator is parsed by parseSearchQuery but intentionally ignored here.
+  // It is also excluded from UI suggestions so users are not misled.
+  if (parsedQuery.to) {
+    console.warn('Search operator "to:" is not supported — no recipient column in emails table');
+  }
 
   // 4. Free text search (least selective, requires scanning body field)
   // Note: body is not indexed due to size, so this will be slowest

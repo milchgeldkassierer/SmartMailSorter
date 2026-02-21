@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import {
   Email,
   DefaultEmailCategory,
@@ -199,13 +199,17 @@ export const useEmails = ({ activeAccountId, accounts: _accounts }: UseEmailsPar
       const operator = (match[1] || match[3]).toLowerCase();
       const value = (match[2] || match[4]).trim();
 
-      if ((value && !value.match(/^\w+:/)) || (value && value.match(/^\d{4}-\d{2}-\d{2}/))) {
-        const knownOps = ['from', 'to', 'subject', 'category', 'has', 'before', 'after'];
+      const knownOps = ['from', 'to', 'subject', 'category', 'has', 'before', 'after'];
+      // Skip values that look like another operator (word:) unless it's a date with colons
+      if (value && (value.match(/^\d{4}-\d{2}-\d{2}/) || !value.match(/^\w+:/))) {
         if (knownOps.includes(operator)) {
           hasOperators = true;
         } else {
           freeTextParts.push(match[0]);
         }
+      } else if (value) {
+        // Value looks like another operator — treat the whole match as free text
+        freeTextParts.push(match[0]);
       }
 
       lastIndex = match.index + match[0].length;
@@ -217,40 +221,37 @@ export const useEmails = ({ activeAccountId, accounts: _accounts }: UseEmailsPar
     return { hasOperators, freeText: freeTextParts.join(' ').trim() };
   };
 
-  // Effect to trigger backend search when search term contains operators
+  // Debounced backend search to avoid excessive API calls during rapid typing
+  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   useEffect(() => {
     const { hasOperators } = parseSearchOperators(searchTerm);
     setIsUsingBackendSearch(hasOperators);
 
     if (hasOperators && window.electron && activeAccountId) {
-      // Pass the raw searchTerm directly - the backend parser handles it
-      window.electron
-        .searchEmails(searchTerm, activeAccountId)
-        .then((results) => {
-          setBackendSearchResults(results);
-        })
-        .catch((error) => {
-          console.error('Backend search failed:', error);
-          setBackendSearchResults([]);
-        });
+      clearTimeout(searchDebounceRef.current);
+      searchDebounceRef.current = setTimeout(() => {
+        window.electron
+          .searchEmails(searchTerm, activeAccountId)
+          .then((results) => {
+            setBackendSearchResults(results);
+          })
+          .catch((error) => {
+            console.error('Backend search failed:', error);
+            setBackendSearchResults([]);
+          });
+      }, 300);
     } else {
       setBackendSearchResults([]);
     }
+
+    return () => clearTimeout(searchDebounceRef.current);
   }, [searchTerm, activeAccountId]);
 
-  // --- Filtering Logic ---
-  const filteredEmails = useMemo(() => {
-    // If using backend search, use those results
-    if (isUsingBackendSearch) {
-      // 1. Filter by category (standard folders, physical folders, or smart categories)
-      const categoryFiltered = backendSearchResults.filter((email) =>
-        shouldShowInCategory(email, selectedCategory, showUnsortedOnly, currentCategories)
-      );
-
-      // 2. Apply sort
-      const sorted = [...categoryFiltered].sort((a, b) => {
+  // Shared sort comparator for email lists
+  const sortEmails = useCallback(
+    (emails: Email[]): Email[] => {
+      return [...emails].sort((a, b) => {
         let comparison = 0;
-
         switch (sortConfig.field) {
           case 'date':
             comparison = a.date.localeCompare(b.date);
@@ -266,46 +267,28 @@ export const useEmails = ({ activeAccountId, accounts: _accounts }: UseEmailsPar
             throw new Error(`Unhandled sort field: ${_exhaustive}`);
           }
         }
-
         return sortConfig.direction === 'asc' ? comparison : -comparison;
       });
+    },
+    [sortConfig]
+  );
 
-      return sorted;
+  // --- Filtering Logic ---
+  const filteredEmails = useMemo(() => {
+    // If using backend search, use those results
+    if (isUsingBackendSearch) {
+      const categoryFiltered = backendSearchResults.filter((email) =>
+        shouldShowInCategory(email, selectedCategory, showUnsortedOnly, currentCategories)
+      );
+      return sortEmails(categoryFiltered);
     }
 
     // Otherwise, use frontend filtering (original logic)
-    // 1. Filter by category (standard folders, physical folders, or smart categories)
     const categoryFiltered = currentEmails.filter((email) =>
       shouldShowInCategory(email, selectedCategory, showUnsortedOnly, currentCategories)
     );
-
-    // 2. Apply search filter
     const searchFiltered = categoryFiltered.filter((email) => matchesSearchTerm(email, searchTerm, searchConfig));
-
-    // 3. Apply sort
-    const sorted = [...searchFiltered].sort((a, b) => {
-      let comparison = 0;
-
-      switch (sortConfig.field) {
-        case 'date':
-          comparison = a.date.localeCompare(b.date);
-          break;
-        case 'sender':
-          comparison = a.sender.localeCompare(b.sender);
-          break;
-        case 'subject':
-          comparison = a.subject.localeCompare(b.subject);
-          break;
-        default: {
-          const _exhaustive: never = sortConfig.field;
-          throw new Error(`Unhandled sort field: ${_exhaustive}`);
-        }
-      }
-
-      return sortConfig.direction === 'asc' ? comparison : -comparison;
-    });
-
-    return sorted;
+    return sortEmails(searchFiltered);
   }, [
     currentEmails,
     selectedCategory,
@@ -313,7 +296,7 @@ export const useEmails = ({ activeAccountId, accounts: _accounts }: UseEmailsPar
     searchConfig,
     showUnsortedOnly,
     currentCategories,
-    sortConfig,
+    sortEmails,
     isUsingBackendSearch,
     backendSearchResults,
   ]);

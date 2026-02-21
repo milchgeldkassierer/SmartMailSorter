@@ -25,17 +25,11 @@ import {
   FLAGGED_FOLDER,
   FolderTranslationKey,
   CategoryTranslationKey,
+  SavedFilter,
 } from '../types';
 import { formatTimeAgo } from '../utils/formatTimeAgo';
 import { formatNumber } from '../utils/formatLocale';
 import { useDialogContext } from '../contexts/DialogContext';
-
-interface SavedFilter {
-  id: string;
-  name: string;
-  query: string;
-  createdAt: string;
-}
 
 interface SidebarProps {
   selectedCategory: string;

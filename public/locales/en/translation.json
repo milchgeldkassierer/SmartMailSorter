@@ -157,7 +157,8 @@
       "hasAttachment": "Emails with attachments",
       "before": "Emails before date",
       "after": "Emails after date"
-    }
+    },
+    "clearSearch": "Clear search"
   },
   "emailList": {
     "noEmails": "No emails",

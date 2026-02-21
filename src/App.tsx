@@ -8,6 +8,7 @@ import {
   FLAGGED_FOLDER,
   SYSTEM_FOLDERS,
   TRASH_FOLDER,
+  SavedFilter,
 } from './types';
 import Sidebar from './components/Sidebar';
 import EmailList from './components/EmailList';
@@ -40,9 +41,7 @@ const App: React.FC = () => {
 
   // Saved Filters
   const { saveFilter, deleteFilter } = useSavedFilters();
-  const [savedFilters, setSavedFilters] = useState<
-    Array<{ id: string; name: string; query: string; createdAt: string }>
-  >([]);
+  const [savedFilters, setSavedFilters] = useState<SavedFilter[]>([]);
   const [filterDialogOpen, setFilterDialogOpen] = useState(false);
   const [editingFilter, setEditingFilter] = useState<{ id: string; name: string; query: string } | null>(null);
 
@@ -424,7 +423,12 @@ const App: React.FC = () => {
   // Load saved filters
   useEffect(() => {
     if (!window.electron) return;
-    window.electron.getSavedFilters().then(setSavedFilters).catch(console.error);
+    window.electron
+      .getSavedFilters()
+      .then(setSavedFilters)
+      .catch((err) => {
+        console.error('Failed to load saved filters:', err);
+      });
   }, []);
 
   // Handle notification clicks

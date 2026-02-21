@@ -216,26 +216,31 @@ describe('useSavedFilters', () => {
   });
 
   describe('Window Electron Availability', () => {
-    it('should not throw when window.electron is undefined', async () => {
+    it('should throw when window.electron is undefined', async () => {
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       const originalElectron = (window as unknown as Record<string, unknown>).electron;
       (window as unknown as Record<string, unknown>).electron = undefined;
 
       const { result } = renderHook(() => useSavedFilters());
 
-      await act(async () => {
-        await result.current.saveFilter('filter-1', 'Test', 'query');
-      });
+      await expect(async () => {
+        await act(async () => {
+          await result.current.saveFilter('filter-1', 'Test', 'query');
+        });
+      }).rejects.toThrow('Electron bridge is not available');
 
-      await act(async () => {
-        await result.current.deleteFilter('filter-1');
-      });
+      await expect(async () => {
+        await act(async () => {
+          await result.current.deleteFilter('filter-1');
+        });
+      }).rejects.toThrow('Electron bridge is not available');
 
-      // Should not throw errors, just silently skip the operations
       expect(mockSaveFilter).not.toHaveBeenCalled();
       expect(mockDeleteFilter).not.toHaveBeenCalled();
 
       // Restore
       (window as unknown as Record<string, unknown>).electron = originalElectron;
+      consoleErrorSpy.mockRestore();
     });
   });
 });

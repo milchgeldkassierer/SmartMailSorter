@@ -76,9 +76,7 @@ describe('SearchBar', () => {
       const onSearchChange = vi.fn();
       render(<SearchBar {...defaultProps} searchTerm="test" onSearchChange={onSearchChange} />);
 
-      // Find and click the clear button (second button - after AI sparkles, before filter)
-      const buttons = document.querySelectorAll('button');
-      const clearButton = buttons[1]; // Second button is the clear button (after AI sparkles)
+      const clearButton = screen.getByRole('button', { name: 'Clear search' });
       fireEvent.click(clearButton);
 
       expect(onSearchChange).toHaveBeenCalledWith('');

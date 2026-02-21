@@ -133,6 +133,7 @@
    - Action: Click to re-execute search
 
 5. **CSS for Highlighting**
+
    ```css
    mark {
      background-color: #fef08a; /* Yellow */

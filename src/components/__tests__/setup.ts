@@ -152,6 +152,7 @@ beforeAll(async () => {
             recentSearches: 'Letzte Suchen',
             searchOperators: 'Suchoperatoren',
             aiConvert: 'KI: In Suchoperatoren umwandeln',
+            clearSearch: 'Suche löschen',
             operators: {
               from: 'Nach Absender filtern',
               subject: 'Im Betreff suchen',
@@ -462,6 +463,7 @@ beforeAll(async () => {
             recentSearches: 'Recent Searches',
             searchOperators: 'Search Operators',
             aiConvert: 'AI: Convert to search operators',
+            clearSearch: 'Clear search',
             operators: {
               from: 'Filter by sender email',
               subject: 'Search in subject line',
