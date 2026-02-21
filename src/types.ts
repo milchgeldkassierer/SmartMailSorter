@@ -69,6 +69,7 @@ export interface ImapAccount {
 
 export interface Email {
   id: string;
+  accountId?: string;
   sender: string;
   senderEmail: string;
   subject: string;

@@ -184,63 +184,48 @@ export const useEmails = ({ activeAccountId, accounts: _accounts }: UseEmailsPar
   const currentEmails = activeData.emails;
   const currentCategories = activeData.categories;
 
-  // Helper function to check if advanced search operators are being used
-  const hasAdvancedSearchOperators = (config: SearchConfig): boolean => {
-    return !!(
-      config.from ||
-      config.to ||
-      config.subject ||
-      config.category ||
-      config.hasAttachment !== undefined ||
-      config.before ||
-      config.after
-    );
+  // Parse operator syntax from searchTerm (e.g. "from:amazon subject:invoice hello")
+  const parseSearchOperators = (query: string): { hasOperators: boolean; freeText: string } => {
+    const operatorRegex = /(\w+):\s*"([^"]+)"|(\w+):\s*(\S+)/gi;
+    let hasOperators = false;
+    const freeTextParts: string[] = [];
+    let lastIndex = 0;
+    let match;
+
+    while ((match = operatorRegex.exec(query)) !== null) {
+      const beforeOperator = query.substring(lastIndex, match.index).trim();
+      if (beforeOperator) freeTextParts.push(beforeOperator);
+
+      const operator = (match[1] || match[3]).toLowerCase();
+      const value = (match[2] || match[4]).trim();
+
+      if ((value && !value.match(/^\w+:/)) || (value && value.match(/^\d{4}-\d{2}-\d{2}/))) {
+        const knownOps = ['from', 'to', 'subject', 'category', 'has', 'before', 'after'];
+        if (knownOps.includes(operator)) {
+          hasOperators = true;
+        } else {
+          freeTextParts.push(match[0]);
+        }
+      }
+
+      lastIndex = match.index + match[0].length;
+    }
+
+    const remaining = query.substring(lastIndex).trim();
+    if (remaining) freeTextParts.push(remaining);
+
+    return { hasOperators, freeText: freeTextParts.join(' ').trim() };
   };
 
-  // Helper function to build search query string from SearchConfig
-  const buildSearchQuery = (config: SearchConfig, freeTextSearch: string): string => {
-    const queryParts: string[] = [];
-
-    if (config.from) {
-      queryParts.push(`from:${config.from}`);
-    }
-    if (config.to) {
-      queryParts.push(`to:${config.to}`);
-    }
-    if (config.subject) {
-      queryParts.push(`subject:${config.subject}`);
-    }
-    if (config.category) {
-      queryParts.push(`category:${config.category}`);
-    }
-    if (config.hasAttachment !== undefined && config.hasAttachment) {
-      queryParts.push('has:attachment');
-    }
-    if (config.before) {
-      queryParts.push(`before:${config.before}`);
-    }
-    if (config.after) {
-      queryParts.push(`after:${config.after}`);
-    }
-
-    // Add free text search term if present
-    if (freeTextSearch && freeTextSearch.trim()) {
-      queryParts.push(freeTextSearch.trim());
-    }
-
-    return queryParts.join(' ');
-  };
-
-  // Effect to trigger backend search when advanced operators are used
+  // Effect to trigger backend search when search term contains operators
   useEffect(() => {
-    const useBackendSearch = hasAdvancedSearchOperators(searchConfig);
-    setIsUsingBackendSearch(useBackendSearch);
+    const { hasOperators } = parseSearchOperators(searchTerm);
+    setIsUsingBackendSearch(hasOperators);
 
-    if (useBackendSearch && window.electron && activeAccountId) {
-      const query = buildSearchQuery(searchConfig, searchTerm);
-
+    if (hasOperators && window.electron && activeAccountId) {
+      // Pass the raw searchTerm directly - the backend parser handles it
       window.electron
-        .searchEmails(query, activeAccountId)
+        .searchEmails(searchTerm, activeAccountId)
         .then((results) => {
           setBackendSearchResults(results);
         })
@@ -251,7 +236,7 @@ export const useEmails = ({ activeAccountId, accounts: _accounts }: UseEmailsPar
     } else {
       setBackendSearchResults([]);
     }
-  }, [searchConfig, searchTerm, activeAccountId]);
+  }, [searchTerm, activeAccountId]);
 
   // --- Filtering Logic ---
   const filteredEmails = useMemo(() => {

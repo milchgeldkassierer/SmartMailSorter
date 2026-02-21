@@ -604,7 +604,10 @@ Antworte NUR mit dem JSON-Objekt mit dem "query" Feld.`;
         }
 
         // Clean markdown formatting
-        const cleanText = text.replace(/```json/g, '').replace(/```/g, '').trim();
+        const cleanText = text
+          .replace(/```json/g, '')
+          .replace(/```/g, '')
+          .trim();
         result = JSON.parse(cleanText);
       } else if (providerLower.includes('openai')) {
         // OpenAI API
@@ -650,9 +653,7 @@ Antworte NUR mit dem JSON-Objekt mit dem "query" Feld.`;
             model: settings.model,
             max_tokens: 256,
             system: systemInstruction,
-            messages: [
-              { role: 'user', content: userPrompt },
-            ],
+            messages: [{ role: 'user', content: userPrompt }],
           }),
         });
 
@@ -669,7 +670,10 @@ Antworte NUR mit dem JSON-Objekt mit dem "query" Feld.`;
         }
 
         // Clean markdown formatting
-        const cleanContent = content.replace(/```json/g, '').replace(/```/g, '').trim();
+        const cleanContent = content
+          .replace(/```json/g, '')
+          .replace(/```/g, '')
+          .trim();
         result = JSON.parse(cleanContent);
       } else {
         throw new Error(`Unknown AI provider: ${settings.provider}`);

@@ -162,9 +162,7 @@ const SavedFilterDialog: React.FC<SavedFilterDialogProps> = ({
 
           {/* Help Text */}
           <div className="bg-blue-50 border border-blue-100 rounded-lg p-3">
-            <p className="text-xs text-slate-600">
-              {t('savedFilterDialog.helpText')}
-            </p>
+            <p className="text-xs text-slate-600">{t('savedFilterDialog.helpText')}</p>
           </div>
         </div>
 

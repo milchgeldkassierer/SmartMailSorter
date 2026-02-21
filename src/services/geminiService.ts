@@ -383,16 +383,12 @@ Antworte NUR mit dem JSON-Objekt mit dem "query" Feld.`;
 
   const prompt = `Wandle diese Suchanfrage um: "${query}"`;
 
-  try {
-    const result = await callLLM(prompt, systemInstruction, schema, settings);
+  const result = await callLLM(prompt, systemInstruction, schema, settings);
 
-    if (typeof result === 'object' && result !== null && 'query' in result) {
-      const queryResult = result as { query: string };
-      return queryResult.query || '';
-    }
-
-    return '';
-  } catch (error) {
-    throw error;
+  if (typeof result === 'object' && result !== null && 'query' in result) {
+    const queryResult = result as { query: string };
+    return queryResult.query || '';
   }
+
+  return '';
 };

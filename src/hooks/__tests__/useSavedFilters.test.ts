@@ -8,7 +8,7 @@ const mockSaveFilter = vi.fn();
 const mockDeleteFilter = vi.fn();
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-(window as any).electron = {
+(window as unknown as Record<string, unknown>).electron = {
   saveFilter: mockSaveFilter,
   deleteFilter: mockDeleteFilter,
 };
@@ -46,10 +46,18 @@ describe('useSavedFilters', () => {
       const { result } = renderHook(() => useSavedFilters());
 
       await act(async () => {
-        await result.current.saveFilter('filter-2', 'Newsletter with Attachments', 'category:Newsletter has:attachment');
+        await result.current.saveFilter(
+          'filter-2',
+          'Newsletter with Attachments',
+          'category:Newsletter has:attachment'
+        );
       });
 
-      expect(mockSaveFilter).toHaveBeenCalledWith('filter-2', 'Newsletter with Attachments', 'category:Newsletter has:attachment');
+      expect(mockSaveFilter).toHaveBeenCalledWith(
+        'filter-2',
+        'Newsletter with Attachments',
+        'category:Newsletter has:attachment'
+      );
     });
 
     it('should handle multiple saves', async () => {
@@ -210,8 +218,8 @@ describe('useSavedFilters', () => {
 
   describe('Window Electron Availability', () => {
     it('should not throw when window.electron is undefined', async () => {
-      const originalElectron = (window as any).electron;
-      (window as any).electron = undefined;
+      const originalElectron = (window as unknown as Record<string, unknown>).electron;
+      (window as unknown as Record<string, unknown>).electron = undefined;
 
       const { result } = renderHook(() => useSavedFilters());
 
@@ -228,7 +236,7 @@ describe('useSavedFilters', () => {
       expect(mockDeleteFilter).not.toHaveBeenCalled();
 
       // Restore
-      (window as any).electron = originalElectron;
+      (window as unknown as Record<string, unknown>).electron = originalElectron;
     });
   });
 });

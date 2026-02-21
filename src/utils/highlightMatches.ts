@@ -22,36 +22,34 @@
  * // Returns: '<mark>Invoice</mark> from <mark>Amazon</mark>'
  * ```
  */
-export function highlightMatches(
-  text: string | null | undefined,
-  searchQuery: string | null | undefined
-): string {
+export function highlightMatches(text: string | null | undefined, searchQuery: string | null | undefined): string {
   // Handle null/undefined/empty input
   if (!text || typeof text !== 'string') {
     return '';
   }
 
   if (!searchQuery || typeof searchQuery !== 'string' || searchQuery.trim() === '') {
-    return text;
+    return escapeHtml(text);
   }
 
   // Extract search terms from query, removing operators
   const terms = extractSearchTerms(searchQuery);
 
   if (terms.length === 0) {
-    return text;
+    return escapeHtml(text);
   }
+
+  // HTML-escape the text first to prevent XSS via dangerouslySetInnerHTML
+  const safeText = escapeHtml(text);
 
   // Escape special regex characters in each term
   const escapedTerms = terms.map((term) => escapeRegex(term));
 
   // Create a regex pattern that matches any of the terms (case-insensitive)
-  // Use word boundaries to avoid partial matches inside words
   const pattern = new RegExp(`(${escapedTerms.join('|')})`, 'gi');
 
   // Replace matches with <mark> wrapped version
-  // Use a replacer function to preserve the original case
-  const highlighted = text.replace(pattern, '<mark>$1</mark>');
+  const highlighted = safeText.replace(pattern, '<mark>$1</mark>');
 
   return highlighted;
 }
@@ -76,15 +74,7 @@ export function highlightMatches(
  */
 export function extractSearchTerms(query: string): string[] {
   // List of search operators to exclude
-  const operators = [
-    'from:',
-    'to:',
-    'subject:',
-    'category:',
-    'has:',
-    'before:',
-    'after:',
-  ];
+  const operators = ['from:', 'to:', 'subject:', 'category:', 'has:', 'before:', 'after:'];
 
   // Remove operators and their values
   let cleanedQuery = query;
@@ -120,6 +110,9 @@ export function extractSearchTerms(query: string): string[] {
  * ```
  */
 export function escapeRegex(str: string): string {
-  // Escape all special regex characters
   return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function escapeHtml(str: string): string {
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }

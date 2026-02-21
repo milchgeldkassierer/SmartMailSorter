@@ -491,7 +491,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         </div>
 
         {/* Saved Filters Section */}
-        {savedFilters && savedFilters.length > 0 && (
+        {onCreateFilter && (
           <div>
             <div className="px-3 mb-2 flex items-center justify-between">
               <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
@@ -517,10 +517,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                   className="flex items-center justify-between px-3 py-2 mx-2 rounded-md cursor-pointer transition-colors group hover:bg-slate-800 text-slate-400 hover:text-slate-200"
                 >
                   <div className="flex items-center gap-3 overflow-hidden">
-                    <Filter
-                      size={18}
-                      className="text-slate-500 group-hover:text-slate-300"
-                    />
+                    <Filter size={18} className="text-slate-500 group-hover:text-slate-300" />
                     <span className="truncate text-sm font-medium">{filter.name}</span>
                   </div>
                 </div>

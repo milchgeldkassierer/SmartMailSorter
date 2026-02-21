@@ -296,7 +296,8 @@ beforeAll(async () => {
             namePlaceholder: 'z.B. Amazon Rechnungen',
             queryLabel: 'Suchanfrage',
             queryPlaceholder: 'z.B. from:amazon category:Rechnungen',
-            helpText: 'Verwenden Sie Suchoperatoren wie from:, to:, subject:, category:, has:attachment, before:, after:',
+            helpText:
+              'Verwenden Sie Suchoperatoren wie from:, to:, subject:, category:, has:attachment, before:, after:',
             saveButton: 'Filter speichern',
             updateButton: 'Filter aktualisieren',
             errors: {

@@ -163,12 +163,12 @@ describe('Advanced Search - End-to-End Integration', () => {
 
       // Should only return Amazon emails in Rechnungen category after Jan 1, 2026
       expect(results).toHaveLength(2);
-      expect(results.every(e => e.senderEmail.toLowerCase().includes('amazon'))).toBe(true);
-      expect(results.every(e => e.smartCategory === 'Rechnungen')).toBe(true);
-      expect(results.every(e => new Date(e.date) > new Date('2026-01-01'))).toBe(true);
+      expect(results.every((e) => e.senderEmail.toLowerCase().includes('amazon'))).toBe(true);
+      expect(results.every((e) => e.smartCategory === 'Rechnungen')).toBe(true);
+      expect(results.every((e) => new Date(e.date) > new Date('2026-01-01'))).toBe(true);
 
       // Verify specific emails
-      const ids = results.map(e => e.id);
+      const ids = results.map((e) => e.id);
       expect(ids).toContain('email-1');
       expect(ids).toContain('email-2');
       expect(ids).not.toContain('email-3'); // Too old
@@ -179,37 +179,37 @@ describe('Advanced Search - End-to-End Integration', () => {
     it('should return correct results for from: operator', () => {
       const results = db.searchEmails('from:amazon', accountId);
       expect(results).toHaveLength(3);
-      expect(results.every(e => e.senderEmail.toLowerCase().includes('amazon'))).toBe(true);
+      expect(results.every((e) => e.senderEmail.toLowerCase().includes('amazon'))).toBe(true);
     });
 
     it('should return correct results for category: operator', () => {
       const results = db.searchEmails('category:Rechnungen', accountId);
       expect(results).toHaveLength(2);
-      expect(results.every(e => e.smartCategory === 'Rechnungen')).toBe(true);
+      expect(results.every((e) => e.smartCategory === 'Rechnungen')).toBe(true);
     });
 
     it('should return correct results for has:attachment operator', () => {
       const results = db.searchEmails('has:attachment', accountId);
       expect(results).toHaveLength(3);
-      expect(results.every(e => e.hasAttachments)).toBe(true);
+      expect(results.every((e) => e.hasAttachments)).toBe(true);
     });
 
     it('should return correct results for after: operator', () => {
       const results = db.searchEmails('after:2026-01-01', accountId);
       expect(results).toHaveLength(4);
-      expect(results.every(e => new Date(e.date) > new Date('2026-01-01'))).toBe(true);
+      expect(results.every((e) => new Date(e.date) > new Date('2026-01-01'))).toBe(true);
     });
 
     it('should return correct results for before: operator', () => {
       const results = db.searchEmails('before:2026-01-01', accountId);
       expect(results).toHaveLength(1);
-      expect(results.every(e => new Date(e.date) < new Date('2026-01-01'))).toBe(true);
+      expect(results.every((e) => new Date(e.date) < new Date('2026-01-01'))).toBe(true);
     });
 
     it('should return correct results for subject: operator', () => {
       const results = db.searchEmails('subject:Invoice', accountId);
       expect(results).toHaveLength(2);
-      expect(results.every(e => e.subject.toLowerCase().includes('invoice'))).toBe(true);
+      expect(results.every((e) => e.subject.toLowerCase().includes('invoice'))).toBe(true);
     });
 
     it('should combine multiple operators with AND logic', () => {
@@ -223,7 +223,11 @@ describe('Advanced Search - End-to-End Integration', () => {
 
   describe('Saved Filters', () => {
     it('should save a filter successfully', () => {
-      const result = db.addSavedFilter('filter1', 'Amazon Invoices', 'from:amazon category:Rechnungen after:2026-01-01');
+      const result = db.addSavedFilter(
+        'filter1',
+        'Amazon Invoices',
+        'from:amazon category:Rechnungen after:2026-01-01'
+      );
       expect(result.success).toBe(true);
       expect(result.changes).toBe(1);
     });
@@ -265,7 +269,7 @@ describe('Advanced Search - End-to-End Integration', () => {
 
       // Retrieve and execute filter
       const filters = db.getSavedFilters();
-      const filter = filters.find(f => f.name === 'Amazon Invoices');
+      const filter = filters.find((f) => f.name === 'Amazon Invoices');
       expect(filter).toBeDefined();
 
       const results = db.searchEmails(filter!.query, accountId);
@@ -290,7 +294,7 @@ describe('Advanced Search - End-to-End Integration', () => {
       expect(history).toHaveLength(3);
 
       // Verify all queries are present (order may vary if timestamps are identical)
-      const queries = history.map(h => h.query);
+      const queries = history.map((h) => h.query);
       expect(queries).toContain('from:amazon');
       expect(queries).toContain('category:Rechnungen');
       expect(queries).toContain('has:attachment');
@@ -317,8 +321,8 @@ describe('Advanced Search - End-to-End Integration', () => {
       }
 
       // Verify we have query data
-      expect(history.every(h => h.query.startsWith('query-'))).toBe(true);
-      expect(history.every(h => h.id.startsWith('search-'))).toBe(true);
+      expect(history.every((h) => h.query.startsWith('query-'))).toBe(true);
+      expect(history.every((h) => h.id.startsWith('search-'))).toBe(true);
     });
 
     it('should clear search history', () => {
@@ -368,8 +372,8 @@ describe('Advanced Search - End-to-End Integration', () => {
 
       // Verify results are correct
       expect(results.length).toBeGreaterThan(0);
-      expect(results.every(e => e.senderEmail.includes('amazon'))).toBe(true);
-      expect(results.every(e => e.smartCategory === 'Rechnungen')).toBe(true);
+      expect(results.every((e) => e.senderEmail.includes('amazon'))).toBe(true);
+      expect(results.every((e) => e.smartCategory === 'Rechnungen')).toBe(true);
     });
 
     it('should search with has:attachment in under 500ms for 10k emails', () => {
@@ -391,7 +395,7 @@ describe('Advanced Search - End-to-End Integration', () => {
 
       expect(searchTime).toBeLessThan(500);
       expect(results).toHaveLength(5000); // Half of emails have attachments
-      expect(results.every(e => e.hasAttachments)).toBe(true);
+      expect(results.every((e) => e.hasAttachments)).toBe(true);
     });
 
     it('should search with date range in under 500ms for 10k emails', () => {
@@ -399,7 +403,7 @@ describe('Advanced Search - End-to-End Integration', () => {
       for (let i = 1; i <= 10000; i++) {
         db.saveEmail(
           createTestEmail(`email-${i}`, accountId, {
-            date: new Date(2025 + (i % 2), (i % 12), 1 + (i % 28), i % 24, i % 60).toISOString(),
+            date: new Date(2025 + (i % 2), i % 12, 1 + (i % 28), i % 24, i % 60).toISOString(),
           })
         );
       }
@@ -411,10 +415,12 @@ describe('Advanced Search - End-to-End Integration', () => {
       console.log(`Date range search completed in ${searchTime}ms, found ${results.length} results`);
 
       expect(searchTime).toBeLessThan(500);
-      expect(results.every(e => {
-        const date = new Date(e.date);
-        return date >= new Date('2026-01-01') && date <= new Date('2026-12-31');
-      })).toBe(true);
+      expect(
+        results.every((e) => {
+          const date = new Date(e.date);
+          return date >= new Date('2026-01-01') && date <= new Date('2026-12-31');
+        })
+      ).toBe(true);
     });
   });
 
@@ -442,7 +448,7 @@ describe('Advanced Search - End-to-End Integration', () => {
     it('should handle special characters in search query', () => {
       db.saveEmail(
         createTestEmail('email-1', accountId, {
-          subject: "Special chars: @#$%^&*()'\"",
+          subject: 'Special chars: @#$%^&*()\'"',
         })
       );
       // Should not throw error
@@ -494,7 +500,7 @@ describe('Advanced Search - End-to-End Integration', () => {
     it('should search across all accounts when no accountId provided', () => {
       const results = db.searchEmails('from:amazon');
       expect(results).toHaveLength(2);
-      const accountIds = results.map(e => e.accountId);
+      const accountIds = results.map((e) => e.accountId);
       expect(accountIds).toContain(accountId);
       expect(accountIds).toContain(account2Id);
     });
@@ -542,9 +548,9 @@ describe('Advanced Search - End-to-End Integration', () => {
 
       // Verify search results
       expect(searchResults).toHaveLength(2);
-      expect(searchResults.every(e => e.senderEmail.toLowerCase().includes('amazon'))).toBe(true);
-      expect(searchResults.every(e => e.smartCategory === 'Rechnungen')).toBe(true);
-      expect(searchResults.every(e => new Date(e.date) > new Date('2026-01-01'))).toBe(true);
+      expect(searchResults.every((e) => e.senderEmail.toLowerCase().includes('amazon'))).toBe(true);
+      expect(searchResults.every((e) => e.smartCategory === 'Rechnungen')).toBe(true);
+      expect(searchResults.every((e) => new Date(e.date) > new Date('2026-01-01'))).toBe(true);
 
       // Step 3: Save the filter
       const saveResult = db.addSavedFilter('filter1', 'Amazon Invoices', query);
@@ -558,7 +564,7 @@ describe('Advanced Search - End-to-End Integration', () => {
       expect(savedFilters[0].query).toBe(query);
 
       // Step 5: Execute saved filter (simulate clicking on it)
-      const filterToExecute = savedFilters.find(f => f.name === 'Amazon Invoices');
+      const filterToExecute = savedFilters.find((f) => f.name === 'Amazon Invoices');
       expect(filterToExecute).toBeDefined();
 
       const filterResults = db.searchEmails(filterToExecute!.query, accountId);

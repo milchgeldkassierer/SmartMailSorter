@@ -180,30 +180,34 @@ describe('highlightMatches', () => {
   });
 
   describe('HTML Content', () => {
-    it('should work with text containing HTML tags', () => {
+    it('should HTML-escape text containing HTML tags for XSS safety', () => {
       const text = '<p>Hello <strong>World</strong></p>';
       const query = 'hello';
       const result = highlightMatches(text, query);
 
       expect(result).toContain('<mark>Hello</mark>');
-      expect(result).toContain('<strong>');
+      expect(result).not.toContain('<strong>');
+      expect(result).toContain('&lt;strong&gt;');
     });
 
-    it('should work with text containing links', () => {
+    it('should HTML-escape text containing links', () => {
       const text = '<a href="https://example.com">Visit site</a>';
       const query = 'visit';
       const result = highlightMatches(text, query);
 
       expect(result).toContain('<mark>Visit</mark>');
+      expect(result).not.toContain('<a href');
+      expect(result).toContain('&lt;a href');
     });
 
-    it('should work with complex HTML structure', () => {
+    it('should HTML-escape complex HTML structure', () => {
       const text = '<div><h2>Invoice Details</h2><p>Amount: $100</p></div>';
       const query = 'invoice amount';
       const result = highlightMatches(text, query);
 
       expect(result).toContain('<mark>Invoice</mark>');
       expect(result).toContain('<mark>Amount</mark>');
+      expect(result).not.toContain('<div>');
     });
   });
 

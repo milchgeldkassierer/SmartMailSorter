@@ -736,14 +736,16 @@ function addSearchHistory(id, query) {
   const info = stmt.run(id, query, timestamp);
 
   // Keep only the last 20 entries
-  db.prepare(`
+  db.prepare(
+    `
     DELETE FROM search_history
     WHERE id NOT IN (
       SELECT id FROM search_history
       ORDER BY timestamp DESC
       LIMIT 20
     )
-  `).run();
+  `
+  ).run();
 
   return { success: true, changes: info.changes };
 }

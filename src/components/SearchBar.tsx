@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Search, SlidersHorizontal, X } from './Icon';
+import { Search, SlidersHorizontal, X, Sparkles } from './Icon';
 import { SearchConfig } from '../types';
 
 // Re-export for backward compatibility
@@ -44,6 +44,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ searchTerm, onSearchChange, confi
   const [showHistory, setShowHistory] = useState(false);
   const [filteredSuggestions, setFilteredSuggestions] = useState<OperatorSuggestion[]>([]);
   const [searchHistory, setSearchHistory] = useState<SearchHistoryItem[]>([]);
+  const [isAiConverting, setIsAiConverting] = useState(false);
   const filterRef = useRef<HTMLDivElement>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
   const historyRef = useRef<HTMLDivElement>(null);
@@ -163,6 +164,22 @@ const SearchBar: React.FC<SearchBarProps> = ({ searchTerm, onSearchChange, confi
     }
   };
 
+  const handleAiConvert = async () => {
+    if (!searchTerm.trim() || !window.electron || isAiConverting) return;
+    setIsAiConverting(true);
+    try {
+      const result = await window.electron.parseNaturalLanguageQuery(searchTerm);
+      if (result && result !== searchTerm) {
+        onSearchChange(result);
+        addToSearchHistory(result);
+      }
+    } catch (error) {
+      console.error('AI conversion failed:', error);
+    } finally {
+      setIsAiConverting(false);
+    }
+  };
+
   const handleSuggestionClick = (operator: string) => {
     const cursorPos = inputRef.current?.selectionStart || searchTerm.length;
     const beforeCursor = searchTerm.substring(0, cursorPos);
@@ -218,12 +235,26 @@ const SearchBar: React.FC<SearchBarProps> = ({ searchTerm, onSearchChange, confi
 
         <div className="absolute inset-y-0 right-0 flex items-center pr-2 gap-1">
           {searchTerm && (
-            <button
-              onClick={() => onSearchChange('')}
-              className="p-1 hover:bg-slate-200 rounded-full text-slate-400 hover:text-slate-600"
-            >
-              <X className="h-3 w-3" />
-            </button>
+            <>
+              <button
+                onClick={handleAiConvert}
+                disabled={isAiConverting}
+                className={`p-1 rounded-full transition-colors ${
+                  isAiConverting
+                    ? 'text-blue-400 animate-pulse'
+                    : 'text-slate-400 hover:text-purple-600 hover:bg-purple-50'
+                }`}
+                title={t('searchBar.aiConvert', 'AI: Convert to search operators')}
+              >
+                <Sparkles className="h-3.5 w-3.5" />
+              </button>
+              <button
+                onClick={() => onSearchChange('')}
+                className="p-1 hover:bg-slate-200 rounded-full text-slate-400 hover:text-slate-600"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </>
           )}
           <button
             onClick={() => setShowFilters(!showFilters)}
@@ -255,9 +286,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ searchTerm, onSearchChange, confi
                   className="w-full text-left px-3 py-2 rounded-lg hover:bg-blue-50 transition-colors group"
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-sm text-slate-700 group-hover:text-slate-900 truncate">
-                      {item.query}
-                    </span>
+                    <span className="text-sm text-slate-700 group-hover:text-slate-900 truncate">{item.query}</span>
                     <span className="text-xs text-slate-400 group-hover:text-slate-500 whitespace-nowrap">
                       {new Date(item.timestamp).toLocaleDateString()}
                     </span>
@@ -290,13 +319,9 @@ const SearchBar: React.FC<SearchBarProps> = ({ searchTerm, onSearchChange, confi
                     <code className="text-sm font-semibold text-blue-600 group-hover:text-blue-700">
                       {suggestion.operator}
                     </code>
-                    <span className="text-xs text-slate-400 group-hover:text-slate-500">
-                      {suggestion.example}
-                    </span>
+                    <span className="text-xs text-slate-400 group-hover:text-slate-500">{suggestion.example}</span>
                   </div>
-                  <div className="text-xs text-slate-500 mt-0.5">
-                    {suggestion.description}
-                  </div>
+                  <div className="text-xs text-slate-500 mt-0.5">{suggestion.description}</div>
                 </button>
               ))}
             </div>

@@ -2,7 +2,14 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import SearchBar from './SearchBar';
 import { RefreshCw, Search, Filter, ChevronUp, ChevronDown, Clock, Mail, FileText } from './Icon';
-import { DefaultEmailCategory, SortConfig, SortField, FolderTranslationKey, CategoryTranslationKey, SearchConfig } from '../types';
+import {
+  DefaultEmailCategory,
+  SortConfig,
+  SortField,
+  FolderTranslationKey,
+  CategoryTranslationKey,
+  SearchConfig,
+} from '../types';
 
 interface TopBarProps {
   selectedCategory: string;

@@ -23,10 +23,12 @@ import { useBatchOperations } from './hooks/useBatchOperations';
 import { useSync } from './hooks/useSync';
 import { useDragAndDrop } from './hooks/useDragAndDrop';
 import { useUndoStack } from './hooks/useUndoStack';
+import { useSavedFilters } from './hooks/useSavedFilters';
 import { useDialogContext } from './contexts/DialogContext';
 import TopBar from './components/TopBar';
 import BatchActionBar from './components/BatchActionBar';
 import ProgressBar from './components/ProgressBar';
+import SavedFilterDialog from './components/SavedFilterDialog';
 
 const App: React.FC = () => {
   const { t, ready } = useTranslation();
@@ -35,6 +37,14 @@ const App: React.FC = () => {
   const { aiSettings, setAiSettings } = useAISettings();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const dialog = useDialogContext();
+
+  // Saved Filters
+  const { saveFilter, deleteFilter } = useSavedFilters();
+  const [savedFilters, setSavedFilters] = useState<
+    Array<{ id: string; name: string; query: string; createdAt: string }>
+  >([]);
+  const [filterDialogOpen, setFilterDialogOpen] = useState(false);
+  const [editingFilter, setEditingFilter] = useState<{ id: string; name: string; query: string } | null>(null);
 
   const {
     setData,
@@ -411,6 +421,12 @@ const App: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [setAccounts, setActiveAccountId, setData, dialog.alert]);
 
+  // Load saved filters
+  useEffect(() => {
+    if (!window.electron) return;
+    window.electron.getSavedFilters().then(setSavedFilters).catch(console.error);
+  }, []);
+
   // Handle notification clicks
   useEffect(() => {
     if (!window.electron) return;
@@ -586,6 +602,20 @@ const App: React.FC = () => {
         dropTargetCategory={dropTargetCategory}
         onCategoryDragOver={onCategoryDragOver}
         onCategoryDragLeave={onCategoryDragLeave}
+        savedFilters={savedFilters}
+        onExecuteFilter={(query) => setSearchTerm(query)}
+        onCreateFilter={() => {
+          setEditingFilter(null);
+          setFilterDialogOpen(true);
+        }}
+        onEditFilter={(filter) => {
+          setEditingFilter(filter);
+          setFilterDialogOpen(true);
+        }}
+        onDeleteFilter={async (filterId) => {
+          await deleteFilter(filterId);
+          setSavedFilters((prev) => prev.filter((f) => f.id !== filterId));
+        }}
         onDropEmails={async (emailIds, targetCategory, targetType) => {
           if (targetType === 'smart' && targetCategory === '__new_category__') {
             const name = await dialog.prompt({
@@ -688,6 +718,26 @@ const App: React.FC = () => {
             </button>
           </div>
         )}
+
+        <SavedFilterDialog
+          isOpen={filterDialogOpen}
+          onClose={() => {
+            setFilterDialogOpen(false);
+            setEditingFilter(null);
+          }}
+          onSave={async (name, query) => {
+            const id = editingFilter?.id || crypto.randomUUID();
+            await saveFilter(id, name, query);
+            // Refresh filters list
+            if (window.electron) {
+              const filters = await window.electron.getSavedFilters();
+              setSavedFilters(filters);
+            }
+          }}
+          initialName={editingFilter?.name}
+          initialQuery={editingFilter?.query || searchTerm}
+          mode={editingFilter ? 'edit' : 'create'}
+        />
 
         <SettingsModal
           isOpen={isSettingsOpen}

@@ -58,13 +58,7 @@ describe('SavedFilterDialog', () => {
     });
 
     it('should populate inputs with initial values', () => {
-      render(
-        <SavedFilterDialog
-          {...defaultProps}
-          initialName="Test Filter"
-          initialQuery="from:amazon"
-        />
-      );
+      render(<SavedFilterDialog {...defaultProps} initialName="Test Filter" initialQuery="from:amazon" />);
       const nameInput = screen.getByLabelText('Filtername') as HTMLInputElement;
       const queryInput = screen.getByLabelText('Suchanfrage') as HTMLInputElement;
 
@@ -193,9 +187,7 @@ describe('SavedFilterDialog', () => {
   describe('Help Text', () => {
     it('should display help text about search operators', () => {
       render(<SavedFilterDialog {...defaultProps} />);
-      expect(
-        screen.getByText(/Verwenden Sie Suchoperatoren wie from:, to:, subject:/)
-      ).toBeInTheDocument();
+      expect(screen.getByText(/Verwenden Sie Suchoperatoren wie from:, to:, subject:/)).toBeInTheDocument();
     });
   });
 
