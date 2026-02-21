@@ -3,6 +3,21 @@ const { getNotificationSettings, getSetting } = require('./db.cjs');
 const logger = require('./utils/logger.cjs');
 
 /**
+ * Safely parse muted categories JSON from settings, returning [] on failure.
+ */
+function getMutedCategories() {
+  const json = getSetting('notifications_muted_categories');
+  if (!json) return [];
+  try {
+    const parsed = JSON.parse(json);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (_e) {
+    logger.warn('[Notifications] Invalid muted categories JSON, defaulting to []');
+    return [];
+  }
+}
+
+/**
  * Check if a notification should be shown for an email based on user settings
  * @param {Object} email - The email object
  * @param {string} email.smartCategory - AI-assigned category
@@ -19,8 +34,7 @@ function shouldNotify(email, accountId) {
     }
 
     // Check if this category/folder is globally muted
-    const mutedJson = getSetting('notifications_muted_categories');
-    const mutedCategories = mutedJson ? JSON.parse(mutedJson) : [];
+    const mutedCategories = getMutedCategories();
     // Check IMAP folder (e.g. Spam, Papierkorb)
     if (email.folder && mutedCategories.includes(email.folder)) {
       logger.debug(`Notifications muted for folder ${email.folder}`);
@@ -150,8 +164,7 @@ function queueNotification(email, accountId) {
     if (!accountSettings.enabled) return;
     // Skip immediately if the IMAP folder is muted (e.g. Spam, Papierkorb)
     if (email.folder) {
-      const mutedJson = getSetting('notifications_muted_categories');
-      const mutedCategories = mutedJson ? JSON.parse(mutedJson) : [];
+      const mutedCategories = getMutedCategories();
       if (mutedCategories.includes(email.folder)) return;
     }
   } catch (_e) {

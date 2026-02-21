@@ -476,7 +476,14 @@ app.whenReady().then(() => {
     // Load global settings from app_settings (not notification_settings, which has FK constraint)
     const globalEnabled = db.getSetting('notifications_enabled');
     const mutedCategoriesJson = db.getSetting('notifications_muted_categories');
-    const mutedCategories = mutedCategoriesJson ? JSON.parse(mutedCategoriesJson) : [];
+    let mutedCategories = [];
+    if (mutedCategoriesJson) {
+      try {
+        mutedCategories = JSON.parse(mutedCategoriesJson);
+      } catch (error) {
+        logger.warn('[Notifications] Invalid muted categories JSON, defaulting to empty list', error);
+      }
+    }
 
     // Build categorySettings with all known categories (true = enabled, false = muted)
     const allCategories = db.getCategories();

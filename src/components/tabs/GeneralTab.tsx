@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Trash2 } from '../Icon';
 import { useOptionalDialogContext } from '../../contexts/DialogContext';
 
-const MIN_SYNC_INTERVAL = 1;
+const MIN_SYNC_INTERVAL = 5;
 const MAX_SYNC_INTERVAL = 30;
 
 const GeneralTab: React.FC = () => {
@@ -55,9 +55,18 @@ const GeneralTab: React.FC = () => {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const raw = e.target.value;
-    if (raw === '') return;
+    if (raw === '') {
+      // Allow empty temporarily; value will be clamped on blur
+      return;
+    }
     const value = Math.max(MIN_SYNC_INTERVAL, Math.min(MAX_SYNC_INTERVAL, parseInt(raw, 10) || MIN_SYNC_INTERVAL));
     updateInterval(value);
+  };
+
+  const handleInputBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    if (e.target.value === '' || isNaN(parseInt(e.target.value, 10))) {
+      updateInterval(MIN_SYNC_INTERVAL);
+    }
   };
 
   const handleResetDatabase = async () => {
@@ -138,6 +147,7 @@ const GeneralTab: React.FC = () => {
                   max={MAX_SYNC_INTERVAL}
                   value={autoSyncInterval}
                   onChange={handleInputChange}
+                  onBlur={handleInputBlur}
                   aria-label="Synchronisationsintervall in Minuten"
                   className="w-12 text-center text-sm text-slate-700 border-x border-slate-300 py-1.5 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 />
