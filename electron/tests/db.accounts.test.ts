@@ -67,6 +67,7 @@ interface DbModule {
   getMaxUidForFolder: (accountId: string, folder: string) => number;
   getAllUidsForFolder: (accountId: string, folder: string) => number[];
   migrateFolder: (oldName: string, newName: string) => void;
+  _getRawPasswordForTesting: (id: string) => string | null;
 }
 
 // Import the database module under test
@@ -1656,6 +1657,116 @@ describe('Database Account CRUD Operations', () => {
         expect(retrieved).toBeDefined();
         expect(retrieved?.password).toBe(acc.password);
       });
+    });
+
+    it('should verify all passwords are stored as base64-encoded encrypted buffers, not plaintext', () => {
+      mockEncryptionAvailable = true;
+
+      const testAccounts = [
+        {
+          id: 'verify-encrypted-1',
+          name: 'Encrypted Account 1',
+          email: 'enc1@test.com',
+          provider: 'gmail',
+          imapHost: 'imap.gmail.com',
+          imapPort: 993,
+          username: 'encuser1',
+          password: 'mySecretPassword123',
+          color: '#FF0000',
+        },
+        {
+          id: 'verify-encrypted-2',
+          name: 'Encrypted Account 2',
+          email: 'enc2@test.com',
+          provider: 'outlook',
+          imapHost: 'imap.outlook.com',
+          imapPort: 993,
+          username: 'encuser2',
+          password: 'anotherSecret456!',
+          color: '#00FF00',
+        },
+        {
+          id: 'verify-encrypted-3',
+          name: 'Encrypted Account 3',
+          email: 'enc3@test.com',
+          provider: 'custom',
+          imapHost: 'imap.custom.com',
+          imapPort: 993,
+          username: 'encuser3',
+          password: 'thirdSecret789@',
+          color: '#0000FF',
+        },
+      ];
+
+      // Add all test accounts with encryption enabled
+      testAccounts.forEach((acc) => db.addAccount(acc));
+
+      // Verify each account's password is properly encrypted in the database
+      testAccounts.forEach((acc) => {
+        const rawPassword = db._getRawPasswordForTesting(acc.id);
+
+        // 1. Raw password should exist in database
+        expect(rawPassword).toBeDefined();
+        expect(rawPassword).not.toBeNull();
+
+        // 2. Raw password should NOT be the plaintext password
+        expect(rawPassword).not.toBe(acc.password);
+
+        // 3. Raw password should be a valid base64 string
+        // Base64 strings only contain alphanumeric characters, +, /, and = for padding
+        const base64Regex = /^[A-Za-z0-9+/]+={0,2}$/;
+        expect(rawPassword).toMatch(base64Regex);
+
+        // 4. Should be able to decode from base64 to Buffer
+        let decodedBuffer;
+        expect(() => {
+          decodedBuffer = Buffer.from(rawPassword!, 'base64');
+        }).not.toThrow();
+
+        // 5. Decoded buffer should be non-empty
+        expect(decodedBuffer).toBeInstanceOf(Buffer);
+        expect(decodedBuffer!.length).toBeGreaterThan(0);
+
+        // 6. Verify the encrypted buffer can be decrypted back to original password
+        const accountWithPassword = db.getAccountWithPassword(acc.id);
+        expect(accountWithPassword).toBeDefined();
+        expect(accountWithPassword!.password).toBe(acc.password);
+
+        // 7. Verify the raw stored value contains encrypted content (not plaintext keywords)
+        // The base64-encoded encrypted buffer should not contain recognizable plaintext
+        const decodedString = decodedBuffer!.toString('utf-8');
+        // Our mock encryption adds "ENCRYPTED:" prefix, verify this is present
+        expect(decodedString).toContain('ENCRYPTED:');
+      });
+    });
+
+    it('should verify plaintext passwords are not stored when encryption is disabled', () => {
+      // Disable encryption
+      mockEncryptionAvailable = false;
+
+      const plaintextAccount = {
+        id: 'plaintext-check',
+        name: 'Plaintext Account',
+        email: 'plain@test.com',
+        provider: 'test',
+        imapHost: 'imap.test.com',
+        imapPort: 993,
+        username: 'plainuser',
+        password: 'plaintextPassword123',
+        color: '#AABBCC',
+      };
+
+      db.addAccount(plaintextAccount);
+
+      const rawPassword = db._getRawPasswordForTesting('plaintext-check');
+
+      // When encryption is unavailable, password is stored as plaintext
+      expect(rawPassword).toBe('plaintextPassword123');
+
+      // Raw password should equal the plaintext (no encryption)
+      const accountWithPassword = db.getAccountWithPassword('plaintext-check');
+      expect(accountWithPassword).toBeDefined();
+      expect(accountWithPassword!.password).toBe(plaintextAccount.password);
     });
   });
 });

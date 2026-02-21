@@ -899,6 +899,13 @@ module.exports = {
   getSearchHistory,
   addSearchHistory,
   clearSearchHistory,
+
+  // Test Helper Methods
+  _getRawPasswordForTesting: (id) => {
+    const stmt = db.prepare('SELECT password FROM accounts WHERE id = ?');
+    const result = stmt.get(id);
+    return result ? result.password : null;
+  },
 };
 
 /** Migrate emails and categories from one folder name to another (transactional). */
