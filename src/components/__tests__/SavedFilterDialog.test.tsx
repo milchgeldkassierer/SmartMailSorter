@@ -161,7 +161,7 @@ describe('SavedFilterDialog', () => {
       expect(defaultProps.onClose).toHaveBeenCalledTimes(1);
     });
 
-    it('should submit form when Enter is pressed in name input', () => {
+    it('should submit form when Enter is pressed in name input', async () => {
       render(<SavedFilterDialog {...defaultProps} />);
       const nameInput = screen.getByLabelText('Filtername');
       const queryInput = screen.getByLabelText('Suchanfrage');
@@ -170,10 +170,12 @@ describe('SavedFilterDialog', () => {
       fireEvent.change(queryInput, { target: { value: 'from:test' } });
       fireEvent.keyDown(nameInput, { key: 'Enter', code: 'Enter' });
 
-      expect(defaultProps.onSave).toHaveBeenCalledWith('Test Filter', 'from:test');
+      await waitFor(() => {
+        expect(defaultProps.onSave).toHaveBeenCalledWith('Test Filter', 'from:test');
+      });
     });
 
-    it('should submit form when Enter is pressed in query input', () => {
+    it('should submit form when Enter is pressed in query input', async () => {
       render(<SavedFilterDialog {...defaultProps} />);
       const nameInput = screen.getByLabelText('Filtername');
       const queryInput = screen.getByLabelText('Suchanfrage');
@@ -182,7 +184,9 @@ describe('SavedFilterDialog', () => {
       fireEvent.change(queryInput, { target: { value: 'from:test' } });
       fireEvent.keyDown(queryInput, { key: 'Enter', code: 'Enter' });
 
-      expect(defaultProps.onSave).toHaveBeenCalledWith('Test Filter', 'from:test');
+      await waitFor(() => {
+        expect(defaultProps.onSave).toHaveBeenCalledWith('Test Filter', 'from:test');
+      });
     });
   });
 

@@ -53,28 +53,20 @@ This application is designed for:
 ### 🤖 Multi-Provider AI Integration
 
 - **Flexible AI Providers**: Support for multiple AI backends:
-  - **Google Gemini**: `gemini-3-flash-preview`, `gemini-3-pro-preview`
-  - **OpenAI**: `gpt-4o`, `gpt-4o-mini`, `gpt-4-turbo`
-  - **Anthropic Claude**: `claude-3-5-sonnet-20240620`, `claude-3-haiku-20240307`
+  - **Google Gemini**: `gemini-2.5-flash`, `gemini-2.5-pro`, `gemini-3-flash-preview`, `gemini-3.1-pro-preview`
+  - **OpenAI**: `gpt-4.1`, `gpt-4.1-mini`, `gpt-4.1-nano`, `gpt-5.2`, `gpt-5-mini`, `gpt-5-nano`
+  - **Anthropic Claude** _(planned)_: `claude-sonnet-4-6`, `claude-haiku-4-5`, `claude-opus-4-6` — models are selectable in the UI but the API integration is not yet implemented
 - **Intelligent Categorization**: AI analyzes email content, sender patterns, and context for accurate classification
 - **Confidence Scoring**: Each AI categorization includes a confidence score for transparency
 - **AI Summaries**: Automatic generation of email summaries and reasoning for categorization decisions
 
-### 🇩🇪 German Folder System
+### 📂 Folder & Category System
 
-- **Native German Interface**: Built-in support for German email folder structure:
-  - **Posteingang** (Inbox)
-  - **Gesendet** (Sent)
-  - **Spam** (Spam)
-  - **Papierkorb** (Trash)
-- **Smart Categories**: AI-powered virtual categories in German:
-  - **Rechnungen** (Invoices)
-  - **Newsletter** (Newsletters)
-  - **Privat** (Private)
-  - **Geschäftlich** (Business)
-  - **Kündigungen** (Cancellations)
-  - **Sonstiges** (Other)
+- **Physical IMAP Folders**: Inbox, Sent, Spam, Trash — synced from your email server
+- **Smart Categories**: AI-powered virtual categories: Invoices, Newsletter, Private, Business, Cancellations, Other
+- **Custom Categories**: Create your own categories for personalized organization
 - **Dual Organization**: Physical IMAP folders combined with virtual AI categories for flexible email organization
+- **Fully Localized**: All folder and category names are translated via i18n to the user's selected language
 
 ### 🏷️ Intelligent Email Categorization
 
@@ -91,15 +83,60 @@ This application is designed for:
 - **Visual Indicators**: Clear UI indicators for emails containing attachments
 - **Efficient Storage**: Attachments are parsed and stored with associated email metadata
 
-### 🔍 Search and Filtering
+### 🔍 Advanced Search and Filtering
 
 - **Full-Text Search**: Search across email subjects, bodies, and sender information
+- **Search Operators**: Powerful operator syntax for precise queries:
+  - `from:sender` — Filter by sender name or address
+  - `subject:text` — Filter by subject line
+  - `category:name` — Filter by AI category
+  - `has:attachment` — Show only emails with attachments
+  - `before:date` / `after:date` — Date range filtering
+  - AND/OR logic for combining operators
+- **Natural Language Search**: AI-powered query parsing converts natural language (e.g., "invoices from Amazon last month") into structured search operators
+- **Saved Filters**: Save frequently used search queries for one-click access, with create/edit/delete support
+- **Search History**: Recent searches are stored (last 20) for quick recall
 - **Category Filtering**: Filter emails by AI-assigned categories or physical folders
 - **Date Range Filtering**: Find emails within specific time periods
 - **Account Filtering**: View emails from specific accounts in multi-account setups
 - **Combined Filters**: Apply multiple filters simultaneously for precise email discovery
 - **Flag Filtering**: Quickly access flagged/marked emails
 - **Read/Unread Status**: Filter by read status for inbox management
+
+### 📦 Batch Operations
+
+- **Multi-Select**: Select multiple emails using checkboxes for bulk actions
+- **Batch Delete**: Delete multiple emails at once with server-side IMAP synchronization
+- **Batch Smart Sort**: Trigger AI categorization on selected emails in bulk
+- **Batch Mark Read/Unread**: Toggle read status for multiple emails simultaneously
+- **Batch Flag/Unflag**: Toggle flag status for multiple emails at once
+- **Batch Action Bar**: Dedicated UI bar appears when emails are selected, showing available bulk actions
+
+### 🔄 Automatic Periodic Synchronization
+
+- **Configurable Interval**: Set auto-sync interval (in minutes) from Settings
+- **Background Sync**: Periodically syncs all accounts automatically without user interaction
+- **Debounce Protection**: Prevents overlapping sync operations when a sync is already in progress
+- **UI Notification**: Renderer process is notified via `auto-sync-completed` event after each cycle
+- **Disable Option**: Set interval to 0 to disable auto-sync entirely
+
+### 🔔 Desktop Notifications
+
+- **New Email Alerts**: Desktop notifications for newly arrived emails after sync
+- **Per-Account Settings**: Enable or disable notifications individually for each account
+- **Category Muting**: Mute notifications for specific categories (e.g., mute Newsletter notifications globally or per account)
+- **Badge Count**: Application badge count updates to reflect unread email count
+- **Settings Tab**: Dedicated Notifications tab in Settings for full configuration
+
+### ✋ Drag & Drop
+
+- **Email Organization**: Drag emails between folders and categories for manual reorganization
+- **Visual Feedback**: Drop targets highlight during drag operations
+
+### ↩️ Undo/Redo
+
+- **Undo Stack**: Undo recent actions (e.g., category changes, flag toggles)
+- **Redo Support**: Re-apply undone actions
 
 ### 🌍 Multilingual Support
 
@@ -138,8 +175,16 @@ The main process is the application's backend and serves as the entry point for 
 - `get-emails`, `get-email-content`, `get-email-attachments`: Email retrieval
 - `sync-account`, `test-connection`: IMAP operations
 - `open-attachment`, `open-external-url`: System integration with security validation
-- `delete-email`, `update-email-read`, `update-email-flag`: Email operations
-- `categorize-emails`: AI categorization triggers
+- `delete-email`, `update-email-read`, `update-email-flag`, `move-email`: Email operations
+- `update-email-smart-category`, `save-email`: Email categorization and persistence
+- `get-categories`, `add-category`, `delete-smart-category`, `rename-smart-category`, `update-category-type`: Category management
+- `search-emails`, `parse-natural-language-query`: Search with operator parsing and AI-powered natural language
+- `get-filters`, `save-filter`, `delete-filter`: Saved search filters
+- `get-search-history`, `save-search-history`, `clear-search-history`: Search history
+- `ai-settings-save`, `ai-settings-load`: AI provider configuration
+- `load-notification-settings`, `save-notification-settings`, `update-badge-count`: Notification system
+- `get-auto-sync-interval`, `set-auto-sync-interval`: Periodic auto-sync configuration
+- `reset-db`: Database reset
 
 #### Renderer Process (React Frontend)
 
@@ -223,9 +268,9 @@ The AI service provides **multi-provider AI integration** for email categorizati
 
 **Supported Providers:**
 
-- **Google Gemini**: `gemini-3-flash-preview` (fast, cost-effective), `gemini-3-pro-preview` (higher accuracy)
-- **OpenAI**: `gpt-4o`, `gpt-4o-mini`, `gpt-4-turbo`
-- **Anthropic Claude**: `claude-3-5-sonnet-20240620`, `claude-3-haiku-20240307`
+- **Google Gemini**: `gemini-2.5-flash` (default, fast), `gemini-2.5-pro`, `gemini-3-flash-preview`, `gemini-3.1-pro-preview`
+- **OpenAI**: `gpt-4.1`, `gpt-4.1-mini`, `gpt-4.1-nano`, `gpt-5.2`, `gpt-5-mini`, `gpt-5-nano`
+- **Anthropic Claude** _(planned)_: `claude-sonnet-4-6`, `claude-haiku-4-5`, `claude-opus-4-6` — not yet implemented in `callLLM()`
 
 **Architecture:**
 
@@ -238,7 +283,7 @@ The AI service provides **multi-provider AI integration** for email categorizati
 
 1. Batch emails (up to 100) for processing efficiency
 2. Send email metadata (subject, sender, body preview) to AI with system instructions
-3. AI analyzes content and assigns German category (Rechnungen, Newsletter, Privat, etc.)
+3. AI analyzes content and assigns a category (Invoices, Newsletter, Private, etc.)
 4. Return category, confidence score, summary, and reasoning for each email
 5. Store AI results in database for transparency and manual review
 
@@ -254,7 +299,26 @@ The AI service provides **multi-provider AI integration** for email categorizati
 - **Batch Processing**: Reduces API calls by processing multiple emails per request
 - **Confidence Scoring**: Allows users to review low-confidence categorizations
 
-#### 4. Logging System (`electron/utils/logger.cjs`)
+#### 4. Notifications System (`electron/notifications.cjs`)
+
+The notification module provides desktop notifications for newly arrived emails:
+
+- **Desktop Alerts**: Shows native OS notifications when new emails arrive after sync
+- **Per-Account Control**: Each account can have notifications independently enabled/disabled
+- **Category Muting**: Specific categories (e.g., Newsletter, Spam) can be muted globally or per account
+- **Badge Count**: Updates the application dock/taskbar badge with unread email count
+- **Settings Persistence**: Notification preferences stored in `notification_settings` and `app_settings` tables
+
+#### 5. Search Parser (`electron/utils/searchParser.cjs`)
+
+Advanced search query parser that converts operator-based queries into SQL WHERE clauses:
+
+- **Operator Parsing**: Extracts `from:`, `subject:`, `category:`, `has:attachment`, `before:`, `after:` operators
+- **Free Text**: Remaining text is searched across sender, subject, and body fields
+- **SQL Generation**: `buildSearchWhereClause()` converts parsed operators into parameterized SQL queries
+- **Natural Language**: AI-powered conversion of natural language queries to structured operators via `parse-natural-language-query` IPC handler
+
+#### 6. Logging System (`electron/utils/logger.cjs`)
 
 Centralized logging using **electron-log** for debugging and troubleshooting:
 
@@ -318,32 +382,67 @@ Here's how email data flows through the application:
 - **Asynchronous**: All IPC handlers return Promises for non-blocking operations
 - **Transactional**: Database operations are wrapped in transactions for consistency
 - **Security-First**: All external data (URLs, filenames) is sanitized before use
+- **Auto-Sync**: Periodic background sync runs via `startAutoSync()` timer, syncing all accounts and notifying the renderer via `auto-sync-completed` event
 
 ### File Structure Overview
 
 ```
 SmartMailSorter/
 ├── electron/                    # Electron main process
-│   ├── main.cjs                 # Application entry point, IPC handlers
+│   ├── main.cjs                 # Application entry point, IPC handlers, auto-sync
 │   ├── preload.cjs              # Secure IPC bridge (context isolation)
-│   ├── db.cjs                   # SQLite database layer
+│   ├── db.cjs                   # SQLite database layer (8 tables)
 │   ├── imap.cjs                 # IMAP email synchronization
+│   ├── notifications.cjs        # Desktop notification system
 │   ├── folderConstants.cjs      # German folder name constants
 │   ├── tests/                   # Backend unit tests
 │   └── utils/
 │       ├── csp-config.cjs       # Content Security Policy configuration
 │       ├── logger.cjs           # electron-log configuration
-│       └── security.cjs         # Input sanitization utilities
+│       ├── searchParser.cjs     # Advanced search operator parser
+│       └── security.cjs         # Password encryption & input sanitization
 ├── src/                         # React renderer process
 │   ├── App.tsx                  # Main React application
 │   ├── components/              # React UI components
+│   │   ├── BatchActionBar.tsx   # Bulk email operations bar
+│   │   ├── ConfirmDialog.tsx    # Reusable confirmation dialogs
+│   │   ├── EmailList.tsx        # Email list with selection & batch support
+│   │   ├── EmailView.tsx        # Email detail view with HTML rendering
+│   │   ├── Icon.tsx             # Unified icon component
+│   │   ├── SavedFilterDialog.tsx # Create/edit saved search filters
+│   │   ├── SearchBar.tsx        # Search with operators & natural language
+│   │   ├── SettingsModal.tsx    # Settings dialog with tabbed UI
+│   │   ├── Sidebar.tsx          # Folder/category navigation & quota display
+│   │   ├── TopBar.tsx           # App header with sync status
+│   │   └── tabs/               # Settings tabs
+│   │       ├── AccountsTab.tsx  # Email account management
+│   │       ├── GeneralTab.tsx   # Language & general settings
+│   │       ├── NotificationsTab.tsx # Notification preferences
+│   │       └── SmartSortTab.tsx # AI categorization settings
 │   ├── contexts/                # React context providers (DialogContext)
-│   ├── hooks/                   # Custom React hooks
+│   ├── hooks/                   # Custom React hooks (14 hooks)
+│   │   ├── useAccounts.ts       # Account CRUD operations
+│   │   ├── useAISettings.ts     # AI provider/model configuration
+│   │   ├── useBatchOperations.ts # Batch email operations
+│   │   ├── useCategories.ts     # Category management
+│   │   ├── useDialog.ts         # Dialog state management
+│   │   ├── useDragAndDrop.ts    # Drag & drop support
+│   │   ├── useEmails.ts         # Email fetching & filtering
+│   │   ├── useLanguage.ts       # i18n language switching
+│   │   ├── useNotifications.ts  # Notification management
+│   │   ├── useSavedFilters.ts   # Saved filter operations
+│   │   ├── useSelection.ts      # Email selection state
+│   │   ├── useSync.ts           # Account synchronization
+│   │   └── useUndoStack.ts      # Undo/redo functionality
+│   ├── i18n/                    # Internationalization configuration
 │   ├── services/
 │   │   └── geminiService.ts     # Multi-provider AI integration
 │   ├── utils/                   # Shared utilities (sanitizeHtml, formatTimeAgo, emailHtml)
 │   └── types.ts                 # TypeScript type definitions
-├── public/                      # Static assets
+├── public/
+│   └── locales/                 # Translation files
+│       ├── de/                  # German translations
+│       └── en/                  # English translations
 ├── dist/                        # Production build output
 └── package.json                 # Dependencies and scripts
 ```
@@ -362,10 +461,11 @@ SmartMailSorter implements several security best practices:
 
 1. **Context Isolation**: Renderer process has no direct Node.js access
 2. **Input Sanitization**: All filenames and URLs are validated before use (`security.cjs`)
-3. **Protocol Validation**: External URLs restricted to `http:`, `https:`, `mailto:`, `tel:`
-4. **No Hardcoded Secrets**: API keys loaded from environment variables or user settings
-5. **SQL Injection Prevention**: Parameterized queries via better-sqlite3
-6. **Content Security Policy**: Restricts script execution and resource loading in renderer process (see detailed section below)
+3. **Password Encryption**: Credentials encrypted using Electron `safeStorage` API with OS-level keychain (`security.cjs`)
+4. **Protocol Validation**: External URLs restricted to `http:`, `https:`, `mailto:`, `tel:`
+5. **No Hardcoded Secrets**: API keys loaded from environment variables or user settings
+6. **SQL Injection Prevention**: Parameterized queries via better-sqlite3
+7. **Content Security Policy**: Restricts script execution and resource loading in renderer process (see detailed section below)
 
 #### Content Security Policy (CSP)
 
@@ -386,7 +486,7 @@ SmartMailSorter implements a **strict Content Security Policy** to provide defen
 | `font-src`    | `'self' https://fonts.gstatic.com`                                                | Allow fonts from: app bundle, Google Fonts CDN                                                                                  |
 | `connect-src` | `'self' https://api.openai.com https://generativelanguage.googleapis.com`         | Restrict network connections to: app origin, OpenAI API, Google Gemini API. **Blocks connections to arbitrary external hosts**  |
 | `img-src`     | `'self' data: https:`                                                             | Allow images from: app bundle, data URIs (inline images), HTTPS sources                                                         |
-| `frame-src`   | `'none'`                                                                          | **Block all iframe embedding** to prevent clickjacking attacks                                                                  |
+| `frame-src`   | `'self'`                                                                          | **Restrict iframe embedding** to same-origin only, preventing clickjacking attacks                                              |
 
 **Why These Domains Are Whitelisted:**
 
@@ -462,6 +562,7 @@ When the application runs in a standard desktop environment, passwords are:
 4. **Automatic Migration**: Existing plaintext passwords from older versions are automatically migrated to encrypted format on first launch
 
 **OS-Level Keychain Services:**
+
 - **macOS**: Keychain
 - **Windows**: Credential Vault (DPAPI)
 - **Linux**: Secret Service API (libsecret)
@@ -478,20 +579,24 @@ In certain environments, Electron's `safeStorage` API may be unavailable. This o
 When encryption is unavailable, the application gracefully falls back to plaintext storage:
 
 **During Application Startup:**
+
 - Password migration is skipped with a warning: `Password encryption migration skipped: safeStorage not available on this system`
 - Existing passwords remain in their current state (plaintext if not previously encrypted)
 
 **When Adding New Accounts:**
+
 - Password is stored in plaintext in the database
 - A warning is logged: `Password encryption not available - storing password without encryption`
 - The account is still functional; only the encryption layer is bypassed
 
 **When Retrieving Passwords:**
+
 - If the password was previously encrypted, decryption is attempted
 - If decryption fails (encryption unavailable), the password is returned as-is from the database
 - IMAP authentication will use the plaintext password if available
 
 **Security Implications:**
+
 - In fallback mode, passwords are stored in plaintext in the SQLite database file
 - The database file remains protected by filesystem permissions
 - This is the same behavior as versions prior to the encryption feature
@@ -538,7 +643,8 @@ CREATE TABLE accounts (
   color TEXT,                       -- UI color identifier
   lastSyncUid INTEGER DEFAULT 0,    -- Last synced email UID (for incremental sync)
   storageUsed INTEGER DEFAULT 0,    -- Used storage in bytes
-  storageTotal INTEGER DEFAULT 0    -- Total storage quota in bytes
+  storageTotal INTEGER DEFAULT 0,   -- Total storage quota in bytes
+  lastSyncTime INTEGER DEFAULT NULL -- Unix timestamp of last successful sync
 )
 ```
 
@@ -555,7 +661,7 @@ CREATE TABLE emails (
   body TEXT,                        -- Plain text body
   bodyHtml TEXT,                    -- HTML body content
   date TEXT,                        -- ISO 8601 timestamp
-  folder TEXT DEFAULT 'Posteingang',-- Physical IMAP folder (German)
+  folder TEXT DEFAULT 'Posteingang',-- Physical IMAP folder
   smartCategory TEXT,               -- AI-assigned virtual category (German)
   isRead INTEGER,                   -- Read status (0/1)
   isFlagged INTEGER,                -- Flag status (0/1)
@@ -596,12 +702,57 @@ CREATE TABLE categories (
 
 **Default System Categories:**
 
-- `Rechnungen` (Invoices) - system
-- `Newsletter` (Newsletters) - system
-- `Privat` (Private) - system
-- `Geschäftlich` (Business) - system
-- `Kündigungen` (Cancellations) - system
-- `Sonstiges` (Other) - system
+- Invoices - system
+- Newsletter - system
+- Private - system
+- Business - system
+- Cancellations - system
+- Other - system
+
+**5. `notification_settings` Table**
+Per-account notification preferences:
+
+```sql
+CREATE TABLE notification_settings (
+  accountId TEXT PRIMARY KEY,         -- Foreign key to accounts table
+  enabled INTEGER DEFAULT 1,          -- Notifications enabled (0/1)
+  mutedCategories TEXT DEFAULT '[]',   -- JSON array of muted category names
+  FOREIGN KEY(accountId) REFERENCES accounts(id) ON DELETE CASCADE
+)
+```
+
+**6. `app_settings` Table**
+Key-value store for application-wide settings (AI config, auto-sync interval, language, notification preferences):
+
+```sql
+CREATE TABLE app_settings (
+  key TEXT PRIMARY KEY,               -- Setting key (e.g., 'ai_provider', 'auto_sync_interval')
+  value TEXT                          -- Setting value (stored as text, parsed by application)
+)
+```
+
+**7. `saved_filters` Table**
+User-saved search filters for one-click access:
+
+```sql
+CREATE TABLE saved_filters (
+  id TEXT PRIMARY KEY,                -- Unique filter identifier
+  name TEXT NOT NULL,                 -- Display name for the filter
+  query TEXT NOT NULL,                -- Search query string (with operators)
+  createdAt INTEGER NOT NULL          -- Unix timestamp of creation
+)
+```
+
+**8. `search_history` Table**
+Recent search queries (limited to last 20 entries):
+
+```sql
+CREATE TABLE search_history (
+  id TEXT PRIMARY KEY,                -- Unique entry identifier
+  query TEXT NOT NULL,                -- The search query
+  timestamp INTEGER NOT NULL          -- Unix timestamp
+)
+```
 
 #### Schema Migrations
 
@@ -622,8 +773,10 @@ SmartMailSorter supports **three major AI providers** for email categorization. 
 **1. Google Gemini** (Default)
 
 - **Models Available:**
-  - `gemini-3-flash-preview` - Fast, cost-effective categorization (recommended)
-  - `gemini-3-pro-preview` - Higher accuracy with extended reasoning
+  - `gemini-2.5-flash` - Fast, cost-effective categorization (default, recommended)
+  - `gemini-2.5-pro` - Higher accuracy with extended reasoning
+  - `gemini-3-flash-preview` - Next-generation fast model
+  - `gemini-3.1-pro-preview` - Next-generation pro model
 - **API Key Setup:**
   1. Visit [Google AI Studio](https://aistudio.google.com/app/apikey)
   2. Create or sign in to your Google account
@@ -638,9 +791,12 @@ SmartMailSorter supports **three major AI providers** for email categorization. 
 **2. OpenAI**
 
 - **Models Available:**
-  - `gpt-4o` - Latest GPT-4 optimized model (recommended)
-  - `gpt-4o-mini` - Faster, lower-cost version
-  - `gpt-4-turbo` - High-performance GPT-4 variant
+  - `gpt-4.1` - Latest GPT-4 model (recommended)
+  - `gpt-4.1-mini` - Faster, lower-cost version
+  - `gpt-4.1-nano` - Ultra-fast, lowest-cost option
+  - `gpt-5.2` - Latest GPT-5 model
+  - `gpt-5-mini` - Balanced GPT-5 variant
+  - `gpt-5-nano` - Fast GPT-5 variant
 - **API Key Setup:**
   1. Visit [OpenAI API Keys](https://platform.openai.com/api-keys)
   2. Create an account and add billing information
@@ -652,12 +808,14 @@ SmartMailSorter supports **three major AI providers** for email categorization. 
   ```
 - **Rate Limits:** Based on usage tier and billing plan
 
-**3. Anthropic Claude**
+**3. Anthropic Claude** _(planned — not yet implemented)_
 
-- **Models Available:**
-  - `claude-3-5-sonnet-20240620` - Balanced performance and accuracy (recommended)
-  - `claude-3-haiku-20240307` - Fast, cost-effective option
-- **API Key Setup:**
+- **Models Available** (selectable in UI, but API call not yet implemented):
+  - `claude-sonnet-4-6` - Balanced performance and accuracy
+  - `claude-haiku-4-5` - Fast, cost-effective option
+  - `claude-opus-4-6` - Highest accuracy
+- **Status:** Models can be selected in the Settings UI, but attempting to categorize emails with Claude will result in an error. Gemini and OpenAI are fully functional.
+- **API Key Setup** (for future use):
   1. Visit [Anthropic Console](https://console.anthropic.com/)
   2. Create an account and verify your email
   3. Navigate to API Keys section
@@ -667,7 +825,6 @@ SmartMailSorter supports **three major AI providers** for email categorization. 
   ```bash
   export ANTHROPIC_API_KEY=your_anthropic_api_key_here
   ```
-- **Rate Limits:** Based on usage tier
 
 #### API Key Configuration
 
@@ -703,41 +860,32 @@ npm start
 
 Choose the right model based on your needs:
 
-| Provider   | Model                    | Speed       | Cost        | Accuracy           | Best For                      |
-| ---------- | ------------------------ | ----------- | ----------- | ------------------ | ----------------------------- |
-| **Gemini** | `gemini-3-flash-preview` | ⚡⚡⚡ Fast | 💰 Low      | ⭐⭐⭐ Good        | High-volume email processing  |
-| **Gemini** | `gemini-3-pro-preview`   | ⚡⚡ Medium | 💰💰 Medium | ⭐⭐⭐⭐ Excellent | Complex categorization needs  |
-| **OpenAI** | `gpt-4o-mini`            | ⚡⚡⚡ Fast | 💰 Low      | ⭐⭐⭐ Good        | Budget-conscious users        |
-| **OpenAI** | `gpt-4o`                 | ⚡⚡ Medium | 💰💰💰 High | ⭐⭐⭐⭐⭐ Best    | Maximum accuracy required     |
-| **Claude** | `claude-3-haiku`         | ⚡⚡⚡ Fast | 💰 Low      | ⭐⭐⭐ Good        | Fast, reliable categorization |
-| **Claude** | `claude-3-5-sonnet`      | ⚡⚡ Medium | 💰💰 Medium | ⭐⭐⭐⭐ Excellent | Balanced performance          |
+| Provider   | Model              | Speed       | Cost        | Accuracy           | Best For                               |
+| ---------- | ------------------ | ----------- | ----------- | ------------------ | -------------------------------------- |
+| **Gemini** | `gemini-2.5-flash` | ⚡⚡⚡ Fast | 💰 Low      | ⭐⭐⭐ Good        | High-volume email processing (default) |
+| **Gemini** | `gemini-2.5-pro`   | ⚡⚡ Medium | 💰💰 Medium | ⭐⭐⭐⭐ Excellent | Complex categorization needs           |
+| **OpenAI** | `gpt-4.1-mini`     | ⚡⚡⚡ Fast | 💰 Low      | ⭐⭐⭐ Good        | Budget-conscious users                 |
+| **OpenAI** | `gpt-4.1`          | ⚡⚡ Medium | 💰💰 Medium | ⭐⭐⭐⭐ Excellent | Balanced performance                   |
+| **OpenAI** | `gpt-5.2`          | ⚡⚡ Medium | 💰💰💰 High | ⭐⭐⭐⭐⭐ Best    | Maximum accuracy required              |
 
-**Recommendation:** Start with `gemini-3-flash-preview` for its excellent balance of speed, cost, and accuracy.
+> **Note:** Anthropic Claude models (`claude-sonnet-4-6`, `claude-haiku-4-5`, `claude-opus-4-6`) are listed in the UI but the API integration is not yet implemented.
 
-### German Folder Naming System
+**Recommendation:** Start with `gemini-2.5-flash` for its excellent balance of speed, cost, and accuracy.
 
-SmartMailSorter is designed specifically for German email users and uses **German folder names** throughout the application. This section explains the dual-layer organization system.
+### Folder & Category System
+
+SmartMailSorter uses a dual-layer organization system with physical IMAP folders and virtual AI categories. All names are displayed in the user's selected language via i18n (see `CategoryTranslationKey` and `FolderTranslationKey` in `src/types.ts`).
 
 #### Physical IMAP Folders (Server-Side)
 
 These folders correspond to **actual folders on your email server** and are synced via IMAP:
 
-| German Name     | English Translation | IMAP Purpose            |
-| --------------- | ------------------- | ----------------------- |
-| **Posteingang** | Inbox               | New, unread emails      |
-| **Gesendet**    | Sent                | Emails you've sent      |
-| **Spam**        | Spam                | Suspected spam messages |
-| **Papierkorb**  | Trash               | Deleted emails          |
-
-**Constants in Code:**
-
-```typescript
-export const INBOX_FOLDER = 'Posteingang';
-export const SENT_FOLDER = 'Gesendet';
-export const SPAM_FOLDER = 'Spam';
-export const TRASH_FOLDER = 'Papierkorb';
-export const SYSTEM_FOLDERS = [INBOX_FOLDER, SENT_FOLDER, SPAM_FOLDER, TRASH_FOLDER];
-```
+| Folder | IMAP Purpose            |
+| ------ | ----------------------- |
+| Inbox  | New, unread emails      |
+| Sent   | Emails you've sent      |
+| Spam   | Suspected spam messages |
+| Trash  | Deleted emails          |
 
 These folders are **read-only to AI categorization** - they represent the physical structure of your email account.
 
@@ -747,38 +895,21 @@ SmartMailSorter overlays **virtual categories** on top of physical folders using
 
 **Default AI Categories:**
 
-| German Name      | English Translation | Description                         | Typical Examples                                        |
-| ---------------- | ------------------- | ----------------------------------- | ------------------------------------------------------- |
-| **Rechnungen**   | Invoices            | Bills, receipts, invoices           | Amazon orders, utility bills, tax documents             |
-| **Newsletter**   | Newsletters         | Marketing emails, subscriptions     | Company updates, promotional emails, digests            |
-| **Privat**       | Private             | Personal communications             | Family emails, friend messages, personal invitations    |
-| **Geschäftlich** | Business            | Work-related emails                 | Client correspondence, meeting invites, project updates |
-| **Kündigungen**  | Cancellations       | Service cancellations, terminations | Subscription cancellations, contract terminations       |
-| **Sonstiges**    | Other               | Unclassified or miscellaneous       | Emails that don't fit other categories                  |
-
-**Enum Definition:**
-
-```typescript
-export enum DefaultEmailCategory {
-  INBOX = 'Posteingang',
-  SENT = 'Gesendet',
-  SPAM = 'Spam',
-  TRASH = 'Papierkorb',
-  INVOICE = 'Rechnungen',
-  NEWSLETTER = 'Newsletter',
-  PRIVATE = 'Privat',
-  BUSINESS = 'Geschäftlich',
-  CANCELLATION = 'Kündigungen',
-  OTHER = 'Sonstiges',
-}
-```
+| Category      | Description                         | Typical Examples                                        |
+| ------------- | ----------------------------------- | ------------------------------------------------------- |
+| Invoices      | Bills, receipts, invoices           | Amazon orders, utility bills, tax documents             |
+| Newsletter    | Marketing emails, subscriptions     | Company updates, promotional emails, digests            |
+| Private       | Personal communications             | Family emails, friend messages, personal invitations    |
+| Business      | Work-related emails                 | Client correspondence, meeting invites, project updates |
+| Cancellations | Service cancellations, terminations | Subscription cancellations, contract terminations       |
+| Other         | Unclassified or miscellaneous       | Emails that don't fit other categories                  |
 
 #### Dual Organization Example
 
 An email might have:
 
-- **Physical Folder:** `Posteingang` (stored in IMAP folder on server)
-- **Smart Category:** `Rechnungen` (AI-assigned virtual category)
+- **Physical Folder:** Inbox
+- **Smart Category:** Invoices
 
 This allows you to:
 
@@ -792,21 +923,11 @@ Users can create **custom categories** beyond the default system categories:
 
 1. Navigate to **Settings** → **Categories**
 2. Click **Add Category**
-3. Enter a German name (e.g., "Versicherung" for Insurance)
+3. Enter a category name
 4. Choose an icon
 5. Click **Save**
 
 Custom categories are stored in the `categories` table with `type = 'custom'` and can be deleted by users. System categories cannot be deleted.
-
-#### Category Localization
-
-While the current implementation uses German names throughout, the architecture supports future localization:
-
-- Category names are stored as data, not hard-coded
-- UI labels can be mapped to translations
-- The `categories` table can be extended with locale fields
-
-**Future Enhancement:** Add support for English, French, and Spanish folder names with user-selectable language preferences.
 
 ## 🚀 Getting Started
 

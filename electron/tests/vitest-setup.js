@@ -154,6 +154,19 @@ Module.prototype.require = function (id) {
   if (id === 'imapflow' && process.env.VITEST) {
     return { ImapFlow: MockImapFlow };
   }
+  // Mock electron module to prevent circular dependency warnings from safeStorage
+  if (id === 'electron' && process.env.VITEST) {
+    return {
+      safeStorage: {
+        isEncryptionAvailable: () => true,
+        encryptString: (plaintext) => Buffer.from(`ENCRYPTED:${plaintext}`, 'utf-8'),
+        decryptString: (encrypted) => encrypted.toString('utf-8').replace('ENCRYPTED:', ''),
+      },
+      app: {
+        getPath: () => './test-data',
+      },
+    };
+  }
   return originalRequire.apply(this, arguments);
 };
 
