@@ -145,6 +145,9 @@ function parseSearchQuery(query) {
  * @returns {Object} { where: string, params: array }
  */
 function buildSearchWhereClause(parsedQuery, accountId = null) {
+  /** Escape SQL LIKE wildcard characters so they match literally. */
+  const escapeLike = (s) => s.replace(/[%_\\]/g, '\\$&');
+
   const conditions = [];
   const params = [];
 
@@ -182,13 +185,13 @@ function buildSearchWhereClause(parsedQuery, accountId = null) {
 
   // 3. LIKE queries - indexes help but leading % prevents full optimization
   if (parsedQuery.from) {
-    conditions.push('senderEmail LIKE ?');
-    params.push(`%${parsedQuery.from}%`);
+    conditions.push("senderEmail LIKE ? ESCAPE '\\'");
+    params.push(`%${escapeLike(parsedQuery.from)}%`);
   }
 
   if (parsedQuery.subject) {
-    conditions.push('subject LIKE ?');
-    params.push(`%${parsedQuery.subject}%`);
+    conditions.push("subject LIKE ? ESCAPE '\\'");
+    params.push(`%${escapeLike(parsedQuery.subject)}%`);
   }
 
   // To filter: not implemented — the emails table has no recipient column.
@@ -201,8 +204,8 @@ function buildSearchWhereClause(parsedQuery, accountId = null) {
   // 4. Free text search (least selective, requires scanning body field)
   // Note: body is not indexed due to size, so this will be slowest
   if (parsedQuery.freeText) {
-    conditions.push('(subject LIKE ? OR body LIKE ?)');
-    params.push(`%${parsedQuery.freeText}%`, `%${parsedQuery.freeText}%`);
+    conditions.push("(subject LIKE ? ESCAPE '\\' OR body LIKE ? ESCAPE '\\')");
+    params.push(`%${escapeLike(parsedQuery.freeText)}%`, `%${escapeLike(parsedQuery.freeText)}%`);
   }
 
   // Build WHERE clause

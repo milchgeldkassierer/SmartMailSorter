@@ -538,10 +538,10 @@ app.whenReady().then(() => {
   async function callGeminiApi(settings, systemInstruction, userPrompt) {
     if (!/^[a-zA-Z0-9._-]+$/.test(settings.model)) throw new Error('Invalid model name');
     const response = await fetchWithTimeout(
-      `https://generativelanguage.googleapis.com/v1beta/models/${settings.model}:generateContent?key=${settings.apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/${settings.model}:generateContent`,
       {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': settings.apiKey },
         body: JSON.stringify({
           contents: [{ parts: [{ text: userPrompt }] }],
           systemInstruction: { parts: [{ text: systemInstruction }] },

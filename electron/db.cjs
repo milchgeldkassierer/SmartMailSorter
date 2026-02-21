@@ -439,6 +439,7 @@ function searchEmails(query, accountId = null) {
     FROM emails
     ${where}
     ORDER BY date DESC
+    LIMIT 500
   `;
 
   // Performance monitoring for slow queries
