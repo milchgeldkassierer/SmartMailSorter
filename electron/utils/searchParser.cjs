@@ -173,14 +173,24 @@ function buildSearchWhereClause(parsedQuery, accountId = null) {
   // Note: before: and after: use strict inequality (< and >), meaning the
   // specified date itself is excluded. E.g. after:2026-01-15 matches dates
   // strictly after 2026-01-15, not including it.
+  const isValidDate = (d) => /^\d{4}-\d{2}-\d{2}/.test(d);
+
   if (parsedQuery.after) {
-    conditions.push('date > ?');
-    params.push(parsedQuery.after);
+    if (isValidDate(parsedQuery.after)) {
+      conditions.push('date > ?');
+      params.push(parsedQuery.after);
+    } else {
+      console.warn(`Ignoring invalid after: date value "${parsedQuery.after}"`);
+    }
   }
 
   if (parsedQuery.before) {
-    conditions.push('date < ?');
-    params.push(parsedQuery.before);
+    if (isValidDate(parsedQuery.before)) {
+      conditions.push('date < ?');
+      params.push(parsedQuery.before);
+    } else {
+      console.warn(`Ignoring invalid before: date value "${parsedQuery.before}"`);
+    }
   }
 
   // 3. LIKE queries - indexes help but leading % prevents full optimization
