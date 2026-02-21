@@ -183,3 +183,10 @@ export interface NotificationOperationResult {
   success: boolean;
   error?: string;
 }
+
+export interface SavedFilter {
+  id: string;
+  name: string;
+  query: string;
+  createdAt: number;
+}

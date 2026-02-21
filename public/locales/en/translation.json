@@ -302,7 +302,7 @@
     "nameLabel": "Filter Name",
     "namePlaceholder": "e.g. Amazon Invoices",
     "queryLabel": "Search Query",
-    "queryPlaceholder": "e.g. from:amazon category:Rechnungen",
+    "queryPlaceholder": "e.g. from:amazon category:Invoices",
     "helpText": "Use search operators like from:, subject:, category:, has:attachment, before:, after:",
     "saveButton": "Save Filter",
     "updateButton": "Update Filter",

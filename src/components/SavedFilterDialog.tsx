@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { X, Filter, CheckCircle } from './Icon';
 
@@ -24,6 +24,14 @@ const SavedFilterDialog: React.FC<SavedFilterDialogProps> = ({
   const [query, setQuery] = useState(initialQuery);
   const [errors, setErrors] = useState<{ name?: string; query?: string }>({});
   const [isSaving, setIsSaving] = useState(false);
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   // Reset form when dialog opens/closes or initial values change
   useEffect(() => {
@@ -34,17 +42,17 @@ const SavedFilterDialog: React.FC<SavedFilterDialogProps> = ({
     }
   }, [isOpen, initialName, initialQuery]);
 
-  // Handle escape key to close dialog
+  // Handle escape key to close dialog (blocked while saving)
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen) {
+      if (e.key === 'Escape' && isOpen && !isSaving) {
         onClose();
       }
     };
 
     window.addEventListener('keydown', handleEscape);
     return () => window.removeEventListener('keydown', handleEscape);
-  }, [isOpen, onClose]);
+  }, [isOpen, onClose, isSaving]);
 
   if (!isOpen) return null;
 
@@ -64,27 +72,32 @@ const SavedFilterDialog: React.FC<SavedFilterDialogProps> = ({
   };
 
   const handleSave = async () => {
+    if (isSaving) return;
     if (validateForm()) {
       setIsSaving(true);
       try {
         await onSave(name.trim(), query.trim());
-        onClose();
+        if (mountedRef.current) {
+          onClose();
+        }
       } catch (error) {
         console.error('Failed to save filter:', error);
       } finally {
-        setIsSaving(false);
+        if (mountedRef.current) {
+          setIsSaving(false);
+        }
       }
     }
   };
 
   const handleOverlayClick = (e: React.MouseEvent) => {
-    if (e.target === e.currentTarget) {
+    if (e.target === e.currentTarget && !isSaving) {
       onClose();
     }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
+    if (e.key === 'Enter' && !isSaving) {
       e.preventDefault();
       handleSave();
     }
@@ -110,7 +123,8 @@ const SavedFilterDialog: React.FC<SavedFilterDialogProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-600"
+            disabled={isSaving}
+            className="text-slate-400 hover:text-slate-600 disabled:opacity-50"
             data-testid="close-button"
           >
             <X className="w-6 h-6" />
@@ -179,7 +193,8 @@ const SavedFilterDialog: React.FC<SavedFilterDialogProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 text-slate-600 hover:text-slate-800 font-medium rounded-lg hover:bg-slate-100 transition-colors"
+            disabled={isSaving}
+            className="px-4 py-2 text-slate-600 hover:text-slate-800 font-medium rounded-lg hover:bg-slate-100 transition-colors disabled:opacity-50"
           >
             {t('common.cancel')}
           </button>

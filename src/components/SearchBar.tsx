@@ -54,7 +54,9 @@ const SearchBar: React.FC<SearchBarProps> = ({ searchTerm, onSearchChange, confi
       window.electron
         .getSearchHistory()
         .then((history) => {
-          setSearchHistory(history.map((h) => ({ query: h.query, timestamp: h.timestamp })));
+          setSearchHistory(
+            history.map((h) => ({ query: h.query, timestamp: h.timestamp })).slice(0, MAX_HISTORY_ITEMS)
+          );
         })
         .catch(() => {
           // Fallback: ignore IPC errors
@@ -102,7 +104,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ searchTerm, onSearchChange, confi
       const filtered = OPERATOR_SUGGESTIONS.filter(
         (suggestion) =>
           suggestion.operator.toLowerCase().startsWith(currentWord) ||
-          suggestion.description.toLowerCase().includes(currentWord)
+          t(suggestion.description).toLowerCase().includes(currentWord)
       );
 
       if (filtered.length > 0) {
@@ -118,7 +120,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ searchTerm, onSearchChange, confi
     } else {
       setShowSuggestions(false);
     }
-  }, [searchTerm]);
+  }, [searchTerm, t]);
 
   const addToSearchHistory = (query: string) => {
     if (!query.trim()) return;

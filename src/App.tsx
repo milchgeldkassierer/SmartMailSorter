@@ -617,8 +617,17 @@ const App: React.FC = () => {
           setFilterDialogOpen(true);
         }}
         onDeleteFilter={async (filterId) => {
-          await deleteFilter(filterId);
-          setSavedFilters((prev) => prev.filter((f) => f.id !== filterId));
+          try {
+            await deleteFilter(filterId);
+            setSavedFilters((prev) => prev.filter((f) => f.id !== filterId));
+          } catch (error) {
+            console.error('Failed to delete filter:', error);
+            await dialog.alert({
+              title: t('common.error'),
+              message: t('app.filterDeleteError', 'Failed to delete filter'),
+              variant: 'danger',
+            });
+          }
         }}
         onDropEmails={async (emailIds, targetCategory, targetType) => {
           if (targetType === 'smart' && targetCategory === '__new_category__') {
@@ -730,12 +739,21 @@ const App: React.FC = () => {
             setEditingFilter(null);
           }}
           onSave={async (name, query) => {
-            const id = editingFilter?.id || crypto.randomUUID();
-            await saveFilter(id, name, query);
-            // Refresh filters list
-            if (window.electron) {
-              const filters = await window.electron.getSavedFilters();
-              setSavedFilters(filters);
+            try {
+              const id = editingFilter?.id || crypto.randomUUID();
+              await saveFilter(id, name, query);
+              // Refresh filters list
+              if (window.electron) {
+                const filters = await window.electron.getSavedFilters();
+                setSavedFilters(filters);
+              }
+            } catch (error) {
+              console.error('Failed to save filter:', error);
+              await dialog.alert({
+                title: t('common.error'),
+                message: t('app.filterSaveError', 'Failed to save filter'),
+                variant: 'danger',
+              });
             }
           }}
           initialName={editingFilter?.name}

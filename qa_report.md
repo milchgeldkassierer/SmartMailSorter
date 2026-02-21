@@ -129,7 +129,7 @@
 4. **Search History Dropdown**
    - Location: `src/components/SearchBar.tsx`
    - Implementation: Shows recent searches on focus
-   - Storage: localStorage with limit of 20 entries
+   - Storage: SQLite DB via IPC (`search-emails` auto-records, `get-search-history`/`clear-search-history` handlers), limited to 20 entries server-side with deduplication
    - Action: Click to re-execute search
 
 5. **CSS for Highlighting**

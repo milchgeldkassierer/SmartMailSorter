@@ -9,6 +9,7 @@ import {
   AISettings,
   NotificationSettings,
   NotificationOperationResult,
+  SavedFilter,
 } from './types';
 
 export {};
@@ -76,8 +77,8 @@ declare global {
       log: (msg: string) => void;
 
       // Advanced Search
-      searchEmails: (query: string, accountId?: string) => Promise<Email[]>;
-      getSavedFilters: () => Promise<Array<{ id: string; name: string; query: string; createdAt: string }>>;
+      searchEmails: (query: string, accountId?: string | null) => Promise<Email[]>;
+      getSavedFilters: () => Promise<SavedFilter[]>;
       saveFilter: (id: string, name: string, query: string) => Promise<void>;
       deleteFilter: (id: string) => Promise<void>;
       getSearchHistory: () => Promise<Array<{ id: string; query: string; timestamp: number }>>;

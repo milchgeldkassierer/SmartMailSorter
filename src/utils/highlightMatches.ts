@@ -71,7 +71,7 @@ export function highlightMatches(text: string | null | undefined, searchQuery: s
  * // Returns: ['hello', 'world']
  *
  * extractSearchTerms('subject:"important meeting" urgent');
- * // Returns: ['important meeting', 'urgent']
+ * // Returns: ['urgent']  (operator + quoted value are removed)
  * ```
  */
 export function extractSearchTerms(query: string): string[] {

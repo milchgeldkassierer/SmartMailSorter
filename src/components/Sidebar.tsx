@@ -502,17 +502,19 @@ const Sidebar: React.FC<SidebarProps> = ({
 
             <div className="space-y-1">
               {savedFilters.map((filter) => (
-                <div
+                <button
+                  type="button"
                   key={filter.id}
                   onClick={() => onExecuteFilter?.(filter.query)}
                   onContextMenu={(e) => handleFilterContextMenu(e, filter)}
-                  className="flex items-center justify-between px-3 py-2 mx-2 rounded-md cursor-pointer transition-colors group hover:bg-slate-800 text-slate-400 hover:text-slate-200"
+                  className="w-full flex items-center justify-between px-3 py-2 mx-2 rounded-md cursor-pointer transition-colors group hover:bg-slate-800 text-slate-400 hover:text-slate-200"
+                  aria-label={filter.name}
                 >
                   <div className="flex items-center gap-3 overflow-hidden">
                     <Filter size={18} className="text-slate-500 group-hover:text-slate-300" />
                     <span className="truncate text-sm font-medium">{filter.name}</span>
                   </div>
-                </div>
+                </button>
               ))}
             </div>
           </div>
