@@ -162,6 +162,16 @@ function createSchema() {
       value TEXT
     )
   `);
+
+  // Create Saved Filters Table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS saved_filters (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      query TEXT NOT NULL,
+      createdAt INTEGER NOT NULL
+    )
+  `);
 }
 
 function migratePasswordEncryption() {
@@ -619,6 +629,31 @@ function getTotalUnreadEmailCount() {
   return result ? result.count : 0;
 }
 
+// --- Saved Filters Methods ---
+
+function getSavedFilters() {
+  return db.prepare('SELECT id, name, query, createdAt FROM saved_filters ORDER BY createdAt DESC').all();
+}
+
+function addSavedFilter(id, name, query) {
+  const createdAt = Date.now();
+  const stmt = db.prepare('INSERT INTO saved_filters (id, name, query, createdAt) VALUES (?, ?, ?, ?)');
+  const info = stmt.run(id, name, query, createdAt);
+  return { success: true, changes: info.changes };
+}
+
+function updateSavedFilter(id, name, query) {
+  const stmt = db.prepare('UPDATE saved_filters SET name = ?, query = ? WHERE id = ?');
+  const info = stmt.run(name, query, id);
+  return { success: true, changes: info.changes };
+}
+
+function deleteSavedFilter(id) {
+  const stmt = db.prepare('DELETE FROM saved_filters WHERE id = ?');
+  const info = stmt.run(id);
+  return { success: true, changes: info.changes };
+}
+
 module.exports = {
   init,
   close,
@@ -684,6 +719,12 @@ module.exports = {
   // App Settings Methods
   getSetting,
   setSetting,
+
+  // Saved Filters Methods
+  getSavedFilters,
+  addSavedFilter,
+  updateSavedFilter,
+  deleteSavedFilter,
 };
 
 function migrateFolder(oldName, newName) {

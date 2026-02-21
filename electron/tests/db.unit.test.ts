@@ -22,6 +22,13 @@ if (require.cache) {
 }
 
 // Define interface for db module methods
+interface SavedFilter {
+  id: string;
+  name: string;
+  query: string;
+  createdAt: number;
+}
+
 interface DbModule {
   init: (path: string) => void;
   addAccount: (account: Partial<ImapAccount> & { id: string; username?: string; password?: string }) => void;
@@ -29,6 +36,10 @@ interface DbModule {
   saveEmail: (email: Partial<Email> & { id: string; accountId: string }) => void;
   getEmails: (accountId: string) => Email[];
   updateAccountQuota: (id: string, used: number, total: number) => void;
+  getSavedFilters: () => SavedFilter[];
+  addSavedFilter: (id: string, name: string, query: string) => { success: boolean; changes: number };
+  updateSavedFilter: (id: string, name: string, query: string) => { success: boolean; changes: number };
+  deleteSavedFilter: (id: string) => { success: boolean; changes: number };
 }
 
 // Import the database module under test
@@ -121,5 +132,82 @@ describe('Database Module', () => {
 
     expect(updated?.storageUsed).toBe(1000);
     expect(updated?.storageTotal).toBe(5000);
+  });
+
+  describe('Saved Filters', () => {
+    it('should add and retrieve saved filters', () => {
+      const result = db.addSavedFilter('filter1', 'Amazon Invoices', 'from:amazon category:Rechnungen');
+
+      expect(result.success).toBe(true);
+      expect(result.changes).toBe(1);
+
+      const filters = db.getSavedFilters();
+      expect(filters).toHaveLength(1);
+      expect(filters[0].id).toBe('filter1');
+      expect(filters[0].name).toBe('Amazon Invoices');
+      expect(filters[0].query).toBe('from:amazon category:Rechnungen');
+      expect(filters[0].createdAt).toBeGreaterThan(0);
+    });
+
+    it('should update a saved filter', () => {
+      db.addSavedFilter('filter2', 'Old Name', 'old query');
+
+      const result = db.updateSavedFilter('filter2', 'New Name', 'new query');
+
+      expect(result.success).toBe(true);
+      expect(result.changes).toBe(1);
+
+      const filters = db.getSavedFilters();
+      const updated = filters.find((f) => f.id === 'filter2');
+      expect(updated?.name).toBe('New Name');
+      expect(updated?.query).toBe('new query');
+    });
+
+    it('should delete a saved filter', () => {
+      db.addSavedFilter('filter3', 'To Delete', 'some query');
+
+      let filters = db.getSavedFilters();
+      expect(filters.find((f) => f.id === 'filter3')).toBeDefined();
+
+      const result = db.deleteSavedFilter('filter3');
+
+      expect(result.success).toBe(true);
+      expect(result.changes).toBe(1);
+
+      filters = db.getSavedFilters();
+      expect(filters.find((f) => f.id === 'filter3')).toBeUndefined();
+    });
+
+    it('should return filters ordered by createdAt DESC', () => {
+      // Add filters with slight delay to ensure different timestamps
+      db.addSavedFilter('filter4', 'First', 'query1');
+      db.addSavedFilter('filter5', 'Second', 'query2');
+
+      const filters = db.getSavedFilters();
+
+      expect(filters.length).toBeGreaterThanOrEqual(2);
+      // Most recent should be first
+      expect(filters[0].createdAt).toBeGreaterThanOrEqual(filters[filters.length - 1].createdAt);
+    });
+
+    it('should return empty array when no filters exist', () => {
+      // Fresh database from beforeEach
+      const filters = db.getSavedFilters();
+      expect(filters).toEqual([]);
+    });
+
+    it('should handle updating non-existent filter', () => {
+      const result = db.updateSavedFilter('non-existent', 'Name', 'query');
+
+      expect(result.success).toBe(true);
+      expect(result.changes).toBe(0);
+    });
+
+    it('should handle deleting non-existent filter', () => {
+      const result = db.deleteSavedFilter('non-existent');
+
+      expect(result.success).toBe(true);
+      expect(result.changes).toBe(0);
+    });
   });
 });
