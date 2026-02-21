@@ -489,6 +489,157 @@ app.whenReady().then(() => {
     }
   });
 
+  // Natural Language Search IPC handler
+  ipcMain.handle('parse-natural-language-query', async (event, query) => {
+    try {
+      if (!query || typeof query !== 'string' || query.trim() === '') {
+        return '';
+      }
+
+      // Load AI settings
+      let settings = null;
+      const hasEncryptedFile = fs.existsSync(AI_SETTINGS_FILE);
+      const hasPlaintextFile = fs.existsSync(AI_SETTINGS_FILE_PLAINTEXT);
+
+      if (hasEncryptedFile && safeStorage.isEncryptionAvailable()) {
+        const encrypted = fs.readFileSync(AI_SETTINGS_FILE);
+        const decrypted = safeStorage.decryptString(encrypted);
+        settings = JSON.parse(decrypted);
+      } else if (hasPlaintextFile) {
+        const settingsJson = fs.readFileSync(AI_SETTINGS_FILE_PLAINTEXT, 'utf8');
+        settings = JSON.parse(settingsJson);
+      }
+
+      if (!settings || !settings.apiKey) {
+        throw new Error('AI settings not configured');
+      }
+
+      // Prepare the prompt
+      const systemInstruction = `Du bist ein Such-Query-Übersetzer für ein Email-System.
+
+Deine Aufgabe: Wandle natürlichsprachige deutsche Suchanfragen in strukturierte Such-Operatoren um.
+
+VERFÜGBARE OPERATOREN:
+- from:EMAIL_ODER_NAME - Suche nach Absender
+- to:EMAIL_ODER_NAME - Suche nach Empfänger
+- subject:TEXT - Suche im Betreff
+- category:KATEGORIE - Suche in Kategorie (z.B. Rechnungen, Newsletter, Spam, Privat, Geschäftlich)
+- has:attachment - Nur Emails mit Anhängen
+- before:YYYY-MM-DD - Emails vor diesem Datum
+- after:YYYY-MM-DD - Emails nach diesem Datum
+
+REGELN:
+1. Erkenne die Absicht des Benutzers und wähle die passenden Operatoren
+2. Für Zeitangaben wie "letzter Monat", "diese Woche", berechne das entsprechende Datum (heute ist ${new Date().toISOString().split('T')[0]})
+3. Wenn keine Operatoren passen, gib den Suchtext als Freitext zurück
+4. Kombiniere mehrere Operatoren mit Leerzeichen
+5. Verwende keine Anführungszeichen um Werte, es sei denn der Wert enthält Leerzeichen
+
+BEISPIELE:
+- "Rechnungen von letztem Monat" → "category:Rechnungen after:2026-01-01"
+- "Emails von Amazon" → "from:amazon"
+- "Newsletter mit Anhängen" → "category:Newsletter has:attachment"
+- "Betreff Rechnung" → "subject:Rechnung"
+- "vor Januar 2026" → "before:2026-01-01"
+- "meeting notes" → "meeting notes" (kein Operator)
+
+Antworte NUR mit dem JSON-Objekt mit dem "query" Feld.`;
+
+      const userPrompt = `Wandle diese Suchanfrage um: "${query}"`;
+
+      let result;
+
+      // Call AI provider based on settings
+      if (settings.provider === 'gemini') {
+        // Google Gemini API
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${settings.model}:generateContent?key=${settings.apiKey}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: userPrompt }] }],
+              systemInstruction: { parts: [{ text: systemInstruction }] },
+              generationConfig: {
+                responseMimeType: 'application/json',
+                responseSchema: {
+                  type: 'object',
+                  properties: {
+                    query: {
+                      type: 'string',
+                      description: 'Formatted search query with operators',
+                    },
+                  },
+                  required: ['query'],
+                },
+              },
+            }),
+          }
+        );
+
+        if (!response.ok) {
+          const errorBody = await response.text();
+          throw new Error(`Gemini API error (${response.status}): ${errorBody}`);
+        }
+
+        const data = await response.json();
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+        if (!text) {
+          throw new Error('Failed to extract text from Gemini response');
+        }
+
+        // Clean markdown formatting
+        const cleanText = text.replace(/```json/g, '').replace(/```/g, '').trim();
+        result = JSON.parse(cleanText);
+      } else if (settings.provider === 'openai') {
+        // OpenAI API
+        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${settings.apiKey}`,
+          },
+          body: JSON.stringify({
+            model: settings.model,
+            messages: [
+              { role: 'system', content: systemInstruction },
+              { role: 'user', content: userPrompt },
+            ],
+            response_format: { type: 'json_object' },
+          }),
+        });
+
+        if (!response.ok) {
+          const errorBody = await response.text();
+          throw new Error(`OpenAI API error (${response.status}): ${errorBody}`);
+        }
+
+        const data = await response.json();
+        const content = data.choices?.[0]?.message?.content;
+
+        if (!content) {
+          throw new Error('OpenAI returned empty response');
+        }
+
+        result = JSON.parse(content);
+      } else {
+        throw new Error('Unknown AI provider');
+      }
+
+      // Extract query from result
+      if (result && typeof result === 'object' && 'query' in result) {
+        logger.info(`[NL Search] Converted "${query}" to "${result.query}"`);
+        return result.query || '';
+      }
+
+      return '';
+    } catch (error) {
+      logger.error('[NL Search] Failed to parse natural language query:', error);
+      throw error;
+    }
+  });
+
   // Notification Settings IPC handlers
   // Load notification settings (global + all accounts)
   ipcMain.handle('load-notification-settings', async () => {

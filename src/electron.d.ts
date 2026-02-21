@@ -75,9 +75,17 @@ declare global {
       // Debug
       log: (msg: string) => void;
 
+      // Advanced Search
+      searchEmails: (query: string, accountId?: string) => Promise<Email[]>;
+      getSavedFilters: () => Promise<Array<{ id: string; name: string; query: string; createdAt: string }>>;
+      saveFilter: (id: string, name: string, query: string) => Promise<void>;
+      deleteFilter: (id: string) => Promise<void>;
+      getSearchHistory: () => Promise<Array<{ id: number; query: string; timestamp: string }>>;
+
       // AI Settings (safeStorage)
       saveAISettings: (settings: AISettings) => Promise<{ success: boolean; encrypted?: boolean; warning?: string }>;
       loadAISettings: () => Promise<AISettings | null>;
+      parseNaturalLanguageQuery: (query: string) => Promise<string>;
 
       // Notification Settings
       loadNotificationSettings: () => Promise<NotificationSettings | null>;

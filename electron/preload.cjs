@@ -39,6 +39,7 @@ contextBridge.exposeInMainWorld('electron', {
   // AI Settings
   saveAISettings: (settings) => ipcRenderer.invoke('ai-settings-save', settings),
   loadAISettings: () => ipcRenderer.invoke('ai-settings-load'),
+  parseNaturalLanguageQuery: (query) => ipcRenderer.invoke('parse-natural-language-query', query),
 
   // Notification Settings (Global + Per-Account)
   loadNotificationSettings: () => ipcRenderer.invoke('load-notification-settings'),
