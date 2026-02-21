@@ -24,6 +24,7 @@ const SavedFilterDialog: React.FC<SavedFilterDialogProps> = ({
   const [query, setQuery] = useState(initialQuery);
   const [errors, setErrors] = useState<{ name?: string; query?: string }>({});
   const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const mountedRef = useRef(true);
 
   useEffect(() => {
@@ -39,6 +40,7 @@ const SavedFilterDialog: React.FC<SavedFilterDialogProps> = ({
       setName(initialName);
       setQuery(initialQuery);
       setErrors({});
+      setSaveError(null);
     }
   }, [isOpen, initialName, initialQuery]);
 
@@ -82,6 +84,9 @@ const SavedFilterDialog: React.FC<SavedFilterDialogProps> = ({
         }
       } catch (error) {
         console.error('Failed to save filter:', error);
+        if (mountedRef.current) {
+          setSaveError(t('savedFilterDialog.errors.saveFailed', 'Failed to save filter. Please try again.'));
+        }
       } finally {
         if (mountedRef.current) {
           setIsSaving(false);
@@ -186,6 +191,13 @@ const SavedFilterDialog: React.FC<SavedFilterDialogProps> = ({
           <div className="bg-blue-50 border border-blue-100 rounded-lg p-3">
             <p className="text-xs text-slate-600">{t('savedFilterDialog.helpText')}</p>
           </div>
+
+          {/* Save Error */}
+          {saveError && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+              <p className="text-sm text-red-600">{saveError}</p>
+            </div>
+          )}
         </div>
 
         {/* Footer with buttons */}

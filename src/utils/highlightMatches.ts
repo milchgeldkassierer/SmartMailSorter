@@ -44,8 +44,20 @@ export function highlightMatches(text: string | null | undefined, searchQuery: s
   // HTML-escape the text first to prevent XSS via dangerouslySetInnerHTML
   const safeText = escapeHtml(text);
 
+  // Guard against ReDoS: limit term count and individual term length
+  const MAX_TERMS = 20;
+  const MAX_TERM_LENGTH = 200;
+  const safeTerms = terms
+    .filter((term) => term.trim().length > 0)
+    .slice(0, MAX_TERMS)
+    .map((term) => (term.length > MAX_TERM_LENGTH ? term.slice(0, MAX_TERM_LENGTH) : term));
+
+  if (safeTerms.length === 0) {
+    return safeText;
+  }
+
   // Escape special regex characters in each term
-  const escapedTerms = terms.map((term) => escapeRegex(term));
+  const escapedTerms = safeTerms.map((term) => escapeRegex(term));
 
   // Create a regex pattern that matches any of the terms (case-insensitive)
   const pattern = new RegExp(`(${escapedTerms.join('|')})`, 'gi');
