@@ -398,7 +398,7 @@ describe('Advanced Search - End-to-End Integration', () => {
       console.warn(`Attachment search completed in ${searchTime}ms, found ${results.length} results`);
 
       expect(searchTime).toBeLessThan(PERF_BUDGET_MS);
-      expect(results).toHaveLength(5000); // Half of emails have attachments
+      expect(results).toHaveLength(500); // Capped by LIMIT 500 (5000 match, half have attachments)
       expect(results.every((e) => e.hasAttachments)).toBe(true);
     });
 
