@@ -410,7 +410,14 @@ app.whenReady().then(() => {
     return results;
   });
   ipcMain.handle('get-filters', () => db.getSavedFilters());
-  ipcMain.handle('save-filter', (event, id, name, query) => db.addSavedFilter(id, name, query));
+  ipcMain.handle('save-filter', (event, id, name, query) => {
+    // Check if filter exists — use UPDATE for edits, INSERT for new
+    const existing = db.getSavedFilters().find((f) => f.id === id);
+    if (existing) {
+      return db.updateSavedFilter(id, name, query);
+    }
+    return db.addSavedFilter(id, name, query);
+  });
   ipcMain.handle('delete-filter', (event, id) => db.deleteSavedFilter(id));
   ipcMain.handle('get-search-history', () => db.getSearchHistory());
   ipcMain.handle('save-search-history', (event, id, query) => db.addSearchHistory(id, query));

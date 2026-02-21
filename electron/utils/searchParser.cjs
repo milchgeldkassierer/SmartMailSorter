@@ -167,6 +167,9 @@ function buildSearchWhereClause(parsedQuery, accountId = null) {
   }
 
   // 2. Range queries - use idx_emails_date for efficient filtering
+  // Note: before: and after: use strict inequality (< and >), meaning the
+  // specified date itself is excluded. E.g. after:2026-01-15 matches dates
+  // strictly after 2026-01-15, not including it.
   if (parsedQuery.after) {
     conditions.push('date > ?');
     params.push(parsedQuery.after);

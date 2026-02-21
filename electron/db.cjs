@@ -732,6 +732,10 @@ function getSearchHistory() {
 
 function addSearchHistory(id, query) {
   const timestamp = Date.now();
+
+  // Deduplicate: remove existing entries with the same query so repeated searches move to the top
+  db.prepare('DELETE FROM search_history WHERE query = ?').run(query);
+
   const stmt = db.prepare('INSERT INTO search_history (id, query, timestamp) VALUES (?, ?, ?)');
   const info = stmt.run(id, query, timestamp);
 

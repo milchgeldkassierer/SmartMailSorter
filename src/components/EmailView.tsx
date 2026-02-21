@@ -99,7 +99,7 @@ const EmailView: React.FC<EmailViewProps> = ({ email, searchQuery }) => {
       cancelled = true;
       clearTimeout(timeoutId);
     };
-  }, [email?.id, email?.bodyHtml, imagesLoaded, searchQuery]);
+  }, [email?.id, email?.bodyHtml, imagesLoaded]);
 
   // Intercept link clicks inside iframe to open in external browser
   const handleIframeLoad = useCallback(() => {
