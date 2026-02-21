@@ -3,11 +3,13 @@ const path = require('path');
 const { INBOX_FOLDER } = require('./folderConstants.cjs');
 const logger = require('./utils/logger.cjs');
 const { encryptPassword, decryptPassword } = require('./utils/security.cjs');
+const { parseSearchQuery, buildSearchWhereClause } = require('./utils/searchParser.cjs');
 // Electron import moved to lazy usage or injection
 
 const DEFAULT_DB_NAME = 'smartmail.db';
 let db;
 
+/** Create all database tables, indexes, and seed default categories. */
 function createSchema() {
   if (!db) return;
   // Create Accounts Table
@@ -69,6 +71,22 @@ function createSchema() {
       FOREIGN KEY(accountId) REFERENCES accounts(id) ON DELETE CASCADE
     )
   `);
+
+  // Create indexes for search performance
+  // Single-column indexes for basic filtering
+  db.exec('CREATE INDEX IF NOT EXISTS idx_emails_accountId ON emails(accountId)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_emails_senderEmail ON emails(senderEmail)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_emails_subject ON emails(subject)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_emails_date ON emails(date)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_emails_folder ON emails(folder)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_emails_smartCategory ON emails(smartCategory)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_emails_hasAttachments ON emails(hasAttachments)');
+
+  // Composite indexes for common search patterns
+  // These optimize multi-condition queries by combining frequently-used filters
+  db.exec('CREATE INDEX IF NOT EXISTS idx_emails_accountId_date ON emails(accountId, date)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_emails_accountId_category ON emails(accountId, smartCategory)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_emails_category_date ON emails(smartCategory, date)');
 
   // Create Attachments Table
   db.exec(`
@@ -162,8 +180,28 @@ function createSchema() {
       value TEXT
     )
   `);
+
+  // Create Saved Filters Table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS saved_filters (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      query TEXT NOT NULL,
+      createdAt INTEGER NOT NULL
+    )
+  `);
+
+  // Create Search History Table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS search_history (
+      id TEXT PRIMARY KEY,
+      query TEXT NOT NULL,
+      timestamp INTEGER NOT NULL
+    )
+  `);
 }
 
+/** Migrate plaintext passwords to encrypted format using Electron safeStorage. */
 function migratePasswordEncryption() {
   if (!db) return;
 
@@ -231,6 +269,10 @@ function migratePasswordEncryption() {
   }
 }
 
+/**
+ * Initialize the database connection and run schema creation/migrations.
+ * @param {string|object} appOrPath - Either a file path (or ':memory:') or an Electron app object
+ */
 function init(appOrPath) {
   // Close existing database if reinitializing (for tests)
   if (db && typeof appOrPath === 'string' && appOrPath === ':memory:') {
@@ -262,7 +304,7 @@ function init(appOrPath) {
   migratePasswordEncryption();
 }
 
-// Account Methods
+/** Retrieve all accounts (without passwords) ordered by id. */
 function getAccounts() {
   return db
     .prepare(
@@ -274,6 +316,7 @@ function getAccounts() {
     .all();
 }
 
+/** Retrieve a single account with decrypted password for IMAP connection. */
 function getAccountWithPassword(accountId) {
   const account = db.prepare('SELECT * FROM accounts WHERE id = ?').get(accountId);
 
@@ -301,6 +344,7 @@ function getAccountWithPassword(accountId) {
   return account;
 }
 
+/** Add a new IMAP account, encrypting the password via safeStorage. */
 function addAccount(account) {
   // Encrypt password before saving
   let encryptedPassword = account.password;
@@ -330,21 +374,24 @@ function addAccount(account) {
   });
 }
 
+/** Update the last sync UID and timestamp for an account after IMAP sync. */
 function updateAccountSync(id, lastSyncUid, lastSyncTime) {
   const stmt = db.prepare('UPDATE accounts SET lastSyncUid = ?, lastSyncTime = ? WHERE id = ?');
   return stmt.run(lastSyncUid, lastSyncTime, id);
 }
 
+/** Update storage quota information for an account. */
 function updateAccountQuota(id, used, total) {
   const stmt = db.prepare('UPDATE accounts SET storageUsed = ?, storageTotal = ? WHERE id = ?');
   return stmt.run(used, total, id);
 }
 
+/** Delete an account and cascade-delete its emails and attachments. */
 function deleteAccountDn(id) {
   db.prepare('DELETE FROM accounts WHERE id = ?').run(id);
 }
 
-// Email Methods
+/** Retrieve all emails for an account (without body/bodyHtml for performance). */
 function getEmails(accountId) {
   // OPTIMIZATION: Do NOT select body or bodyHtml (too large for list view)
   const emails = db
@@ -369,20 +416,73 @@ function getEmails(accountId) {
   }));
 }
 
+/**
+ * Search emails using operator syntax (from:, subject:, category:, etc.).
+ * @param {string} query - Raw search query with optional operators
+ * @param {string|null} accountId - Account to search within, or null for all accounts
+ * @returns {Array} Matching emails (without body/bodyHtml)
+ */
+function searchEmails(query, accountId = null) {
+  // Parse the search query into structured parameters
+  const parsedQuery = parseSearchQuery(query);
+
+  // Build the WHERE clause from parsed parameters
+  const { where, params } = buildSearchWhereClause(parsedQuery, accountId);
+
+  // OPTIMIZATION: Do NOT select body or bodyHtml (too large for list view)
+  // The body field is only needed for display, not for search results list
+  const sql = `
+    SELECT
+      id, accountId, sender, senderEmail, subject, date,
+      folder, smartCategory, isRead, isFlagged, hasAttachments,
+      aiSummary, aiReasoning, confidence, uid
+    FROM emails
+    ${where}
+    ORDER BY date DESC
+    LIMIT 500
+  `;
+
+  // Performance monitoring for slow queries
+  const startTime = Date.now();
+  const stmt = db.prepare(sql);
+  const emails = stmt.all(...params);
+  const queryTime = Date.now() - startTime;
+
+  // Log slow queries (>100ms) - avoid logging sensitive search terms/params
+  if (queryTime > 100) {
+    logger.warn(`Slow search query detected: ${queryTime}ms`, {
+      accountId,
+      resultCount: emails.length,
+      hasQuery: Boolean(query),
+    });
+  }
+
+  return emails.map((email) => ({
+    ...email,
+    isRead: Boolean(email.isRead),
+    isFlagged: Boolean(email.isFlagged),
+    hasAttachments: Boolean(email.hasAttachments),
+  }));
+}
+
+/** Retrieve the body and bodyHtml content for a single email. */
 function getEmailContent(emailId) {
   return db.prepare('SELECT body, bodyHtml FROM emails WHERE id = ?').get(emailId);
 }
 
+/** Retrieve attachment metadata (without binary data) for an email. */
 function getEmailAttachments(emailId) {
   return db.prepare('SELECT id, filename, contentType, size FROM attachments WHERE emailId = ?').all(emailId);
 }
 
+/** Retrieve a single attachment including binary data. */
 function getAttachment(id) {
   return db.prepare('SELECT * FROM attachments WHERE id = ?').get(id);
 }
 
 const crypto = require('crypto');
 
+/** Save or update an email and its attachments (INSERT OR REPLACE). */
 function saveEmail(email) {
   const stmt = db.prepare(`
     INSERT OR REPLACE INTO emails (
@@ -436,6 +536,7 @@ function saveEmail(email) {
   return result;
 }
 
+/** Update the AI-assigned smart category, summary, reasoning, and confidence for an email. */
 function updateEmailSmartCategory(id, smartCategory, aiSummary, aiReasoning, confidence) {
   const stmt = db.prepare(`
         UPDATE emails 
@@ -445,15 +546,18 @@ function updateEmailSmartCategory(id, smartCategory, aiSummary, aiReasoning, con
   return stmt.run({ id, smartCategory, aiSummary, aiReasoning, confidence });
 }
 
+/** Move an email to a different physical folder. */
 function updateEmailFolder(id, folder) {
   const stmt = db.prepare('UPDATE emails SET folder = @folder WHERE id = @id');
   return stmt.run({ id, folder });
 }
 
+/** Delete a single email by id. */
 function deleteEmail(id) {
   db.prepare('DELETE FROM emails WHERE id = ?').run(id);
 }
 
+/** Batch-delete emails by UID within a specific account/folder (transactional). */
 function deleteEmailsByUid(accountId, folder, uids) {
   if (!uids || uids.length === 0) return 0;
   const deleteStmt = db.prepare('DELETE FROM emails WHERE accountId = ? AND folder = ? AND uid = ?');
@@ -470,19 +574,24 @@ function deleteEmailsByUid(accountId, folder, uids) {
   return deleteMany(uids);
 }
 
+/** Update the read status of an email. */
 function updateEmailReadStatus(id, isRead) {
   const stmt = db.prepare('UPDATE emails SET isRead = ? WHERE id = ?');
   return stmt.run(isRead ? 1 : 0, id);
 }
 
+/** Update the flagged/starred status of an email. */
 function updateEmailFlagStatus(id, isFlagged) {
   const stmt = db.prepare('UPDATE emails SET isFlagged = ? WHERE id = ?');
   return stmt.run(isFlagged ? 1 : 0, id);
 }
 
+/** Drop all tables and recreate the schema (used for testing/reset). */
 function resetDb() {
   db.exec('DROP TABLE IF EXISTS attachments');
   db.exec('DROP TABLE IF EXISTS notification_settings');
+  db.exec('DROP TABLE IF EXISTS saved_filters');
+  db.exec('DROP TABLE IF EXISTS search_history');
   db.exec('DROP TABLE IF EXISTS emails');
   db.exec('DROP TABLE IF EXISTS categories');
   db.exec('DROP TABLE IF EXISTS accounts');
@@ -492,6 +601,7 @@ function resetDb() {
 
 // --- Category Methods ---
 
+/** Get all category names sorted alphabetically. */
 function _getCategories() {
   return db
     .prepare('SELECT name FROM categories ORDER BY name ASC')
@@ -499,6 +609,7 @@ function _getCategories() {
     .map((c) => c.name);
 }
 
+/** Add a custom category, ignoring duplicates. */
 function _addCategory(name) {
   try {
     const stmt = db.prepare('INSERT INTO categories (name, type) VALUES (?, ?)');
@@ -510,6 +621,7 @@ function _addCategory(name) {
   }
 }
 
+/** Delete a category and untag all emails that were assigned to it. */
 function deleteSmartCategory(categoryName) {
   logger.info(`[DB] Deleting category "${categoryName}"`);
 
@@ -525,6 +637,7 @@ function deleteSmartCategory(categoryName) {
   return { success: true, changes: info.changes };
 }
 
+/** Rename a category and update all associated emails (transactional). */
 function renameSmartCategory(oldName, newName) {
   logger.info(`[DB] Renaming category from "${oldName}" to "${newName}"`);
 
@@ -546,6 +659,7 @@ function renameSmartCategory(oldName, newName) {
   return { success: true };
 }
 
+/** Close the database connection. */
 function close() {
   if (db) {
     try {
@@ -559,11 +673,13 @@ function close() {
 
 // --- App Settings Methods ---
 
+/** Get a value from the app_settings key-value store. */
 function getSetting(key) {
   const row = db.prepare('SELECT value FROM app_settings WHERE key = ?').get(key);
   return row ? row.value : null;
 }
 
+/** Set a value in the app_settings key-value store (INSERT OR REPLACE). */
 function setSetting(key, value) {
   const stmt = db.prepare('INSERT OR REPLACE INTO app_settings (key, value) VALUES (?, ?)');
   return stmt.run(key, value);
@@ -571,6 +687,7 @@ function setSetting(key, value) {
 
 // --- Notification Settings Methods ---
 
+/** Get notification settings for an account, returning defaults if none exist. */
 function getNotificationSettings(accountId) {
   const settings = db
     .prepare('SELECT enabled, mutedCategories FROM notification_settings WHERE accountId = ?')
@@ -600,6 +717,7 @@ function getNotificationSettings(accountId) {
   };
 }
 
+/** Save notification settings for an account (INSERT OR REPLACE). */
 function saveNotificationSettings(accountId, settings) {
   const mutedCategoriesJson = JSON.stringify(settings.mutedCategories || []);
   const stmt = db.prepare(`
@@ -609,14 +727,98 @@ function saveNotificationSettings(accountId, settings) {
   return stmt.run(accountId, settings.enabled ? 1 : 0, mutedCategoriesJson);
 }
 
+/** Count unread emails for a specific account. */
 function getUnreadEmailCount(accountId) {
   const result = db.prepare('SELECT COUNT(*) as count FROM emails WHERE accountId = ? AND isRead = 0').get(accountId);
   return result ? result.count : 0;
 }
 
+/** Count total unread emails across all accounts. */
 function getTotalUnreadEmailCount() {
   const result = db.prepare('SELECT COUNT(*) as count FROM emails WHERE isRead = 0').get();
   return result ? result.count : 0;
+}
+
+// --- Saved Filters Methods ---
+
+/** Retrieve all saved search filters ordered by creation date (newest first). */
+function getSavedFilters() {
+  return db.prepare('SELECT id, name, query, createdAt FROM saved_filters ORDER BY createdAt DESC').all();
+}
+
+/** Add a new saved search filter. */
+function addSavedFilter(id, name, query) {
+  const createdAt = Date.now();
+  const stmt = db.prepare('INSERT INTO saved_filters (id, name, query, createdAt) VALUES (?, ?, ?, ?)');
+  const info = stmt.run(id, name, query, createdAt);
+  return { success: true, changes: info.changes };
+}
+
+/** Update the name and query of an existing saved filter. */
+function updateSavedFilter(id, name, query) {
+  const stmt = db.prepare('UPDATE saved_filters SET name = ?, query = ? WHERE id = ?');
+  const info = stmt.run(name, query, id);
+  return { success: true, changes: info.changes };
+}
+
+/** Insert or update a saved filter in a single statement. */
+function upsertSavedFilter(id, name, query) {
+  const createdAt = Date.now();
+  const stmt = db.prepare(
+    'INSERT INTO saved_filters (id, name, query, createdAt) VALUES (?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET name = excluded.name, query = excluded.query'
+  );
+  const info = stmt.run(id, name, query, createdAt);
+  return { success: true, changes: info.changes };
+}
+
+/** Delete a saved search filter by id. */
+function deleteSavedFilter(id) {
+  const stmt = db.prepare('DELETE FROM saved_filters WHERE id = ?');
+  const info = stmt.run(id);
+  return { success: true, changes: info.changes };
+}
+
+// --- Search History Methods ---
+
+/** Retrieve the most recent 20 search history entries. */
+function getSearchHistory() {
+  return db.prepare('SELECT id, query, timestamp FROM search_history ORDER BY timestamp DESC LIMIT 20').all();
+}
+
+/** Add a search query to history, deduplicating and capping at 20 entries. */
+function addSearchHistory(id, query) {
+  const timestamp = Date.now();
+
+  const run = db.transaction(() => {
+    // Deduplicate: remove existing entries with the same query so repeated searches move to the top
+    db.prepare('DELETE FROM search_history WHERE query = ?').run(query);
+
+    const stmt = db.prepare('INSERT INTO search_history (id, query, timestamp) VALUES (?, ?, ?)');
+    const info = stmt.run(id, query, timestamp);
+
+    // Keep only the last 20 entries
+    db.prepare(
+      `
+      DELETE FROM search_history
+      WHERE id NOT IN (
+        SELECT id FROM search_history
+        ORDER BY timestamp DESC
+        LIMIT 20
+      )
+    `
+    ).run();
+
+    return { success: true, changes: info.changes };
+  });
+
+  return run();
+}
+
+/** Delete all search history entries. */
+function clearSearchHistory() {
+  const stmt = db.prepare('DELETE FROM search_history');
+  const info = stmt.run();
+  return { success: true, changes: info.changes };
 }
 
 module.exports = {
@@ -627,6 +829,7 @@ module.exports = {
   addAccount,
   updateAccountSync,
   getEmails,
+  searchEmails,
   getEmailContent,
   saveEmail,
   deleteAccountDn,
@@ -684,8 +887,21 @@ module.exports = {
   // App Settings Methods
   getSetting,
   setSetting,
+
+  // Saved Filters Methods
+  getSavedFilters,
+  addSavedFilter,
+  updateSavedFilter,
+  upsertSavedFilter,
+  deleteSavedFilter,
+
+  // Search History Methods
+  getSearchHistory,
+  addSearchHistory,
+  clearSearchHistory,
 };
 
+/** Migrate emails and categories from one folder name to another (transactional). */
 function migrateFolder(oldName, newName) {
   const updateEmails = db.prepare('UPDATE emails SET folder = ? WHERE folder = ?');
   // Also update category if it exists as a "Smart Category" (which we treated physical folders as)

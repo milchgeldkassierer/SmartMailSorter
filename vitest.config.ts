@@ -4,14 +4,17 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
-    include: ['electron/tests/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
+    include: [
+      'electron/tests/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}',
+      'src/services/__tests__/**/*.{test,spec}.{ts,tsx}',
+    ],
     // Setup file that patches CJS modules before any tests run
     setupFiles: ['./electron/tests/vitest-setup.js'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html', 'clover', 'json'],
       // Backend tests only cover electron and services (components tested separately with jsdom)
-      include: ['electron/**/*.{js,cjs,ts}', 'src/services/**/*.{js,ts}'],
+      include: ['electron/**/*.{js,cjs,ts}', 'src/services/**/*.{js,ts}', 'src/utils/**/*.{js,ts}'],
       exclude: [
         'electron/tests/**',
         'electron/main.cjs',

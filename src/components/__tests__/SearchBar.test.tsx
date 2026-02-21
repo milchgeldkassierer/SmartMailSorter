@@ -48,11 +48,11 @@ describe('SearchBar', () => {
       expect(clearButtons).toHaveLength(1);
     });
 
-    it('should show clear button when search term is not empty', () => {
+    it('should show clear button and AI button when search term is not empty', () => {
       render(<SearchBar {...defaultProps} searchTerm="test" />);
-      // Both clear button and filter button should be present
+      // AI sparkles button, clear button, and filter button should be present
       const buttons = document.querySelectorAll('button');
-      expect(buttons).toHaveLength(2);
+      expect(buttons).toHaveLength(3);
     });
 
     it('should not show filter dropdown by default', () => {
@@ -76,9 +76,7 @@ describe('SearchBar', () => {
       const onSearchChange = vi.fn();
       render(<SearchBar {...defaultProps} searchTerm="test" onSearchChange={onSearchChange} />);
 
-      // Find and click the clear button (first button before filter button)
-      const buttons = document.querySelectorAll('button');
-      const clearButton = buttons[0]; // First button is the clear button
+      const clearButton = screen.getByRole('button', { name: 'Clear search' });
       fireEvent.click(clearButton);
 
       expect(onSearchChange).toHaveBeenCalledWith('');

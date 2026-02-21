@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import {
   Email,
   DefaultEmailCategory,
@@ -10,8 +10,8 @@ import {
   TRASH_FOLDER,
   FLAGGED_FOLDER,
   SortConfig,
+  SearchConfig,
 } from '../types';
-import { SearchConfig } from '../components/SearchBar';
 
 // Standard folder name constants
 const STANDARD_EXCLUDED_FOLDERS = [SENT_FOLDER, SPAM_FOLDER, TRASH_FOLDER] as const;
@@ -175,46 +175,131 @@ export const useEmails = ({ activeAccountId, accounts: _accounts }: UseEmailsPar
   // Pagination State
   const [visibleCount, setVisibleCount] = useState(100);
 
+  // Backend Search State
+  const [backendSearchResults, setBackendSearchResults] = useState<Email[]>([]);
+  const [isUsingBackendSearch, setIsUsingBackendSearch] = useState(false);
+
   // Computed properties based on Active Account
   const activeData = data[activeAccountId] || { emails: [], categories: [] };
   const currentEmails = activeData.emails;
   const currentCategories = activeData.categories;
 
+  // Parse operator syntax from searchTerm (e.g. "from:amazon subject:invoice hello")
+  const parseSearchOperators = (query: string): { hasOperators: boolean; freeText: string } => {
+    const operatorRegex = /(\w+):\s*"([^"]+)"|(\w+):\s*(\S+)/gi;
+    let hasOperators = false;
+    const freeTextParts: string[] = [];
+    let lastIndex = 0;
+    let match;
+
+    while ((match = operatorRegex.exec(query)) !== null) {
+      const beforeOperator = query.substring(lastIndex, match.index).trim();
+      if (beforeOperator) freeTextParts.push(beforeOperator);
+
+      const operator = (match[1] || match[3]).toLowerCase();
+      const value = (match[2] || match[4]).trim();
+
+      const knownOps = ['from', 'to', 'subject', 'category', 'has', 'before', 'after'];
+      // Skip values that look like another operator (word:) unless it's a date with colons
+      if (value && (value.match(/^\d{4}-\d{2}-\d{2}/) || !value.match(/^\w+:/))) {
+        if (knownOps.includes(operator)) {
+          hasOperators = true;
+        } else {
+          freeTextParts.push(match[0]);
+        }
+      } else if (value) {
+        // Value looks like another operator — treat the whole match as free text
+        freeTextParts.push(match[0]);
+      }
+
+      lastIndex = match.index + match[0].length;
+    }
+
+    const remaining = query.substring(lastIndex).trim();
+    if (remaining) freeTextParts.push(remaining);
+
+    return { hasOperators, freeText: freeTextParts.join(' ').trim() };
+  };
+
+  // Debounced backend search to avoid excessive API calls during rapid typing
+  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  useEffect(() => {
+    const { hasOperators } = parseSearchOperators(searchTerm);
+    setIsUsingBackendSearch(hasOperators);
+
+    if (hasOperators && window.electron && activeAccountId) {
+      clearTimeout(searchDebounceRef.current);
+      searchDebounceRef.current = setTimeout(() => {
+        window.electron
+          .searchEmails(searchTerm, activeAccountId)
+          .then((results) => {
+            setBackendSearchResults(results);
+          })
+          .catch((error) => {
+            console.error('Backend search failed:', error);
+            setBackendSearchResults([]);
+          });
+      }, 300);
+    } else {
+      setBackendSearchResults([]);
+    }
+
+    return () => clearTimeout(searchDebounceRef.current);
+  }, [searchTerm, activeAccountId]);
+
+  // Shared sort comparator for email lists
+  const sortEmails = useCallback(
+    (emails: Email[]): Email[] => {
+      return [...emails].sort((a, b) => {
+        let comparison = 0;
+        switch (sortConfig.field) {
+          case 'date':
+            comparison = a.date.localeCompare(b.date);
+            break;
+          case 'sender':
+            comparison = a.sender.localeCompare(b.sender);
+            break;
+          case 'subject':
+            comparison = a.subject.localeCompare(b.subject);
+            break;
+          default: {
+            const _exhaustive: never = sortConfig.field;
+            throw new Error(`Unhandled sort field: ${_exhaustive}`);
+          }
+        }
+        return sortConfig.direction === 'asc' ? comparison : -comparison;
+      });
+    },
+    [sortConfig]
+  );
+
   // --- Filtering Logic ---
   const filteredEmails = useMemo(() => {
-    // 1. Filter by category (standard folders, physical folders, or smart categories)
+    // If using backend search, use those results
+    if (isUsingBackendSearch) {
+      const categoryFiltered = backendSearchResults.filter((email) =>
+        shouldShowInCategory(email, selectedCategory, showUnsortedOnly, currentCategories)
+      );
+      return sortEmails(categoryFiltered);
+    }
+
+    // Otherwise, use frontend filtering (original logic)
     const categoryFiltered = currentEmails.filter((email) =>
       shouldShowInCategory(email, selectedCategory, showUnsortedOnly, currentCategories)
     );
-
-    // 2. Apply search filter
     const searchFiltered = categoryFiltered.filter((email) => matchesSearchTerm(email, searchTerm, searchConfig));
-
-    // 3. Apply sort
-    const sorted = [...searchFiltered].sort((a, b) => {
-      let comparison = 0;
-
-      switch (sortConfig.field) {
-        case 'date':
-          comparison = a.date.localeCompare(b.date);
-          break;
-        case 'sender':
-          comparison = a.sender.localeCompare(b.sender);
-          break;
-        case 'subject':
-          comparison = a.subject.localeCompare(b.subject);
-          break;
-        default: {
-          const _exhaustive: never = sortConfig.field;
-          throw new Error(`Unhandled sort field: ${_exhaustive}`);
-        }
-      }
-
-      return sortConfig.direction === 'asc' ? comparison : -comparison;
-    });
-
-    return sorted;
-  }, [currentEmails, selectedCategory, searchTerm, searchConfig, showUnsortedOnly, currentCategories, sortConfig]);
+    return sortEmails(searchFiltered);
+  }, [
+    currentEmails,
+    selectedCategory,
+    searchTerm,
+    searchConfig,
+    showUnsortedOnly,
+    currentCategories,
+    sortEmails,
+    isUsingBackendSearch,
+    backendSearchResults,
+  ]);
 
   // Pagination
   const displayedEmails = filteredEmails.slice(0, visibleCount);

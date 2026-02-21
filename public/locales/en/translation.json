@@ -40,7 +40,11 @@
     "iconSelectionComingSoon": "Icon selection will be available soon!",
     "changeIcon": "Change icon",
     "createNewCategory": "Create new category",
-    "moveSelectedHere": "Move selected here ({{count}})"
+    "moveSelectedHere": "Move selected here ({{count}})",
+    "savedFilters": "Saved Filters",
+    "createNewFilter": "Create new filter",
+    "deleteFilter": "Delete filter",
+    "deleteFilterConfirm": "Are you sure you want to delete the filter '{{name}}'?"
   },
   "settingsModal": {
     "title": "Settings",
@@ -142,7 +146,19 @@
     "body": "Body",
     "logic": "Logic",
     "and": "AND (All)",
-    "or": "OR"
+    "or": "OR",
+    "recentSearches": "Recent Searches",
+    "searchOperators": "Search Operators",
+    "aiConvert": "AI: Convert to search operators",
+    "operators": {
+      "from": "Filter by sender email",
+      "subject": "Search in subject line",
+      "category": "Filter by smart category",
+      "hasAttachment": "Emails with attachments",
+      "before": "Emails before date",
+      "after": "Emails after date"
+    },
+    "clearSearch": "Clear search"
   },
   "emailList": {
     "noEmails": "No emails",
@@ -279,5 +295,20 @@
     "createFolders": "Create",
     "sortErrorTitle": "Error during sorting",
     "sortErrorMessage": "An error occurred during sorting: {{error}}"
+  },
+  "savedFilterDialog": {
+    "createTitle": "Save Search Filter",
+    "editTitle": "Edit Search Filter",
+    "nameLabel": "Filter Name",
+    "namePlaceholder": "e.g. Amazon Invoices",
+    "queryLabel": "Search Query",
+    "queryPlaceholder": "e.g. from:amazon category:Invoices",
+    "helpText": "Use search operators like from:, subject:, category:, has:attachment, before:, after:",
+    "saveButton": "Save Filter",
+    "updateButton": "Update Filter",
+    "errors": {
+      "nameRequired": "Filter name is required",
+      "queryRequired": "Search query is required"
+    }
   }
 }

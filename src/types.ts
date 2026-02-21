@@ -69,6 +69,7 @@ export interface ImapAccount {
 
 export interface Email {
   id: string;
+  accountId?: string;
   sender: string;
   senderEmail: string;
   subject: string;
@@ -107,6 +108,24 @@ export interface SortConfig {
   direction: 'asc' | 'desc';
 }
 
+// Search Configuration Types
+export interface SearchConfig {
+  // Basic field search flags (for free text search)
+  searchSender: boolean;
+  searchSubject: boolean;
+  searchBody: boolean;
+  logic: 'AND' | 'OR';
+
+  // Advanced search operators (optional)
+  from?: string;
+  to?: string;
+  subject?: string;
+  category?: string;
+  hasAttachment?: boolean;
+  before?: string; // ISO date string
+  after?: string; // ISO date string
+}
+
 // AI Specific Types
 export enum LLMProvider {
   GEMINI = 'Google Gemini',
@@ -121,9 +140,9 @@ export interface AISettings {
 }
 
 export const AVAILABLE_MODELS: Record<LLMProvider, string[]> = {
-  [LLMProvider.GEMINI]: ['gemini-3-flash-preview', 'gemini-3-pro-preview'],
-  [LLMProvider.OPENAI]: ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo'],
-  [LLMProvider.ANTHROPIC]: ['claude-3-5-sonnet-20240620', 'claude-3-haiku-20240307'],
+  [LLMProvider.GEMINI]: ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-3-flash-preview', 'gemini-3.1-pro-preview'],
+  [LLMProvider.OPENAI]: ['gpt-4.1', 'gpt-4.1-mini', 'gpt-4.1-nano', 'gpt-5.2', 'gpt-5-mini', 'gpt-5-nano'],
+  [LLMProvider.ANTHROPIC]: ['claude-sonnet-4-6', 'claude-haiku-4-5', 'claude-opus-4-6'],
 };
 
 // Attachment Types
@@ -163,4 +182,11 @@ export interface NotificationSettings {
 export interface NotificationOperationResult {
   success: boolean;
   error?: string;
+}
+
+export interface SavedFilter {
+  id: string;
+  name: string;
+  query: string;
+  createdAt: number;
 }

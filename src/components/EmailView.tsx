@@ -4,12 +4,14 @@ import { Email, Attachment } from '../types';
 import { CategoryIcon, BrainCircuit, Paperclip } from './Icon';
 import { sanitizeHtml } from '../utils/sanitizeHtml';
 import { blockRemoteImages, buildIframeDoc } from '../utils/emailHtml';
+import { highlightMatches } from '../utils/highlightMatches';
 
 interface EmailViewProps {
   email: Email | null;
+  searchQuery?: string;
 }
 
-const EmailView: React.FC<EmailViewProps> = ({ email }) => {
+const EmailView: React.FC<EmailViewProps> = ({ email, searchQuery }) => {
   const { t } = useTranslation();
   const [showHtml, setShowHtml] = useState(true);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
@@ -79,6 +81,10 @@ const EmailView: React.FC<EmailViewProps> = ({ email }) => {
         } else {
           setBlockedImageCount(0);
         }
+
+        // Note: highlightMatches is not applied to HTML content because it
+        // escapes HTML entities, which would destroy the sanitized HTML structure.
+        // Highlighting is only applied to plain text view below.
 
         setIframeSrcDoc(buildIframeDoc(html));
       } catch (err) {
@@ -322,9 +328,12 @@ const EmailView: React.FC<EmailViewProps> = ({ email }) => {
               />
             )
           ) : (
-            <div className="prose prose-slate max-w-none whitespace-pre-wrap font-sans text-slate-800 p-8 overflow-y-auto flex-1">
-              {email.body}
-            </div>
+            <div
+              className="prose prose-slate max-w-none whitespace-pre-wrap font-sans text-slate-800 p-8 overflow-y-auto flex-1"
+              dangerouslySetInnerHTML={{
+                __html: highlightMatches(email.body, searchQuery),
+              }}
+            />
           )}
         </div>
       </div>

@@ -6,7 +6,7 @@ import { AISettings, LLMProvider, AVAILABLE_MODELS } from '../../../types';
 describe('SmartSortTab', () => {
   const mockAISettings: AISettings = {
     provider: LLMProvider.GEMINI,
-    model: 'gemini-3-flash-preview',
+    model: 'gemini-2.5-flash',
     apiKey: '',
   };
 
@@ -45,18 +45,18 @@ describe('SmartSortTab', () => {
 
     it('should render model select with current value', () => {
       render(<SmartSortTab {...defaultProps} />);
-      const modelSelect = screen.getByDisplayValue('gemini-3-flash-preview');
+      const modelSelect = screen.getByDisplayValue('gemini-2.5-flash');
       expect(modelSelect).toBeInTheDocument();
     });
 
     it('should render available models for current provider', () => {
       render(<SmartSortTab {...defaultProps} />);
-      const modelSelect = screen.getByDisplayValue('gemini-3-flash-preview');
+      const modelSelect = screen.getByDisplayValue('gemini-2.5-flash');
       const options = modelSelect.querySelectorAll('option');
 
       expect(options).toHaveLength(AVAILABLE_MODELS[LLMProvider.GEMINI].length);
-      expect(options[0]).toHaveTextContent('gemini-3-flash-preview');
-      expect(options[1]).toHaveTextContent('gemini-3-pro-preview');
+      expect(options[0]).toHaveTextContent('gemini-2.5-flash');
+      expect(options[1]).toHaveTextContent('gemini-2.5-pro');
     });
 
     it('should render API key input with correct placeholder for Gemini', () => {
@@ -69,7 +69,7 @@ describe('SmartSortTab', () => {
     it('should render API key input with correct placeholder for OpenAI', () => {
       const openAISettings: AISettings = {
         provider: LLMProvider.OPENAI,
-        model: 'gpt-4o',
+        model: 'gpt-4.1',
         apiKey: '',
       };
       render(<SmartSortTab aiSettings={openAISettings} onSave={vi.fn()} />);
@@ -87,7 +87,7 @@ describe('SmartSortTab', () => {
     it('should render non-Gemini help text for other providers', () => {
       const openAISettings: AISettings = {
         provider: LLMProvider.OPENAI,
-        model: 'gpt-4o',
+        model: 'gpt-4.1',
         apiKey: '',
       };
       render(<SmartSortTab aiSettings={openAISettings} onSave={vi.fn()} />);
@@ -132,7 +132,7 @@ describe('SmartSortTab', () => {
     it('should reset API key when provider changes', () => {
       const settingsWithKey: AISettings = {
         provider: LLMProvider.GEMINI,
-        model: 'gemini-3-flash-preview',
+        model: 'gemini-2.5-flash',
         apiKey: 'my-api-key-123',
       };
       render(<SmartSortTab aiSettings={settingsWithKey} onSave={vi.fn()} />);
@@ -152,7 +152,7 @@ describe('SmartSortTab', () => {
       const providerSelect = screen.getByDisplayValue(LLMProvider.GEMINI);
 
       // Initially showing Gemini models
-      expect(screen.getByDisplayValue('gemini-3-flash-preview')).toBeInTheDocument();
+      expect(screen.getByDisplayValue('gemini-2.5-flash')).toBeInTheDocument();
 
       // Change to Anthropic
       fireEvent.change(providerSelect, { target: { value: LLMProvider.ANTHROPIC } });
@@ -187,18 +187,18 @@ describe('SmartSortTab', () => {
   describe('Model Selection', () => {
     it('should change model when selected', () => {
       render(<SmartSortTab {...defaultProps} />);
-      const modelSelect = screen.getByDisplayValue('gemini-3-flash-preview');
+      const modelSelect = screen.getByDisplayValue('gemini-2.5-flash');
 
-      fireEvent.change(modelSelect, { target: { value: 'gemini-3-pro-preview' } });
+      fireEvent.change(modelSelect, { target: { value: 'gemini-2.5-pro' } });
 
-      expect(modelSelect).toHaveValue('gemini-3-pro-preview');
+      expect(modelSelect).toHaveValue('gemini-2.5-pro');
     });
 
     it('should maintain provider when model changes', () => {
       render(<SmartSortTab {...defaultProps} />);
-      const modelSelect = screen.getByDisplayValue('gemini-3-flash-preview');
+      const modelSelect = screen.getByDisplayValue('gemini-2.5-flash');
 
-      fireEvent.change(modelSelect, { target: { value: 'gemini-3-pro-preview' } });
+      fireEvent.change(modelSelect, { target: { value: 'gemini-2.5-pro' } });
 
       const providerSelect = screen.getByDisplayValue(LLMProvider.GEMINI);
       expect(providerSelect).toHaveValue(LLMProvider.GEMINI);
@@ -207,34 +207,34 @@ describe('SmartSortTab', () => {
     it('should show correct models for OpenAI provider', () => {
       const openAISettings: AISettings = {
         provider: LLMProvider.OPENAI,
-        model: 'gpt-4o',
+        model: 'gpt-4.1',
         apiKey: '',
       };
       render(<SmartSortTab aiSettings={openAISettings} onSave={vi.fn()} />);
 
-      const modelSelect = screen.getByDisplayValue('gpt-4o');
+      const modelSelect = screen.getByDisplayValue('gpt-4.1');
       const options = modelSelect.querySelectorAll('option');
 
       expect(options).toHaveLength(AVAILABLE_MODELS[LLMProvider.OPENAI].length);
-      expect(options[0]).toHaveTextContent('gpt-4o');
-      expect(options[1]).toHaveTextContent('gpt-4o-mini');
-      expect(options[2]).toHaveTextContent('gpt-4-turbo');
+      expect(options[0]).toHaveTextContent('gpt-4.1');
+      expect(options[1]).toHaveTextContent('gpt-4.1-mini');
+      expect(options[2]).toHaveTextContent('gpt-4.1-nano');
     });
 
     it('should show correct models for Anthropic provider', () => {
       const anthropicSettings: AISettings = {
         provider: LLMProvider.ANTHROPIC,
-        model: 'claude-3-5-sonnet-20240620',
+        model: 'claude-sonnet-4-6',
         apiKey: '',
       };
       render(<SmartSortTab aiSettings={anthropicSettings} onSave={vi.fn()} />);
 
-      const modelSelect = screen.getByDisplayValue('claude-3-5-sonnet-20240620');
+      const modelSelect = screen.getByDisplayValue('claude-sonnet-4-6');
       const options = modelSelect.querySelectorAll('option');
 
       expect(options).toHaveLength(AVAILABLE_MODELS[LLMProvider.ANTHROPIC].length);
-      expect(options[0]).toHaveTextContent('claude-3-5-sonnet-20240620');
-      expect(options[1]).toHaveTextContent('claude-3-haiku-20240307');
+      expect(options[0]).toHaveTextContent('claude-sonnet-4-6');
+      expect(options[1]).toHaveTextContent('claude-haiku-4-5');
     });
   });
 
@@ -251,7 +251,7 @@ describe('SmartSortTab', () => {
     it('should display existing API key value', () => {
       const settingsWithKey: AISettings = {
         provider: LLMProvider.GEMINI,
-        model: 'gemini-3-flash-preview',
+        model: 'gemini-2.5-flash',
         apiKey: 'existing-key-789',
       };
       render(<SmartSortTab aiSettings={settingsWithKey} onSave={vi.fn()} />);
@@ -289,7 +289,7 @@ describe('SmartSortTab', () => {
       fireEvent.change(providerSelect, { target: { value: LLMProvider.OPENAI } });
 
       const modelSelect = screen.getByDisplayValue(AVAILABLE_MODELS[LLMProvider.OPENAI][0]);
-      fireEvent.change(modelSelect, { target: { value: 'gpt-4o-mini' } });
+      fireEvent.change(modelSelect, { target: { value: 'gpt-4.1-mini' } });
 
       const apiKeyInput = screen.getByPlaceholderText('sk-...');
       fireEvent.change(apiKeyInput, { target: { value: 'sk-test-key' } });
@@ -300,7 +300,7 @@ describe('SmartSortTab', () => {
 
       expect(onSave).toHaveBeenCalledWith({
         provider: LLMProvider.OPENAI,
-        model: 'gpt-4o-mini',
+        model: 'gpt-4.1-mini',
         apiKey: 'sk-test-key',
       });
     });
@@ -326,21 +326,21 @@ describe('SmartSortTab', () => {
       const onSave = vi.fn();
       const settingsWithKey: AISettings = {
         provider: LLMProvider.GEMINI,
-        model: 'gemini-3-flash-preview',
+        model: 'gemini-2.5-flash',
         apiKey: 'my-key-123',
       };
       render(<SmartSortTab aiSettings={settingsWithKey} onSave={onSave} />);
 
       // Only change model
-      const modelSelect = screen.getByDisplayValue('gemini-3-flash-preview');
-      fireEvent.change(modelSelect, { target: { value: 'gemini-3-pro-preview' } });
+      const modelSelect = screen.getByDisplayValue('gemini-2.5-flash');
+      fireEvent.change(modelSelect, { target: { value: 'gemini-2.5-pro' } });
 
       const saveButton = screen.getByText('Einstellungen speichern');
       fireEvent.click(saveButton);
 
       expect(onSave).toHaveBeenCalledWith({
         provider: LLMProvider.GEMINI,
-        model: 'gemini-3-pro-preview',
+        model: 'gemini-2.5-pro',
         apiKey: 'my-key-123', // Preserved
       });
     });
@@ -351,18 +351,18 @@ describe('SmartSortTab', () => {
       const { rerender } = render(<SmartSortTab {...defaultProps} />);
 
       expect(screen.getByDisplayValue(LLMProvider.GEMINI)).toBeInTheDocument();
-      expect(screen.getByDisplayValue('gemini-3-flash-preview')).toBeInTheDocument();
+      expect(screen.getByDisplayValue('gemini-2.5-flash')).toBeInTheDocument();
 
       // Update props
       const newSettings: AISettings = {
         provider: LLMProvider.OPENAI,
-        model: 'gpt-4o',
+        model: 'gpt-4.1',
         apiKey: 'new-key',
       };
       rerender(<SmartSortTab aiSettings={newSettings} onSave={vi.fn()} />);
 
       expect(screen.getByDisplayValue(LLMProvider.OPENAI)).toBeInTheDocument();
-      expect(screen.getByDisplayValue('gpt-4o')).toBeInTheDocument();
+      expect(screen.getByDisplayValue('gpt-4.1')).toBeInTheDocument();
       expect(screen.getByDisplayValue('new-key')).toBeInTheDocument();
     });
 
@@ -377,7 +377,7 @@ describe('SmartSortTab', () => {
       // Update props (simulating external change)
       const newSettings: AISettings = {
         provider: LLMProvider.GEMINI,
-        model: 'gemini-3-flash-preview',
+        model: 'gemini-2.5-flash',
         apiKey: 'external-key',
       };
       rerender(<SmartSortTab aiSettings={newSettings} onSave={vi.fn()} />);
@@ -411,7 +411,7 @@ describe('SmartSortTab', () => {
       fireEvent.change(providerSelect, { target: { value: LLMProvider.GEMINI } });
 
       expect(providerSelect).toHaveValue(LLMProvider.GEMINI);
-      expect(screen.getByDisplayValue('gemini-3-flash-preview')).toBeInTheDocument();
+      expect(screen.getByDisplayValue('gemini-2.5-flash')).toBeInTheDocument();
     });
 
     it('should handle special characters in API key', () => {

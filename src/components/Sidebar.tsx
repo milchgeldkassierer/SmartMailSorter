@@ -14,6 +14,7 @@ import {
   Archive,
   Clock,
   Star,
+  Filter,
 } from './Icon';
 import {
   ImapAccount,
@@ -24,6 +25,7 @@ import {
   FLAGGED_FOLDER,
   FolderTranslationKey,
   CategoryTranslationKey,
+  SavedFilter,
 } from '../types';
 import { formatTimeAgo } from '../utils/formatTimeAgo';
 import { formatNumber } from '../utils/formatLocale';
@@ -52,6 +54,12 @@ interface SidebarProps {
   // Accessibility: move selected emails via context menu
   selectedEmailCount?: number;
   onMoveSelectedToCategory?: (targetCategory: string, targetType: 'folder' | 'smart') => void;
+  // Saved Filters
+  savedFilters?: SavedFilter[];
+  onExecuteFilter?: (query: string) => void;
+  onCreateFilter?: () => void;
+  onEditFilter?: (filter: SavedFilter) => void;
+  onDeleteFilter?: (filterId: string) => void;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({
@@ -73,12 +81,20 @@ const Sidebar: React.FC<SidebarProps> = ({
   onCategoryDragLeave,
   selectedEmailCount,
   onMoveSelectedToCategory,
+  savedFilters = [],
+  onExecuteFilter,
+  onCreateFilter,
+  onEditFilter,
+  onDeleteFilter,
 }) => {
   const { t } = useTranslation();
   const [isAdding, setIsAdding] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; category: string } | null>(null);
+  const [filterContextMenu, setFilterContextMenu] = useState<{ x: number; y: number; filter: SavedFilter } | null>(
+    null
+  );
   const dialog = useDialogContext();
 
   const activeAccount = accounts.find((a) => a.id === activeAccountId) || accounts[0];
@@ -221,9 +237,17 @@ const Sidebar: React.FC<SidebarProps> = ({
     setContextMenu({ x: e.clientX, y: e.clientY, category });
   };
 
+  const handleFilterContextMenu = (e: React.MouseEvent, filter: SavedFilter) => {
+    e.preventDefault();
+    setFilterContextMenu({ x: e.clientX, y: e.clientY, filter });
+  };
+
   // Close context menu on global click
   React.useEffect(() => {
-    const close = () => setContextMenu(null);
+    const close = () => {
+      setContextMenu(null);
+      setFilterContextMenu(null);
+    };
     window.addEventListener('click', close);
     return () => window.removeEventListener('click', close);
   }, []);
@@ -459,6 +483,42 @@ const Sidebar: React.FC<SidebarProps> = ({
             </form>
           )}
         </div>
+
+        {/* Saved Filters Section */}
+        {onCreateFilter && (
+          <div>
+            <div className="px-3 mb-2 flex items-center justify-between">
+              <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                {t('sidebar.savedFilters')}
+              </span>
+              <button
+                onClick={onCreateFilter}
+                className="text-slate-400 hover:text-blue-600 transition-colors"
+                title={t('sidebar.createNewFilter')}
+              >
+                <PlusCircle className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-1">
+              {savedFilters.map((filter) => (
+                <button
+                  type="button"
+                  key={filter.id}
+                  onClick={() => onExecuteFilter?.(filter.query)}
+                  onContextMenu={(e) => handleFilterContextMenu(e, filter)}
+                  className="w-full flex items-center justify-between px-3 py-2 mx-2 rounded-md cursor-pointer transition-colors group hover:bg-slate-800 text-slate-400 hover:text-slate-200"
+                  aria-label={filter.name}
+                >
+                  <div className="flex items-center gap-3 overflow-hidden">
+                    <Filter size={18} className="text-slate-500 group-hover:text-slate-300" />
+                    <span className="truncate text-sm font-medium">{filter.name}</span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Context Menu Portal */}
@@ -550,6 +610,52 @@ const Sidebar: React.FC<SidebarProps> = ({
             className="w-full text-left px-3 py-2 text-sm text-slate-300 hover:bg-slate-700 flex items-center gap-2"
           >
             <div className="w-4 h-4" /> <span>{t('sidebar.changeIcon')}</span>
+          </button>
+        </div>
+      )}
+
+      {/* Filter Context Menu Portal */}
+      {filterContextMenu && (
+        <div
+          className="fixed bg-slate-800 border border-slate-700 shadow-xl rounded-lg py-1 z-50 min-w-[150px] animate-in fade-in zoom-in-95 duration-100"
+          style={{ left: filterContextMenu.x, top: filterContextMenu.y }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="px-3 py-1.5 text-xs font-semibold text-slate-400 border-b border-slate-700 mb-1">
+            {filterContextMenu.filter.name}
+          </div>
+
+          <button
+            onClick={() => {
+              const filter = filterContextMenu.filter;
+              setFilterContextMenu(null);
+              onEditFilter?.(filter);
+            }}
+            className="w-full text-left px-3 py-2 text-sm text-slate-300 hover:bg-slate-700 flex items-center gap-2"
+          >
+            <Filter className="w-4 h-4" /> <span>{t('common.edit')}</span>
+          </button>
+
+          <div className="h-px bg-slate-700 my-1" />
+
+          <button
+            onClick={async () => {
+              const filter = filterContextMenu.filter;
+              setFilterContextMenu(null);
+              const confirmed = await dialog.confirm({
+                title: t('sidebar.deleteFilter'),
+                message: t('sidebar.deleteFilterConfirm', { name: filter.name }),
+                confirmText: t('common.delete'),
+                cancelText: t('common.cancel'),
+                variant: 'danger',
+              });
+              if (confirmed) {
+                onDeleteFilter?.(filter.id);
+              }
+            }}
+            className="w-full text-left px-3 py-2 text-sm text-red-400 hover:bg-red-900/30 flex items-center gap-2"
+          >
+            <Trash2 className="w-4 h-4" /> <span>{t('common.delete')}</span>
           </button>
         </div>
       )}

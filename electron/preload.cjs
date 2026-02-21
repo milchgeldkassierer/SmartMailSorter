@@ -29,9 +29,19 @@ contextBridge.exposeInMainWorld('electron', {
   deleteSmartCategory: (categoryName) => ipcRenderer.invoke('delete-smart-category', categoryName),
   renameSmartCategory: (data) => ipcRenderer.invoke('rename-smart-category', data),
 
+  // Advanced Search
+  searchEmails: (query, accountId) => ipcRenderer.invoke('search-emails', query, accountId),
+  getSavedFilters: () => ipcRenderer.invoke('get-filters'),
+  saveFilter: (id, name, query) => ipcRenderer.invoke('save-filter', id, name, query),
+  deleteFilter: (id) => ipcRenderer.invoke('delete-filter', id),
+  getSearchHistory: () => ipcRenderer.invoke('get-search-history'),
+  addSearchHistory: (id, query) => ipcRenderer.invoke('save-search-history', id, query),
+  clearSearchHistory: () => ipcRenderer.invoke('clear-search-history'),
+
   // AI Settings
   saveAISettings: (settings) => ipcRenderer.invoke('ai-settings-save', settings),
   loadAISettings: () => ipcRenderer.invoke('ai-settings-load'),
+  parseNaturalLanguageQuery: (query) => ipcRenderer.invoke('parse-natural-language-query', query),
 
   // Notification Settings (Global + Per-Account)
   loadNotificationSettings: () => ipcRenderer.invoke('load-notification-settings'),

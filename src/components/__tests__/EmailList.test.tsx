@@ -720,7 +720,7 @@ describe('EmailList', () => {
 
       render(<EmailList {...defaultProps} emails={[specialCharsEmail]} />);
 
-      // React escapes HTML by default
+      // highlightMatches HTML-escapes the text, so the script tag is rendered as text
       expect(screen.getByText('<script>alert("XSS")</script>')).toBeInTheDocument();
     });
 

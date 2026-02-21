@@ -8,6 +8,7 @@ import {
   FLAGGED_FOLDER,
   SYSTEM_FOLDERS,
   TRASH_FOLDER,
+  SavedFilter,
 } from './types';
 import Sidebar from './components/Sidebar';
 import EmailList from './components/EmailList';
@@ -23,10 +24,12 @@ import { useBatchOperations } from './hooks/useBatchOperations';
 import { useSync } from './hooks/useSync';
 import { useDragAndDrop } from './hooks/useDragAndDrop';
 import { useUndoStack } from './hooks/useUndoStack';
+import { useSavedFilters } from './hooks/useSavedFilters';
 import { useDialogContext } from './contexts/DialogContext';
 import TopBar from './components/TopBar';
 import BatchActionBar from './components/BatchActionBar';
 import ProgressBar from './components/ProgressBar';
+import SavedFilterDialog from './components/SavedFilterDialog';
 
 const App: React.FC = () => {
   const { t, ready } = useTranslation();
@@ -35,6 +38,12 @@ const App: React.FC = () => {
   const { aiSettings, setAiSettings } = useAISettings();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const dialog = useDialogContext();
+
+  // Saved Filters
+  const { saveFilter, deleteFilter } = useSavedFilters();
+  const [savedFilters, setSavedFilters] = useState<SavedFilter[]>([]);
+  const [filterDialogOpen, setFilterDialogOpen] = useState(false);
+  const [editingFilter, setEditingFilter] = useState<{ id: string; name: string; query: string } | null>(null);
 
   const {
     setData,
@@ -411,6 +420,17 @@ const App: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [setAccounts, setActiveAccountId, setData, dialog.alert]);
 
+  // Load saved filters
+  useEffect(() => {
+    if (!window.electron) return;
+    window.electron
+      .getSavedFilters()
+      .then(setSavedFilters)
+      .catch((err) => {
+        console.error('Failed to load saved filters:', err);
+      });
+  }, []);
+
   // Handle notification clicks
   useEffect(() => {
     if (!window.electron) return;
@@ -586,6 +606,29 @@ const App: React.FC = () => {
         dropTargetCategory={dropTargetCategory}
         onCategoryDragOver={onCategoryDragOver}
         onCategoryDragLeave={onCategoryDragLeave}
+        savedFilters={savedFilters}
+        onExecuteFilter={(query) => setSearchTerm(query)}
+        onCreateFilter={() => {
+          setEditingFilter(null);
+          setFilterDialogOpen(true);
+        }}
+        onEditFilter={(filter) => {
+          setEditingFilter(filter);
+          setFilterDialogOpen(true);
+        }}
+        onDeleteFilter={async (filterId) => {
+          try {
+            await deleteFilter(filterId);
+            setSavedFilters((prev) => prev.filter((f) => f.id !== filterId));
+          } catch (error) {
+            console.error('Failed to delete filter:', error);
+            await dialog.alert({
+              title: t('common.error'),
+              message: t('app.filterDeleteError', 'Failed to delete filter'),
+              variant: 'danger',
+            });
+          }
+        }}
         onDropEmails={async (emailIds, targetCategory, targetType) => {
           if (targetType === 'smart' && targetCategory === '__new_category__') {
             const name = await dialog.prompt({
@@ -665,8 +708,9 @@ const App: React.FC = () => {
             onDragStart={onEmailDragStart}
             onDragEnd={onDragEnd}
             draggedEmailIds={draggedEmailIds}
+            searchQuery={searchTerm}
           />
-          <EmailView email={selectedEmail} />
+          <EmailView email={selectedEmail} searchQuery={searchTerm} />
         </div>
 
         {undoToast && (
@@ -687,6 +731,35 @@ const App: React.FC = () => {
             </button>
           </div>
         )}
+
+        <SavedFilterDialog
+          isOpen={filterDialogOpen}
+          onClose={() => {
+            setFilterDialogOpen(false);
+            setEditingFilter(null);
+          }}
+          onSave={async (name, query) => {
+            try {
+              const id = editingFilter?.id || crypto.randomUUID();
+              await saveFilter(id, name, query);
+              // Refresh filters list
+              if (window.electron) {
+                const filters = await window.electron.getSavedFilters();
+                setSavedFilters(filters);
+              }
+            } catch (error) {
+              console.error('Failed to save filter:', error);
+              await dialog.alert({
+                title: t('common.error'),
+                message: t('app.filterSaveError', 'Failed to save filter'),
+                variant: 'danger',
+              });
+            }
+          }}
+          initialName={editingFilter?.name}
+          initialQuery={editingFilter?.query || searchTerm}
+          mode={editingFilter ? 'edit' : 'create'}
+        />
 
         <SettingsModal
           isOpen={isSettingsOpen}

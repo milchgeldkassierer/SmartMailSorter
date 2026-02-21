@@ -40,7 +40,11 @@
     "iconSelectionComingSoon": "Die Icon-Auswahl wird bald verfügbar sein!",
     "changeIcon": "Icon ändern",
     "createNewCategory": "Neue Kategorie erstellen",
-    "moveSelectedHere": "Ausgewählte hierher verschieben ({{count}})"
+    "moveSelectedHere": "Ausgewählte hierher verschieben ({{count}})",
+    "savedFilters": "Gespeicherte Filter",
+    "createNewFilter": "Neuen Filter erstellen",
+    "deleteFilter": "Filter löschen",
+    "deleteFilterConfirm": "Möchten Sie den Filter '{{name}}' wirklich löschen?"
   },
   "settingsModal": {
     "title": "Einstellungen",
@@ -142,7 +146,19 @@
     "body": "Inhalt (Body)",
     "logic": "Logik",
     "and": "UND (Alle)",
-    "or": "ODER"
+    "or": "ODER",
+    "recentSearches": "Letzte Suchen",
+    "searchOperators": "Suchoperatoren",
+    "aiConvert": "KI: In Suchoperatoren umwandeln",
+    "operators": {
+      "from": "Nach Absender filtern",
+      "subject": "Im Betreff suchen",
+      "category": "Nach Kategorie filtern",
+      "hasAttachment": "E-Mails mit Anhängen",
+      "before": "E-Mails vor Datum",
+      "after": "E-Mails nach Datum"
+    },
+    "clearSearch": "Suche löschen"
   },
   "emailList": {
     "noEmails": "Keine Emails",
@@ -279,5 +295,20 @@
     "createFolders": "Anlegen",
     "sortErrorTitle": "Fehler beim Sortieren",
     "sortErrorMessage": "Ein Fehler ist beim Sortieren aufgetreten: {{error}}"
+  },
+  "savedFilterDialog": {
+    "createTitle": "Suchfilter speichern",
+    "editTitle": "Suchfilter bearbeiten",
+    "nameLabel": "Filtername",
+    "namePlaceholder": "z.B. Amazon Rechnungen",
+    "queryLabel": "Suchanfrage",
+    "queryPlaceholder": "z.B. from:amazon category:Rechnungen",
+    "helpText": "Verwenden Sie Suchoperatoren wie from:, subject:, category:, has:attachment, before:, after:",
+    "saveButton": "Filter speichern",
+    "updateButton": "Filter aktualisieren",
+    "errors": {
+      "nameRequired": "Filtername ist erforderlich",
+      "queryRequired": "Suchanfrage ist erforderlich"
+    }
   }
 }

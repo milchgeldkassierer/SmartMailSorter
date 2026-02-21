@@ -32,7 +32,7 @@ describe('BatchActionBar', () => {
 
   const defaultAISettings: AISettings = {
     provider: LLMProvider.GEMINI,
-    model: 'gemini-3-flash-preview',
+    model: 'gemini-2.5-flash',
     apiKey: '',
   };
 

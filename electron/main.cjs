@@ -25,6 +25,7 @@ let autoSyncTimer = null;
 let autoSyncDebounceTimer = null;
 let isSyncing = false;
 
+/** Start the periodic auto-sync timer for all accounts. */
 function startAutoSync(intervalMinutes) {
   stopAutoSync();
   if (!intervalMinutes || intervalMinutes <= 0) {
@@ -40,6 +41,7 @@ function startAutoSync(intervalMinutes) {
   }, intervalMs);
 }
 
+/** Stop the auto-sync timer if running. */
 function stopAutoSync() {
   if (autoSyncTimer) {
     clearInterval(autoSyncTimer);
@@ -48,6 +50,7 @@ function stopAutoSync() {
   }
 }
 
+/** Run a single auto-sync cycle for all accounts with debounce protection. */
 async function runAutoSync() {
   if (isSyncing) {
     logger.info('[AutoSync] Sync already in progress, skipping');
@@ -80,6 +83,7 @@ async function runAutoSync() {
   }
 }
 
+/** Create the main application BrowserWindow with IPC handlers. */
 function createWindow() {
   const win = new BrowserWindow({
     width: 1600,
@@ -396,6 +400,19 @@ app.whenReady().then(() => {
     return db.renameSmartCategory(oldName, newName);
   });
 
+  // Advanced Search IPC handlers
+  ipcMain.handle('search-emails', (event, query, accountId) => {
+    return db.searchEmails(query, accountId);
+  });
+  ipcMain.handle('get-filters', () => db.getSavedFilters());
+  ipcMain.handle('save-filter', (event, id, name, query) => {
+    return db.upsertSavedFilter(id, name, query);
+  });
+  ipcMain.handle('delete-filter', (event, id) => db.deleteSavedFilter(id));
+  ipcMain.handle('get-search-history', () => db.getSearchHistory());
+  ipcMain.handle('save-search-history', (event, id, query) => db.addSearchHistory(id, query));
+  ipcMain.handle('clear-search-history', () => db.clearSearchHistory());
+
   // AI Settings safeStorage IPC handlers
   const AI_SETTINGS_FILE = path.join(app.getPath('userData'), 'ai-settings.encrypted');
   const AI_SETTINGS_FILE_PLAINTEXT = path.join(app.getPath('userData'), 'ai-settings.json');
@@ -482,6 +499,191 @@ app.whenReady().then(() => {
     }
   });
 
+  // --- AI Provider Helpers ---
+
+  /** Fetch with AbortController timeout to prevent hung UI */
+  function fetchWithTimeout(url, options, timeoutMs = 15000) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    return fetch(url, { ...options, signal: controller.signal })
+      .catch((err) => {
+        if (err.name === 'AbortError') throw new Error(`Request timed out after ${timeoutMs / 1000}s`);
+        throw err;
+      })
+      .finally(() => clearTimeout(timer));
+  }
+
+  /** Load AI settings from encrypted or plaintext file */
+  function loadAISettings() {
+    const hasEncryptedFile = fs.existsSync(AI_SETTINGS_FILE);
+    const hasPlaintextFile = fs.existsSync(AI_SETTINGS_FILE_PLAINTEXT);
+
+    if (hasEncryptedFile && safeStorage.isEncryptionAvailable()) {
+      const encrypted = fs.readFileSync(AI_SETTINGS_FILE);
+      const decrypted = safeStorage.decryptString(encrypted);
+      return JSON.parse(decrypted);
+    }
+    if (hasPlaintextFile) {
+      return JSON.parse(fs.readFileSync(AI_SETTINGS_FILE_PLAINTEXT, 'utf8'));
+    }
+    return null;
+  }
+
+  /** Clean markdown code fences from AI response text */
+  function cleanMarkdown(text) {
+    return text.replace(/```json/g, '').replace(/```/g, '').trim();
+  }
+
+  /** Call Google Gemini API and return parsed JSON */
+  async function callGeminiApi(settings, systemInstruction, userPrompt) {
+    if (!/^[a-zA-Z0-9._-]+$/.test(settings.model)) throw new Error('Invalid model name');
+    const response = await fetchWithTimeout(
+      `https://generativelanguage.googleapis.com/v1beta/models/${settings.model}:generateContent`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': settings.apiKey },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: userPrompt }] }],
+          systemInstruction: { parts: [{ text: systemInstruction }] },
+          generationConfig: {
+            responseMimeType: 'application/json',
+            responseSchema: {
+              type: 'object',
+              properties: { query: { type: 'string', description: 'Formatted search query with operators' } },
+              required: ['query'],
+            },
+          },
+        }),
+      }
+    );
+    if (!response.ok) {
+      const errorBody = await response.text();
+      throw new Error(`Gemini API error (${response.status}): ${errorBody.slice(0, 200)}`);
+    }
+    const data = await response.json();
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!text) throw new Error('Failed to extract text from Gemini response');
+    return JSON.parse(cleanMarkdown(text));
+  }
+
+  /** Call OpenAI API and return parsed JSON */
+  async function callOpenAIApi(settings, systemInstruction, userPrompt) {
+    const response = await fetchWithTimeout('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${settings.apiKey}` },
+      body: JSON.stringify({
+        model: settings.model,
+        messages: [
+          { role: 'system', content: systemInstruction },
+          { role: 'user', content: userPrompt },
+        ],
+        response_format: { type: 'json_object' },
+      }),
+    });
+    if (!response.ok) {
+      const errorBody = await response.text();
+      throw new Error(`OpenAI API error (${response.status}): ${errorBody.slice(0, 200)}`);
+    }
+    const data = await response.json();
+    const content = data.choices?.[0]?.message?.content;
+    if (!content) throw new Error('OpenAI returned empty response');
+    return JSON.parse(content);
+  }
+
+  /** Call Anthropic Claude API and return parsed JSON */
+  async function callAnthropicApi(settings, systemInstruction, userPrompt) {
+    const response = await fetchWithTimeout('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': settings.apiKey,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: settings.model,
+        max_tokens: 256,
+        system: systemInstruction,
+        messages: [{ role: 'user', content: userPrompt }],
+      }),
+    });
+    if (!response.ok) {
+      const errorBody = await response.text();
+      throw new Error(`Anthropic API error (${response.status}): ${errorBody.slice(0, 200)}`);
+    }
+    const data = await response.json();
+    const content = data.content?.[0]?.text;
+    if (!content) throw new Error('Anthropic returned empty response');
+    return JSON.parse(cleanMarkdown(content));
+  }
+
+  /** Route to the correct AI provider based on settings */
+  async function callAIProvider(settings, systemInstruction, userPrompt) {
+    const providerLower = settings.provider.toLowerCase();
+    if (providerLower.includes('gemini')) return callGeminiApi(settings, systemInstruction, userPrompt);
+    if (providerLower.includes('openai')) return callOpenAIApi(settings, systemInstruction, userPrompt);
+    if (providerLower.includes('anthropic')) return callAnthropicApi(settings, systemInstruction, userPrompt);
+    throw new Error(`Unknown AI provider: ${settings.provider}`);
+  }
+
+  // Natural Language Search IPC handler
+  ipcMain.handle('parse-natural-language-query', async (event, query) => {
+    try {
+      if (!query || typeof query !== 'string' || query.trim() === '') {
+        return '';
+      }
+      if (query.length > 500) {
+        throw new Error('Search query too long (max 500 characters)');
+      }
+
+      const settings = loadAISettings();
+      if (!settings || !settings.apiKey) {
+        throw new Error('AI settings not configured');
+      }
+
+      const systemInstruction = `Du bist ein Such-Query-Übersetzer für ein Email-System.
+
+Deine Aufgabe: Wandle natürlichsprachige deutsche Suchanfragen in strukturierte Such-Operatoren um.
+
+VERFÜGBARE OPERATOREN:
+- from:EMAIL_ODER_NAME - Suche nach Absender
+- subject:TEXT - Suche im Betreff
+- category:KATEGORIE - Suche in Kategorie (z.B. Rechnungen, Newsletter, Spam, Privat, Geschäftlich)
+- has:attachment - Nur Emails mit Anhängen
+- before:YYYY-MM-DD - Emails vor diesem Datum
+- after:YYYY-MM-DD - Emails nach diesem Datum
+
+REGELN:
+1. Erkenne die Absicht des Benutzers und wähle die passenden Operatoren
+2. Für Zeitangaben wie "letzter Monat", "diese Woche", berechne das entsprechende Datum (heute ist ${new Date().toISOString().split('T')[0]})
+3. Wenn keine Operatoren passen, gib den Suchtext als Freitext zurück
+4. Kombiniere mehrere Operatoren mit Leerzeichen
+5. Verwende keine Anführungszeichen um Werte, es sei denn der Wert enthält Leerzeichen
+
+BEISPIELE:
+- "Rechnungen von letztem Monat" → "category:Rechnungen after:2026-01-01"
+- "Emails von Amazon" → "from:amazon"
+- "Newsletter mit Anhängen" → "category:Newsletter has:attachment"
+- "Betreff Rechnung" → "subject:Rechnung"
+- "vor Januar 2026" → "before:2026-01-01"
+- "meeting notes" → "meeting notes" (kein Operator)
+
+Antworte NUR mit dem JSON-Objekt mit dem "query" Feld.`;
+
+      const userPrompt = `Wandle diese Suchanfrage um: "${query}"`;
+      const result = await callAIProvider(settings, systemInstruction, userPrompt);
+
+      if (result && typeof result === 'object' && 'query' in result) {
+        logger.info('[NL Search] Query converted successfully');
+        return result.query || '';
+      }
+
+      return '';
+    } catch (error) {
+      logger.error('[NL Search] Failed to parse natural language query:', error);
+      throw new Error('AI query conversion failed');
+    }
+  });
+
   // Notification Settings IPC handlers
   // Load notification settings (global + all accounts)
   ipcMain.handle('load-notification-settings', async () => {
@@ -552,6 +754,7 @@ app.whenReady().then(() => {
   // Auto-sync IPC handlers
   const MIN_SYNC_INTERVAL = 2;
   const MAX_SYNC_INTERVAL = 30;
+  /** Clamp sync interval to valid range (1-30 minutes). */
   function sanitizeSyncInterval(value) {
     const parsed = Math.round(Number(value));
     if (!Number.isFinite(parsed) || parsed <= 0) return 0;

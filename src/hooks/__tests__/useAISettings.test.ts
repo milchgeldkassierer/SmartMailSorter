@@ -17,19 +17,19 @@ const mockSaveAISettings = vi.fn();
 describe('useAISettings', () => {
   const mockGeminiSettings: AISettings = {
     provider: LLMProvider.GEMINI,
-    model: 'gemini-3-flash-preview',
+    model: 'gemini-2.5-flash',
     apiKey: 'test-gemini-key',
   };
 
   const mockOpenAISettings: AISettings = {
     provider: LLMProvider.OPENAI,
-    model: 'gpt-4o',
+    model: 'gpt-4.1',
     apiKey: 'test-openai-key',
   };
 
   const mockAnthropicSettings: AISettings = {
     provider: LLMProvider.ANTHROPIC,
-    model: 'claude-3-5-sonnet-20240620',
+    model: 'claude-sonnet-4-6',
     apiKey: 'test-anthropic-key',
   };
 
