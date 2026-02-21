@@ -19,6 +19,14 @@ interface OperatorSuggestion {
   example: string;
 }
 
+interface SearchHistoryItem {
+  query: string;
+  timestamp: number;
+}
+
+const SEARCH_HISTORY_KEY = 'smartmailsorter_search_history';
+const MAX_HISTORY_ITEMS = 10;
+
 const OPERATOR_SUGGESTIONS: OperatorSuggestion[] = [
   { operator: 'from:', description: 'Filter by sender email', example: 'from:amazon' },
   { operator: 'to:', description: 'Filter by recipient email', example: 'to:me@example.com' },
@@ -33,12 +41,28 @@ const SearchBar: React.FC<SearchBarProps> = ({ searchTerm, onSearchChange, confi
   const { t } = useTranslation();
   const [showFilters, setShowFilters] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const [filteredSuggestions, setFilteredSuggestions] = useState<OperatorSuggestion[]>([]);
+  const [searchHistory, setSearchHistory] = useState<SearchHistoryItem[]>([]);
   const filterRef = useRef<HTMLDivElement>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
+  const historyRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Close filter dropdown when clicking outside
+  // Load search history from localStorage on mount
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(SEARCH_HISTORY_KEY);
+      if (stored) {
+        const history = JSON.parse(stored) as SearchHistoryItem[];
+        setSearchHistory(history);
+      }
+    } catch (error) {
+      // Ignore localStorage errors
+    }
+  }, []);
+
+  // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (filterRef.current && !filterRef.current.contains(event.target as Node)) {
@@ -46,6 +70,9 @@ const SearchBar: React.FC<SearchBarProps> = ({ searchTerm, onSearchChange, confi
       }
       if (suggestionsRef.current && !suggestionsRef.current.contains(event.target as Node)) {
         setShowSuggestions(false);
+      }
+      if (historyRef.current && !historyRef.current.contains(event.target as Node)) {
+        setShowHistory(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -57,8 +84,12 @@ const SearchBar: React.FC<SearchBarProps> = ({ searchTerm, onSearchChange, confi
     if (!searchTerm) {
       setFilteredSuggestions([]);
       setShowSuggestions(false);
+      // Don't show history here - it's controlled by onFocus
       return;
     }
+
+    // Hide history when typing
+    setShowHistory(false);
 
     // Get the current word being typed (last word before cursor or after last space)
     const cursorPos = inputRef.current?.selectionStart || searchTerm.length;
@@ -88,6 +119,49 @@ const SearchBar: React.FC<SearchBarProps> = ({ searchTerm, onSearchChange, confi
       setShowSuggestions(false);
     }
   }, [searchTerm]);
+
+  const addToSearchHistory = (query: string) => {
+    if (!query.trim()) return;
+
+    try {
+      // Remove duplicates and add new search at the beginning
+      const newHistory = [
+        { query, timestamp: Date.now() },
+        ...searchHistory.filter((item) => item.query !== query),
+      ].slice(0, MAX_HISTORY_ITEMS);
+
+      setSearchHistory(newHistory);
+      localStorage.setItem(SEARCH_HISTORY_KEY, JSON.stringify(newHistory));
+    } catch (error) {
+      // Ignore localStorage errors
+    }
+  };
+
+  const handleSearchChange = (term: string) => {
+    onSearchChange(term);
+    // Add to history when search is executed (Enter key or manual trigger)
+    // We'll add to history on blur or when suggestions are selected
+  };
+
+  const handleHistoryClick = (query: string) => {
+    onSearchChange(query);
+    setShowHistory(false);
+    addToSearchHistory(query);
+    inputRef.current?.focus();
+  };
+
+  const handleInputFocus = () => {
+    // Show history only if search is empty and we have history
+    if (!searchTerm && searchHistory.length > 0) {
+      setShowHistory(true);
+    }
+  };
+
+  const handleInputKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && searchTerm) {
+      addToSearchHistory(searchTerm);
+    }
+  };
 
   const handleSuggestionClick = (operator: string) => {
     const cursorPos = inputRef.current?.selectionStart || searchTerm.length;
@@ -135,7 +209,9 @@ const SearchBar: React.FC<SearchBarProps> = ({ searchTerm, onSearchChange, confi
           ref={inputRef}
           type="text"
           value={searchTerm}
-          onChange={(e) => onSearchChange(e.target.value)}
+          onChange={(e) => handleSearchChange(e.target.value)}
+          onFocus={handleInputFocus}
+          onKeyDown={handleInputKeyDown}
           className="block w-full pl-10 pr-20 py-2 border border-slate-200 rounded-lg leading-5 bg-slate-50 text-slate-900 placeholder-slate-500 focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-100 focus:border-blue-400 sm:text-sm transition-all shadow-sm"
           placeholder={t('searchBar.placeholder')}
         />
@@ -160,6 +236,38 @@ const SearchBar: React.FC<SearchBarProps> = ({ searchTerm, onSearchChange, confi
           </button>
         </div>
       </div>
+
+      {/* Search History Dropdown */}
+      {showHistory && searchHistory.length > 0 && (
+        <div
+          ref={historyRef}
+          className="absolute top-full left-0 mt-2 w-full bg-white rounded-xl shadow-xl border border-slate-200 overflow-hidden z-50 animate-in fade-in slide-in-from-top-2"
+        >
+          <div className="p-2">
+            <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-2 py-1">
+              Recent Searches
+            </div>
+            <div className="space-y-1">
+              {searchHistory.map((item, index) => (
+                <button
+                  key={`${item.timestamp}-${index}`}
+                  onClick={() => handleHistoryClick(item.query)}
+                  className="w-full text-left px-3 py-2 rounded-lg hover:bg-blue-50 transition-colors group"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm text-slate-700 group-hover:text-slate-900 truncate">
+                      {item.query}
+                    </span>
+                    <span className="text-xs text-slate-400 group-hover:text-slate-500 whitespace-nowrap">
+                      {new Date(item.timestamp).toLocaleDateString()}
+                    </span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Operator Suggestions Dropdown */}
       {showSuggestions && filteredSuggestions.length > 0 && (
