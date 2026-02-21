@@ -15,7 +15,8 @@
     "unknown": "Unbekannt",
     "error": "Fehler",
     "settings": "Einstellungen",
-    "logout": "Logout"
+    "logout": "Logout",
+    "note": "Hinweis"
   },
   "sidebar": {
     "noAccount": "Kein Konto",
@@ -44,6 +45,7 @@
     "tabs": {
       "accounts": "IMAP Konten",
       "smartSort": "Smart Sort",
+      "notifications": "Benachrichtigungen",
       "general": "Allgemein"
     }
   },
@@ -86,6 +88,16 @@
     "geminiKeyInfo": "Für Google Gemini ist bereits ein Demo-Key hinterlegt. Du kannst ihn überschreiben.",
     "apiKeyInfo": "Der API Key wird nur lokal im Browser für die Simulation verwendet.",
     "saveSettings": "Einstellungen speichern"
+  },
+  "notificationsTab": {
+    "title": "Desktop-Benachrichtigungen",
+    "description": "Benachrichtigungen bei neuen E-Mails anzeigen",
+    "loading": "Einstellungen werden geladen...",
+    "perAccount": "Benachrichtigungen pro Konto",
+    "noAccounts": "Keine Konten verbunden",
+    "perCategory": "Benachrichtigungen pro Kategorie",
+    "perCategoryDescription": "Wähle aus, für welche Kategorien du Benachrichtigungen erhalten möchtest",
+    "infoNote": "Benachrichtigungen erscheinen nur bei neu eintreffenden E-Mails während der IMAP-Synchronisation. Stelle sicher, dass Benachrichtigungen in deinen Systemeinstellungen erlaubt sind."
   },
   "generalTab": {
     "language": "Sprache",

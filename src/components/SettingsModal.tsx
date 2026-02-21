@@ -71,7 +71,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
               }`}
             >
               <Bell className="w-3 h-3" />
-              Benachrichtigungen
+              {t('settingsModal.tabs.notifications')}
             </button>
             <button
               onClick={() => setActiveTab('general')}
