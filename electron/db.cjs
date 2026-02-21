@@ -3,6 +3,7 @@ const path = require('path');
 const { INBOX_FOLDER } = require('./folderConstants.cjs');
 const logger = require('./utils/logger.cjs');
 const { encryptPassword, decryptPassword } = require('./utils/security.cjs');
+const { parseSearchQuery, buildSearchWhereClause } = require('./utils/searchParser.cjs');
 // Electron import moved to lazy usage or injection
 
 const DEFAULT_DB_NAME = 'smartmail.db';
@@ -398,6 +399,34 @@ function getEmails(accountId) {
   }));
 }
 
+function searchEmails(query, accountId = null) {
+  // Parse the search query into structured parameters
+  const parsedQuery = parseSearchQuery(query);
+
+  // Build the WHERE clause from parsed parameters
+  const { where, params } = buildSearchWhereClause(parsedQuery, accountId);
+
+  // OPTIMIZATION: Do NOT select body or bodyHtml (too large for list view)
+  const sql = `
+    SELECT
+      id, accountId, sender, senderEmail, subject, date,
+      folder, smartCategory, isRead, isFlagged, hasAttachments,
+      aiSummary, aiReasoning, confidence, uid
+    FROM emails
+    ${where}
+    ORDER BY date DESC
+  `;
+
+  const emails = db.prepare(sql).all(...params);
+
+  return emails.map((email) => ({
+    ...email,
+    isRead: Boolean(email.isRead),
+    isFlagged: Boolean(email.isFlagged),
+    hasAttachments: Boolean(email.hasAttachments),
+  }));
+}
+
 function getEmailContent(emailId) {
   return db.prepare('SELECT body, bodyHtml FROM emails WHERE id = ?').get(emailId);
 }
@@ -711,6 +740,7 @@ module.exports = {
   addAccount,
   updateAccountSync,
   getEmails,
+  searchEmails,
   getEmailContent,
   saveEmail,
   deleteAccountDn,
