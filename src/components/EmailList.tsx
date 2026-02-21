@@ -4,6 +4,7 @@ import { Email } from '../types';
 import { BrainCircuit, Trash2, Mail, MailOpen, Star, Paperclip, Folder } from './Icon';
 import { formatEmailDate } from '../utils/formatEmailDate';
 import { displayName } from '../utils/displayName';
+import { highlightMatches } from '../utils/highlightMatches';
 
 interface EmailListProps {
   emails: Email[];
@@ -20,6 +21,7 @@ interface EmailListProps {
   onDragStart?: (emailId: string, selectedIds: Set<string>, event: React.DragEvent) => void;
   onDragEnd?: () => void;
   draggedEmailIds?: string[];
+  searchQuery?: string;
 }
 
 const EmailList: React.FC<EmailListProps> = ({
@@ -37,6 +39,7 @@ const EmailList: React.FC<EmailListProps> = ({
   onDragStart,
   onDragEnd,
   draggedEmailIds,
+  searchQuery,
 }) => {
   const { t } = useTranslation();
   const [visibleCount, setVisibleCount] = React.useState(50);
@@ -221,7 +224,12 @@ const EmailList: React.FC<EmailListProps> = ({
               <div
                 className={`text-sm mb-1 truncate pr-8 flex items-center gap-2 ${email.isRead ? 'text-slate-500' : 'text-slate-800 font-medium'}`}
               >
-                <span className="truncate">{email.subject}</span>
+                <span
+                  className="truncate"
+                  dangerouslySetInnerHTML={{
+                    __html: highlightMatches(email.subject, searchQuery),
+                  }}
+                />
                 {email.hasAttachments && <Paperclip className="w-3.5 h-3.5 text-blue-600 flex-shrink-0" />}
               </div>
 
