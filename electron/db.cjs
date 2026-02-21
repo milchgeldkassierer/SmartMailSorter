@@ -72,6 +72,7 @@ function createSchema() {
   `);
 
   // Create indexes for search performance
+  // Single-column indexes for basic filtering
   db.exec('CREATE INDEX IF NOT EXISTS idx_emails_accountId ON emails(accountId)');
   db.exec('CREATE INDEX IF NOT EXISTS idx_emails_senderEmail ON emails(senderEmail)');
   db.exec('CREATE INDEX IF NOT EXISTS idx_emails_subject ON emails(subject)');
@@ -79,7 +80,12 @@ function createSchema() {
   db.exec('CREATE INDEX IF NOT EXISTS idx_emails_folder ON emails(folder)');
   db.exec('CREATE INDEX IF NOT EXISTS idx_emails_smartCategory ON emails(smartCategory)');
   db.exec('CREATE INDEX IF NOT EXISTS idx_emails_hasAttachments ON emails(hasAttachments)');
+
+  // Composite indexes for common search patterns
+  // These optimize multi-condition queries by combining frequently-used filters
   db.exec('CREATE INDEX IF NOT EXISTS idx_emails_accountId_date ON emails(accountId, date)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_emails_accountId_category ON emails(accountId, smartCategory)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_emails_category_date ON emails(smartCategory, date)');
 
   // Create Attachments Table
   db.exec(`
@@ -407,6 +413,7 @@ function searchEmails(query, accountId = null) {
   const { where, params } = buildSearchWhereClause(parsedQuery, accountId);
 
   // OPTIMIZATION: Do NOT select body or bodyHtml (too large for list view)
+  // The body field is only needed for display, not for search results list
   const sql = `
     SELECT
       id, accountId, sender, senderEmail, subject, date,
@@ -417,7 +424,22 @@ function searchEmails(query, accountId = null) {
     ORDER BY date DESC
   `;
 
-  const emails = db.prepare(sql).all(...params);
+  // Performance monitoring for slow queries
+  const startTime = Date.now();
+  const stmt = db.prepare(sql);
+  const emails = stmt.all(...params);
+  const queryTime = Date.now() - startTime;
+
+  // Log slow queries (>100ms) in development
+  if (queryTime > 100) {
+    logger.warn(`Slow search query detected: ${queryTime}ms`, {
+      query,
+      accountId,
+      resultCount: emails.length,
+      sql,
+      params,
+    });
+  }
 
   return emails.map((email) => ({
     ...email,

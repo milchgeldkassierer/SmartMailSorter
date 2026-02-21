@@ -126,6 +126,20 @@ function parseSearchQuery(query) {
 
 /**
  * Build SQL WHERE clause from parsed search parameters
+ * PERFORMANCE: Conditions are ordered for optimal index usage:
+ * 1. Exact matches first (accountId, category, hasAttachments) - use indexes efficiently
+ * 2. Range queries (date) - use idx_emails_date
+ * 3. LIKE queries last (senderEmail, subject, body) - partial index usage
+ *
+ * Indexes used:
+ * - accountId = ? → idx_emails_accountId
+ * - smartCategory = ? → idx_emails_smartCategory
+ * - hasAttachments = 1 → idx_emails_hasAttachments
+ * - date < ?/> ? → idx_emails_date
+ * - senderEmail LIKE ? → idx_emails_senderEmail (partial, leading % limits optimization)
+ * - subject LIKE ? → idx_emails_subject (partial, leading % limits optimization)
+ * - body LIKE ? → Full scan (no index on body for size reasons)
+ *
  * @param {Object} parsedQuery - Output from parseSearchQuery
  * @param {string} accountId - Optional account ID to filter by
  * @returns {Object} { where: string, params: array }
@@ -134,16 +148,44 @@ function buildSearchWhereClause(parsedQuery, accountId = null) {
   const conditions = [];
   const params = [];
 
-  // Account filter
+  // OPTIMIZATION: Order conditions from most selective to least selective
+  // This helps SQLite's query planner optimize execution
+
+  // 1. Exact match filters (most selective) - use indexes efficiently
   if (accountId) {
     conditions.push('accountId = ?');
     params.push(accountId);
   }
 
-  // From filter
+  if (parsedQuery.category) {
+    conditions.push('smartCategory = ?');
+    params.push(parsedQuery.category);
+  }
+
+  if (parsedQuery.hasAttachment === true) {
+    conditions.push('hasAttachments = 1');
+  }
+
+  // 2. Range queries - use idx_emails_date for efficient filtering
+  if (parsedQuery.after) {
+    conditions.push('date > ?');
+    params.push(parsedQuery.after);
+  }
+
+  if (parsedQuery.before) {
+    conditions.push('date < ?');
+    params.push(parsedQuery.before);
+  }
+
+  // 3. LIKE queries - indexes help but leading % prevents full optimization
   if (parsedQuery.from) {
     conditions.push('senderEmail LIKE ?');
     params.push(`%${parsedQuery.from}%`);
+  }
+
+  if (parsedQuery.subject) {
+    conditions.push('subject LIKE ?');
+    params.push(`%${parsedQuery.subject}%`);
   }
 
   // To filter (note: we don't store recipient emails in the current schema)
@@ -154,35 +196,8 @@ function buildSearchWhereClause(parsedQuery, accountId = null) {
     // params.push(`%${parsedQuery.to}%`);
   }
 
-  // Subject filter
-  if (parsedQuery.subject) {
-    conditions.push('subject LIKE ?');
-    params.push(`%${parsedQuery.subject}%`);
-  }
-
-  // Category filter
-  if (parsedQuery.category) {
-    conditions.push('smartCategory = ?');
-    params.push(parsedQuery.category);
-  }
-
-  // Has attachment filter
-  if (parsedQuery.hasAttachment === true) {
-    conditions.push('hasAttachments = 1');
-  }
-
-  // Date range filters
-  if (parsedQuery.before) {
-    conditions.push('date < ?');
-    params.push(parsedQuery.before);
-  }
-
-  if (parsedQuery.after) {
-    conditions.push('date > ?');
-    params.push(parsedQuery.after);
-  }
-
-  // Free text search (search in subject and body)
+  // 4. Free text search (least selective, requires scanning body field)
+  // Note: body is not indexed due to size, so this will be slowest
   if (parsedQuery.freeText) {
     conditions.push('(subject LIKE ? OR body LIKE ?)');
     params.push(`%${parsedQuery.freeText}%`, `%${parsedQuery.freeText}%`);
