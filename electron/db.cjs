@@ -22,7 +22,7 @@ function createSchema() {
       imapHost TEXT,
       imapPort INTEGER,
       username TEXT,
-      password TEXT, -- Note: In a real production app, use safeStorage (Electron)
+      password TEXT, -- Encrypted using Electron safeStorage
       color TEXT,
       lastSyncUid INTEGER DEFAULT 0,
       storageUsed INTEGER DEFAULT 0,
@@ -899,6 +899,17 @@ module.exports = {
   getSearchHistory,
   addSearchHistory,
   clearSearchHistory,
+
+  // Test Helper Methods - only exposed in test environment
+  ...(process.env.VITEST || process.env.NODE_ENV === 'test'
+    ? {
+        _getRawPasswordForTesting: (id) => {
+          const stmt = db.prepare('SELECT password FROM accounts WHERE id = ?');
+          const result = stmt.get(id);
+          return result ? result.password : null;
+        },
+      }
+    : {}),
 };
 
 /** Migrate emails and categories from one folder name to another (transactional). */

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import SavedFilterDialog from '../SavedFilterDialog';
 
 describe('SavedFilterDialog', () => {
@@ -105,7 +105,7 @@ describe('SavedFilterDialog', () => {
       expect(defaultProps.onSave).not.toHaveBeenCalled();
     });
 
-    it('should call onSave with trimmed values when form is valid', () => {
+    it('should call onSave with trimmed values when form is valid', async () => {
       render(<SavedFilterDialog {...defaultProps} />);
       const nameInput = screen.getByLabelText('Filtername');
       const queryInput = screen.getByLabelText('Suchanfrage');
@@ -115,8 +115,10 @@ describe('SavedFilterDialog', () => {
       fireEvent.change(queryInput, { target: { value: '  from:amazon  ' } });
       fireEvent.click(saveButton);
 
-      expect(defaultProps.onSave).toHaveBeenCalledWith('Test Filter', 'from:amazon');
-      expect(defaultProps.onClose).toHaveBeenCalledTimes(1);
+      await waitFor(() => {
+        expect(defaultProps.onSave).toHaveBeenCalledWith('Test Filter', 'from:amazon');
+        expect(defaultProps.onClose).toHaveBeenCalledTimes(1);
+      });
     });
 
     it('should clear error when user starts typing in name field', () => {
@@ -187,7 +189,7 @@ describe('SavedFilterDialog', () => {
   describe('Help Text', () => {
     it('should display help text about search operators', () => {
       render(<SavedFilterDialog {...defaultProps} />);
-      expect(screen.getByText(/Verwenden Sie Suchoperatoren wie from:, to:, subject:/)).toBeInTheDocument();
+      expect(screen.getByText(/Verwenden Sie Suchoperatoren wie from:, subject:, category:/)).toBeInTheDocument();
     });
   });
 

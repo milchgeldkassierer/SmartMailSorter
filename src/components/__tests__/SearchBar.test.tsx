@@ -76,7 +76,7 @@ describe('SearchBar', () => {
       const onSearchChange = vi.fn();
       render(<SearchBar {...defaultProps} searchTerm="test" onSearchChange={onSearchChange} />);
 
-      const clearButton = screen.getByRole('button', { name: 'Clear search' });
+      const clearButton = screen.getByRole('button', { name: 'Suche löschen' });
       fireEvent.click(clearButton);
 
       expect(onSearchChange).toHaveBeenCalledWith('');

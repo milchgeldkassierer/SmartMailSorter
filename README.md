@@ -448,7 +448,57 @@ If you need to add a new external CDN or API endpoint:
 
 **Important**: Never add `'unsafe-inline'` to `script-src` or `'unsafe-eval'` in production, as this defeats the purpose of CSP and allows XSS attacks.
 
-**Note on Password Storage**: Account passwords are currently stored in plaintext in SQLite for development convenience. **For production use, implement Electron's `safeStorage` API** to encrypt passwords using OS-level credential storage (Keychain on macOS, Credential Vault on Windows, Secret Service on Linux).
+### Credential Storage & Encryption
+
+SmartMailSorter uses **Electron's `safeStorage` API** to encrypt email account passwords before storing them in the SQLite database. This ensures credentials are protected using your operating system's native keychain infrastructure.
+
+#### Normal Operation (Encryption Available)
+
+When the application runs in a standard desktop environment, passwords are:
+
+1. **Encrypted Before Storage**: New account passwords are encrypted using OS-level keychain services
+2. **Stored as Encrypted Buffers**: Encrypted passwords are base64-encoded and stored in the database
+3. **Decrypted On-Demand**: Passwords are only decrypted in-memory when needed for IMAP authentication
+4. **Automatic Migration**: Existing plaintext passwords from older versions are automatically migrated to encrypted format on first launch
+
+**OS-Level Keychain Services:**
+- **macOS**: Keychain
+- **Windows**: Credential Vault (DPAPI)
+- **Linux**: Secret Service API (libsecret)
+
+#### Fallback Behavior (Encryption Unavailable)
+
+In certain environments, Electron's `safeStorage` API may be unavailable. This occurs when:
+
+- **Test Environments**: Running unit tests without a full Electron instance
+- **Unsupported Systems**: Operating systems or environments without keychain support
+- **Headless Environments**: CI/CD pipelines, Docker containers, or server environments
+- **VM or Sandboxed Environments**: Some virtualized or restricted environments may lack keychain access
+
+When encryption is unavailable, the application gracefully falls back to plaintext storage:
+
+**During Application Startup:**
+- Password migration is skipped with a warning: `Password encryption migration skipped: safeStorage not available on this system`
+- Existing passwords remain in their current state (plaintext if not previously encrypted)
+
+**When Adding New Accounts:**
+- Password is stored in plaintext in the database
+- A warning is logged: `Password encryption not available - storing password without encryption`
+- The account is still functional; only the encryption layer is bypassed
+
+**When Retrieving Passwords:**
+- If the password was previously encrypted, decryption is attempted
+- If decryption fails (encryption unavailable), the password is returned as-is from the database
+- IMAP authentication will use the plaintext password if available
+
+**Security Implications:**
+- In fallback mode, passwords are stored in plaintext in the SQLite database file
+- The database file remains protected by filesystem permissions
+- This is the same behavior as versions prior to the encryption feature
+- **Recommendation**: Avoid using SmartMailSorter in production on systems where `safeStorage` is unavailable
+
+**Verifying Encryption Status:**
+Check your application logs during startup. If you see "Starting password encryption migration..." followed by "Password encryption migration completed", encryption is working correctly. If you see "Password encryption migration skipped", you are in fallback mode.
 
 ## ⚙️ Configuration
 
@@ -484,7 +534,7 @@ CREATE TABLE accounts (
   imapHost TEXT,                    -- IMAP server hostname
   imapPort INTEGER,                 -- IMAP port (typically 993 for SSL)
   username TEXT,                    -- IMAP username
-  password TEXT,                    -- IMAP password (plaintext in dev)
+  password TEXT,                    -- IMAP password (encrypted using safeStorage)
   color TEXT,                       -- UI color identifier
   lastSyncUid INTEGER DEFAULT 0,    -- Last synced email UID (for incremental sync)
   storageUsed INTEGER DEFAULT 0,    -- Used storage in bytes
@@ -647,7 +697,7 @@ set API_KEY=your_gemini_api_key_here
 npm start
 ```
 
-**Security Note:** API keys are stored in the SQLite database or read from environment variables. For production deployments, consider using Electron's `safeStorage` API or system keychains for enhanced security.
+**Security Note:** API keys and credentials are encrypted using Electron's `safeStorage` API, which leverages OS-level credential storage for enhanced security. Environment variables can also be used as an alternative configuration method.
 
 #### AI Model Selection Guide
 

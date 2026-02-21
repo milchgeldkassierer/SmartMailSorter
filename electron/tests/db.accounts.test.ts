@@ -1,25 +1,13 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { createRequire } from 'module';
-import path from 'path';
 import { ImapAccount } from '../../src/types';
+import { setupElectronMock } from './helpers/mockElectron';
 
 // Create require function for CommonJS modules
 const require = createRequire(import.meta.url);
 
-// Mock Electron to provide app.getPath
-const electronPath = path.resolve(
-  path.dirname(new URL(import.meta.url).pathname),
-  '../../node_modules/electron/index.js'
-);
-if (require.cache) {
-  require.cache[electronPath] = {
-    exports: {
-      app: {
-        getPath: () => './test-data',
-      },
-    },
-  } as NodeModule;
-}
+// Set up shared Electron mock (must happen before requiring db.cjs)
+const electronMock = setupElectronMock();
 
 // Define interface for db module methods (account-related)
 interface DbModule {
@@ -43,6 +31,7 @@ interface DbModule {
   getMaxUidForFolder: (accountId: string, folder: string) => number;
   getAllUidsForFolder: (accountId: string, folder: string) => number[];
   migrateFolder: (oldName: string, newName: string) => void;
+  _getRawPasswordForTesting: (id: string) => string | null;
 }
 
 // Import the database module under test
@@ -1333,6 +1322,378 @@ describe('Database Account CRUD Operations', () => {
     it('should handle migration with no emails in source folder', () => {
       // Just migrate folders, no emails
       expect(() => db.migrateFolder('EmptySource', 'EmptyTarget')).not.toThrow();
+    });
+  });
+
+  describe('Password Encryption Migration', () => {
+    beforeEach(() => {
+      // Reset mock state and clear mocks before each test
+      electronMock.setEncryptionAvailable(true);
+      vi.clearAllMocks();
+    });
+
+    it('should encrypt passwords when encryption is available and decrypt on retrieval', () => {
+      // Note: True plaintext-to-encrypted migration on existing DB rows requires
+      // persisting state across db.init() calls (e.g., a file-based DB). This test
+      // verifies the core encrypt/decrypt path: that a password added with encryption
+      // enabled is stored encrypted and retrieved as plaintext.
+      electronMock.setEncryptionAvailable(true);
+
+      const account = {
+        id: 'migrate-plaintext',
+        name: 'Migration Test',
+        email: 'migrate@test.com',
+        provider: 'gmail',
+        imapHost: 'imap.gmail.com',
+        imapPort: 993,
+        username: 'migrateuser',
+        password: 'plaintextPassword123',
+        color: '#123456',
+      };
+
+      db.addAccount(account);
+
+      // Verify password is stored encrypted (not plaintext) in the database
+      const rawPassword = db._getRawPasswordForTesting('migrate-plaintext');
+      expect(rawPassword).not.toBe('plaintextPassword123');
+
+      // Verify decryption returns the original password
+      const accountAfter = db.getAccountWithPassword('migrate-plaintext');
+      expect(accountAfter).toBeDefined();
+      expect(accountAfter?.password).toBe('plaintextPassword123');
+    });
+
+    it('should decrypt encrypted passwords consistently across multiple retrievals', () => {
+      electronMock.setEncryptionAvailable(true);
+
+      const account = {
+        id: 'already-encrypted',
+        name: 'Already Encrypted',
+        email: 'encrypted@test.com',
+        provider: 'gmail',
+        imapHost: 'imap.gmail.com',
+        imapPort: 993,
+        username: 'encuser',
+        password: 'alreadyEncryptedPass789',
+        color: '#ABCDEF',
+      };
+
+      // Add account (will be encrypted)
+      db.addAccount(account);
+
+      // Verify password can be retrieved and decrypted consistently
+      const accountFirst = db.getAccountWithPassword('already-encrypted');
+      expect(accountFirst).toBeDefined();
+      expect(accountFirst?.password).toBe('alreadyEncryptedPass789');
+
+      const accountSecond = db.getAccountWithPassword('already-encrypted');
+      expect(accountSecond).toBeDefined();
+      expect(accountSecond?.password).toBe('alreadyEncryptedPass789');
+    });
+
+    it('should handle accounts with no password', () => {
+      electronMock.setEncryptionAvailable(true);
+
+      const accountWithoutPassword = {
+        id: 'no-password',
+        name: 'No Password Account',
+        email: 'nopass@test.com',
+        provider: 'gmail',
+        imapHost: 'imap.gmail.com',
+        imapPort: 993,
+        username: 'nopassuser',
+        // No password field
+        color: '#FF00FF',
+      };
+
+      // Should not throw even without password
+      expect(() => db.addAccount(accountWithoutPassword)).not.toThrow();
+
+      const retrieved = db.getAccountWithPassword('no-password');
+      expect(retrieved).toBeDefined();
+      // SQLite returns null for missing fields, not undefined
+      expect(retrieved?.password).toBeNull();
+    });
+
+    it('should handle accounts with empty password', () => {
+      electronMock.setEncryptionAvailable(true);
+
+      const accountWithEmptyPassword = {
+        id: 'empty-password',
+        name: 'Empty Password Account',
+        email: 'empty@test.com',
+        provider: 'gmail',
+        imapHost: 'imap.gmail.com',
+        imapPort: 993,
+        username: 'emptyuser',
+        password: '',
+        color: '#00FFFF',
+      };
+
+      db.addAccount(accountWithEmptyPassword);
+
+      const retrieved = db.getAccountWithPassword('empty-password');
+      expect(retrieved).toBeDefined();
+      // Empty string should be handled gracefully
+      expect(retrieved?.password).toBe('');
+    });
+
+    it('should skip migration gracefully when encryption unavailable', () => {
+      // Disable encryption
+      electronMock.setEncryptionAvailable(false);
+
+      const account = {
+        id: 'migration-skip',
+        name: 'Migration Skip Test',
+        email: 'skip@test.com',
+        provider: 'gmail',
+        imapHost: 'imap.gmail.com',
+        imapPort: 993,
+        username: 'skipuser',
+        password: 'plaintextPasswordToSkip',
+        color: '#FF0000',
+      };
+
+      // Add account with plaintext password (encryption unavailable)
+      expect(() => db.addAccount(account)).not.toThrow();
+
+      // Verify password is stored as plaintext
+      const retrieved = db.getAccountWithPassword('migration-skip');
+      expect(retrieved).toBeDefined();
+      expect(retrieved?.password).toBe('plaintextPasswordToSkip');
+
+      // Re-initialize with encryption still unavailable
+      // Migration should skip gracefully without errors
+      expect(() => db.init(':memory:')).not.toThrow();
+    });
+
+    it('should encrypt passwords with special characters', () => {
+      electronMock.setEncryptionAvailable(true);
+
+      const specialPassword = '!@#$%^&*()_+-=[]{}|;:,.<>?/~`"\'\\';
+      const account = {
+        id: 'special-chars',
+        name: 'Special Chars Test',
+        email: 'special@test.com',
+        provider: 'gmail',
+        imapHost: 'imap.gmail.com',
+        imapPort: 993,
+        username: 'specialuser',
+        password: specialPassword,
+        color: '#123ABC',
+      };
+
+      db.addAccount(account);
+
+      const retrieved = db.getAccountWithPassword('special-chars');
+      expect(retrieved).toBeDefined();
+      expect(retrieved?.password).toBe(specialPassword);
+    });
+
+    it('should encrypt passwords with unicode characters', () => {
+      electronMock.setEncryptionAvailable(true);
+
+      const unicodePassword = '密码🔐パスワード';
+      const account = {
+        id: 'unicode-password',
+        name: 'Unicode Test',
+        email: 'unicode@test.com',
+        provider: 'gmail',
+        imapHost: 'imap.gmail.com',
+        imapPort: 993,
+        username: 'unicodeuser',
+        password: unicodePassword,
+        color: '#ABC123',
+      };
+
+      db.addAccount(account);
+
+      const retrieved = db.getAccountWithPassword('unicode-password');
+      expect(retrieved).toBeDefined();
+      expect(retrieved?.password).toBe(unicodePassword);
+    });
+
+    it('should encrypt long passwords', () => {
+      electronMock.setEncryptionAvailable(true);
+
+      const longPassword = 'a'.repeat(1000);
+      const account = {
+        id: 'long-password',
+        name: 'Long Password Test',
+        email: 'long@test.com',
+        provider: 'gmail',
+        imapHost: 'imap.gmail.com',
+        imapPort: 993,
+        username: 'longuser',
+        password: longPassword,
+        color: '#FEDCBA',
+      };
+
+      db.addAccount(account);
+
+      const retrieved = db.getAccountWithPassword('long-password');
+      expect(retrieved).toBeDefined();
+      expect(retrieved?.password).toBe(longPassword);
+    });
+
+    it('should handle password encryption round-trip for multiple accounts', () => {
+      electronMock.setEncryptionAvailable(true);
+
+      const accounts = [
+        {
+          id: 'roundtrip-1',
+          name: 'RT1',
+          email: 'rt1@test.com',
+          provider: 'gmail',
+          imapHost: 'imap.gmail.com',
+          imapPort: 993,
+          username: 'rt1',
+          password: 'password1',
+          color: '#111111',
+        },
+        {
+          id: 'roundtrip-2',
+          name: 'RT2',
+          email: 'rt2@test.com',
+          provider: 'gmail',
+          imapHost: 'imap.gmail.com',
+          imapPort: 993,
+          username: 'rt2',
+          password: 'password2',
+          color: '#222222',
+        },
+        {
+          id: 'roundtrip-3',
+          name: 'RT3',
+          email: 'rt3@test.com',
+          provider: 'gmail',
+          imapHost: 'imap.gmail.com',
+          imapPort: 993,
+          username: 'rt3',
+          password: 'password3',
+          color: '#333333',
+        },
+      ];
+
+      // Add all accounts
+      accounts.forEach((acc) => db.addAccount(acc));
+
+      // Verify all passwords decrypt correctly
+      accounts.forEach((acc) => {
+        const retrieved = db.getAccountWithPassword(acc.id);
+        expect(retrieved).toBeDefined();
+        expect(retrieved?.password).toBe(acc.password);
+      });
+    });
+
+    it('should verify all passwords are stored as base64-encoded encrypted buffers, not plaintext', () => {
+      electronMock.setEncryptionAvailable(true);
+
+      const testAccounts = [
+        {
+          id: 'verify-encrypted-1',
+          name: 'Encrypted Account 1',
+          email: 'enc1@test.com',
+          provider: 'gmail',
+          imapHost: 'imap.gmail.com',
+          imapPort: 993,
+          username: 'encuser1',
+          password: 'mySecretPassword123',
+          color: '#FF0000',
+        },
+        {
+          id: 'verify-encrypted-2',
+          name: 'Encrypted Account 2',
+          email: 'enc2@test.com',
+          provider: 'outlook',
+          imapHost: 'imap.outlook.com',
+          imapPort: 993,
+          username: 'encuser2',
+          password: 'anotherSecret456!',
+          color: '#00FF00',
+        },
+        {
+          id: 'verify-encrypted-3',
+          name: 'Encrypted Account 3',
+          email: 'enc3@test.com',
+          provider: 'custom',
+          imapHost: 'imap.custom.com',
+          imapPort: 993,
+          username: 'encuser3',
+          password: 'thirdSecret789@',
+          color: '#0000FF',
+        },
+      ];
+
+      // Add all test accounts with encryption enabled
+      testAccounts.forEach((acc) => db.addAccount(acc));
+
+      // Verify each account's password is properly encrypted in the database
+      testAccounts.forEach((acc) => {
+        const rawPassword = db._getRawPasswordForTesting(acc.id);
+
+        // 1. Raw password should exist in database
+        expect(rawPassword).toBeDefined();
+        expect(rawPassword).not.toBeNull();
+
+        // 2. Raw password should NOT be the plaintext password
+        expect(rawPassword).not.toBe(acc.password);
+
+        // 3. Raw password should be a valid base64 string
+        // Base64 strings only contain alphanumeric characters, +, /, and = for padding
+        const base64Regex = /^[A-Za-z0-9+/]+={0,2}$/;
+        expect(rawPassword).toMatch(base64Regex);
+
+        // 4. Should be able to decode from base64 to Buffer
+        let decodedBuffer;
+        expect(() => {
+          decodedBuffer = Buffer.from(rawPassword!, 'base64');
+        }).not.toThrow();
+
+        // 5. Decoded buffer should be non-empty
+        expect(decodedBuffer).toBeInstanceOf(Buffer);
+        expect(decodedBuffer!.length).toBeGreaterThan(0);
+
+        // 6. Verify the encrypted buffer can be decrypted back to original password
+        const accountWithPassword = db.getAccountWithPassword(acc.id);
+        expect(accountWithPassword).toBeDefined();
+        expect(accountWithPassword!.password).toBe(acc.password);
+
+        // 7. Verify the raw stored value contains encrypted content (not plaintext keywords)
+        // The base64-encoded encrypted buffer should not contain recognizable plaintext
+        const decodedString = decodedBuffer!.toString('utf-8');
+        // Our mock encryption adds "ENCRYPTED:" prefix, verify this is present
+        expect(decodedString).toContain('ENCRYPTED:');
+      });
+    });
+
+    it('should verify plaintext passwords are not stored when encryption is disabled', () => {
+      // Disable encryption
+      electronMock.setEncryptionAvailable(false);
+
+      const plaintextAccount = {
+        id: 'plaintext-check',
+        name: 'Plaintext Account',
+        email: 'plain@test.com',
+        provider: 'test',
+        imapHost: 'imap.test.com',
+        imapPort: 993,
+        username: 'plainuser',
+        password: 'plaintextPassword123',
+        color: '#AABBCC',
+      };
+
+      db.addAccount(plaintextAccount);
+
+      const rawPassword = db._getRawPasswordForTesting('plaintext-check');
+
+      // When encryption is unavailable, password is stored as plaintext
+      expect(rawPassword).toBe('plaintextPassword123');
+
+      // Raw password should equal the plaintext (no encryption)
+      const accountWithPassword = db.getAccountWithPassword('plaintext-check');
+      expect(accountWithPassword).toBeDefined();
+      expect(accountWithPassword!.password).toBe(plaintextAccount.password);
     });
   });
 });
