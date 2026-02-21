@@ -122,13 +122,9 @@ export function sanitizeHtml(html: string | null | undefined): string {
       'colspan',
       'rowspan',
       'scope',
-      // Safe styling attributes (DOMPurify will sanitize style content)
+      // Safe styling attributes
       'class',
       'id',
-      // Inline styles - DOMPurify sanitizes dangerous CSS like expression() and url(javascript:).
-      // Note: when 'Load Images' is enabled, CSS url() in styles can enable tracking pixels
-      // (e.g., background-image: url(https://tracker/pixel)) similarly to <img> tags.
-      'style',
       // Text direction
       'dir',
       // Time element

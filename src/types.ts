@@ -143,9 +143,22 @@ export interface SyncResult {
 export interface EmailOperationResult {
   success: boolean;
   error?: string;
+  movedToTrash?: boolean;
 }
 
 export interface CategoryOperationResult {
   success: boolean;
   changes?: number;
+}
+
+// Notification Settings Types
+export interface NotificationSettings {
+  enabled: boolean; // Global notification toggle
+  accountSettings: Record<string, boolean>; // Per-account: accountId -> enabled
+  categorySettings: Record<string, boolean>; // Per-category: categoryName -> enabled
+}
+
+export interface NotificationOperationResult {
+  success: boolean;
+  error?: string;
 }

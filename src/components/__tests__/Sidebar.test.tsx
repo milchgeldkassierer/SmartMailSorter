@@ -614,6 +614,123 @@ describe('Sidebar', () => {
     });
   });
 
+  describe('Drag and Drop', () => {
+    const dndProps = {
+      isDraggingEmails: true,
+      dropTargetCategory: null as string | null,
+      onDropEmails: vi.fn(),
+    };
+
+    it('should show drop target styling when isDraggingEmails is true', () => {
+      const { container } = renderWithDialog(<Sidebar {...defaultProps} {...dndProps} />);
+      // When dragging, categories should have drop target background styling
+      const styledElements = container.querySelectorAll('[class*="bg-slate-800"]');
+      expect(styledElements.length).toBeGreaterThan(0);
+    });
+
+    it('should not show drop target ring classes when isDraggingEmails is false', () => {
+      const { container } = renderWithDialog(<Sidebar {...defaultProps} isDraggingEmails={false} />);
+      const ringElements = container.querySelectorAll('.ring-dashed');
+      expect(ringElements.length).toBe(0);
+    });
+
+    it('should show active highlight on dropTargetCategory match', () => {
+      const { container } = renderWithDialog(
+        <Sidebar {...defaultProps} {...dndProps} dropTargetCategory="Rechnungen" />
+      );
+      const activeDropTarget = container.querySelectorAll('[class*="bg-blue-600"]');
+      expect(activeDropTarget.length).toBeGreaterThan(0);
+    });
+
+    it('should call onDropEmails with correct args on drop event', () => {
+      const onDropEmails = vi.fn();
+      renderWithDialog(<Sidebar {...defaultProps} {...dndProps} onDropEmails={onDropEmails} />);
+
+      const inboxButton = screen.getByRole('button', { name: /Posteingang/i });
+      const emailIds = ['email-1', 'email-2'];
+
+      fireEvent.drop(inboxButton, {
+        dataTransfer: {
+          getData: (type: string) => {
+            if (type === 'application/x-email-ids') return JSON.stringify(emailIds);
+            return '';
+          },
+        },
+      });
+
+      expect(onDropEmails).toHaveBeenCalledWith(emailIds, INBOX_FOLDER, 'folder');
+    });
+
+    it('should call onDropEmails for smart category drops', () => {
+      const onDropEmails = vi.fn();
+      renderWithDialog(<Sidebar {...defaultProps} {...dndProps} onDropEmails={onDropEmails} />);
+
+      const rechnungenItem = screen.getByText('Rechnungen').closest('div[class*="cursor-pointer"]');
+      const emailIds = ['email-3'];
+
+      fireEvent.drop(rechnungenItem!, {
+        dataTransfer: {
+          getData: (type: string) => {
+            if (type === 'application/x-email-ids') return JSON.stringify(emailIds);
+            return '';
+          },
+        },
+      });
+
+      expect(onDropEmails).toHaveBeenCalledWith(emailIds, 'Rechnungen', 'smart');
+    });
+
+    it('should have aria-dropeffect attributes when dragging', () => {
+      renderWithDialog(<Sidebar {...defaultProps} {...dndProps} />);
+
+      const inboxButton = screen.getByRole('button', { name: /Posteingang/i });
+      expect(inboxButton).toHaveAttribute('aria-dropeffect', 'move');
+    });
+
+    it('should have aria-dropeffect=none when not dragging', () => {
+      renderWithDialog(<Sidebar {...defaultProps} isDraggingEmails={false} />);
+
+      const inboxButton = screen.getByRole('button', { name: /Posteingang/i });
+      expect(inboxButton).toHaveAttribute('aria-dropeffect', 'none');
+    });
+
+    it('should show new category drop zone when dragging', () => {
+      renderWithDialog(<Sidebar {...defaultProps} {...dndProps} />);
+      expect(screen.getByText('Neue Kategorie erstellen')).toBeInTheDocument();
+    });
+
+    it('should not show new category drop zone when not dragging', () => {
+      renderWithDialog(<Sidebar {...defaultProps} isDraggingEmails={false} />);
+      expect(screen.queryByText('Neue Kategorie erstellen')).not.toBeInTheDocument();
+    });
+
+    it('should call onDropEmails with __new_category__ when dropping on new category zone', () => {
+      const onDropEmails = vi.fn();
+      renderWithDialog(<Sidebar {...defaultProps} {...dndProps} onDropEmails={onDropEmails} />);
+
+      const newCategoryZone = screen.getByText('Neue Kategorie erstellen').closest('button');
+      const emailIds = ['email-4'];
+
+      fireEvent.drop(newCategoryZone!, {
+        dataTransfer: {
+          getData: (type: string) => {
+            if (type === 'application/x-email-ids') return JSON.stringify(emailIds);
+            return '';
+          },
+        },
+      });
+
+      expect(onDropEmails).toHaveBeenCalledWith(emailIds, '__new_category__', 'smart');
+    });
+
+    it('should render without DnD props (all optional with sensible defaults)', () => {
+      // No DnD props passed - should render fine
+      renderWithDialog(<Sidebar {...defaultProps} />);
+      expect(screen.getByText('Ordner')).toBeInTheDocument();
+      expect(screen.getByText(INBOX_FOLDER)).toBeInTheDocument();
+    });
+  });
+
   describe('Accessibility', () => {
     it('should have accessible buttons for categories', () => {
       renderWithDialog(<Sidebar {...defaultProps} />);

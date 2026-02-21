@@ -13,8 +13,10 @@ process.on('unhandledRejection', (reason, promise) => {
 
 const db = require('./db.cjs');
 const imap = require('./imap.cjs');
+const notifications = require('./notifications.cjs');
 const { sanitizeFilename } = require('./utils/security.cjs');
 const { createCspHeaderHandler } = require('./utils/csp-config.cjs');
+const { TRASH_FOLDER } = require('./folderConstants.cjs');
 
 const isDev = !app.isPackaged;
 
@@ -63,6 +65,8 @@ app.whenReady().then(() => {
     // Initial sync using the account from DB (ensures encrypted/decrypted flow)
     const syncResult = await imap.syncAccount(accountWithPassword);
 
+    // Badge count is updated inside imap.syncAccount
+
     // Return account without password for safe frontend state management
     const { password, ...accountWithoutPassword } = accountWithPassword;
     return { ...syncResult, account: accountWithoutPassword };
@@ -70,6 +74,9 @@ app.whenReady().then(() => {
 
   ipcMain.handle('delete-account', (event, id) => {
     db.deleteAccountDn(id);
+    // Update badge count after account deletion
+    const unreadCount = db.getTotalUnreadEmailCount();
+    notifications.updateBadgeCount(unreadCount);
     return true;
   });
 
@@ -226,11 +233,16 @@ app.whenReady().then(() => {
       logger.error(`[IPC delete-email] Account not found: ${accountId}`);
       return { success: false, error: 'Account not found' };
     }
-    // Delete from server FIRST
+    // Move to Trash on server (or permanently delete if already in Trash)
     const result = await imap.deleteEmail(accountWithPassword, uid, folder);
-    // Only delete from DB if server deletion succeeded
     if (result.success) {
-      db.deleteEmail(emailId);
+      if (result.movedToTrash) {
+        // Move to trash in DB instead of deleting
+        db.updateEmailFolder(emailId, TRASH_FOLDER);
+      } else {
+        // Permanently deleted (was already in Trash or no Trash folder found)
+        db.deleteEmail(emailId);
+      }
     }
     return result;
   });
@@ -247,6 +259,9 @@ app.whenReady().then(() => {
     // Only update DB if server update succeeded
     if (result.success) {
       db.updateEmailReadStatus(emailId, isRead);
+      // Update badge count after read status change
+      const unreadCount = db.getTotalUnreadEmailCount();
+      notifications.updateBadgeCount(unreadCount);
     }
     return result;
   });
@@ -267,13 +282,19 @@ app.whenReady().then(() => {
     return result;
   });
 
-  ipcMain.handle('move-email', (event, { emailId, category }) => {
-    // Move is local category change only (for now)
-    return db.updateEmailCategory(emailId, category, null, null, 0);
+  ipcMain.handle('move-email', (event, { emailId, target, type }) => {
+    if (type === 'folder') {
+      return db.updateEmailFolder(emailId, target);
+    }
+    // Default: smart category move
+    return db.updateEmailSmartCategory(emailId, target, null, null, 0);
   });
 
   ipcMain.handle('update-email-smart-category', (event, { emailId, category, summary, reasoning, confidence }) => {
-    return db.updateEmailSmartCategory(emailId, category, summary, reasoning, confidence);
+    const result = db.updateEmailSmartCategory(emailId, category, summary, reasoning, confidence);
+    // Show queued notification now that we have the AI category
+    notifications.processPendingNotification(emailId, category);
+    return result;
   });
 
   ipcMain.handle('save-email', (event, email) => db.saveEmail(email));
@@ -370,6 +391,64 @@ app.whenReady().then(() => {
       logger.error('[IPC] Failed to load AI settings:', error);
       throw error;
     }
+  });
+
+  // Notification Settings IPC handlers
+  // Load notification settings (global + all accounts)
+  ipcMain.handle('load-notification-settings', async () => {
+    const accounts = db.getAccounts();
+    const accountSettings = {};
+
+    // Load per-account settings
+    accounts.forEach(account => {
+      const settings = db.getNotificationSettings(account.id);
+      accountSettings[account.id] = settings.enabled;
+    });
+
+    // Load global settings (stored with special accountId)
+    const globalSettings = db.getNotificationSettings('GLOBAL');
+
+    // Build categorySettings with all known categories (true = enabled, false = muted)
+    const allCategories = db.getCategories();
+    const categorySettings = {};
+    allCategories.forEach(cat => {
+      categorySettings[cat.name] = !Array.isArray(globalSettings.mutedCategories) ||
+        !globalSettings.mutedCategories.includes(cat.name);
+    });
+
+    return {
+      enabled: globalSettings.enabled,
+      accountSettings,
+      categorySettings,
+    };
+  });
+
+  // Save notification settings (global + per-account)
+  ipcMain.handle('save-notification-settings', async (_event, settings) => {
+    // Convert categorySettings Record<string, boolean> to mutedCategories array
+    const mutedCategories = Object.entries(settings.categorySettings || {})
+      .filter(([, enabled]) => !enabled)
+      .map(([name]) => name);
+
+    // Save global enabled + category settings
+    db.saveNotificationSettings('GLOBAL', {
+      enabled: settings.enabled,
+      mutedCategories,
+    });
+
+    // Save per-account settings
+    for (const [accountId, enabled] of Object.entries(settings.accountSettings)) {
+      db.saveNotificationSettings(accountId, {
+        enabled,
+        mutedCategories: [],
+      });
+    }
+
+    return { success: true };
+  });
+
+  ipcMain.handle('update-badge-count', (event, count) => {
+    return notifications.updateBadgeCount(count);
   });
 
   createWindow();

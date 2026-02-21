@@ -1,0 +1,32 @@
+{
+  "project_type": "single",
+  "services": {
+    "frontend": {
+      "path": "./src",
+      "tech_stack": ["react", "typescript", "vite", "tailwindcss", "lucide-react"],
+      "port": 3000,
+      "dev_command": "npm run dev",
+      "test_command": "npx vitest run --config vitest.config.components.ts"
+    },
+    "electron": {
+      "path": "./electron",
+      "tech_stack": ["electron", "better-sqlite3", "imapflow"],
+      "port": null,
+      "dev_command": "npm run electron:dev",
+      "test_command": "npx vitest run"
+    }
+  },
+  "infrastructure": {
+    "docker": false,
+    "database": "sqlite (better-sqlite3)",
+    "bundler": "vite"
+  },
+  "conventions": {
+    "linter": "eslint",
+    "formatter": "prettier",
+    "testing": "vitest + @testing-library/react",
+    "component_tests_config": "vitest.config.components.ts",
+    "electron_tests_config": "vitest.config.ts",
+    "language": "German UI labels throughout"
+  }
+}

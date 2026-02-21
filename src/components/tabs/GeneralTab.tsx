@@ -1,22 +1,28 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Trash2 } from '../Icon';
-import { useDialogContext } from '../../contexts/DialogContext';
+import { useOptionalDialogContext } from '../../contexts/DialogContext';
 import { useLanguage } from '../../hooks/useLanguage';
 
 const GeneralTab: React.FC = () => {
   const { t } = useTranslation();
-  const dialog = useDialogContext();
+  const dialog = useOptionalDialogContext();
   const { currentLanguage, changeLanguage, availableLanguages, languageLabels } = useLanguage();
 
   const handleResetDatabase = async () => {
-    const confirmed = await dialog.confirm({
-      title: t('generalTab.resetDatabaseTitle'),
-      message: t('generalTab.resetDatabaseConfirm'),
-      confirmText: t('generalTab.resetButton'),
-      cancelText: t('common.cancel'),
-      variant: 'danger',
-    });
+    let confirmed = false;
+
+    if (dialog) {
+      confirmed = await dialog.confirm({
+        title: t('generalTab.resetDatabaseTitle'),
+        message: t('generalTab.resetDatabaseConfirm'),
+        confirmText: t('generalTab.resetButton'),
+        cancelText: t('common.cancel'),
+        variant: 'danger',
+      });
+    } else {
+      confirmed = window.confirm(t('generalTab.resetDatabaseConfirm'));
+    }
 
     if (confirmed) {
       try {
@@ -24,11 +30,16 @@ const GeneralTab: React.FC = () => {
         window.location.reload();
       } catch (error) {
         console.error('Failed to reset database:', error);
-        await dialog.alert({
-          title: t('common.error'),
-          message: `${t('generalTab.resetError')} ${error instanceof Error ? error.message : t('generalTab.unknownError')}`,
-          variant: 'danger',
-        });
+        const errorMessage = `${t('generalTab.resetError')} ${error instanceof Error ? error.message : t('generalTab.unknownError')}`;
+        if (dialog) {
+          await dialog.alert({
+            title: t('common.error'),
+            message: errorMessage,
+            variant: 'danger',
+          });
+        } else {
+          alert(errorMessage);
+        }
       }
     }
   };

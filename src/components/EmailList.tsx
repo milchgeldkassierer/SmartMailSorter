@@ -17,6 +17,9 @@ interface EmailListProps {
   isLoading: boolean;
   onLoadMore?: () => void;
   hasMore?: boolean;
+  onDragStart?: (emailId: string, selectedIds: Set<string>, event: React.DragEvent) => void;
+  onDragEnd?: () => void;
+  draggedEmailIds?: string[];
 }
 
 const EmailList: React.FC<EmailListProps> = ({
@@ -31,9 +34,48 @@ const EmailList: React.FC<EmailListProps> = ({
   isLoading,
   onLoadMore,
   hasMore,
+  onDragStart,
+  onDragEnd,
+  draggedEmailIds,
 }) => {
   const { t } = useTranslation();
   const [visibleCount, setVisibleCount] = React.useState(50);
+  const dragImageRef = React.useRef<HTMLDivElement | null>(null);
+
+  // Create persistent drag image element
+  React.useEffect(() => {
+    const el = document.createElement('div');
+    el.style.cssText =
+      'position:absolute;top:-1000px;left:-1000px;padding:6px 12px;background:#3b82f6;color:white;border-radius:6px;font-size:13px;font-weight:500;white-space:nowrap;pointer-events:none;z-index:9999;';
+    document.body.appendChild(el);
+    dragImageRef.current = el;
+    return () => {
+      document.body.removeChild(el);
+    };
+  }, []);
+
+  const handleDragStart = React.useCallback(
+    (emailId: string, e: React.DragEvent) => {
+      if (!onDragStart) return;
+      // Determine dragged set: if email is in selection, drag all selected; otherwise just this one
+      const dragIds = selectedIds.has(emailId) ? selectedIds : new Set([emailId]);
+      const count = dragIds.size;
+
+      // Set custom drag image
+      if (dragImageRef.current) {
+        dragImageRef.current.textContent = count === 1 ? '1 E-Mail' : `${count} E-Mails`;
+        e.dataTransfer.setDragImage(dragImageRef.current, 0, 0);
+      }
+
+      e.dataTransfer.effectAllowed = 'move';
+      onDragStart(emailId, dragIds, e);
+    },
+    [onDragStart, selectedIds]
+  );
+
+  const handleDragEnd = React.useCallback(() => {
+    onDragEnd?.();
+  }, [onDragEnd]);
 
   // Reset visible count when list changes (e.g. folder change)
   React.useEffect(() => {
@@ -71,6 +113,7 @@ const EmailList: React.FC<EmailListProps> = ({
         </h2>
       </div>
       <div
+        role="list"
         className="flex-1 overflow-y-auto"
         onScroll={(e) => {
           const target = e.currentTarget;
@@ -84,9 +127,15 @@ const EmailList: React.FC<EmailListProps> = ({
       >
         {emails.slice(0, visibleCount).map((email) => {
           const isSelected = selectedIds.has(email.id);
+          const isDragged = draggedEmailIds?.includes(email.id) ?? false;
           return (
             <div
               key={email.id}
+              role="listitem"
+              draggable={!!onDragStart}
+              onDragStart={(e) => handleDragStart(email.id, e)}
+              onDragEnd={handleDragEnd}
+              aria-grabbed={isDragged || undefined}
               onClick={(e) => {
                 onRowClick(email.id, e);
               }}
@@ -94,7 +143,7 @@ const EmailList: React.FC<EmailListProps> = ({
                 selectedEmailId === email.id
                   ? 'bg-blue-50 border-l-4 border-l-blue-600'
                   : 'border-l-4 border-l-transparent'
-              } ${isSelected ? 'bg-blue-50/50' : ''}`}
+              } ${isSelected ? 'bg-blue-50/50' : ''} ${isDragged ? 'opacity-50' : ''}`}
             >
               {/* Selection Checkbox (Absolute Left) */}
               <div

@@ -144,6 +144,16 @@ function createSchema() {
   } catch (e) {
     logger.error('Failed to sync categories from emails:', e);
   }
+
+  // Create Notification Settings Table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS notification_settings (
+      accountId TEXT PRIMARY KEY,
+      enabled INTEGER DEFAULT 1,
+      mutedCategories TEXT DEFAULT '[]',
+      FOREIGN KEY(accountId) REFERENCES accounts(id) ON DELETE CASCADE
+    )
+  `);
 }
 
 function migratePasswordEncryption() {
@@ -427,6 +437,11 @@ function updateEmailSmartCategory(id, smartCategory, aiSummary, aiReasoning, con
   return stmt.run({ id, smartCategory, aiSummary, aiReasoning, confidence });
 }
 
+function updateEmailFolder(id, folder) {
+  const stmt = db.prepare('UPDATE emails SET folder = @folder WHERE id = @id');
+  return stmt.run({ id, folder });
+}
+
 function deleteEmail(id) {
   db.prepare('DELETE FROM emails WHERE id = ?').run(id);
 }
@@ -530,6 +545,58 @@ function close() {
   }
 }
 
+// --- Notification Settings Methods ---
+
+function getNotificationSettings(accountId) {
+  const settings = db.prepare('SELECT enabled, mutedCategories FROM notification_settings WHERE accountId = ?').get(accountId);
+
+  if (!settings) {
+    // Return defaults if no settings exist yet
+    return {
+      enabled: true,
+      mutedCategories: [],
+    };
+  }
+
+  let mutedCategories = [];
+  try {
+    mutedCategories = JSON.parse(settings.mutedCategories || '[]');
+    if (!Array.isArray(mutedCategories)) {
+      mutedCategories = [];
+    }
+  } catch (_e) {
+    // Fallback to empty array if stored value is corrupted
+  }
+
+  return {
+    enabled: Boolean(settings.enabled),
+    mutedCategories,
+  };
+}
+
+function saveNotificationSettings(accountId, settings) {
+  const mutedCategoriesJson = JSON.stringify(settings.mutedCategories || []);
+  const stmt = db.prepare(`
+    INSERT OR REPLACE INTO notification_settings (accountId, enabled, mutedCategories)
+    VALUES (?, ?, ?)
+  `);
+  return stmt.run(accountId, settings.enabled ? 1 : 0, mutedCategoriesJson);
+}
+
+function getUnreadEmailCount(accountId) {
+  const result = db
+    .prepare('SELECT COUNT(*) as count FROM emails WHERE accountId = ? AND isRead = 0')
+    .get(accountId);
+  return result ? result.count : 0;
+}
+
+function getTotalUnreadEmailCount() {
+  const result = db
+    .prepare('SELECT COUNT(*) as count FROM emails WHERE isRead = 0')
+    .get();
+  return result ? result.count : 0;
+}
+
 module.exports = {
   init,
   close,
@@ -542,6 +609,7 @@ module.exports = {
   saveEmail,
   deleteAccountDn,
   updateEmailSmartCategory,
+  updateEmailFolder,
   updateAccountQuota,
   deleteEmail,
   deleteEmailsByUid,
@@ -549,6 +617,8 @@ module.exports = {
   updateEmailFlagStatus,
   getEmailAttachments,
   getAttachment,
+  getUnreadEmailCount,
+  getTotalUnreadEmailCount,
 
   // New Category Methods
   getCategories: () => db.prepare('SELECT name, type FROM categories ORDER BY name').all(),
@@ -584,6 +654,10 @@ module.exports = {
   },
   migrateFolder,
   resetDb,
+
+  // Notification Settings Methods
+  getNotificationSettings,
+  saveNotificationSettings,
 };
 
 function migrateFolder(oldName, newName) {

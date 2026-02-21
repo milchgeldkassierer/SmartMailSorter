@@ -8,6 +8,7 @@ const {
   getMaxUidForFolder: _getMaxUidForFolder,
   getAllUidsForFolder: _getAllUidsForFolder,
   deleteEmailsByUid: _deleteEmailsByUid,
+  getTotalUnreadEmailCount,
 } = require('./db.cjs');
 // Add db just for direct calls if needed, though we imported migrateFolder directly
 const db = require('./db.cjs');
@@ -18,6 +19,7 @@ const {
   TRASH_FOLDER,
 } = require('./folderConstants.cjs');
 const logger = require('./utils/logger.cjs');
+const notifications = require('./notifications.cjs');
 
 logger.info('IMAP Module Loaded: Version LargeScaleSync_v1');
 
@@ -208,6 +210,11 @@ async function processMessages(client, messages, account, targetCategory) {
 
         saveEmail(email);
         savedCount++;
+
+        // Queue notification for new unread emails (shown after AI categorization)
+        if (!email.isRead) {
+          notifications.queueNotification(email, account.id);
+        }
       } catch (parseErr) {
         logger.error(`[IMAP] Failed to parse message UID ${currentUid}:`, parseErr.message);
         // Save Error Placeholder
@@ -599,8 +606,12 @@ async function syncAccount(account) {
     const maxUid = _getMaxUidForFolder(account.id, INBOX_FOLDER);
     _updateAccountSync(account.id, maxUid, Date.now());
 
+    // Update badge count with total unread emails across all accounts
+    const unreadCount = getTotalUnreadEmailCount();
+    notifications.updateBadgeCount(unreadCount);
+
     await client.logout();
-    logger.info(`Sync completed. Total new messages: ${totalNew}`);
+    logger.info(`Sync completed. Total new messages: ${totalNew}, Total unread count: ${unreadCount}`);
     return { success: true, count: totalNew };
   } catch (error) {
     if (process.env.NODE_ENV !== 'test') {
@@ -645,18 +656,44 @@ async function deleteEmail(account, uid, dbFolder) {
       logger.warn(`[Delete] Could not map '${dbFolder}' to server path. Defaulting to INBOX.`);
     }
 
-    // Get mailbox lock for the target folder
-    const lock = await client.getMailboxLock(serverPath);
+    // Find the Trash folder on the server
+    const trashPath = await findServerFolderForDbName(client, TRASH_FOLDER);
 
-    try {
-      // Delete message using ImapFlow's messageDelete (marks as deleted and expunges)
-      await client.messageDelete(uid, { uid: true });
-    } finally {
-      lock.release();
+    // If email is already in Trash, permanently delete it
+    if (dbFolder === TRASH_FOLDER) {
+      const lock = await client.getMailboxLock(serverPath);
+      try {
+        await client.messageDelete(uid, { uid: true });
+      } finally {
+        lock.release();
+      }
+      await client.logout();
+      return { success: true, movedToTrash: false };
     }
 
-    await client.logout();
-    return { success: true };
+    // Move to Trash folder if found, otherwise fall back to permanent delete
+    if (trashPath) {
+      const lock = await client.getMailboxLock(serverPath);
+      try {
+        await client.messageMove(uid, trashPath, { uid: true });
+        logger.debug(`[Delete] Moved email UID ${uid} to Trash folder '${trashPath}'`);
+      } finally {
+        lock.release();
+      }
+      await client.logout();
+      return { success: true, movedToTrash: true };
+    } else {
+      // No Trash folder found on server, fall back to permanent delete
+      logger.warn(`[Delete] No Trash folder found on server, permanently deleting email UID ${uid}`);
+      const lock = await client.getMailboxLock(serverPath);
+      try {
+        await client.messageDelete(uid, { uid: true });
+      } finally {
+        lock.release();
+      }
+      await client.logout();
+      return { success: true, movedToTrash: false };
+    }
   } catch (error) {
     logger.error('Delete Error:', error);
     return { success: false, error: error.message };
