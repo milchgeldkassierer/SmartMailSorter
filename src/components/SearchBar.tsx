@@ -13,10 +13,30 @@ interface SearchBarProps {
   onConfigChange: (config: SearchConfig) => void;
 }
 
+interface OperatorSuggestion {
+  operator: string;
+  description: string;
+  example: string;
+}
+
+const OPERATOR_SUGGESTIONS: OperatorSuggestion[] = [
+  { operator: 'from:', description: 'Filter by sender email', example: 'from:amazon' },
+  { operator: 'to:', description: 'Filter by recipient email', example: 'to:me@example.com' },
+  { operator: 'subject:', description: 'Search in subject line', example: 'subject:invoice' },
+  { operator: 'category:', description: 'Filter by smart category', example: 'category:Rechnungen' },
+  { operator: 'has:attachment', description: 'Emails with attachments', example: 'has:attachment' },
+  { operator: 'before:', description: 'Emails before date', example: 'before:2026-01-01' },
+  { operator: 'after:', description: 'Emails after date', example: 'after:2026-01-01' },
+];
+
 const SearchBar: React.FC<SearchBarProps> = ({ searchTerm, onSearchChange, config, onConfigChange }) => {
   const { t } = useTranslation();
   const [showFilters, setShowFilters] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [filteredSuggestions, setFilteredSuggestions] = useState<OperatorSuggestion[]>([]);
   const filterRef = useRef<HTMLDivElement>(null);
+  const suggestionsRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   // Close filter dropdown when clicking outside
   useEffect(() => {
@@ -24,10 +44,73 @@ const SearchBar: React.FC<SearchBarProps> = ({ searchTerm, onSearchChange, confi
       if (filterRef.current && !filterRef.current.contains(event.target as Node)) {
         setShowFilters(false);
       }
+      if (suggestionsRef.current && !suggestionsRef.current.contains(event.target as Node)) {
+        setShowSuggestions(false);
+      }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // Update operator suggestions based on search term
+  useEffect(() => {
+    if (!searchTerm) {
+      setFilteredSuggestions([]);
+      setShowSuggestions(false);
+      return;
+    }
+
+    // Get the current word being typed (last word before cursor or after last space)
+    const cursorPos = inputRef.current?.selectionStart || searchTerm.length;
+    const beforeCursor = searchTerm.substring(0, cursorPos);
+    const lastSpaceIndex = beforeCursor.lastIndexOf(' ');
+    const currentWord = beforeCursor.substring(lastSpaceIndex + 1).toLowerCase();
+
+    // Only show suggestions if typing a word that could be an operator
+    if (currentWord.length > 0 && !currentWord.includes(':')) {
+      const filtered = OPERATOR_SUGGESTIONS.filter(
+        (suggestion) =>
+          suggestion.operator.toLowerCase().startsWith(currentWord) ||
+          suggestion.description.toLowerCase().includes(currentWord)
+      );
+
+      if (filtered.length > 0) {
+        setFilteredSuggestions(filtered);
+        setShowSuggestions(true);
+      } else {
+        setShowSuggestions(false);
+      }
+    } else if (currentWord === '' && lastSpaceIndex >= 0) {
+      // Show all suggestions after a space
+      setFilteredSuggestions(OPERATOR_SUGGESTIONS);
+      setShowSuggestions(true);
+    } else {
+      setShowSuggestions(false);
+    }
+  }, [searchTerm]);
+
+  const handleSuggestionClick = (operator: string) => {
+    const cursorPos = inputRef.current?.selectionStart || searchTerm.length;
+    const beforeCursor = searchTerm.substring(0, cursorPos);
+    const afterCursor = searchTerm.substring(cursorPos);
+    const lastSpaceIndex = beforeCursor.lastIndexOf(' ');
+
+    // Replace the current word with the operator
+    const prefix = lastSpaceIndex >= 0 ? beforeCursor.substring(0, lastSpaceIndex + 1) : '';
+    const newSearchTerm = prefix + operator + afterCursor;
+
+    onSearchChange(newSearchTerm);
+    setShowSuggestions(false);
+
+    // Focus back on input and position cursor after the inserted operator
+    setTimeout(() => {
+      if (inputRef.current) {
+        inputRef.current.focus();
+        const newCursorPos = prefix.length + operator.length;
+        inputRef.current.setSelectionRange(newCursorPos, newCursorPos);
+      }
+    }, 0);
+  };
 
   const handleToggle = (key: keyof SearchConfig) => {
     if (key === 'logic') {
@@ -49,6 +132,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ searchTerm, onSearchChange, confi
         </div>
 
         <input
+          ref={inputRef}
           type="text"
           value={searchTerm}
           onChange={(e) => onSearchChange(e.target.value)}
@@ -76,6 +160,41 @@ const SearchBar: React.FC<SearchBarProps> = ({ searchTerm, onSearchChange, confi
           </button>
         </div>
       </div>
+
+      {/* Operator Suggestions Dropdown */}
+      {showSuggestions && filteredSuggestions.length > 0 && (
+        <div
+          ref={suggestionsRef}
+          className="absolute top-full left-0 mt-2 w-full bg-white rounded-xl shadow-xl border border-slate-200 overflow-hidden z-50 animate-in fade-in slide-in-from-top-2"
+        >
+          <div className="p-2">
+            <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-2 py-1">
+              Search Operators
+            </div>
+            <div className="space-y-1">
+              {filteredSuggestions.map((suggestion) => (
+                <button
+                  key={suggestion.operator}
+                  onClick={() => handleSuggestionClick(suggestion.operator)}
+                  className="w-full text-left px-3 py-2 rounded-lg hover:bg-blue-50 transition-colors group"
+                >
+                  <div className="flex items-center justify-between">
+                    <code className="text-sm font-semibold text-blue-600 group-hover:text-blue-700">
+                      {suggestion.operator}
+                    </code>
+                    <span className="text-xs text-slate-400 group-hover:text-slate-500">
+                      {suggestion.example}
+                    </span>
+                  </div>
+                  <div className="text-xs text-slate-500 mt-0.5">
+                    {suggestion.description}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Advanced Filter Popover */}
       {showFilters && (
