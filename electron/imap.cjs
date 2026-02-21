@@ -12,12 +12,7 @@ const {
 } = require('./db.cjs');
 // Add db just for direct calls if needed, though we imported migrateFolder directly
 const db = require('./db.cjs');
-const {
-  INBOX_FOLDER,
-  SENT_FOLDER,
-  SPAM_FOLDER,
-  TRASH_FOLDER,
-} = require('./folderConstants.cjs');
+const { INBOX_FOLDER, SENT_FOLDER, SPAM_FOLDER, TRASH_FOLDER } = require('./folderConstants.cjs');
 const logger = require('./utils/logger.cjs');
 const notifications = require('./notifications.cjs');
 
@@ -371,9 +366,7 @@ async function fetchUidBatch(client, seqRange) {
   }
 
   // Extract server UIDs from this batch
-  const batchServerUids = headers
-    .map((m) => (m.attributes ? m.attributes.uid : null))
-    .filter((u) => u != null);
+  const batchServerUids = headers.map((m) => (m.attributes ? m.attributes.uid : null)).filter((u) => u != null);
 
   logger.debug(
     `[Sync Debug] Range ${seqRange}: Fetched ${headers.length} headers, extracted ${batchServerUids.length} UIDs.`
@@ -430,9 +423,7 @@ async function downloadMessageBatch(client, chunkUids, account, targetCategory) 
     }
 
     if (messages.length === 0) {
-      logger.error(
-        `[Sync Error] Fetched 0 messages for UIDs ${chunkUids[0]}..${chunkUids[chunkUids.length - 1]}`
-      );
+      logger.error(`[Sync Error] Fetched 0 messages for UIDs ${chunkUids[0]}..${chunkUids[chunkUids.length - 1]}`);
       return 0;
     } else {
       logger.debug(`[Sync Debug] Fetched ${messages.length} raw messages. Processing...`);

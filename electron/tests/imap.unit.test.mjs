@@ -239,7 +239,7 @@ describe('IMAP Module', () => {
       // Set mock quota response
       setQuotaResponse({
         storage: {
-          usage: 1024000,  // 1000 KB in bytes
+          usage: 1024000, // 1000 KB in bytes
           limit: 10240000, // 10000 KB in bytes
         },
       });
@@ -266,7 +266,10 @@ describe('IMAP Module', () => {
 
       // Create mock client
       const mockClient = {
-        capabilities: new Map([['IMAP4REV1', true], ['QUOTA', true]]),
+        capabilities: new Map([
+          ['IMAP4REV1', true],
+          ['QUOTA', true],
+        ]),
         async getQuota(_mailbox) {
           return {
             storage: {
@@ -286,7 +289,10 @@ describe('IMAP Module', () => {
 
     it('should return null when quota has no storage property', async () => {
       const mockClient = {
-        capabilities: new Map([['IMAP4REV1', true], ['QUOTA', true]]),
+        capabilities: new Map([
+          ['IMAP4REV1', true],
+          ['QUOTA', true],
+        ]),
         async getQuota(_mailbox) {
           return { foo: 'bar' };
         },
@@ -299,7 +305,10 @@ describe('IMAP Module', () => {
 
     it('should return null when quota storage has no valid limit', async () => {
       const mockClient = {
-        capabilities: new Map([['IMAP4REV1', true], ['QUOTA', true]]),
+        capabilities: new Map([
+          ['IMAP4REV1', true],
+          ['QUOTA', true],
+        ]),
         async getQuota(_mailbox) {
           return {
             storage: {
@@ -330,7 +339,10 @@ describe('IMAP Module', () => {
 
     it('should handle getQuota errors gracefully', async () => {
       const mockClient = {
-        capabilities: new Map([['IMAP4REV1', true], ['QUOTA', true]]),
+        capabilities: new Map([
+          ['IMAP4REV1', true],
+          ['QUOTA', true],
+        ]),
         async getQuota(_mailbox) {
           throw new Error('Quota not supported');
         },
@@ -343,11 +355,14 @@ describe('IMAP Module', () => {
 
     it('should round bytes to KB correctly', async () => {
       const mockClient = {
-        capabilities: new Map([['IMAP4REV1', true], ['QUOTA', true]]),
+        capabilities: new Map([
+          ['IMAP4REV1', true],
+          ['QUOTA', true],
+        ]),
         async getQuota(_mailbox) {
           return {
             storage: {
-              usage: 1536,  // 1.5 KB = 1536 bytes
+              usage: 1536, // 1.5 KB = 1536 bytes
               limit: 2560, // 2.5 KB = 2560 bytes
             },
           };
@@ -357,7 +372,7 @@ describe('IMAP Module', () => {
       const result = await imap.checkAccountQuota(mockClient, 'test-account');
 
       expect(result).not.toBeNull();
-      expect(result.usedKB).toBe(2);  // Math.round(1536/1024) = 2
+      expect(result.usedKB).toBe(2); // Math.round(1536/1024) = 2
       expect(result.totalKB).toBe(3); // Math.round(2560/1024) = 3
     });
   });
@@ -610,9 +625,7 @@ describe('IMAP Module', () => {
     });
 
     it('should extract UIDs correctly from message attributes', async () => {
-      setServerEmails([
-        { uid: 42, body: 'Test email', flags: ['\\Seen'] },
-      ]);
+      setServerEmails([{ uid: 42, body: 'Test email', flags: ['\\Seen'] }]);
 
       const account = {
         id: 'test-account',
@@ -805,9 +818,7 @@ describe('IMAP Module', () => {
     it('should handle fetch errors gracefully', async () => {
       const { setFetchFailure } = await import('./vitest-setup.js');
 
-      setServerEmails([
-        { uid: 100, body: 'Test email', flags: [] },
-      ]);
+      setServerEmails([{ uid: 100, body: 'Test email', flags: [] }]);
 
       const account = {
         id: 'test-account',
@@ -901,9 +912,7 @@ describe('IMAP Module', () => {
     });
 
     it('should handle messages without body source', async () => {
-      setServerEmails([
-        { uid: 100, body: '', flags: [], noSource: true },
-      ]);
+      setServerEmails([{ uid: 100, body: '', flags: [], noSource: true }]);
 
       const account = {
         id: 'test-account',
@@ -1010,13 +1019,7 @@ describe('IMAP Module', () => {
       const localUids = [100, 200, 300];
       const serverUids = new Set([100, 300]);
 
-      const deletedCount = imap.reconcileOrphans(
-        localUids,
-        serverUids,
-        account.id,
-        'Posteingang',
-        'INBOX'
-      );
+      const deletedCount = imap.reconcileOrphans(localUids, serverUids, account.id, 'Posteingang', 'INBOX');
 
       expect(deletedCount).toBe(1);
 
@@ -1048,13 +1051,7 @@ describe('IMAP Module', () => {
       const localUids = [100, 200, 300];
       const serverUids = new Set([100, 200, 300, 400]);
 
-      const deletedCount = imap.reconcileOrphans(
-        localUids,
-        serverUids,
-        account.id,
-        'Posteingang',
-        'INBOX'
-      );
+      const deletedCount = imap.reconcileOrphans(localUids, serverUids, account.id, 'Posteingang', 'INBOX');
 
       expect(deletedCount).toBe(0);
     });
@@ -1080,13 +1077,7 @@ describe('IMAP Module', () => {
       const localUids = [];
       const serverUids = new Set([100, 200, 300]);
 
-      const deletedCount = imap.reconcileOrphans(
-        localUids,
-        serverUids,
-        account.id,
-        'Posteingang',
-        'INBOX'
-      );
+      const deletedCount = imap.reconcileOrphans(localUids, serverUids, account.id, 'Posteingang', 'INBOX');
 
       expect(deletedCount).toBe(0);
     });
@@ -1136,13 +1127,7 @@ describe('IMAP Module', () => {
       const localUids = [100, 200];
       const serverUids = new Set([]);
 
-      const deletedCount = imap.reconcileOrphans(
-        localUids,
-        serverUids,
-        account.id,
-        'Posteingang',
-        'INBOX'
-      );
+      const deletedCount = imap.reconcileOrphans(localUids, serverUids, account.id, 'Posteingang', 'INBOX');
 
       expect(deletedCount).toBe(2);
 
@@ -1185,13 +1170,7 @@ describe('IMAP Module', () => {
       const localUids = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
       const serverUids = new Set([10, 30, 50, 70, 90]);
 
-      const deletedCount = imap.reconcileOrphans(
-        localUids,
-        serverUids,
-        account.id,
-        'Posteingang',
-        'INBOX'
-      );
+      const deletedCount = imap.reconcileOrphans(localUids, serverUids, account.id, 'Posteingang', 'INBOX');
 
       expect(deletedCount).toBe(5);
 

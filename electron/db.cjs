@@ -572,7 +572,9 @@ function setSetting(key, value) {
 // --- Notification Settings Methods ---
 
 function getNotificationSettings(accountId) {
-  const settings = db.prepare('SELECT enabled, mutedCategories FROM notification_settings WHERE accountId = ?').get(accountId);
+  const settings = db
+    .prepare('SELECT enabled, mutedCategories FROM notification_settings WHERE accountId = ?')
+    .get(accountId);
 
   if (!settings) {
     // Return defaults if no settings exist yet
@@ -608,16 +610,12 @@ function saveNotificationSettings(accountId, settings) {
 }
 
 function getUnreadEmailCount(accountId) {
-  const result = db
-    .prepare('SELECT COUNT(*) as count FROM emails WHERE accountId = ? AND isRead = 0')
-    .get(accountId);
+  const result = db.prepare('SELECT COUNT(*) as count FROM emails WHERE accountId = ? AND isRead = 0').get(accountId);
   return result ? result.count : 0;
 }
 
 function getTotalUnreadEmailCount() {
-  const result = db
-    .prepare('SELECT COUNT(*) as count FROM emails WHERE isRead = 0')
-    .get();
+  const result = db.prepare('SELECT COUNT(*) as count FROM emails WHERE isRead = 0').get();
   return result ? result.count : 0;
 }
 

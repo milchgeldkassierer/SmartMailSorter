@@ -265,7 +265,11 @@ app.whenReady().then(() => {
 
   ipcMain.handle('sync-account', async (event, accountId) => {
     if (isSyncing) {
-      return { success: false, error: 'SYNC_IN_PROGRESS', message: 'Eine Synchronisation läuft bereits. Bitte warten.' };
+      return {
+        success: false,
+        error: 'SYNC_IN_PROGRESS',
+        message: 'Eine Synchronisation läuft bereits. Bitte warten.',
+      };
     }
     // Retrieve account with decrypted password for IMAP operations
     const accountWithPassword = db.getAccountWithPassword(accountId);
@@ -291,7 +295,11 @@ app.whenReady().then(() => {
 
   ipcMain.handle('reset-db', () => {
     if (isSyncing) {
-      return { success: false, error: 'SYNC_IN_PROGRESS', message: 'Kann nicht zurücksetzen während eine Synchronisation läuft.' };
+      return {
+        success: false,
+        error: 'SYNC_IN_PROGRESS',
+        message: 'Kann nicht zurücksetzen während eine Synchronisation läuft.',
+      };
     }
     // Clear debounce timer to prevent stale restart after reset
     if (autoSyncDebounceTimer) {
@@ -409,7 +417,9 @@ app.whenReady().then(() => {
 
       if (!safeStorage.isEncryptionAvailable()) {
         logger.warn('[IPC] safeStorage encryption is not available - falling back to plaintext storage');
-        logger.warn('[IPC] WARNING: AI settings will be stored unencrypted. This is not recommended for production use.');
+        logger.warn(
+          '[IPC] WARNING: AI settings will be stored unencrypted. This is not recommended for production use.'
+        );
         fs.writeFileSync(AI_SETTINGS_FILE_PLAINTEXT, settingsJson);
         logger.debug('[IPC] AI settings saved successfully (plaintext fallback)');
         return { success: true, encrypted: false, warning: 'Settings stored unencrypted due to platform limitations' };
@@ -449,7 +459,9 @@ app.whenReady().then(() => {
         // Fall through to plaintext if available, otherwise error
         if (!hasPlaintextFile) {
           logger.error('[IPC] safeStorage encryption is not available, but encrypted file exists');
-          throw new Error('Encryption not available - cannot decrypt existing settings. Please set up platform keyring support.');
+          throw new Error(
+            'Encryption not available - cannot decrypt existing settings. Please set up platform keyring support.'
+          );
         }
       }
 
@@ -477,7 +489,7 @@ app.whenReady().then(() => {
     const accountSettings = {};
 
     // Load per-account settings
-    accounts.forEach(account => {
+    accounts.forEach((account) => {
       const settings = db.getNotificationSettings(account.id);
       accountSettings[account.id] = settings.enabled;
     });
@@ -490,16 +502,16 @@ app.whenReady().then(() => {
     const allCategories = db.getCategories();
     const categorySettings = {};
     // Include smart/custom categories from DB
-    allCategories.forEach(cat => {
+    allCategories.forEach((cat) => {
       categorySettings[cat.name] = true;
     });
     // Include system folders (not stored in categories table)
-    ['Posteingang', 'Gesendet', 'Spam', 'Papierkorb'].forEach(name => {
+    ['Posteingang', 'Gesendet', 'Spam', 'Papierkorb'].forEach((name) => {
       categorySettings[name] = true;
     });
     // Mark muted categories as false
     if (Array.isArray(mutedCategories)) {
-      mutedCategories.forEach(name => {
+      mutedCategories.forEach((name) => {
         categorySettings[name] = false;
       });
     }

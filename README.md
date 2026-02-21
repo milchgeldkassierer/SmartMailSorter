@@ -133,6 +133,7 @@ The main process is the application's backend and serves as the entry point for 
 - **Security Layer**: Implements context isolation and sandboxing to protect against malicious code execution
 
 **Key IPC Handlers:**
+
 - `get-accounts`, `add-account`, `delete-account`: Account management
 - `get-emails`, `get-email-content`, `get-email-attachments`: Email retrieval
 - `sync-account`, `test-connection`: IMAP operations
@@ -157,18 +158,21 @@ The renderer process runs the React application in a sandboxed Chromium environm
 The database layer provides all data persistence using **SQLite with better-sqlite3**:
 
 **Database Schema:**
+
 - **`accounts` table**: Stores email account credentials, IMAP settings, sync state, and storage quotas
 - **`emails` table**: Contains email metadata (sender, subject, body, HTML, dates, flags, folders, AI categories)
 - **`attachments` table**: Stores attachment metadata and binary data (BLOB)
 - **`categories` table**: Defines both system-provided and user-created categories
 
 **Key Features:**
+
 - **Synchronous API**: `better-sqlite3` provides synchronous database operations for simpler code flow
 - **Foreign Key Cascade**: Account deletion automatically removes associated emails and attachments
 - **Migration Support**: Automatic column additions for backward compatibility with existing databases
 - **Indexed Queries**: Optimized for fast email retrieval and filtering
 
 **Core Methods:**
+
 - Account CRUD: `getAccounts()`, `addAccount()`, `deleteAccountDn()`, `updateAccountSync()`, `updateAccountQuota()`
 - Email Operations: `getEmails()`, `saveEmail()`, `deleteEmail()`, `getEmailContent()`, `updateEmailRead()`, `updateEmailFlag()`
 - Attachment Handling: `getAttachment()`, `getEmailAttachments()`
@@ -179,6 +183,7 @@ The database layer provides all data persistence using **SQLite with better-sqli
 The IMAP module handles all email synchronization using **ImapFlow**:
 
 **Features:**
+
 - **Multi-Folder Sync**: Supports syncing Inbox, Sent, Spam, and Trash folders
 - **Incremental Sync**: Tracks `lastSyncUid` per account to sync only new messages
 - **Large-Scale Performance**: Optimized batch processing for accounts with thousands of emails
@@ -188,12 +193,14 @@ The IMAP module handles all email synchronization using **ImapFlow**:
 
 **Provider Presets:**
 Built-in configuration for popular German email providers:
+
 - **GMX**: `imap.gmx.net:993`
 - **Web.de**: `imap.web.de:993`
 - **Gmail**: `imap.gmail.com:993`
 - Custom IMAP servers supported with manual configuration
 
 **Sync Process:**
+
 1. Connect to IMAP server with account credentials
 2. Retrieve list of mailboxes and map to DB folder names
 3. For each folder, fetch UIDs greater than `lastSyncUid`
@@ -203,6 +210,7 @@ Built-in configuration for popular German email providers:
 7. Update `lastSyncUid` to track sync state
 
 **Key Functions:**
+
 - `syncAccount(account)`: Performs full multi-folder sync
 - `testConnection(account)`: Validates IMAP credentials
 - `deleteEmail(account, uid, folder)`: Removes email from server
@@ -214,17 +222,20 @@ Built-in configuration for popular German email providers:
 The AI service provides **multi-provider AI integration** for email categorization:
 
 **Supported Providers:**
+
 - **Google Gemini**: `gemini-3-flash-preview` (fast, cost-effective), `gemini-3-pro-preview` (higher accuracy)
 - **OpenAI**: `gpt-4o`, `gpt-4o-mini`, `gpt-4-turbo`
 - **Anthropic Claude**: `claude-3-5-sonnet-20240620`, `claude-3-haiku-20240307`
 
 **Architecture:**
+
 - **Unified Interface**: Single `callLLM()` function abstracts provider differences
 - **JSON Schema Validation**: Enforces structured responses using provider-specific schema systems
 - **Error Handling**: Graceful handling of rate limits (429 errors) and API failures
 - **Response Parsing**: Multi-strategy text extraction for robust response handling
 
 **Categorization Process:**
+
 1. Batch emails (up to 100) for processing efficiency
 2. Send email metadata (subject, sender, body preview) to AI with system instructions
 3. AI analyzes content and assigns German category (Rechnungen, Newsletter, Privat, etc.)
@@ -232,11 +243,13 @@ The AI service provides **multi-provider AI integration** for email categorizati
 5. Store AI results in database for transparency and manual review
 
 **Key Functions:**
+
 - `categorizeEmails(emails, categories, settings)`: Batch categorization with confidence scoring
 - `generateDemoEmails(count, settings)`: Generate realistic test emails for development
 - `callLLM(prompt, systemInstruction, jsonSchema, settings)`: Core LLM interaction
 
 **Optimization:**
+
 - **Thinking Budget**: Limits reasoning tokens for faster responses (Gemini)
 - **Batch Processing**: Reduces API calls by processing multiple emails per request
 - **Confidence Scoring**: Allows users to review low-confidence categorizations
@@ -300,6 +313,7 @@ Here's how email data flows through the application:
 ```
 
 **Key Data Flow Characteristics:**
+
 - **Unidirectional**: Renderer → Main → IMAP/DB/AI → Main → Renderer
 - **Asynchronous**: All IPC handlers return Promises for non-blocking operations
 - **Transactional**: Database operations are wrapped in transactions for consistency
@@ -335,6 +349,7 @@ SmartMailSorter/
 ```
 
 **Key Design Decisions:**
+
 - **`.cjs` Extension**: Main process uses CommonJS for better Electron compatibility
 - **`.ts/.tsx` Extension**: Renderer uses TypeScript for type safety
 - **Separation of Concerns**: Database, IMAP, and AI logic separated into distinct modules
@@ -363,15 +378,15 @@ SmartMailSorter implements a **strict Content Security Policy** to provide defen
 
 **CSP Directives Explained:**
 
-| Directive | Production Value | Purpose |
-|-----------|-----------------|---------|
-| `default-src` | `'self'` | Default policy: only load resources from the application's origin |
-| `script-src` | `'self' https://cdn.tailwindcss.com https://esm.sh` | Allow scripts from: app bundle, Tailwind CSS CDN, ES modules from esm.sh. **Blocks inline scripts and `eval()`** to prevent XSS |
-| `style-src` | `'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.tailwindcss.com` | Allow styles from: app bundle, inline styles (required for React), Google Fonts, Tailwind CDN |
-| `font-src` | `'self' https://fonts.gstatic.com` | Allow fonts from: app bundle, Google Fonts CDN |
-| `connect-src` | `'self' https://api.openai.com https://generativelanguage.googleapis.com` | Restrict network connections to: app origin, OpenAI API, Google Gemini API. **Blocks connections to arbitrary external hosts** |
-| `img-src` | `'self' data: https:` | Allow images from: app bundle, data URIs (inline images), HTTPS sources |
-| `frame-src` | `'none'` | **Block all iframe embedding** to prevent clickjacking attacks |
+| Directive     | Production Value                                                                  | Purpose                                                                                                                         |
+| ------------- | --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `default-src` | `'self'`                                                                          | Default policy: only load resources from the application's origin                                                               |
+| `script-src`  | `'self' https://cdn.tailwindcss.com https://esm.sh`                               | Allow scripts from: app bundle, Tailwind CSS CDN, ES modules from esm.sh. **Blocks inline scripts and `eval()`** to prevent XSS |
+| `style-src`   | `'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.tailwindcss.com` | Allow styles from: app bundle, inline styles (required for React), Google Fonts, Tailwind CDN                                   |
+| `font-src`    | `'self' https://fonts.gstatic.com`                                                | Allow fonts from: app bundle, Google Fonts CDN                                                                                  |
+| `connect-src` | `'self' https://api.openai.com https://generativelanguage.googleapis.com`         | Restrict network connections to: app origin, OpenAI API, Google Gemini API. **Blocks connections to arbitrary external hosts**  |
+| `img-src`     | `'self' data: https:`                                                             | Allow images from: app bundle, data URIs (inline images), HTTPS sources                                                         |
+| `frame-src`   | `'none'`                                                                          | **Block all iframe embedding** to prevent clickjacking attacks                                                                  |
 
 **Why These Domains Are Whitelisted:**
 
@@ -386,12 +401,14 @@ SmartMailSorter implements a **strict Content Security Policy** to provide defen
 The CSP automatically adjusts based on the environment:
 
 **Development Mode** (when `isDev` is true):
+
 - Allows `http://localhost:3000` for Vite dev server
 - Allows `ws://localhost:3000` for Hot Module Replacement (HMR)
 - Permits `'unsafe-eval'` for development tooling
 - Enables `'unsafe-inline'` for development convenience
 
 **Production Mode** (packaged application):
+
 - Strict CSP with no localhost or eval allowed
 - Only whitelisted external domains permitted
 - Maximum protection against XSS attacks
@@ -408,6 +425,7 @@ The CSP automatically adjusts based on the environment:
 If you need to add a new external CDN or API endpoint:
 
 1. **Update CSP Headers** in `electron/main.cjs`:
+
    ```javascript
    const cspDirectives = [
      // ... existing directives ...
@@ -416,9 +434,12 @@ If you need to add a new external CDN or API endpoint:
    ```
 
 2. **Update CSP Meta Tag** in `index.html`:
+
    ```html
-   <meta http-equiv="Content-Security-Policy"
-         content="...; script-src 'self' https://cdn.tailwindcss.com https://esm.sh https://new-cdn.example.com; ..." />
+   <meta
+     http-equiv="Content-Security-Policy"
+     content="...; script-src 'self' https://cdn.tailwindcss.com https://esm.sh https://new-cdn.example.com; ..."
+   />
    ```
 
 3. **Update Tests** in `electron/tests/security.csp.test.ts` to verify the new domain is allowed
@@ -453,6 +474,7 @@ The application uses a relational schema with four core tables:
 
 **1. `accounts` Table**
 Stores email account configuration and sync state:
+
 ```sql
 CREATE TABLE accounts (
   id TEXT PRIMARY KEY,              -- Unique account identifier
@@ -472,6 +494,7 @@ CREATE TABLE accounts (
 
 **2. `emails` Table**
 Stores email metadata and content:
+
 ```sql
 CREATE TABLE emails (
   id TEXT PRIMARY KEY,              -- Unique email identifier
@@ -497,6 +520,7 @@ CREATE TABLE emails (
 
 **3. `attachments` Table**
 Stores email attachments as BLOBs:
+
 ```sql
 CREATE TABLE attachments (
   id TEXT PRIMARY KEY,              -- Unique attachment identifier
@@ -511,6 +535,7 @@ CREATE TABLE attachments (
 
 **4. `categories` Table**
 Defines system and custom email categories:
+
 ```sql
 CREATE TABLE categories (
   name TEXT PRIMARY KEY,            -- Category name (German)
@@ -520,6 +545,7 @@ CREATE TABLE categories (
 ```
 
 **Default System Categories:**
+
 - `Rechnungen` (Invoices) - system
 - `Newsletter` (Newsletters) - system
 - `Privat` (Private) - system
@@ -532,6 +558,7 @@ CREATE TABLE categories (
 The database automatically applies column migrations on startup to ensure backward compatibility. If new columns are added in updates, existing databases will be upgraded automatically using `ALTER TABLE` statements with safe defaults.
 
 **Migration Strategy:**
+
 - Column additions wrapped in try-catch blocks (ignore errors if column exists)
 - Foreign key cascade deletes ensure referential integrity
 - Sync process migrates custom categories from `emails.smartCategory` to `categories` table
@@ -543,6 +570,7 @@ SmartMailSorter supports **three major AI providers** for email categorization. 
 #### Supported AI Providers
 
 **1. Google Gemini** (Default)
+
 - **Models Available:**
   - `gemini-3-flash-preview` - Fast, cost-effective categorization (recommended)
   - `gemini-3-pro-preview` - Higher accuracy with extended reasoning
@@ -558,6 +586,7 @@ SmartMailSorter supports **three major AI providers** for email categorization. 
 - **Rate Limits:** Generous free tier with rate limiting on high usage
 
 **2. OpenAI**
+
 - **Models Available:**
   - `gpt-4o` - Latest GPT-4 optimized model (recommended)
   - `gpt-4o-mini` - Faster, lower-cost version
@@ -574,6 +603,7 @@ SmartMailSorter supports **three major AI providers** for email categorization. 
 - **Rate Limits:** Based on usage tier and billing plan
 
 **3. Anthropic Claude**
+
 - **Models Available:**
   - `claude-3-5-sonnet-20240620` - Balanced performance and accuracy (recommended)
   - `claude-3-haiku-20240307` - Fast, cost-effective option
@@ -592,6 +622,7 @@ SmartMailSorter supports **three major AI providers** for email categorization. 
 #### API Key Configuration
 
 **Option 1: Settings UI (Recommended)**
+
 1. Launch SmartMailSorter
 2. Navigate to **Settings** → **AI Configuration**
 3. Select your preferred provider from the dropdown
@@ -622,14 +653,14 @@ npm start
 
 Choose the right model based on your needs:
 
-| Provider | Model | Speed | Cost | Accuracy | Best For |
-|----------|-------|-------|------|----------|----------|
-| **Gemini** | `gemini-3-flash-preview` | ⚡⚡⚡ Fast | 💰 Low | ⭐⭐⭐ Good | High-volume email processing |
-| **Gemini** | `gemini-3-pro-preview` | ⚡⚡ Medium | 💰💰 Medium | ⭐⭐⭐⭐ Excellent | Complex categorization needs |
-| **OpenAI** | `gpt-4o-mini` | ⚡⚡⚡ Fast | 💰 Low | ⭐⭐⭐ Good | Budget-conscious users |
-| **OpenAI** | `gpt-4o` | ⚡⚡ Medium | 💰💰💰 High | ⭐⭐⭐⭐⭐ Best | Maximum accuracy required |
-| **Claude** | `claude-3-haiku` | ⚡⚡⚡ Fast | 💰 Low | ⭐⭐⭐ Good | Fast, reliable categorization |
-| **Claude** | `claude-3-5-sonnet` | ⚡⚡ Medium | 💰💰 Medium | ⭐⭐⭐⭐ Excellent | Balanced performance |
+| Provider   | Model                    | Speed       | Cost        | Accuracy           | Best For                      |
+| ---------- | ------------------------ | ----------- | ----------- | ------------------ | ----------------------------- |
+| **Gemini** | `gemini-3-flash-preview` | ⚡⚡⚡ Fast | 💰 Low      | ⭐⭐⭐ Good        | High-volume email processing  |
+| **Gemini** | `gemini-3-pro-preview`   | ⚡⚡ Medium | 💰💰 Medium | ⭐⭐⭐⭐ Excellent | Complex categorization needs  |
+| **OpenAI** | `gpt-4o-mini`            | ⚡⚡⚡ Fast | 💰 Low      | ⭐⭐⭐ Good        | Budget-conscious users        |
+| **OpenAI** | `gpt-4o`                 | ⚡⚡ Medium | 💰💰💰 High | ⭐⭐⭐⭐⭐ Best    | Maximum accuracy required     |
+| **Claude** | `claude-3-haiku`         | ⚡⚡⚡ Fast | 💰 Low      | ⭐⭐⭐ Good        | Fast, reliable categorization |
+| **Claude** | `claude-3-5-sonnet`      | ⚡⚡ Medium | 💰💰 Medium | ⭐⭐⭐⭐ Excellent | Balanced performance          |
 
 **Recommendation:** Start with `gemini-3-flash-preview` for its excellent balance of speed, cost, and accuracy.
 
@@ -641,14 +672,15 @@ SmartMailSorter is designed specifically for German email users and uses **Germa
 
 These folders correspond to **actual folders on your email server** and are synced via IMAP:
 
-| German Name | English Translation | IMAP Purpose |
-|-------------|---------------------|--------------|
-| **Posteingang** | Inbox | New, unread emails |
-| **Gesendet** | Sent | Emails you've sent |
-| **Spam** | Spam | Suspected spam messages |
-| **Papierkorb** | Trash | Deleted emails |
+| German Name     | English Translation | IMAP Purpose            |
+| --------------- | ------------------- | ----------------------- |
+| **Posteingang** | Inbox               | New, unread emails      |
+| **Gesendet**    | Sent                | Emails you've sent      |
+| **Spam**        | Spam                | Suspected spam messages |
+| **Papierkorb**  | Trash               | Deleted emails          |
 
 **Constants in Code:**
+
 ```typescript
 export const INBOX_FOLDER = 'Posteingang';
 export const SENT_FOLDER = 'Gesendet';
@@ -665,16 +697,17 @@ SmartMailSorter overlays **virtual categories** on top of physical folders using
 
 **Default AI Categories:**
 
-| German Name | English Translation | Description | Typical Examples |
-|-------------|---------------------|-------------|------------------|
-| **Rechnungen** | Invoices | Bills, receipts, invoices | Amazon orders, utility bills, tax documents |
-| **Newsletter** | Newsletters | Marketing emails, subscriptions | Company updates, promotional emails, digests |
-| **Privat** | Private | Personal communications | Family emails, friend messages, personal invitations |
-| **Geschäftlich** | Business | Work-related emails | Client correspondence, meeting invites, project updates |
-| **Kündigungen** | Cancellations | Service cancellations, terminations | Subscription cancellations, contract terminations |
-| **Sonstiges** | Other | Unclassified or miscellaneous | Emails that don't fit other categories |
+| German Name      | English Translation | Description                         | Typical Examples                                        |
+| ---------------- | ------------------- | ----------------------------------- | ------------------------------------------------------- |
+| **Rechnungen**   | Invoices            | Bills, receipts, invoices           | Amazon orders, utility bills, tax documents             |
+| **Newsletter**   | Newsletters         | Marketing emails, subscriptions     | Company updates, promotional emails, digests            |
+| **Privat**       | Private             | Personal communications             | Family emails, friend messages, personal invitations    |
+| **Geschäftlich** | Business            | Work-related emails                 | Client correspondence, meeting invites, project updates |
+| **Kündigungen**  | Cancellations       | Service cancellations, terminations | Subscription cancellations, contract terminations       |
+| **Sonstiges**    | Other               | Unclassified or miscellaneous       | Emails that don't fit other categories                  |
 
 **Enum Definition:**
+
 ```typescript
 export enum DefaultEmailCategory {
   INBOX = 'Posteingang',
@@ -693,10 +726,12 @@ export enum DefaultEmailCategory {
 #### Dual Organization Example
 
 An email might have:
+
 - **Physical Folder:** `Posteingang` (stored in IMAP folder on server)
 - **Smart Category:** `Rechnungen` (AI-assigned virtual category)
 
 This allows you to:
+
 1. **Filter by physical folder** to see what's in your Inbox, Sent, etc.
 2. **Filter by AI category** to see all invoices across all folders
 3. **Combine filters** to see "Invoices in my Inbox" or "Business emails in Sent"
@@ -716,6 +751,7 @@ Custom categories are stored in the `categories` table with `type = 'custom'` an
 #### Category Localization
 
 While the current implementation uses German names throughout, the architecture supports future localization:
+
 - Category names are stored as data, not hard-coded
 - UI labels can be mapped to translations
 - The `categories` table can be extended with locale fields
@@ -743,12 +779,14 @@ Before you begin, ensure you have the following installed:
 ### Installation
 
 1. **Clone the repository:**
+
    ```bash
    git clone https://github.com/yourusername/SmartMailSorter.git
    cd SmartMailSorter
    ```
 
 2. **Install dependencies:**
+
    ```bash
    npm install
    ```
@@ -798,6 +836,7 @@ npm run electron:dev
 ```
 
 This command does the following:
+
 1. Rebuilds native modules for Electron (`npm run rebuild:electron`)
 2. Starts the Vite development server on port 3000
 3. Waits for the dev server to be ready
@@ -806,6 +845,7 @@ This command does the following:
 The Electron window will automatically reload when you make changes to React components, and the main process will need to be manually restarted (Ctrl+C and re-run) when you modify `electron/*.cjs` files.
 
 **Hot Module Replacement (HMR):**
+
 - React component changes trigger instant hot reloading
 - CSS/styling changes apply without full page reload
 - Main process changes require application restart
@@ -817,10 +857,12 @@ SmartMailSorter uses **Vitest** with a workspace configuration for organizing te
 **Test Structure:**
 
 The project uses a **Vitest workspace** (`vitest.workspace.ts`) that defines multiple test projects:
+
 - **Unit Tests** (`vitest.config.ts`): Tests for backend logic, database operations, IMAP sync, and AI services
 - **Component Tests** (`vitest.config.components.ts`): React component tests with `@testing-library/react` and JSDOM
 
 This separation allows you to:
+
 - Run backend tests without loading React Testing Library overhead
 - Test components in isolation with proper browser environment simulation
 - Parallelize test execution across different test suites
@@ -893,6 +935,7 @@ npm run electron:build
 ```
 
 This command:
+
 1. Runs `npm run build` to create an optimized production build of the React frontend (output to `dist/`)
 2. Runs `electron-builder` to package the application into a distributable format
 
@@ -907,6 +950,7 @@ The packaged application will be created in the `dist-electron/` directory with 
 **Build Configuration:**
 
 Electron Builder configuration is defined in `package.json` under the `"build"` key. You can customize:
+
 - Application icon
 - Installer settings
 - Code signing (for macOS and Windows)
@@ -935,18 +979,21 @@ npm run electron:build -- --linux
 This error occurs when `better-sqlite3` is compiled for the wrong runtime (Node.js vs Electron).
 
 **Solution:**
+
 - If running the app: `npm run rebuild:electron`
 - If running tests: `npm run rebuild:node`
 
 #### Port 3000 Already in Use
 
 If another application is using port 3000, you'll need to either:
+
 - Stop the other application
 - Or modify the Vite configuration in `vite.config.ts` to use a different port
 
 #### Electron Window Opens But Shows Blank Screen
 
 This usually means the Vite dev server hasn't started yet. The `wait-on` package should handle this automatically, but if you see this issue:
+
 1. Check if Vite is running on `http://localhost:3000`
 2. Check the terminal for Vite startup errors
 3. Try restarting the development server
@@ -954,12 +1001,14 @@ This usually means the Vite dev server hasn't started yet. The `wait-on` package
 #### Native Module Compilation Failures
 
 If `npm run rebuild:electron` fails:
+
 - **Windows**: Ensure Visual Studio Build Tools are installed
 - **macOS**: Run `xcode-select --install` to install Command Line Tools
 - **Linux**: Install `build-essential` and `python3`
 - Check that your Node.js version is 18.x or higher
 
 For more detailed logs during rebuild:
+
 ```bash
 npm run rebuild:electron -- --verbose
 ```
@@ -976,9 +1025,11 @@ npm run rebuild:electron -- --verbose
 3. **DevTools**: Press `Ctrl+Shift+I` (Windows/Linux) or `Cmd+Option+I` (macOS) to open Chrome DevTools in the Electron renderer process.
 
 4. **Main Process Debugging**: Add `debugger` statements in `electron/*.cjs` files and run with:
+
    ```bash
    NODE_ENV=development electron --inspect .
    ```
+
    Then connect to `chrome://inspect` in Chrome.
 
 5. **Log Files**: Check log files for debugging (see [Logging System](#logging-system) section):
@@ -1039,6 +1090,7 @@ The logging system supports four severity levels:
 #### Development Mode
 
 When running with `npm run dev`:
+
 - **Console**: Debug-level logs appear in the terminal
 - **File**: Debug-level logs are written to log files
 - All verbose sync and debug output is visible for easier development
@@ -1046,6 +1098,7 @@ When running with `npm run dev`:
 #### Production Mode
 
 When running the packaged application:
+
 - **Console**: Disabled (to avoid polluting stdout)
 - **File**: Info-level logs only (debug logs are disabled)
 - Cleaner log output focused on operational events and errors
@@ -1063,6 +1116,7 @@ The actual path depends on your operating system:
 - **Windows:** `%APPDATA%/SmartMailSorter/logs/main.log`
 
 **Log Rotation:**
+
 - Maximum file size: 10MB
 - When the limit is reached, the current log is automatically moved to `main.log.old`
 - Only one backup file is kept (newest 20MB of logs total)
