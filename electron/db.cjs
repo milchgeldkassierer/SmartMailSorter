@@ -22,7 +22,7 @@ function createSchema() {
       imapHost TEXT,
       imapPort INTEGER,
       username TEXT,
-      password TEXT, -- Note: In a real production app, use safeStorage (Electron)
+      password TEXT, -- Encrypted using Electron safeStorage
       color TEXT,
       lastSyncUid INTEGER DEFAULT 0,
       storageUsed INTEGER DEFAULT 0,
