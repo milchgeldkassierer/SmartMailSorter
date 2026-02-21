@@ -7,6 +7,7 @@ export default defineConfig({
     include: [
       'electron/tests/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}',
       'src/services/__tests__/**/*.{test,spec}.{ts,tsx}',
+      'src/hooks/__tests__/**/*.{test,spec}.{ts,tsx}',
     ],
     // Setup file that patches CJS modules before any tests run
     setupFiles: ['./electron/tests/vitest-setup.js'],
