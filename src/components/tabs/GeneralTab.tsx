@@ -1,12 +1,16 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Trash2 } from '../Icon';
 import { useOptionalDialogContext } from '../../contexts/DialogContext';
+import { useLanguage } from '../../hooks/useLanguage';
 
 const MIN_SYNC_INTERVAL = 2;
 const MAX_SYNC_INTERVAL = 30;
 
 const GeneralTab: React.FC = () => {
+  const { t } = useTranslation();
   const dialog = useOptionalDialogContext();
+  const { currentLanguage, changeLanguage, availableLanguages, languageLabels } = useLanguage();
   const [autoSyncInterval, setAutoSyncInterval] = useState<number>(0);
   const [inputValue, setInputValue] = useState<string>('');
 
@@ -76,14 +80,14 @@ const GeneralTab: React.FC = () => {
 
     if (dialog) {
       confirmed = await dialog.confirm({
-        title: 'Datenbank zurücksetzen',
-        message: 'Achtung: Dies löscht alle gespeicherten Emails und Konten! Fortfahren?',
-        confirmText: 'Zurücksetzen',
-        cancelText: 'Abbrechen',
+        title: t('generalTab.resetDatabaseTitle'),
+        message: t('generalTab.resetDatabaseConfirm'),
+        confirmText: t('generalTab.resetButton'),
+        cancelText: t('common.cancel'),
         variant: 'danger',
       });
     } else {
-      confirmed = window.confirm('Achtung: Dies löscht alle gespeicherten Emails und Konten! Fortfahren?');
+      confirmed = window.confirm(t('generalTab.resetDatabaseConfirm'));
     }
 
     if (confirmed) {
@@ -91,9 +95,9 @@ const GeneralTab: React.FC = () => {
         if (window.electron) {
           const result = await window.electron.resetDb();
           if (result && typeof result === 'object' && !result.success) {
-            const msg = result.message || 'Datenbank konnte nicht zurückgesetzt werden.';
+            const msg = result.message || t('generalTab.resetError');
             if (dialog) {
-              await dialog.alert({ title: 'Hinweis', message: msg });
+              await dialog.alert({ title: t('common.note'), message: msg });
             } else {
               alert(msg);
             }
@@ -103,10 +107,10 @@ const GeneralTab: React.FC = () => {
         window.location.reload();
       } catch (error) {
         console.error('Failed to reset database:', error);
-        const errorMessage = `Datenbank konnte nicht zurückgesetzt werden: ${error instanceof Error ? error.message : 'Unbekannter Fehler'}`;
+        const errorMessage = `${t('generalTab.resetError')} ${error instanceof Error ? error.message : t('generalTab.unknownError')}`;
         if (dialog) {
           await dialog.alert({
-            title: 'Fehler',
+            title: t('common.error'),
             message: errorMessage,
             variant: 'danger',
           });
@@ -119,19 +123,36 @@ const GeneralTab: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {/* Language Selection */}
+      <div className="space-y-4">
+        <h3 className="font-semibold text-slate-800">{t('generalTab.language')}</h3>
+        <div>
+          <select
+            value={currentLanguage}
+            onChange={(e) => changeLanguage(e.target.value as typeof currentLanguage)}
+            className="px-4 py-2 border border-slate-300 rounded-md bg-white text-slate-800 hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+            aria-label={t('generalTab.selectLanguage')}
+          >
+            {availableLanguages.map((lang) => (
+              <option key={lang} value={lang}>
+                {languageLabels[lang]}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
       {/* Automatische Synchronisation */}
       <div className="space-y-4">
-        <h3 className="font-semibold text-slate-800">Automatische Synchronisation</h3>
-        <p className="text-sm text-slate-500">
-          Lege fest, in welchem Intervall E-Mails automatisch synchronisiert werden sollen.
-        </p>
+        <h3 className="font-semibold text-slate-800">{t('generalTab.autoSync')}</h3>
+        <p className="text-sm text-slate-500">{t('generalTab.autoSyncDescription')}</p>
         <div className="flex items-center gap-4">
           <button
             type="button"
             onClick={handleToggleSync}
             role="switch"
             aria-checked={autoSyncInterval > 0}
-            aria-label="Automatische Synchronisation"
+            aria-label={t('generalTab.autoSync')}
             className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
               autoSyncInterval > 0 ? 'bg-blue-600' : 'bg-slate-300'
             }`}
@@ -144,7 +165,7 @@ const GeneralTab: React.FC = () => {
           </button>
           {autoSyncInterval > 0 && (
             <div className="flex items-center gap-2">
-              <span className="text-sm text-slate-600">Alle</span>
+              <span className="text-sm text-slate-600">{t('generalTab.every')}</span>
               <div className="flex items-center border border-slate-300 rounded-lg overflow-hidden">
                 <button
                   type="button"
@@ -161,7 +182,7 @@ const GeneralTab: React.FC = () => {
                   value={inputValue}
                   onChange={handleInputChange}
                   onBlur={handleInputBlur}
-                  aria-label="Synchronisationsintervall in Minuten"
+                  aria-label={t('generalTab.syncIntervalLabel')}
                   className="w-12 text-center text-sm text-slate-700 border-x border-slate-300 py-1.5 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 />
                 <button
@@ -173,22 +194,22 @@ const GeneralTab: React.FC = () => {
                   +
                 </button>
               </div>
-              <span className="text-sm text-slate-600">Minuten</span>
+              <span className="text-sm text-slate-600">{t('generalTab.minutes')}</span>
             </div>
           )}
-          {autoSyncInterval === 0 && <span className="text-sm text-slate-500">Deaktiviert</span>}
+          {autoSyncInterval === 0 && <span className="text-sm text-slate-500">{t('generalTab.disabled')}</span>}
         </div>
       </div>
 
       {/* Datenverwaltung */}
       <div className="space-y-4">
-        <h3 className="font-semibold text-slate-800">Datenverwaltung</h3>
+        <h3 className="font-semibold text-slate-800">{t('generalTab.dataManagement')}</h3>
         <button
           onClick={handleResetDatabase}
           className="flex items-center gap-2 px-4 py-2 bg-red-50 text-red-600 border border-red-200 rounded hover:bg-red-100 transition-colors"
         >
           <Trash2 className="w-4 h-4" />
-          Datenbank komplett zurücksetzen & neu starten
+          {t('generalTab.resetDatabase')}
         </button>
       </div>
     </div>

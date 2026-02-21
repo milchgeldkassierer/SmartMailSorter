@@ -1,5 +1,6 @@
 import React from 'react';
-import { ImapAccount, DefaultEmailCategory } from '../../types';
+import { useTranslation } from 'react-i18next';
+import { ImapAccount, DefaultEmailCategory, CategoryTranslationKey } from '../../types';
 import { useNotifications } from '../../hooks/useNotifications';
 import { Bell, BellOff } from '../Icon';
 
@@ -21,6 +22,7 @@ interface NotificationsTabProps {
 }
 
 const NotificationsTab: React.FC<NotificationsTabProps> = ({ accounts }) => {
+  const { t } = useTranslation();
   const { notificationSettings, setNotificationSettings, isLoading } = useNotifications();
 
   const handleGlobalToggle = () => {
@@ -52,10 +54,15 @@ const NotificationsTab: React.FC<NotificationsTabProps> = ({ accounts }) => {
     });
   };
 
+  const getCategoryDisplayName = (category: DefaultEmailCategory): string => {
+    const key = CategoryTranslationKey[category];
+    return t(`categories.${key}`, { ns: 'categories', defaultValue: category });
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-10">
-        <div className="text-slate-500">Einstellungen werden geladen...</div>
+        <div className="text-slate-500">{t('notificationsTab.loading')}</div>
       </div>
     );
   }
@@ -72,8 +79,8 @@ const NotificationsTab: React.FC<NotificationsTabProps> = ({ accounts }) => {
               <BellOff className="w-5 h-5 text-slate-400" />
             )}
             <div>
-              <h3 className="font-semibold text-slate-800">Desktop-Benachrichtigungen</h3>
-              <p className="text-xs text-slate-500">Benachrichtigungen bei neuen E-Mails anzeigen</p>
+              <h3 className="font-semibold text-slate-800">{t('notificationsTab.title')}</h3>
+              <p className="text-xs text-slate-500">{t('notificationsTab.description')}</p>
             </div>
           </div>
           <button
@@ -94,9 +101,9 @@ const NotificationsTab: React.FC<NotificationsTabProps> = ({ accounts }) => {
 
       {/* Per-Account Settings */}
       <div className="space-y-2">
-        <h4 className="text-sm font-semibold text-slate-700">Pro Konto</h4>
+        <h4 className="text-sm font-semibold text-slate-700">{t('notificationsTab.perAccount')}</h4>
         {accounts.length === 0 ? (
-          <p className="text-sm text-slate-500">Keine Konten verbunden</p>
+          <p className="text-sm text-slate-500">{t('notificationsTab.noAccounts')}</p>
         ) : (
           <div className="space-y-1.5">
             {accounts.map((account) => {
@@ -138,7 +145,7 @@ const NotificationsTab: React.FC<NotificationsTabProps> = ({ accounts }) => {
 
       {/* Per-Category Settings */}
       <div className="space-y-2">
-        <h4 className="text-sm font-semibold text-slate-700">Pro Ordner / Kategorie</h4>
+        <h4 className="text-sm font-semibold text-slate-700">{t('notificationsTab.perCategory')}</h4>
         <div className="grid grid-cols-3 gap-1.5">
           {Object.values(DefaultEmailCategory).map((category) => {
             const isEnabled = notificationSettings.categorySettings[category] ?? true;
@@ -156,7 +163,7 @@ const NotificationsTab: React.FC<NotificationsTabProps> = ({ accounts }) => {
                   disabled={!notificationSettings.enabled}
                   className="w-3.5 h-3.5 text-blue-600 border-slate-300 rounded focus:ring-blue-500"
                 />
-                <span className="text-xs text-slate-700">{category}</span>
+                <span className="text-xs text-slate-700">{getCategoryDisplayName(category)}</span>
               </label>
             );
           })}
@@ -164,9 +171,7 @@ const NotificationsTab: React.FC<NotificationsTabProps> = ({ accounts }) => {
       </div>
 
       {/* Info Box */}
-      <p className="text-xs text-slate-400">
-        Benachrichtigungen erscheinen nur bei neu eintreffenden E-Mails während der Synchronisation.
-      </p>
+      <p className="text-xs text-slate-400">{t('notificationsTab.infoNote')}</p>
     </div>
   );
 };

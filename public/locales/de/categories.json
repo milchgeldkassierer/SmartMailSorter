@@ -1,0 +1,15 @@
+{
+  "categories": {
+    "INBOX": "Posteingang",
+    "SENT": "Gesendet",
+    "SPAM": "Spam",
+    "TRASH": "Papierkorb",
+    "INVOICE": "Rechnungen",
+    "NEWSLETTER": "Newsletter",
+    "PRIVATE": "Privat",
+    "BUSINESS": "Geschäftlich",
+    "CANCELLATION": "Kündigungen",
+    "OTHER": "Sonstiges",
+    "FLAGGED": "Markierte"
+  }
+}

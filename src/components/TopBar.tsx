@@ -1,7 +1,8 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import SearchBar, { SearchConfig } from './SearchBar';
 import { RefreshCw, Search, Filter, ChevronUp, ChevronDown, Clock, Mail, FileText } from './Icon';
-import { DefaultEmailCategory, SortConfig, SortField } from '../types';
+import { DefaultEmailCategory, SortConfig, SortField, FolderTranslationKey, CategoryTranslationKey } from '../types';
 
 interface TopBarProps {
   selectedCategory: string;
@@ -32,14 +33,26 @@ const TopBar: React.FC<TopBarProps> = ({
   onSync,
   isSorting,
 }) => {
+  const { t } = useTranslation(['translation', 'categories']);
+
+  const getCategoryDisplayName = (categoryName: string): string => {
+    const translationKey =
+      FolderTranslationKey[categoryName] ||
+      CategoryTranslationKey[categoryName as DefaultEmailCategory] ||
+      categoryName;
+    const key = `categories.${translationKey}`;
+    const translated = t(key, { ns: 'categories', defaultValue: categoryName });
+    return translated === key ? categoryName : translated;
+  };
+
   const getSortFieldLabel = (field: SortField): string => {
     switch (field) {
       case 'date':
-        return 'Datum';
+        return t('topBar.sortFields.date');
       case 'sender':
-        return 'Absender';
+        return t('topBar.sortFields.sender');
       case 'subject':
-        return 'Betreff';
+        return t('topBar.sortFields.subject');
     }
   };
 
@@ -71,7 +84,7 @@ const TopBar: React.FC<TopBarProps> = ({
         {!searchTerm ? (
           <div className="flex items-center gap-4">
             <h2 className="text-xl font-semibold text-slate-800 flex items-center gap-2 min-w-[150px]">
-              {selectedCategory}
+              {getCategoryDisplayName(selectedCategory)}
               <span className="ml-2 text-sm font-normal text-slate-500">({filteredEmailsCount})</span>
             </h2>
 
@@ -86,14 +99,14 @@ const TopBar: React.FC<TopBarProps> = ({
                 }`}
               >
                 <Filter className="w-3 h-3" />
-                <span>Nur unsortierte</span>
+                <span>{t('topBar.onlyUnsorted')}</span>
               </button>
             )}
           </div>
         ) : (
           <h2 className="text-xl font-semibold text-blue-600 flex items-center gap-2 min-w-[150px]">
             <Search className="w-5 h-5" />
-            Suchergebnisse
+            {t('topBar.searchResults')}
             <span className="ml-2 text-sm font-normal text-slate-500">({filteredEmailsCount})</span>
           </h2>
         )}
@@ -121,7 +134,7 @@ const TopBar: React.FC<TopBarProps> = ({
                 className={`text-xs px-2.5 py-1.5 transition-colors flex items-center gap-1.5 ${
                   isActive ? 'bg-blue-100 text-blue-700 font-medium' : 'bg-white text-slate-500 hover:bg-slate-50'
                 }`}
-                title={`Sortieren nach ${getSortFieldLabel(field)}`}
+                title={t('topBar.sortBy', { field: getSortFieldLabel(field) })}
               >
                 <Icon className="w-3 h-3" />
                 <span className="hidden sm:inline">{getSortFieldLabel(field)}</span>
@@ -135,7 +148,9 @@ const TopBar: React.FC<TopBarProps> = ({
           type="button"
           onClick={handleSortDirectionToggle}
           className="text-sm text-slate-500 hover:text-blue-600 flex items-center gap-1 px-2.5 py-1.5 rounded-md border border-slate-200 hover:bg-slate-50 transition-colors"
-          title={sortConfig.direction === 'asc' ? 'Aufsteigend' : 'Absteigend'}
+          title={
+            sortConfig.direction === 'asc' ? t('topBar.sortDirection.ascending') : t('topBar.sortDirection.descending')
+          }
         >
           {sortConfig.direction === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
         </button>
@@ -144,7 +159,7 @@ const TopBar: React.FC<TopBarProps> = ({
           onClick={onSync}
           disabled={isSorting}
           className="text-sm text-slate-500 hover:text-blue-600 flex items-center gap-1 px-3 py-1.5 rounded-md hover:bg-slate-50 transition-colors"
-          title="Emails abrufen"
+          title={t('topBar.fetchEmails')}
         >
           <RefreshCw className={`w-3 h-3 ${isSorting ? 'animate-spin' : ''}`} />
         </button>

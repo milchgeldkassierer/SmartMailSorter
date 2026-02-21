@@ -20,13 +20,13 @@ describe('SimulationStart', () => {
 
     it('should render the subtitle', () => {
       render(<SimulationStart {...defaultProps} />);
-      expect(screen.getByText('Intelligent Email Categorization Prototype')).toBeInTheDocument();
+      expect(screen.getByText('Intelligenter E-Mail-Kategorisierungs-Prototyp')).toBeInTheDocument();
     });
 
     it('should render the simulation mode warning', () => {
       render(<SimulationStart {...defaultProps} />);
-      expect(screen.getByText(/Simulation Mode:/)).toBeInTheDocument();
-      expect(screen.getByText(/Direct IMAP access is not possible from a browser/)).toBeInTheDocument();
+      expect(screen.getByText(/Simulationsmodus:/)).toBeInTheDocument();
+      expect(screen.getByText(/Direkter IMAP-Zugriff ist im Browser nicht möglich/)).toBeInTheDocument();
     });
 
     it('should render the description text', () => {
@@ -36,7 +36,7 @@ describe('SimulationStart', () => {
 
     it('should render the powered by footer', () => {
       render(<SimulationStart {...defaultProps} />);
-      expect(screen.getByText('Powered by Gemini 3 Flash Preview')).toBeInTheDocument();
+      expect(screen.getByText('Bereitgestellt von Gemini 3 Flash Preview')).toBeInTheDocument();
     });
 
     it('should render Mail icon', () => {
@@ -244,7 +244,7 @@ describe('SimulationStart', () => {
       render(<SimulationStart {...defaultProps} />);
       const strongText = document.querySelector('strong');
       expect(strongText).toBeInTheDocument();
-      expect(strongText).toHaveTextContent('Simulation Mode:');
+      expect(strongText).toHaveTextContent('Simulationsmodus:');
     });
   });
 });

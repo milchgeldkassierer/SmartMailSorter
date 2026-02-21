@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Email, AISettings, DefaultEmailCategory, SortResult, Category } from '../types';
 import { categorizeBatchWithAI } from '../services/geminiService';
 import { UseDialogReturn } from './useDialog';
@@ -46,6 +47,7 @@ export const useBatchOperations = ({
   onConfirmDelete,
   onConfirmNewCategories,
 }: UseBatchOperationsProps): UseBatchOperationsReturn => {
+  const { t } = useTranslation();
   const [isSorting, setIsSorting] = useState(false);
   const [sortProgress, setSortProgress] = useState(0);
 
@@ -145,11 +147,11 @@ export const useBatchOperations = ({
     const confirmed = onConfirmDelete
       ? await onConfirmDelete(selectedIds.size)
       : await dialog.confirm({
-          title: 'Emails löschen',
-          message: `${selectedIds.size} Emails wirklich löschen?`,
+          title: t('batch.deleteTitle'),
+          message: t('batch.deleteConfirm', { count: selectedIds.size }),
           variant: 'danger',
-          confirmText: 'Löschen',
-          cancelText: 'Abbrechen',
+          confirmText: t('common.delete'),
+          cancelText: t('common.cancel'),
         });
 
     if (!confirmed) return;
@@ -161,8 +163,8 @@ export const useBatchOperations = ({
     } catch (error) {
       console.error('Failed to delete emails:', error);
       await dialog.alert({
-        title: 'Fehler',
-        message: 'Einige Emails konnten nicht gelöscht werden',
+        title: t('common.error'),
+        message: t('batch.deleteError'),
         variant: 'danger',
       });
     }
@@ -194,8 +196,8 @@ export const useBatchOperations = ({
       } catch (error) {
         console.error(errorMsg, error);
         await dialog.alert({
-          title: 'Fehler',
-          message: 'Einige Emails konnten nicht aktualisiert werden',
+          title: t('common.error'),
+          message: t('batch.updateError'),
           variant: 'danger',
         });
       }
@@ -218,8 +220,8 @@ export const useBatchOperations = ({
     if (selectedIds.size === 0) return;
     if (!aiSettings.apiKey) {
       await dialog.alert({
-        title: 'AI Settings erforderlich',
-        message: 'Bitte AI Settings (API Key) konfigurieren!',
+        title: t('batch.aiSettingsRequired'),
+        message: t('batch.configureApiKey'),
         variant: 'warning',
       });
       onOpenSettings();
@@ -242,11 +244,11 @@ export const useBatchOperations = ({
         const confirmed = onConfirmNewCategories
           ? await onConfirmNewCategories(newArr)
           : await dialog.confirm({
-              title: 'Neue Ordner vorgeschlagen',
-              message: `Die KI schlägt folgende neue Ordner vor:\n\n${newArr.join(', ')}\n\nSollen diese angelegt werden?\n(Bei 'Abbrechen' werden die Mails in 'Sonstiges' verschoben)`,
+              title: t('batch.newFoldersSuggested'),
+              message: t('batch.newFoldersMessage', { folders: newArr.join(', ') }),
               variant: 'info',
-              confirmText: 'Anlegen',
-              cancelText: 'Abbrechen',
+              confirmText: t('batch.createFolders'),
+              cancelText: t('common.cancel'),
             });
 
         if (confirmed) {
@@ -290,8 +292,8 @@ export const useBatchOperations = ({
     } catch (e) {
       console.error('Smart Sort Error:', e);
       await dialog.alert({
-        title: 'Fehler beim Sortieren',
-        message: `Ein Fehler ist beim Sortieren aufgetreten: ${e instanceof Error ? e.message : 'Unbekannter Fehler'}`,
+        title: t('batch.sortErrorTitle'),
+        message: t('batch.sortErrorMessage', { error: e instanceof Error ? e.message : t('generalTab.unknownError') }),
         variant: 'danger',
       });
     } finally {

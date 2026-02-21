@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import type { LucideIcon } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import {
   CategoryIcon,
   Trash2,
@@ -14,8 +15,18 @@ import {
   Clock,
   Star,
 } from './Icon';
-import { ImapAccount, DefaultEmailCategory, Category, SYSTEM_FOLDERS, FLAGGED_FOLDER } from '../types';
+import {
+  ImapAccount,
+  DefaultEmailCategory,
+  Category,
+  SYSTEM_FOLDERS,
+  INBOX_FOLDER,
+  FLAGGED_FOLDER,
+  FolderTranslationKey,
+  CategoryTranslationKey,
+} from '../types';
 import { formatTimeAgo } from '../utils/formatTimeAgo';
+import { formatNumber } from '../utils/formatLocale';
 import { useDialogContext } from '../contexts/DialogContext';
 
 interface SidebarProps {
@@ -63,6 +74,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   selectedEmailCount,
   onMoveSelectedToCategory,
 }) => {
+  const { t } = useTranslation();
   const [isAdding, setIsAdding] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
@@ -70,6 +82,19 @@ const Sidebar: React.FC<SidebarProps> = ({
   const dialog = useDialogContext();
 
   const activeAccount = accounts.find((a) => a.id === activeAccountId) || accounts[0];
+
+  // Helper function to translate category names using FolderTranslationKey/CategoryTranslationKey
+  const getCategoryDisplayName = (categoryName: string): string => {
+    // Look up the translation key from folder or category mappings
+    const translationKey =
+      FolderTranslationKey[categoryName] ||
+      CategoryTranslationKey[categoryName as DefaultEmailCategory] ||
+      categoryName;
+    const key = `categories.${translationKey}`;
+    const translated = t(key, { ns: 'categories', defaultValue: categoryName });
+    // If translation key equals the result, return the original name (custom category)
+    return translated === key ? categoryName : translated;
+  };
 
   const handleAddNewCategory = (e: React.FormEvent) => {
     e.preventDefault();
@@ -227,15 +252,15 @@ const Sidebar: React.FC<SidebarProps> = ({
                     <span>
                       {activeAccount.lastSyncTime
                         ? formatTimeAgo(activeAccount.lastSyncTime)
-                        : 'Noch nie synchronisiert'}
+                        : t('sidebar.neverSynced')}
                     </span>
                   </div>
                 </div>
               </>
             ) : (
               <div className="text-left flex-1 min-w-0">
-                <div className="text-sm font-semibold text-white truncate">Kein Konto</div>
-                <div className="text-xs text-slate-400 truncate">Bitte einrichten</div>
+                <div className="text-sm font-semibold text-white truncate">{t('sidebar.noAccount')}</div>
+                <div className="text-xs text-slate-400 truncate">{t('sidebar.pleaseSetup')}</div>
               </div>
             )}
           </div>
@@ -275,7 +300,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                   className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-blue-400 hover:text-blue-300 hover:bg-slate-700 transition-colors"
                 >
                   <Settings className="w-4 h-4" />
-                  <span>Konten verwalten</span>
+                  <span>{t('sidebar.manageAccounts')}</span>
                 </button>
               </div>
             </div>
@@ -286,7 +311,9 @@ const Sidebar: React.FC<SidebarProps> = ({
       <div className="flex-1 overflow-y-auto py-4 px-3 space-y-6">
         {/* Standard Folders Group */}
         <div>
-          <div className="px-3 mb-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">Ordner</div>
+          <div className="px-3 mb-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">
+            {t('sidebar.folders')}
+          </div>
           <div className="space-y-1">
             {SYSTEM_FOLDERS.map((cat) => {
               const isActive = selectedCategory === cat;
@@ -313,7 +340,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                         category={cat}
                         className={`w-4 h-4 ${isActive ? 'text-blue-200' : 'text-slate-500'}`}
                       />
-                      <span>{cat}</span>
+                      <span>{getCategoryDisplayName(cat)}</span>
                     </div>
                     {count > 0 && (
                       <span
@@ -330,7 +357,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                   {cat === DefaultEmailCategory.INBOX && physicalFolders.length > 0 && (
                     <div className="mt-1 mb-1">
                       {physicalFolders.map((c) =>
-                        renderCategoryItem(c.name, c.name.replace('Posteingang/', ''), FolderOpen, 1, 'folder')
+                        renderCategoryItem(c.name, c.name.replace(`${INBOX_FOLDER}/`, ''), FolderOpen, 1, 'folder')
                       )}
                     </div>
                   )}
@@ -342,20 +369,22 @@ const Sidebar: React.FC<SidebarProps> = ({
 
         {/* Flagged/Starred Virtual View */}
         <div>
-          <div className="px-3 mb-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">Markierungen</div>
-          <div className="space-y-1">{renderCategoryItem(FLAGGED_FOLDER, 'Markierte', Star)}</div>
+          <div className="px-3 mb-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">
+            {t('sidebar.markings')}
+          </div>
+          <div className="space-y-1">{renderCategoryItem(FLAGGED_FOLDER, t('sidebar.starred'), Star)}</div>
         </div>
 
         {/* Smart Categories Group */}
         <div>
           <div className="px-3 mb-2 flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-              Intelligentes Postfach
+              {t('sidebar.smartMailbox')}
             </span>
             <button
               onClick={setIsAddingCategory}
               className="text-slate-400 hover:text-blue-600 transition-colors"
-              title="Neuen Ordner erstellen"
+              title={t('sidebar.createNewFolder')}
             >
               <PlusCircle className="w-4 h-4" />
             </button>
@@ -365,8 +394,12 @@ const Sidebar: React.FC<SidebarProps> = ({
             {/* Smart Categories */}
             {smartCategories.length > 0 && (
               <div className="mb-2">
-                <div className="px-3 text-[10px] text-slate-500 font-semibold uppercase mb-1">KI Kategorien</div>
-                {smartCategories.map((category) => renderCategoryItem(category.name, category.name, Folder))}
+                <div className="px-3 text-[10px] text-slate-500 font-semibold uppercase mb-1">
+                  {t('sidebar.aiCategories')}
+                </div>
+                {smartCategories.map((category) =>
+                  renderCategoryItem(category.name, getCategoryDisplayName(category.name), Folder)
+                )}
               </div>
             )}
 
@@ -401,12 +434,12 @@ const Sidebar: React.FC<SidebarProps> = ({
                 }`}
               >
                 <PlusCircle className="w-4 h-4" />
-                <span className="text-sm">Neue Kategorie erstellen</span>
+                <span className="text-sm">{t('sidebar.createNewCategory')}</span>
               </button>
             )}
 
             {/* Sonstiges */}
-            {renderCategoryItem(DefaultEmailCategory.OTHER, 'Sonstiges', Archive)}
+            {renderCategoryItem(DefaultEmailCategory.OTHER, t('sidebar.other'), Archive)}
           </div>
 
           {/* Add Category Input */}
@@ -419,7 +452,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                   value={newCategoryName}
                   onChange={(e) => setNewCategoryName(e.target.value)}
                   onBlur={() => !newCategoryName && setIsAdding(false)}
-                  placeholder="Name..."
+                  placeholder={t('sidebar.namePlaceholder')}
                   className="bg-transparent border-none outline-none text-sm w-full min-w-0"
                 />
               </div>
@@ -447,18 +480,18 @@ const Sidebar: React.FC<SidebarProps> = ({
                     const category = contextMenu.category;
                     setContextMenu(null);
                     const newName = await dialog.prompt({
-                      title: 'Kategorie umbenennen',
-                      message: 'Geben Sie einen neuen Namen ein:',
+                      title: t('sidebar.renameCategory'),
+                      message: t('sidebar.renameCategoryPrompt'),
                       defaultValue: category,
-                      confirmText: 'Umbenennen',
-                      cancelText: 'Abbrechen',
+                      confirmText: t('common.rename'),
+                      cancelText: t('common.cancel'),
                       variant: 'info',
                     });
                     if (newName && newName.trim()) onRenameCategory(category, newName.trim());
                   }}
                   className="w-full text-left px-3 py-2 text-sm text-slate-300 hover:bg-slate-700 flex items-center gap-2"
                 >
-                  <div className="w-4 h-4" /> <span>Umbenennen</span>
+                  <div className="w-4 h-4" /> <span>{t('common.rename')}</span>
                 </button>
                 <div className="h-px bg-slate-700 my-1" />
                 <button
@@ -466,10 +499,10 @@ const Sidebar: React.FC<SidebarProps> = ({
                     const category = contextMenu.category;
                     setContextMenu(null);
                     const confirmed = await dialog.confirm({
-                      title: 'Kategorie löschen',
-                      message: `Möchten Sie die Kategorie '${category}' wirklich löschen?`,
-                      confirmText: 'Löschen',
-                      cancelText: 'Abbrechen',
+                      title: t('sidebar.deleteCategory'),
+                      message: t('sidebar.deleteCategoryConfirm', { category }),
+                      confirmText: t('common.delete'),
+                      cancelText: t('common.cancel'),
                       variant: 'danger',
                     });
                     if (confirmed) {
@@ -478,7 +511,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                   }}
                   className="w-full text-left px-3 py-2 text-sm text-red-400 hover:bg-red-900/30 flex items-center gap-2"
                 >
-                  <Trash2 className="w-4 h-4" /> <span>Löschen</span>
+                  <Trash2 className="w-4 h-4" /> <span>{t('common.delete')}</span>
                 </button>
                 <div className="h-px bg-slate-700 my-1" />
               </>
@@ -498,7 +531,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                 className="w-full text-left px-3 py-2 text-sm text-blue-400 hover:bg-blue-900/30 flex items-center gap-2"
               >
                 <Folder className="w-4 h-4" />
-                <span>Ausgewählte hierher verschieben ({selectedEmailCount})</span>
+                <span>{t('sidebar.moveSelectedHere', { count: selectedEmailCount })}</span>
               </button>
               <div className="h-px bg-slate-700 my-1" />
             </>
@@ -508,15 +541,15 @@ const Sidebar: React.FC<SidebarProps> = ({
             onClick={async () => {
               setContextMenu(null);
               await dialog.alert({
-                title: 'Funktion in Entwicklung',
-                message: 'Die Icon-Auswahl wird bald verfügbar sein!',
-                confirmText: 'OK',
+                title: t('sidebar.featureInDevelopment'),
+                message: t('sidebar.iconSelectionComingSoon'),
+                confirmText: t('common.ok'),
                 variant: 'info',
               });
             }}
             className="w-full text-left px-3 py-2 text-sm text-slate-300 hover:bg-slate-700 flex items-center gap-2"
           >
-            <div className="w-4 h-4" /> <span>Icon ändern</span>
+            <div className="w-4 h-4" /> <span>{t('sidebar.changeIcon')}</span>
           </button>
         </div>
       )}
@@ -526,16 +559,23 @@ const Sidebar: React.FC<SidebarProps> = ({
         <div className="flex items-center justify-between text-xs text-slate-400 mb-1.5">
           <div className="flex items-center gap-1.5">
             <Server className="w-3 h-3" />
-            <span>Speicher</span>
+            <span>{t('sidebar.storage')}</span>
           </div>
           {activeAccount && activeAccount.storageTotal ? (
             <span>
-              {Math.round((activeAccount.storageUsed || 0) / 1024)} MB /{' '}
-              {Math.round((activeAccount.storageTotal / 1024 / 1024) * 100) / 100} GB (
-              {Math.round(((activeAccount.storageUsed || 0) / activeAccount.storageTotal) * 100)}%)
+              {formatNumber((activeAccount.storageUsed || 0) / 1024, { maximumFractionDigits: 0 }) ?? '0'} MB /{' '}
+              {formatNumber(activeAccount.storageTotal / 1024 / 1024, {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              }) ?? '0'}{' '}
+              GB (
+              {formatNumber(((activeAccount.storageUsed || 0) / activeAccount.storageTotal) * 100, {
+                maximumFractionDigits: 0,
+              }) ?? '0'}
+              %)
             </span>
           ) : (
-            <span>Unbekannt</span>
+            <span>{t('common.unknown')}</span>
           )}
         </div>
 
@@ -559,7 +599,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         <button
           onClick={onOpenSettings}
           className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
-          title="Einstellungen"
+          title={t('common.settings')}
         >
           <Settings className="w-5 h-5" />
         </button>

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, KeyboardEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import { X, AlertCircle, AlertOctagon, CheckCircle } from './Icon';
 
 export type DialogType = 'confirm' | 'alert' | 'prompt';
@@ -31,11 +32,12 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   title,
   message,
   confirmText,
-  cancelText = 'Abbrechen',
+  cancelText,
   defaultValue = '',
   placeholder = '',
   autoFocusInput = true,
 }) => {
+  const { t } = useTranslation();
   const [inputValue, setInputValue] = useState(defaultValue);
 
   // Reset input value when dialog opens
@@ -110,7 +112,9 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   };
 
   const variantStyles = getVariantStyles();
-  const defaultConfirmText = confirmText || (type === 'alert' ? 'OK' : variant === 'danger' ? 'Löschen' : 'Bestätigen');
+  const defaultConfirmText =
+    confirmText ||
+    (type === 'alert' ? t('common.ok') : variant === 'danger' ? t('common.delete') : t('confirmDialog.confirm'));
 
   return (
     <div
@@ -165,7 +169,7 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
               onClick={onClose}
               className="px-4 py-2 text-slate-600 hover:text-slate-800 font-medium rounded-lg hover:bg-slate-100 transition-colors"
             >
-              {cancelText}
+              {cancelText || t('common.cancel')}
             </button>
           )}
           <button

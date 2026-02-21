@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { AISettings, LLMProvider, AVAILABLE_MODELS } from '../../types';
 import { Bot, Key, Cpu, BrainCircuit } from '../Icon';
 
@@ -8,6 +9,7 @@ interface SmartSortTabProps {
 }
 
 const SmartSortTab: React.FC<SmartSortTabProps> = ({ aiSettings, onSave }) => {
+  const { t } = useTranslation();
   const [tempAISettings, setTempAISettings] = useState<AISettings>(aiSettings);
 
   // Sync prop changes to internal state
@@ -35,8 +37,8 @@ const SmartSortTab: React.FC<SmartSortTabProps> = ({ aiSettings, onSave }) => {
           <BrainCircuit className="w-6 h-6" />
         </div>
         <div>
-          <h3 className="font-bold text-slate-800">Smart Sort Konfiguration</h3>
-          <p className="text-sm text-slate-500">Wähle die KI, die deine Emails sortiert.</p>
+          <h3 className="font-bold text-slate-800">{t('smartSortTab.title')}</h3>
+          <p className="text-sm text-slate-500">{t('smartSortTab.description')}</p>
         </div>
       </div>
 
@@ -45,7 +47,7 @@ const SmartSortTab: React.FC<SmartSortTabProps> = ({ aiSettings, onSave }) => {
         <div>
           <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-2">
             <Bot className="w-4 h-4 text-blue-500" />
-            LLM Anbieter
+            {t('smartSortTab.llmProvider')}
           </label>
           <select
             className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-900 focus:border-blue-500 outline-none"
@@ -64,7 +66,7 @@ const SmartSortTab: React.FC<SmartSortTabProps> = ({ aiSettings, onSave }) => {
         <div>
           <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-2">
             <Cpu className="w-4 h-4 text-purple-500" />
-            Modell
+            {t('smartSortTab.model')}
           </label>
           <select
             className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-900 focus:border-blue-500 outline-none"
@@ -83,21 +85,23 @@ const SmartSortTab: React.FC<SmartSortTabProps> = ({ aiSettings, onSave }) => {
         <div>
           <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-2">
             <Key className="w-4 h-4 text-amber-500" />
-            API Key
+            {t('smartSortTab.apiKey')}
           </label>
           <input
             type="password"
             className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-900 focus:border-blue-500 outline-none placeholder-slate-400"
             placeholder={
-              tempAISettings.provider === LLMProvider.GEMINI ? 'Optional (verwendet Standard-Key)' : 'sk-...'
+              tempAISettings.provider === LLMProvider.GEMINI
+                ? t('smartSortTab.apiKeyPlaceholderOptional')
+                : t('smartSortTab.apiKeyPlaceholder')
             }
             value={tempAISettings.apiKey}
             onChange={(e) => setTempAISettings({ ...tempAISettings, apiKey: e.target.value })}
           />
           <p className="text-xs text-slate-500 mt-1">
             {tempAISettings.provider === LLMProvider.GEMINI
-              ? 'Für Google Gemini ist bereits ein Demo-Key hinterlegt. Du kannst ihn überschreiben.'
-              : 'Der API Key wird nur lokal im Browser für die Simulation verwendet.'}
+              ? t('smartSortTab.geminiKeyInfo')
+              : t('smartSortTab.apiKeyInfo')}
           </p>
         </div>
       </div>
@@ -107,7 +111,7 @@ const SmartSortTab: React.FC<SmartSortTabProps> = ({ aiSettings, onSave }) => {
           onClick={handleSaveAI}
           className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition-colors shadow-sm"
         >
-          Einstellungen speichern
+          {t('smartSortTab.saveSettings')}
         </button>
       </div>
     </div>
