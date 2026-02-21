@@ -25,6 +25,7 @@ let autoSyncTimer = null;
 let autoSyncDebounceTimer = null;
 let isSyncing = false;
 
+/** Start the periodic auto-sync timer for all accounts. */
 function startAutoSync(intervalMinutes) {
   stopAutoSync();
   if (!intervalMinutes || intervalMinutes <= 0) {
@@ -40,6 +41,7 @@ function startAutoSync(intervalMinutes) {
   }, intervalMs);
 }
 
+/** Stop the auto-sync timer if running. */
 function stopAutoSync() {
   if (autoSyncTimer) {
     clearInterval(autoSyncTimer);
@@ -48,6 +50,7 @@ function stopAutoSync() {
   }
 }
 
+/** Run a single auto-sync cycle for all accounts with debounce protection. */
 async function runAutoSync() {
   if (isSyncing) {
     logger.info('[AutoSync] Sync already in progress, skipping');
@@ -80,6 +83,7 @@ async function runAutoSync() {
   }
 }
 
+/** Create the main application BrowserWindow with IPC handlers. */
 function createWindow() {
   const win = new BrowserWindow({
     width: 1600,
@@ -755,6 +759,7 @@ Antworte NUR mit dem JSON-Objekt mit dem "query" Feld.`;
   // Auto-sync IPC handlers
   const MIN_SYNC_INTERVAL = 2;
   const MAX_SYNC_INTERVAL = 30;
+  /** Clamp sync interval to valid range (1-30 minutes). */
   function sanitizeSyncInterval(value) {
     const parsed = Math.round(Number(value));
     if (!Number.isFinite(parsed) || parsed <= 0) return 0;

@@ -5,6 +5,7 @@ interface UseSavedFiltersReturn {
   deleteFilter: (id: string) => Promise<void>;
 }
 
+/** Hook for saving and deleting search filters via Electron IPC. */
 export const useSavedFilters = (): UseSavedFiltersReturn => {
   // Save or update a filter
   const saveFilter = useCallback(async (id: string, name: string, query: string) => {
