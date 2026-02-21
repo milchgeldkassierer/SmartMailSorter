@@ -177,12 +177,12 @@ describe('EmailView', () => {
     });
   });
 
-  describe('AI Confidence Display', () => {
+  describe('KI-Konfidenz Display', () => {
     it('should render AI confidence percentage when present', () => {
       const email = createEmail({ confidence: 0.95 });
       render(<EmailView email={email} />);
 
-      expect(screen.getByText('AI Confidence')).toBeInTheDocument();
+      expect(screen.getByText('KI-Konfidenz')).toBeInTheDocument();
       expect(screen.getByText('95%')).toBeInTheDocument();
     });
 
@@ -197,7 +197,7 @@ describe('EmailView', () => {
       const email = createEmail({ confidence: undefined });
       render(<EmailView email={email} />);
 
-      expect(screen.queryByText('AI Confidence')).not.toBeInTheDocument();
+      expect(screen.queryByText('KI-Konfidenz')).not.toBeInTheDocument();
     });
 
     it('should handle 100% confidence', () => {

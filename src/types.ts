@@ -44,6 +44,7 @@ export const FolderTranslationKey: Record<string, string> = {
   [SENT_FOLDER]: 'SENT',
   [SPAM_FOLDER]: 'SPAM',
   [TRASH_FOLDER]: 'TRASH',
+  [FLAGGED_FOLDER]: 'FLAGGED',
 };
 
 export interface Category {

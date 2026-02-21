@@ -38,7 +38,9 @@
     "deleteCategoryConfirm": "Are you sure you want to delete the category '{{category}}'?",
     "featureInDevelopment": "Feature in development",
     "iconSelectionComingSoon": "Icon selection will be available soon!",
-    "changeIcon": "Change icon"
+    "changeIcon": "Change icon",
+    "createNewCategory": "Create new category",
+    "moveSelectedHere": "Move selected here ({{count}})"
   },
   "settingsModal": {
     "title": "Settings",
@@ -153,7 +155,8 @@
     "delete": "Delete",
     "flag": "Flag",
     "unflag": "Remove flag",
-    "loadMore": "Load more..."
+    "loadMore": "Load more...",
+    "dragCount": "{{count}} email(s)"
   },
   "emailView": {
     "noEmailSelected": "No email selected",
@@ -180,7 +183,9 @@
     "markAsRead": "Mark as read",
     "markAsUnread": "Mark as unread",
     "star": "Star",
-    "unstar": "Remove star"
+    "unstar": "Remove star",
+    "aiConfidence": "AI Confidence",
+    "aiAnalysis": "AI Analysis"
   },
   "categories": {
     "inbox": "Inbox",

@@ -11,7 +11,7 @@ interface UseLanguageReturn {
 export const useLanguage = (): UseLanguageReturn => {
   const { i18n } = useTranslation();
 
-  const currentLanguage = i18n.language as SupportedLanguage;
+  const currentLanguage = (i18n.resolvedLanguage || i18n.language) as SupportedLanguage;
 
   const changeLanguage = async (lng: SupportedLanguage): Promise<void> => {
     await i18n.changeLanguage(lng);

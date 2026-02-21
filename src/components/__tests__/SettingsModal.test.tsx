@@ -83,7 +83,7 @@ describe('SettingsModal - Integration Tests', () => {
     });
 
     it('should render with backdrop overlay', () => {
-      const { container } = render(<SettingsModal {...defaultProps} />);
+      const { container } = renderWithDialog(<SettingsModal {...defaultProps} />);
       const backdrop = container.querySelector('.fixed.inset-0.z-50');
       expect(backdrop).toBeInTheDocument();
     });
@@ -214,14 +214,18 @@ describe('SettingsModal - Integration Tests', () => {
     });
 
     it('should update displayed accounts when accounts prop changes', () => {
-      const { rerender } = render(<SettingsModal {...defaultProps} />);
+      const { rerender } = renderWithDialog(<SettingsModal {...defaultProps} />);
 
       expect(screen.getByText('Work Account')).toBeInTheDocument();
       expect(screen.getByText('Personal')).toBeInTheDocument();
 
       // Update accounts
       const newAccounts = [mockAccounts[0]]; // Only first account
-      rerender(<SettingsModal {...defaultProps} accounts={newAccounts} />);
+      rerender(
+        <DialogProvider>
+          <SettingsModal {...defaultProps} accounts={newAccounts} />
+        </DialogProvider>
+      );
 
       expect(screen.getByText('Work Account')).toBeInTheDocument();
       expect(screen.queryByText('Personal')).not.toBeInTheDocument();
@@ -282,25 +286,25 @@ describe('SettingsModal - Integration Tests', () => {
 
   describe('Layout and Styling', () => {
     it('should have sidebar with tab buttons', () => {
-      const { container } = render(<SettingsModal {...defaultProps} />);
+      const { container } = renderWithDialog(<SettingsModal {...defaultProps} />);
       const sidebar = container.querySelector('.w-48.bg-slate-50');
       expect(sidebar).toBeInTheDocument();
     });
 
     it('should have scrollable content area', () => {
-      const { container } = render(<SettingsModal {...defaultProps} />);
+      const { container } = renderWithDialog(<SettingsModal {...defaultProps} />);
       const contentArea = container.querySelector('.flex-1.p-6.overflow-y-auto');
       expect(contentArea).toBeInTheDocument();
     });
 
     it('should render modal with max height constraint', () => {
-      const { container } = render(<SettingsModal {...defaultProps} />);
+      const { container } = renderWithDialog(<SettingsModal {...defaultProps} />);
       const modalContent = container.querySelector('.max-h-\\[90vh\\]');
       expect(modalContent).toBeInTheDocument();
     });
 
     it('should have centered modal with backdrop blur', () => {
-      const { container } = render(<SettingsModal {...defaultProps} />);
+      const { container } = renderWithDialog(<SettingsModal {...defaultProps} />);
       const wrapper = container.querySelector('.fixed.inset-0.z-50.flex.items-center.justify-center');
       expect(wrapper).toBeInTheDocument();
       expect(wrapper).toHaveClass('backdrop-blur-sm');
@@ -334,7 +338,7 @@ describe('SettingsModal - Integration Tests', () => {
     });
 
     it('should have accessible modal structure', () => {
-      const { container } = render(<SettingsModal {...defaultProps} />);
+      const { container } = renderWithDialog(<SettingsModal {...defaultProps} />);
 
       // Modal should have proper structure
       const modal = container.querySelector('.bg-white.rounded-xl.shadow-2xl');

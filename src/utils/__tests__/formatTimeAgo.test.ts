@@ -216,18 +216,32 @@ describe('formatTimeAgo', () => {
       expect(result).toBe('Vor 2 Wochen');
     });
 
-    it('should format 30 days as "Vor 4 Wochen"', () => {
+    it('should format 30 days as "Vor einem Monat"', () => {
       const now = Date.now();
       const timestamp = now - 30 * 24 * 60 * 60 * 1000; // 30 days ago
       const result = formatTimeAgo(timestamp);
-      expect(result).toBe('Vor 4 Wochen');
+      expect(result).toBe('Vor einem Monat');
     });
 
-    it('should format 365 days as "Vor 52 Wochen"', () => {
+    it('should format 90 days as "Vor 3 Monaten"', () => {
+      const now = Date.now();
+      const timestamp = now - 90 * 24 * 60 * 60 * 1000; // 90 days ago
+      const result = formatTimeAgo(timestamp);
+      expect(result).toBe('Vor 3 Monaten');
+    });
+
+    it('should format 365 days as "Vor einem Jahr"', () => {
       const now = Date.now();
       const timestamp = now - 365 * 24 * 60 * 60 * 1000; // 1 year ago
       const result = formatTimeAgo(timestamp);
-      expect(result).toBe('Vor 52 Wochen');
+      expect(result).toBe('Vor einem Jahr');
+    });
+
+    it('should format 730 days as "Vor 2 Jahren"', () => {
+      const now = Date.now();
+      const timestamp = now - 730 * 24 * 60 * 60 * 1000; // 2 years ago
+      const result = formatTimeAgo(timestamp);
+      expect(result).toBe('Vor 2 Jahren');
     });
   });
 
@@ -281,8 +295,8 @@ describe('formatTimeAgo', () => {
     });
   });
 
-  describe('German Language Correctness', () => {
-    it('should always use German words', () => {
+  describe('German Language Correctness (locale: de)', () => {
+    it('should use German words when locale is de', () => {
       const testCases = [
         { time: 30 * 1000, expected: 'Gerade' }, // seconds
         { time: 5 * 60 * 1000, expected: 'Minuten' }, // minutes

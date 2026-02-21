@@ -38,7 +38,9 @@
     "deleteCategoryConfirm": "Möchten Sie die Kategorie '{{category}}' wirklich löschen?",
     "featureInDevelopment": "Funktion in Entwicklung",
     "iconSelectionComingSoon": "Die Icon-Auswahl wird bald verfügbar sein!",
-    "changeIcon": "Icon ändern"
+    "changeIcon": "Icon ändern",
+    "createNewCategory": "Neue Kategorie erstellen",
+    "moveSelectedHere": "Ausgewählte hierher verschieben ({{count}})"
   },
   "settingsModal": {
     "title": "Einstellungen",
@@ -153,7 +155,8 @@
     "delete": "Löschen",
     "flag": "Markieren",
     "unflag": "Markierung entfernen",
-    "loadMore": "Mehr laden..."
+    "loadMore": "Mehr laden...",
+    "dragCount": "{{count}} E-Mail(s)"
   },
   "emailView": {
     "noEmailSelected": "Keine Email ausgewählt",
@@ -180,7 +183,9 @@
     "markAsRead": "Als gelesen markieren",
     "markAsUnread": "Als ungelesen markieren",
     "star": "Markieren",
-    "unstar": "Markierung entfernen"
+    "unstar": "Markierung entfernen",
+    "aiConfidence": "KI-Konfidenz",
+    "aiAnalysis": "Gemini Analyse"
   },
   "categories": {
     "inbox": "Posteingang",
@@ -234,13 +239,13 @@
   },
   "simulationStart": {
     "title": "GMX AI Sorter",
-    "subtitle": "Intelligent Email Categorization Prototype",
-    "simulationModeTitle": "Simulation Mode:",
-    "simulationModeDescription": "Direct IMAP access is not possible from a browser. This app uses Gemini AI to generate realistic email data and demonstrate how the AI sorting algorithm functions.",
+    "subtitle": "Intelligenter E-Mail-Kategorisierungs-Prototyp",
+    "simulationModeTitle": "Simulationsmodus:",
+    "simulationModeDescription": "Direkter IMAP-Zugriff ist im Browser nicht möglich. Diese App verwendet Gemini AI, um realistische E-Mail-Daten zu erzeugen und den KI-Sortieralgorithmus zu demonstrieren.",
     "description": "Klicken Sie auf \"Verbinden\", um den Simulator zu starten. Gemini generiert Beispiel-Emails und sortiert diese automatisch in die richtigen Ordner.",
     "connecting": "Generiere Postfach...",
     "connectButton": "Mit Demo-Postfach verbinden",
-    "poweredBy": "Powered by Gemini 3 Flash Preview"
+    "poweredBy": "Bereitgestellt von Gemini 3 Flash Preview"
   },
   "confirmDialog": {
     "confirm": "Bestätigen"

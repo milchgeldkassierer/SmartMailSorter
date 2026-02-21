@@ -15,8 +15,17 @@ import {
   Clock,
   Star,
 } from './Icon';
-import { ImapAccount, DefaultEmailCategory, Category, SYSTEM_FOLDERS, FLAGGED_FOLDER } from '../types';
-import { formatTimeAgo, formatNumber } from '../utils/formatTimeAgo';
+import {
+  ImapAccount,
+  DefaultEmailCategory,
+  Category,
+  SYSTEM_FOLDERS,
+  FLAGGED_FOLDER,
+  FolderTranslationKey,
+  CategoryTranslationKey,
+} from '../types';
+import { formatTimeAgo } from '../utils/formatTimeAgo';
+import { formatNumber } from '../utils/formatLocale';
 import { useDialogContext } from '../contexts/DialogContext';
 
 interface SidebarProps {
@@ -73,10 +82,14 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   const activeAccount = accounts.find((a) => a.id === activeAccountId) || accounts[0];
 
-  // Helper function to translate category names
+  // Helper function to translate category names using FolderTranslationKey/CategoryTranslationKey
   const getCategoryDisplayName = (categoryName: string): string => {
-    // Try to get translation from categories namespace
-    const key = `categories.${categoryName}`;
+    // Look up the translation key from folder or category mappings
+    const translationKey =
+      FolderTranslationKey[categoryName] ||
+      CategoryTranslationKey[categoryName as DefaultEmailCategory] ||
+      categoryName;
+    const key = `categories.${translationKey}`;
     const translated = t(key, { ns: 'categories', defaultValue: categoryName });
     // If translation key equals the result, return the original name (custom category)
     return translated === key ? categoryName : translated;
@@ -420,7 +433,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                 }`}
               >
                 <PlusCircle className="w-4 h-4" />
-                <span className="text-sm">Neue Kategorie erstellen</span>
+                <span className="text-sm">{t('sidebar.createNewCategory')}</span>
               </button>
             )}
 
@@ -517,7 +530,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                 className="w-full text-left px-3 py-2 text-sm text-blue-400 hover:bg-blue-900/30 flex items-center gap-2"
               >
                 <Folder className="w-4 h-4" />
-                <span>Ausgewählte hierher verschieben ({selectedEmailCount})</span>
+                <span>{t('sidebar.moveSelectedHere', { count: selectedEmailCount })}</span>
               </button>
               <div className="h-px bg-slate-700 my-1" />
             </>
@@ -549,15 +562,15 @@ const Sidebar: React.FC<SidebarProps> = ({
           </div>
           {activeAccount && activeAccount.storageTotal ? (
             <span>
-              {formatNumber((activeAccount.storageUsed || 0) / 1024, { maximumFractionDigits: 0 })} MB /{' '}
+              {formatNumber((activeAccount.storageUsed || 0) / 1024, { maximumFractionDigits: 0 }) ?? '0'} MB /{' '}
               {formatNumber(activeAccount.storageTotal / 1024 / 1024, {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2,
-              })}{' '}
+              }) ?? '0'}{' '}
               GB (
               {formatNumber(((activeAccount.storageUsed || 0) / activeAccount.storageTotal) * 100, {
                 maximumFractionDigits: 0,
-              })}
+              }) ?? '0'}
               %)
             </span>
           ) : (

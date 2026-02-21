@@ -207,7 +207,9 @@ const EmailView: React.FC<EmailViewProps> = ({ email }) => {
           <h1 className="text-2xl font-bold text-slate-900 leading-tight">{email.subject}</h1>
           {email.confidence && (
             <div className="flex flex-col items-end">
-              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">AI Confidence</span>
+              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                {t('emailView.aiConfidence')}
+              </span>
               <div className="flex items-center gap-1 text-blue-600 font-bold">
                 <span>{Math.round(email.confidence * 100)}%</span>
               </div>
@@ -259,7 +261,7 @@ const EmailView: React.FC<EmailViewProps> = ({ email }) => {
         <div className="m-6 mb-2 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 rounded-lg shadow-sm">
           <div className="flex items-center gap-2 mb-2 text-blue-700">
             <BrainCircuit className="w-5 h-5" />
-            <h3 className="font-semibold text-sm">Gemini Analyse</h3>
+            <h3 className="font-semibold text-sm">{t('emailView.aiAnalysis')}</h3>
           </div>
           <p className="text-sm text-slate-700 leading-relaxed">{email.aiReasoning}</p>
         </div>

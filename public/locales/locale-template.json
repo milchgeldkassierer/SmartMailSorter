@@ -32,7 +32,8 @@
     "unknown": "",
     "error": "",
     "settings": "",
-    "logout": ""
+    "logout": "",
+    "note": ""
   },
   "sidebar": {
     "noAccount": "",
@@ -55,13 +56,17 @@
     "_comment_deleteCategoryConfirm": "Keep {{category}} placeholder - it will be replaced with the actual category name",
     "featureInDevelopment": "",
     "iconSelectionComingSoon": "",
-    "changeIcon": ""
+    "changeIcon": "",
+    "createNewCategory": "",
+    "moveSelectedHere": "",
+    "_comment_moveSelectedHere": "Keep {{count}} placeholder - it will be replaced with the number of selected emails"
   },
   "settingsModal": {
     "title": "",
     "tabs": {
       "accounts": "",
       "smartSort": "",
+      "notifications": "",
       "general": ""
     }
   },
@@ -115,6 +120,16 @@
     "apiKeyInfo": "",
     "saveSettings": ""
   },
+  "notificationsTab": {
+    "title": "",
+    "description": "",
+    "loading": "",
+    "perAccount": "",
+    "noAccounts": "",
+    "perCategory": "",
+    "perCategoryDescription": "",
+    "infoNote": ""
+  },
   "generalTab": {
     "language": "",
     "selectLanguage": "",
@@ -123,6 +138,12 @@
     "resetDatabaseTitle": "",
     "resetDatabaseConfirm": "",
     "resetButton": "",
+    "autoSync": "",
+    "autoSyncDescription": "",
+    "every": "",
+    "minutes": "",
+    "syncIntervalLabel": "",
+    "disabled": "",
     "resetError": "",
     "unknownError": ""
   },
@@ -166,7 +187,9 @@
     "delete": "",
     "flag": "",
     "unflag": "",
-    "loadMore": ""
+    "loadMore": "",
+    "dragCount": "",
+    "_comment_dragCount": "Keep {{count}} placeholder - it will be replaced with the number of dragged emails"
   },
   "emailView": {
     "noEmailSelected": "",
@@ -197,7 +220,9 @@
     "markAsRead": "",
     "markAsUnread": "",
     "star": "",
-    "unstar": ""
+    "unstar": "",
+    "aiConfidence": "",
+    "aiAnalysis": ""
   },
   "categories": {
     "inbox": "",

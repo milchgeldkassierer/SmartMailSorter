@@ -9,6 +9,7 @@
     "PRIVATE": "Private",
     "BUSINESS": "Business",
     "CANCELLATION": "Cancellations",
-    "OTHER": "Other"
+    "OTHER": "Other",
+    "FLAGGED": "Flagged"
   }
 }

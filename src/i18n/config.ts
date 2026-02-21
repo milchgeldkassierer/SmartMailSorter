@@ -24,6 +24,9 @@ export const i18nConfig = {
   // Supported languages
   supportedLngs: SUPPORTED_LANGUAGES,
 
+  // Normalize language variants (e.g., en-US -> en)
+  load: 'languageOnly' as const,
+
   // Default namespace
   defaultNS: 'translation',
 

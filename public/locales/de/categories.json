@@ -9,6 +9,7 @@
     "PRIVATE": "Privat",
     "BUSINESS": "Geschäftlich",
     "CANCELLATION": "Kündigungen",
-    "OTHER": "Sonstiges"
+    "OTHER": "Sonstiges",
+    "FLAGGED": "Markierte"
   }
 }

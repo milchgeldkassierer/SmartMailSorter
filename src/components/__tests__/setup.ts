@@ -2,7 +2,7 @@
 // This file is automatically loaded before each test via vitest.config.components.ts
 
 import { cleanup } from '@testing-library/react';
-import { afterEach, beforeAll } from 'vitest';
+import { afterEach, beforeAll, beforeEach } from 'vitest';
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 
@@ -61,6 +61,8 @@ beforeAll(async () => {
             featureInDevelopment: 'Funktion in Entwicklung',
             iconSelectionComingSoon: 'Die Icon-Auswahl wird bald verfügbar sein!',
             changeIcon: 'Icon ändern',
+            createNewCategory: 'Neue Kategorie erstellen',
+            moveSelectedHere: 'Ausgewählte hierher verschieben ({{count}})',
           },
           settingsModal: {
             title: 'Einstellungen',
@@ -159,6 +161,7 @@ beforeAll(async () => {
             flag: 'Markieren',
             unflag: 'Markierung entfernen',
             loadMore: 'Mehr laden...',
+            dragCount: '{{count}} E-Mail(s)',
           },
           emailView: {
             noEmailSelected: 'Keine Email ausgewählt',
@@ -186,6 +189,8 @@ beforeAll(async () => {
             markAsUnread: 'Als ungelesen markieren',
             star: 'Markieren',
             unstar: 'Markierung entfernen',
+            aiConfidence: 'KI-Konfidenz',
+            aiAnalysis: 'Gemini Analyse',
           },
           categories: {
             inbox: 'Posteingang',
@@ -309,6 +314,8 @@ beforeAll(async () => {
             featureInDevelopment: 'Feature in development',
             iconSelectionComingSoon: 'Icon selection will be available soon!',
             changeIcon: 'Change icon',
+            createNewCategory: 'Create new category',
+            moveSelectedHere: 'Move selected here ({{count}})',
           },
           settingsModal: {
             title: 'Settings',
@@ -407,6 +414,7 @@ beforeAll(async () => {
             flag: 'Flag',
             unflag: 'Remove flag',
             loadMore: 'Load more...',
+            dragCount: '{{count}} email(s)',
           },
           emailView: {
             noEmailSelected: 'No email selected',
@@ -434,6 +442,8 @@ beforeAll(async () => {
             markAsUnread: 'Mark as unread',
             star: 'Star',
             unstar: 'Remove star',
+            aiConfidence: 'AI Confidence',
+            aiAnalysis: 'AI Analysis',
           },
           categories: {
             inbox: 'Inbox',
