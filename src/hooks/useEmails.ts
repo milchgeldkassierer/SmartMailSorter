@@ -175,13 +175,120 @@ export const useEmails = ({ activeAccountId, accounts: _accounts }: UseEmailsPar
   // Pagination State
   const [visibleCount, setVisibleCount] = useState(100);
 
+  // Backend Search State
+  const [backendSearchResults, setBackendSearchResults] = useState<Email[]>([]);
+  const [isUsingBackendSearch, setIsUsingBackendSearch] = useState(false);
+
   // Computed properties based on Active Account
   const activeData = data[activeAccountId] || { emails: [], categories: [] };
   const currentEmails = activeData.emails;
   const currentCategories = activeData.categories;
 
+  // Helper function to check if advanced search operators are being used
+  const hasAdvancedSearchOperators = (config: SearchConfig): boolean => {
+    return !!(
+      config.from ||
+      config.to ||
+      config.subject ||
+      config.category ||
+      config.hasAttachment !== undefined ||
+      config.before ||
+      config.after
+    );
+  };
+
+  // Helper function to build search query string from SearchConfig
+  const buildSearchQuery = (config: SearchConfig, freeTextSearch: string): string => {
+    const queryParts: string[] = [];
+
+    if (config.from) {
+      queryParts.push(`from:${config.from}`);
+    }
+    if (config.to) {
+      queryParts.push(`to:${config.to}`);
+    }
+    if (config.subject) {
+      queryParts.push(`subject:${config.subject}`);
+    }
+    if (config.category) {
+      queryParts.push(`category:${config.category}`);
+    }
+    if (config.hasAttachment !== undefined && config.hasAttachment) {
+      queryParts.push('has:attachment');
+    }
+    if (config.before) {
+      queryParts.push(`before:${config.before}`);
+    }
+    if (config.after) {
+      queryParts.push(`after:${config.after}`);
+    }
+
+    // Add free text search term if present
+    if (freeTextSearch && freeTextSearch.trim()) {
+      queryParts.push(freeTextSearch.trim());
+    }
+
+    return queryParts.join(' ');
+  };
+
+  // Effect to trigger backend search when advanced operators are used
+  useEffect(() => {
+    const useBackendSearch = hasAdvancedSearchOperators(searchConfig);
+    setIsUsingBackendSearch(useBackendSearch);
+
+    if (useBackendSearch && window.electron && activeAccountId) {
+      const query = buildSearchQuery(searchConfig, searchTerm);
+
+      window.electron
+        .searchEmails(query, activeAccountId)
+        .then((results) => {
+          setBackendSearchResults(results);
+        })
+        .catch((error) => {
+          console.error('Backend search failed:', error);
+          setBackendSearchResults([]);
+        });
+    } else {
+      setBackendSearchResults([]);
+    }
+  }, [searchConfig, searchTerm, activeAccountId]);
+
   // --- Filtering Logic ---
   const filteredEmails = useMemo(() => {
+    // If using backend search, use those results
+    if (isUsingBackendSearch) {
+      // 1. Filter by category (standard folders, physical folders, or smart categories)
+      const categoryFiltered = backendSearchResults.filter((email) =>
+        shouldShowInCategory(email, selectedCategory, showUnsortedOnly, currentCategories)
+      );
+
+      // 2. Apply sort
+      const sorted = [...categoryFiltered].sort((a, b) => {
+        let comparison = 0;
+
+        switch (sortConfig.field) {
+          case 'date':
+            comparison = a.date.localeCompare(b.date);
+            break;
+          case 'sender':
+            comparison = a.sender.localeCompare(b.sender);
+            break;
+          case 'subject':
+            comparison = a.subject.localeCompare(b.subject);
+            break;
+          default: {
+            const _exhaustive: never = sortConfig.field;
+            throw new Error(`Unhandled sort field: ${_exhaustive}`);
+          }
+        }
+
+        return sortConfig.direction === 'asc' ? comparison : -comparison;
+      });
+
+      return sorted;
+    }
+
+    // Otherwise, use frontend filtering (original logic)
     // 1. Filter by category (standard folders, physical folders, or smart categories)
     const categoryFiltered = currentEmails.filter((email) =>
       shouldShowInCategory(email, selectedCategory, showUnsortedOnly, currentCategories)
@@ -214,7 +321,17 @@ export const useEmails = ({ activeAccountId, accounts: _accounts }: UseEmailsPar
     });
 
     return sorted;
-  }, [currentEmails, selectedCategory, searchTerm, searchConfig, showUnsortedOnly, currentCategories, sortConfig]);
+  }, [
+    currentEmails,
+    selectedCategory,
+    searchTerm,
+    searchConfig,
+    showUnsortedOnly,
+    currentCategories,
+    sortConfig,
+    isUsingBackendSearch,
+    backendSearchResults,
+  ]);
 
   // Pagination
   const displayedEmails = filteredEmails.slice(0, visibleCount);
