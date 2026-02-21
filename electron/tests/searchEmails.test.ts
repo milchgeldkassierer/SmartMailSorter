@@ -21,18 +21,59 @@ if (require.cache) {
 }
 
 // Define interface for db module methods
+interface TestAccount {
+  id: string;
+  name: string;
+  email: string;
+  provider: string;
+  username: string;
+  password: string;
+  imapHost: string;
+  imapPort: number;
+  color: string;
+}
+
+interface TestEmail {
+  id: string;
+  accountId: string;
+  sender: string;
+  senderEmail: string;
+  subject: string;
+  body: string;
+  date: string;
+  folder: string;
+  smartCategory?: string;
+  hasAttachments?: boolean;
+  isRead?: boolean;
+  isFlagged?: boolean;
+}
+
+interface SearchResult {
+  id: string;
+  accountId: string;
+  sender: string;
+  senderEmail: string;
+  subject: string;
+  date: string;
+  folder: string;
+  smartCategory: string | null;
+  isRead: boolean;
+  isFlagged: boolean;
+  hasAttachments: boolean;
+}
+
 interface DbModule {
   init: (path: string) => void;
-  addAccount: (account: any) => void;
-  saveEmail: (email: any) => void;
-  searchEmails: (query: string, accountId?: string | null) => any[];
+  addAccount: (account: TestAccount) => void;
+  saveEmail: (email: TestEmail) => void;
+  searchEmails: (query: string, accountId?: string | null) => SearchResult[];
 }
 
 // Import the database module under test
 const db: DbModule = require('../db.cjs');
 
 // Import folder constants
-const { INBOX_FOLDER, SENT_FOLDER } = require('../folderConstants.cjs');
+const { INBOX_FOLDER, SENT_FOLDER }: { INBOX_FOLDER: string; SENT_FOLDER: string } = require('../folderConstants.cjs');
 
 describe('searchEmails', () => {
   const accountId = 'search-test-account';

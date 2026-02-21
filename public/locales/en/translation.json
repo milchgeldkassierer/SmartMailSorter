@@ -146,7 +146,18 @@
     "body": "Body",
     "logic": "Logic",
     "and": "AND (All)",
-    "or": "OR"
+    "or": "OR",
+    "recentSearches": "Recent Searches",
+    "searchOperators": "Search Operators",
+    "aiConvert": "AI: Convert to search operators",
+    "operators": {
+      "from": "Filter by sender email",
+      "subject": "Search in subject line",
+      "category": "Filter by smart category",
+      "hasAttachment": "Emails with attachments",
+      "before": "Emails before date",
+      "after": "Emails after date"
+    }
   },
   "emailList": {
     "noEmails": "No emails",
@@ -291,7 +302,7 @@
     "namePlaceholder": "e.g. Amazon Invoices",
     "queryLabel": "Search Query",
     "queryPlaceholder": "e.g. from:amazon category:Rechnungen",
-    "helpText": "Use search operators like from:, to:, subject:, category:, has:attachment, before:, after:",
+    "helpText": "Use search operators like from:, subject:, category:, has:attachment, before:, after:",
     "saveButton": "Save Filter",
     "updateButton": "Update Filter",
     "errors": {

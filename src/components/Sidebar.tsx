@@ -497,15 +497,13 @@ const Sidebar: React.FC<SidebarProps> = ({
               <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
                 {t('sidebar.savedFilters')}
               </span>
-              {onCreateFilter && (
-                <button
-                  onClick={onCreateFilter}
-                  className="text-slate-400 hover:text-blue-600 transition-colors"
-                  title={t('sidebar.createNewFilter')}
-                >
-                  <PlusCircle className="w-4 h-4" />
-                </button>
-              )}
+              <button
+                onClick={onCreateFilter}
+                className="text-slate-400 hover:text-blue-600 transition-colors"
+                title={t('sidebar.createNewFilter')}
+              >
+                <PlusCircle className="w-4 h-4" />
+              </button>
             </div>
 
             <div className="space-y-1">

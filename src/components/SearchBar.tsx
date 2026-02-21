@@ -24,17 +24,15 @@ interface SearchHistoryItem {
   timestamp: number;
 }
 
-const SEARCH_HISTORY_KEY = 'smartmailsorter_search_history';
 const MAX_HISTORY_ITEMS = 10;
 
 const OPERATOR_SUGGESTIONS: OperatorSuggestion[] = [
-  { operator: 'from:', description: 'Filter by sender email', example: 'from:amazon' },
-  { operator: 'to:', description: 'Filter by recipient email', example: 'to:me@example.com' },
-  { operator: 'subject:', description: 'Search in subject line', example: 'subject:invoice' },
-  { operator: 'category:', description: 'Filter by smart category', example: 'category:Rechnungen' },
-  { operator: 'has:attachment', description: 'Emails with attachments', example: 'has:attachment' },
-  { operator: 'before:', description: 'Emails before date', example: 'before:2026-01-01' },
-  { operator: 'after:', description: 'Emails after date', example: 'after:2026-01-01' },
+  { operator: 'from:', description: 'searchBar.operators.from', example: 'from:amazon' },
+  { operator: 'subject:', description: 'searchBar.operators.subject', example: 'subject:invoice' },
+  { operator: 'category:', description: 'searchBar.operators.category', example: 'category:Rechnungen' },
+  { operator: 'has:attachment', description: 'searchBar.operators.hasAttachment', example: 'has:attachment' },
+  { operator: 'before:', description: 'searchBar.operators.before', example: 'before:2026-01-01' },
+  { operator: 'after:', description: 'searchBar.operators.after', example: 'after:2026-01-01' },
 ];
 
 const SearchBar: React.FC<SearchBarProps> = ({ searchTerm, onSearchChange, config, onConfigChange }) => {
@@ -50,16 +48,17 @@ const SearchBar: React.FC<SearchBarProps> = ({ searchTerm, onSearchChange, confi
   const historyRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Load search history from localStorage on mount
+  // Load search history from IPC (SQLite-backed) on mount
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(SEARCH_HISTORY_KEY);
-      if (stored) {
-        const history = JSON.parse(stored) as SearchHistoryItem[];
-        setSearchHistory(history);
-      }
-    } catch (error) {
-      // Ignore localStorage errors
+    if (window.electron?.getSearchHistory) {
+      window.electron
+        .getSearchHistory()
+        .then((history) => {
+          setSearchHistory(history.map((h) => ({ query: h.query, timestamp: h.timestamp })));
+        })
+        .catch(() => {
+          // Fallback: ignore IPC errors
+        });
     }
   }, []);
 
@@ -124,18 +123,16 @@ const SearchBar: React.FC<SearchBarProps> = ({ searchTerm, onSearchChange, confi
   const addToSearchHistory = (query: string) => {
     if (!query.trim()) return;
 
-    try {
-      // Remove duplicates and add new search at the beginning
-      const newHistory = [
-        { query, timestamp: Date.now() },
-        ...searchHistory.filter((item) => item.query !== query),
-      ].slice(0, MAX_HISTORY_ITEMS);
+    // Update local state optimistically
+    const newHistory = [
+      { query, timestamp: Date.now() },
+      ...searchHistory.filter((item) => item.query !== query),
+    ].slice(0, MAX_HISTORY_ITEMS);
 
-      setSearchHistory(newHistory);
-      localStorage.setItem(SEARCH_HISTORY_KEY, JSON.stringify(newHistory));
-    } catch (error) {
-      // Ignore localStorage errors
-    }
+    setSearchHistory(newHistory);
+
+    // The backend IPC handler auto-records history via search-emails,
+    // so no separate save call is needed here.
   };
 
   const handleSearchChange = (term: string) => {
@@ -245,6 +242,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ searchTerm, onSearchChange, confi
                     : 'text-slate-400 hover:text-purple-600 hover:bg-purple-50'
                 }`}
                 title={t('searchBar.aiConvert', 'AI: Convert to search operators')}
+                aria-label={t('searchBar.aiConvert', 'AI: Convert to search operators')}
               >
                 <Sparkles className="h-3.5 w-3.5" />
               </button>
@@ -276,7 +274,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ searchTerm, onSearchChange, confi
         >
           <div className="p-2">
             <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-2 py-1">
-              Recent Searches
+              {t('searchBar.recentSearches')}
             </div>
             <div className="space-y-1">
               {searchHistory.map((item, index) => (
@@ -306,7 +304,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ searchTerm, onSearchChange, confi
         >
           <div className="p-2">
             <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-2 py-1">
-              Search Operators
+              {t('searchBar.searchOperators')}
             </div>
             <div className="space-y-1">
               {filteredSuggestions.map((suggestion) => (
@@ -321,7 +319,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ searchTerm, onSearchChange, confi
                     </code>
                     <span className="text-xs text-slate-400 group-hover:text-slate-500">{suggestion.example}</span>
                   </div>
-                  <div className="text-xs text-slate-500 mt-0.5">{suggestion.description}</div>
+                  <div className="text-xs text-slate-500 mt-0.5">{t(suggestion.description)}</div>
                 </button>
               ))}
             </div>

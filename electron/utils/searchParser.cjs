@@ -188,13 +188,8 @@ function buildSearchWhereClause(parsedQuery, accountId = null) {
     params.push(`%${parsedQuery.subject}%`);
   }
 
-  // To filter (note: we don't store recipient emails in the current schema)
-  // This would need to be added to the emails table if needed
-  if (parsedQuery.to) {
-    // For now, we'll skip this or add a TODO
-    // conditions.push('recipientEmail LIKE ?');
-    // params.push(`%${parsedQuery.to}%`);
-  }
+  // To filter: not implemented yet (no recipient column in emails table).
+  // The to: operator is parsed but silently ignored for now.
 
   // 4. Free text search (least selective, requires scanning body field)
   // Note: body is not indexed due to size, so this will be slowest

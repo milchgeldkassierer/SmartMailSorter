@@ -502,6 +502,126 @@ app.whenReady().then(() => {
     }
   });
 
+  // --- AI Provider Helpers ---
+
+  /** Fetch with AbortController timeout to prevent hung UI */
+  function fetchWithTimeout(url, options, timeoutMs = 15000) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    return fetch(url, { ...options, signal: controller.signal }).finally(() => clearTimeout(timer));
+  }
+
+  /** Load AI settings from encrypted or plaintext file */
+  function loadAISettings() {
+    const hasEncryptedFile = fs.existsSync(AI_SETTINGS_FILE);
+    const hasPlaintextFile = fs.existsSync(AI_SETTINGS_FILE_PLAINTEXT);
+
+    if (hasEncryptedFile && safeStorage.isEncryptionAvailable()) {
+      const encrypted = fs.readFileSync(AI_SETTINGS_FILE);
+      const decrypted = safeStorage.decryptString(encrypted);
+      return JSON.parse(decrypted);
+    }
+    if (hasPlaintextFile) {
+      return JSON.parse(fs.readFileSync(AI_SETTINGS_FILE_PLAINTEXT, 'utf8'));
+    }
+    return null;
+  }
+
+  /** Clean markdown code fences from AI response text */
+  function cleanMarkdown(text) {
+    return text.replace(/```json/g, '').replace(/```/g, '').trim();
+  }
+
+  /** Call Google Gemini API and return parsed JSON */
+  async function callGeminiApi(settings, systemInstruction, userPrompt) {
+    const response = await fetchWithTimeout(
+      `https://generativelanguage.googleapis.com/v1beta/models/${settings.model}:generateContent?key=${settings.apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: userPrompt }] }],
+          systemInstruction: { parts: [{ text: systemInstruction }] },
+          generationConfig: {
+            responseMimeType: 'application/json',
+            responseSchema: {
+              type: 'object',
+              properties: { query: { type: 'string', description: 'Formatted search query with operators' } },
+              required: ['query'],
+            },
+          },
+        }),
+      }
+    );
+    if (!response.ok) {
+      const errorBody = await response.text();
+      throw new Error(`Gemini API error (${response.status}): ${errorBody}`);
+    }
+    const data = await response.json();
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!text) throw new Error('Failed to extract text from Gemini response');
+    return JSON.parse(cleanMarkdown(text));
+  }
+
+  /** Call OpenAI API and return parsed JSON */
+  async function callOpenAIApi(settings, systemInstruction, userPrompt) {
+    const response = await fetchWithTimeout('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${settings.apiKey}` },
+      body: JSON.stringify({
+        model: settings.model,
+        messages: [
+          { role: 'system', content: systemInstruction },
+          { role: 'user', content: userPrompt },
+        ],
+        response_format: { type: 'json_object' },
+      }),
+    });
+    if (!response.ok) {
+      const errorBody = await response.text();
+      throw new Error(`OpenAI API error (${response.status}): ${errorBody}`);
+    }
+    const data = await response.json();
+    const content = data.choices?.[0]?.message?.content;
+    if (!content) throw new Error('OpenAI returned empty response');
+    return JSON.parse(content);
+  }
+
+  /** Call Anthropic Claude API and return parsed JSON */
+  async function callAnthropicApi(settings, systemInstruction, userPrompt) {
+    const response = await fetchWithTimeout('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': settings.apiKey,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: settings.model,
+        max_tokens: 256,
+        system: systemInstruction,
+        messages: [{ role: 'user', content: userPrompt }],
+      }),
+    });
+    if (!response.ok) {
+      const errorBody = await response.text();
+      throw new Error(`Anthropic API error (${response.status}): ${errorBody}`);
+    }
+    const data = await response.json();
+    const content = data.content?.[0]?.text;
+    if (!content) throw new Error('Anthropic returned empty response');
+    return JSON.parse(cleanMarkdown(content));
+  }
+
+  /** Route to the correct AI provider based on settings */
+  async function callAIProvider(settings, systemInstruction, userPrompt) {
+    const providerLower = settings.provider.toLowerCase();
+    if (providerLower.includes('gemini')) return callGeminiApi(settings, systemInstruction, userPrompt);
+    if (providerLower.includes('openai')) return callOpenAIApi(settings, systemInstruction, userPrompt);
+    if (providerLower.includes('anthropic')) return callAnthropicApi(settings, systemInstruction, userPrompt);
+    throw new Error(`Unknown AI provider: ${settings.provider}`);
+  }
+
   // Natural Language Search IPC handler
   ipcMain.handle('parse-natural-language-query', async (event, query) => {
     try {
@@ -509,32 +629,17 @@ app.whenReady().then(() => {
         return '';
       }
 
-      // Load AI settings
-      let settings = null;
-      const hasEncryptedFile = fs.existsSync(AI_SETTINGS_FILE);
-      const hasPlaintextFile = fs.existsSync(AI_SETTINGS_FILE_PLAINTEXT);
-
-      if (hasEncryptedFile && safeStorage.isEncryptionAvailable()) {
-        const encrypted = fs.readFileSync(AI_SETTINGS_FILE);
-        const decrypted = safeStorage.decryptString(encrypted);
-        settings = JSON.parse(decrypted);
-      } else if (hasPlaintextFile) {
-        const settingsJson = fs.readFileSync(AI_SETTINGS_FILE_PLAINTEXT, 'utf8');
-        settings = JSON.parse(settingsJson);
-      }
-
+      const settings = loadAISettings();
       if (!settings || !settings.apiKey) {
         throw new Error('AI settings not configured');
       }
 
-      // Prepare the prompt
       const systemInstruction = `Du bist ein Such-Query-Übersetzer für ein Email-System.
 
 Deine Aufgabe: Wandle natürlichsprachige deutsche Suchanfragen in strukturierte Such-Operatoren um.
 
 VERFÜGBARE OPERATOREN:
 - from:EMAIL_ODER_NAME - Suche nach Absender
-- to:EMAIL_ODER_NAME - Suche nach Empfänger
 - subject:TEXT - Suche im Betreff
 - category:KATEGORIE - Suche in Kategorie (z.B. Rechnungen, Newsletter, Spam, Privat, Geschäftlich)
 - has:attachment - Nur Emails mit Anhängen
@@ -559,129 +664,10 @@ BEISPIELE:
 Antworte NUR mit dem JSON-Objekt mit dem "query" Feld.`;
 
       const userPrompt = `Wandle diese Suchanfrage um: "${query}"`;
+      const result = await callAIProvider(settings, systemInstruction, userPrompt);
 
-      let result;
-
-      // Call AI provider based on settings
-      const providerLower = settings.provider.toLowerCase();
-      if (providerLower.includes('gemini')) {
-        // Google Gemini API
-        const response = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/${settings.model}:generateContent?key=${settings.apiKey}`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              contents: [{ parts: [{ text: userPrompt }] }],
-              systemInstruction: { parts: [{ text: systemInstruction }] },
-              generationConfig: {
-                responseMimeType: 'application/json',
-                responseSchema: {
-                  type: 'object',
-                  properties: {
-                    query: {
-                      type: 'string',
-                      description: 'Formatted search query with operators',
-                    },
-                  },
-                  required: ['query'],
-                },
-              },
-            }),
-          }
-        );
-
-        if (!response.ok) {
-          const errorBody = await response.text();
-          throw new Error(`Gemini API error (${response.status}): ${errorBody}`);
-        }
-
-        const data = await response.json();
-        const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-
-        if (!text) {
-          throw new Error('Failed to extract text from Gemini response');
-        }
-
-        // Clean markdown formatting
-        const cleanText = text
-          .replace(/```json/g, '')
-          .replace(/```/g, '')
-          .trim();
-        result = JSON.parse(cleanText);
-      } else if (providerLower.includes('openai')) {
-        // OpenAI API
-        const response = await fetch('https://api.openai.com/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${settings.apiKey}`,
-          },
-          body: JSON.stringify({
-            model: settings.model,
-            messages: [
-              { role: 'system', content: systemInstruction },
-              { role: 'user', content: userPrompt },
-            ],
-            response_format: { type: 'json_object' },
-          }),
-        });
-
-        if (!response.ok) {
-          const errorBody = await response.text();
-          throw new Error(`OpenAI API error (${response.status}): ${errorBody}`);
-        }
-
-        const data = await response.json();
-        const content = data.choices?.[0]?.message?.content;
-
-        if (!content) {
-          throw new Error('OpenAI returned empty response');
-        }
-
-        result = JSON.parse(content);
-      } else if (providerLower.includes('anthropic')) {
-        // Anthropic Claude API
-        const response = await fetch('https://api.anthropic.com/v1/messages', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-api-key': settings.apiKey,
-            'anthropic-version': '2023-06-01',
-          },
-          body: JSON.stringify({
-            model: settings.model,
-            max_tokens: 256,
-            system: systemInstruction,
-            messages: [{ role: 'user', content: userPrompt }],
-          }),
-        });
-
-        if (!response.ok) {
-          const errorBody = await response.text();
-          throw new Error(`Anthropic API error (${response.status}): ${errorBody}`);
-        }
-
-        const data = await response.json();
-        const content = data.content?.[0]?.text;
-
-        if (!content) {
-          throw new Error('Anthropic returned empty response');
-        }
-
-        // Clean markdown formatting
-        const cleanContent = content
-          .replace(/```json/g, '')
-          .replace(/```/g, '')
-          .trim();
-        result = JSON.parse(cleanContent);
-      } else {
-        throw new Error(`Unknown AI provider: ${settings.provider}`);
-      }
-
-      // Extract query from result
       if (result && typeof result === 'object' && 'query' in result) {
-        logger.info(`[NL Search] Converted "${query}" to "${result.query}"`);
+        logger.info('[NL Search] Query converted successfully');
         return result.query || '';
       }
 

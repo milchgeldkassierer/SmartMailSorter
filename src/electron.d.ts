@@ -80,8 +80,8 @@ declare global {
       getSavedFilters: () => Promise<Array<{ id: string; name: string; query: string; createdAt: string }>>;
       saveFilter: (id: string, name: string, query: string) => Promise<void>;
       deleteFilter: (id: string) => Promise<void>;
-      getSearchHistory: () => Promise<Array<{ id: number; query: string; timestamp: string }>>;
-      saveSearchHistory: (id: string, query: string) => Promise<{ success: boolean; changes: number }>;
+      getSearchHistory: () => Promise<Array<{ id: string; query: string; timestamp: number }>>;
+      addSearchHistory: (id: string, query: string) => Promise<{ success: boolean; changes: number }>;
       clearSearchHistory: () => Promise<{ success: boolean; changes: number }>;
 
       // AI Settings (safeStorage)

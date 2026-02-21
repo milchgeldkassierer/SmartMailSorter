@@ -5,7 +5,7 @@ import { X, Filter, CheckCircle } from './Icon';
 interface SavedFilterDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (name: string, query: string) => void;
+  onSave: (name: string, query: string) => void | Promise<void>;
   initialName?: string;
   initialQuery?: string;
   mode?: 'create' | 'edit';
@@ -23,6 +23,7 @@ const SavedFilterDialog: React.FC<SavedFilterDialogProps> = ({
   const [name, setName] = useState(initialName);
   const [query, setQuery] = useState(initialQuery);
   const [errors, setErrors] = useState<{ name?: string; query?: string }>({});
+  const [isSaving, setIsSaving] = useState(false);
 
   // Reset form when dialog opens/closes or initial values change
   useEffect(() => {
@@ -62,10 +63,17 @@ const SavedFilterDialog: React.FC<SavedFilterDialogProps> = ({
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (validateForm()) {
-      onSave(name.trim(), query.trim());
-      onClose();
+      setIsSaving(true);
+      try {
+        await onSave(name.trim(), query.trim());
+        onClose();
+      } catch (error) {
+        console.error('Failed to save filter:', error);
+      } finally {
+        setIsSaving(false);
+      }
     }
   };
 
@@ -178,7 +186,8 @@ const SavedFilterDialog: React.FC<SavedFilterDialogProps> = ({
           <button
             type="button"
             onClick={handleSave}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors flex items-center gap-2"
+            disabled={isSaving}
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-medium rounded-lg transition-colors flex items-center gap-2"
           >
             <CheckCircle className="w-4 h-4" />
             {mode === 'edit' ? t('savedFilterDialog.updateButton') : t('savedFilterDialog.saveButton')}

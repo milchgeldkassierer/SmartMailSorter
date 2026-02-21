@@ -7,7 +7,6 @@ import { useSavedFilters } from '../useSavedFilters';
 const mockSaveFilter = vi.fn();
 const mockDeleteFilter = vi.fn();
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 (window as unknown as Record<string, unknown>).electron = {
   saveFilter: mockSaveFilter,
   deleteFilter: mockDeleteFilter,

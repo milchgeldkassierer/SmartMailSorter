@@ -146,7 +146,18 @@
     "body": "Inhalt (Body)",
     "logic": "Logik",
     "and": "UND (Alle)",
-    "or": "ODER"
+    "or": "ODER",
+    "recentSearches": "Letzte Suchen",
+    "searchOperators": "Suchoperatoren",
+    "aiConvert": "KI: In Suchoperatoren umwandeln",
+    "operators": {
+      "from": "Nach Absender filtern",
+      "subject": "Im Betreff suchen",
+      "category": "Nach Kategorie filtern",
+      "hasAttachment": "E-Mails mit Anhängen",
+      "before": "E-Mails vor Datum",
+      "after": "E-Mails nach Datum"
+    }
   },
   "emailList": {
     "noEmails": "Keine Emails",
@@ -291,7 +302,7 @@
     "namePlaceholder": "z.B. Amazon Rechnungen",
     "queryLabel": "Suchanfrage",
     "queryPlaceholder": "z.B. from:amazon category:Rechnungen",
-    "helpText": "Verwenden Sie Suchoperatoren wie from:, to:, subject:, category:, has:attachment, before:, after:",
+    "helpText": "Verwenden Sie Suchoperatoren wie from:, subject:, category:, has:attachment, before:, after:",
     "saveButton": "Filter speichern",
     "updateButton": "Filter aktualisieren",
     "errors": {

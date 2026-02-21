@@ -1,17 +1,19 @@
 /**
- * Highlight matching search terms in text by wrapping them in <mark> tags.
+ * Highlight matching search terms in plain text by wrapping them in <mark> tags.
  *
- * This function finds all occurrences of search terms in the provided text
- * and wraps them in HTML <mark> tags for visual highlighting. It handles:
+ * IMPORTANT: This function accepts plain text only, NOT HTML. It escapes all HTML
+ * entities in the input before applying highlights, so passing sanitized HTML will
+ * double-escape it. For HTML content, use a DOM-based approach instead.
+ *
+ * This function handles:
  * - Case-insensitive matching
  * - Multiple search terms
  * - Special regex characters in search terms
- * - Preserving existing HTML structure
- * - Avoiding duplicate highlighting
+ * - HTML escaping to prevent XSS via dangerouslySetInnerHTML
  *
- * @param text - The text content to search within (can contain HTML)
+ * @param text - The plain text content to search within (NOT HTML)
  * @param searchQuery - The search query containing terms to highlight
- * @returns Text with matching terms wrapped in <mark> tags
+ * @returns HTML string with matching terms wrapped in <mark> tags
  *
  * @example
  * ```typescript

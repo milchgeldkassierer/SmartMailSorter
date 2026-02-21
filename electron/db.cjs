@@ -430,14 +430,12 @@ function searchEmails(query, accountId = null) {
   const emails = stmt.all(...params);
   const queryTime = Date.now() - startTime;
 
-  // Log slow queries (>100ms) in development
+  // Log slow queries (>100ms) - avoid logging sensitive search terms/params
   if (queryTime > 100) {
     logger.warn(`Slow search query detected: ${queryTime}ms`, {
-      query,
       accountId,
       resultCount: emails.length,
-      sql,
-      params,
+      hasQuery: Boolean(query),
     });
   }
 
@@ -563,6 +561,8 @@ function updateEmailFlagStatus(id, isFlagged) {
 function resetDb() {
   db.exec('DROP TABLE IF EXISTS attachments');
   db.exec('DROP TABLE IF EXISTS notification_settings');
+  db.exec('DROP TABLE IF EXISTS saved_filters');
+  db.exec('DROP TABLE IF EXISTS search_history');
   db.exec('DROP TABLE IF EXISTS emails');
   db.exec('DROP TABLE IF EXISTS categories');
   db.exec('DROP TABLE IF EXISTS accounts');

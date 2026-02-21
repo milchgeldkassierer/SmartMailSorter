@@ -82,10 +82,9 @@ const EmailView: React.FC<EmailViewProps> = ({ email, searchQuery }) => {
           setBlockedImageCount(0);
         }
 
-        // Apply search term highlighting
-        if (searchQuery) {
-          html = highlightMatches(html, searchQuery);
-        }
+        // Note: highlightMatches is not applied to HTML content because it
+        // escapes HTML entities, which would destroy the sanitized HTML structure.
+        // Highlighting is only applied to plain text view below.
 
         setIframeSrcDoc(buildIframeDoc(html));
       } catch (err) {
