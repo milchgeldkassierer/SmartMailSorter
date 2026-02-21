@@ -247,15 +247,15 @@ beforeAll(async () => {
           },
           simulationStart: {
             title: 'GMX AI Sorter',
-            subtitle: 'Intelligent Email Categorization Prototype',
-            simulationModeTitle: 'Simulation Mode:',
+            subtitle: 'Intelligenter E-Mail-Kategorisierungs-Prototyp',
+            simulationModeTitle: 'Simulationsmodus:',
             simulationModeDescription:
-              'Direct IMAP access is not possible from a browser. This app uses Gemini AI to generate realistic email data and demonstrate how the AI sorting algorithm functions.',
+              'Direkter IMAP-Zugriff ist im Browser nicht möglich. Diese App verwendet Gemini AI, um realistische E-Mail-Daten zu erzeugen und den KI-Sortieralgorithmus zu demonstrieren.',
             description:
               'Klicken Sie auf "Verbinden", um den Simulator zu starten. Gemini generiert Beispiel-Emails und sortiert diese automatisch in die richtigen Ordner.',
             connecting: 'Generiere Postfach...',
             connectButton: 'Mit Demo-Postfach verbinden',
-            poweredBy: 'Powered by Gemini 3 Flash Preview',
+            poweredBy: 'Bereitgestellt von Gemini 3 Flash Preview',
           },
           confirmDialog: {
             confirm: 'Bestätigen',
@@ -556,8 +556,6 @@ beforeEach(async () => {
 
 // Automatic cleanup after each test to prevent memory leaks
 // and ensure test isolation
-afterEach(async () => {
+afterEach(() => {
   cleanup();
-  // Reset language to German for next test
-  await i18n.changeLanguage('de');
 });

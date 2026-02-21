@@ -48,19 +48,26 @@ Follow these steps to contribute a translation for a new language:
 ### Step 1: Set Up Your Development Environment
 
 1. **Fork the Repository**: Fork the SmartMailSorter repository on GitHub to your account
+
 2. **Clone Your Fork**: Clone your forked repository to your local machine
+
    ```bash
    git clone https://github.com/YOUR-USERNAME/SmartMailSorter.git
    cd SmartMailSorter
    ```
+
 3. **Install Dependencies**: Install the project dependencies
+
    ```bash
    npm install
    ```
+
 4. **Create a Feature Branch**: Create a new branch for your translation
+
    ```bash
    git checkout -b translation/add-<language-code>
    ```
+
    Replace `<language-code>` with your language's ISO 639-1 code (e.g., `fr` for French, `es` for Spanish)
 
 ### Step 2: Create Language Directory
@@ -81,10 +88,13 @@ Follow these steps to contribute a translation for a new language:
    - [Find other codes here](https://en.wikipedia.org/wiki/List_of_ISO_639-1_codes)
 
 2. **Create Language Directory**:
+
    ```bash
    mkdir -p public/locales/<language-code>
    ```
+
    For example, for French:
+
    ```bash
    mkdir -p public/locales/fr
    ```
@@ -94,6 +104,7 @@ Follow these steps to contribute a translation for a new language:
 #### 3.1 Main Translation File (`translation.json`)
 
 1. **Copy the Template**:
+
    ```bash
    cp public/locales/locale-template.json public/locales/<language-code>/translation.json
    ```
@@ -101,6 +112,7 @@ Follow these steps to contribute a translation for a new language:
 2. **Translate All Strings**: Open `public/locales/<language-code>/translation.json` and translate all values while keeping keys unchanged
 
    **Example (French)**:
+
    ```json
    {
      "common": {
@@ -122,9 +134,11 @@ Follow these steps to contribute a translation for a new language:
 3. **Important Translation Guidelines**:
    - **Keep keys unchanged**: Only translate the values, never the keys
    - **Preserve placeholders**: Keep dynamic placeholders like `{{count}}`, `{{category}}`, `{{field}}` exactly as they are
+
      ```json
      "deleteCategoryConfirm": "Êtes-vous sûr de vouloir supprimer la catégorie '{{category}}' ?"
      ```
+
    - **Maintain brand names**: Keep product names unchanged (GMX, Gmail, Google Gemini, etc.)
    - **Preserve technical terms**: Keep acronyms like IMAP, API, HTML, SSL as-is unless your language has established translations
    - **Use appropriate formality**: Choose the formality level (formal/informal "you") that matches your language's conventions for software UI
@@ -134,6 +148,7 @@ Follow these steps to contribute a translation for a new language:
 #### 3.2 Categories Translation File (`categories.json`)
 
 1. **Copy the English Categories File**:
+
    ```bash
    cp public/locales/en/categories.json public/locales/<language-code>/categories.json
    ```
@@ -141,6 +156,7 @@ Follow these steps to contribute a translation for a new language:
 2. **Translate Category Names**: Translate the email category names to your language
 
    **Example Structure**:
+
    ```json
    {
      "categories": {
@@ -159,6 +175,7 @@ Follow these steps to contribute a translation for a new language:
    ```
 
    **French Example**:
+
    ```json
    {
      "categories": {
@@ -178,48 +195,42 @@ Follow these steps to contribute a translation for a new language:
 
 ### Step 4: Register Your Language
 
-Update the i18n configuration to include your new language:
+SmartMailSorter uses `i18next-http-backend` to load translations dynamically from `public/locales/{{lng}}/{{ns}}.json`. You only need to register your language code in the configuration:
 
 1. **Open** `src/i18n/config.ts`
 
-2. **Add your language** to the `resources` object:
+2. **Add your language code** to the `SUPPORTED_LANGUAGES` array:
+
    ```typescript
-   resources: {
-     de: {
-       translation: require('../../public/locales/de/translation.json'),
-       categories: require('../../public/locales/de/categories.json'),
-     },
-     en: {
-       translation: require('../../public/locales/en/translation.json'),
-       categories: require('../../public/locales/en/categories.json'),
-     },
-     fr: {  // Add your language here
-       translation: require('../../public/locales/fr/translation.json'),
-       categories: require('../../public/locales/fr/categories.json'),
-     },
-   },
+   export const SUPPORTED_LANGUAGES = ['de', 'en', 'fr'] as const; // Add your language code
    ```
 
-3. **Update the language hook** in `src/hooks/useLanguage.ts`:
+3. **Add a label** to the `LANGUAGE_LABELS` record:
+
    ```typescript
-   const availableLanguages = [
-     { code: 'de', label: 'Deutsch' },
-     { code: 'en', label: 'English' },
-     { code: 'fr', label: 'Français' },  // Add your language
-   ];
+   export const LANGUAGE_LABELS: Record<SupportedLanguage, string> = {
+     de: 'Deutsch',
+     en: 'English',
+     fr: 'Français',  // Add your language's native name
+   };
    ```
+
+   That's it! The `useLanguage` hook in `src/hooks/useLanguage.ts` reads from `SUPPORTED_LANGUAGES` and `LANGUAGE_LABELS` automatically, so no changes to the hook are needed. The HTTP backend will load your translation files from `public/locales/<language-code>/` at runtime.
 
 ### Step 5: Test Your Translation
 
 Before submitting your translation, thoroughly test it in the application:
 
 1. **Build the Application**:
+
    ```bash
    npm run build
    ```
+
    Verify there are no build errors.
 
 2. **Start the Development Server**:
+
    ```bash
    npm run electron:dev
    ```
@@ -254,24 +265,25 @@ Before submitting your translation, thoroughly test it in the application:
 Once you've tested your translation and verified it works correctly:
 
 1. **Add Your Files to Git**:
+
    ```bash
    git add public/locales/<language-code>/
    git add src/i18n/config.ts
-   git add src/hooks/useLanguage.ts
    ```
 
 2. **Commit Your Changes**:
+
    ```bash
    git commit -m "feat: Add <Language Name> translation (<language-code>)
 
    - Added complete translation.json with all UI strings
    - Added categories.json with email category translations
    - Registered language in i18n configuration
-   - Added language option to language switcher hook
    - Tested all UI elements for translation accuracy"
    ```
 
 3. **Push to Your Fork**:
+
    ```bash
    git push origin translation/add-<language-code>
    ```
@@ -381,6 +393,7 @@ Choose the appropriate formality level for your language:
 ### ❌ Don't Do This
 
 1. **Changing JSON structure**:
+
    ```json
    // Wrong - changed key names
    {
@@ -391,12 +404,14 @@ Choose the appropriate formality level for your language:
    ```
 
 2. **Breaking placeholders**:
+
    ```json
    // Wrong - placeholder modified
    "message": "Voulez-vous supprimer {{catégorie}} ?"  // Should be {{category}}
    ```
 
 3. **Adding/removing keys**:
+
    ```json
    // Wrong - added a key that doesn't exist in original
    {
@@ -408,6 +423,7 @@ Choose the appropriate formality level for your language:
    ```
 
 4. **Leaving strings untranslated**:
+
    ```json
    // Wrong - left in English
    {
@@ -426,6 +442,7 @@ Choose the appropriate formality level for your language:
 ### ✅ Do This Instead
 
 1. **Maintain exact JSON structure**:
+
    ```json
    {
      "common": {
@@ -436,11 +453,13 @@ Choose the appropriate formality level for your language:
    ```
 
 2. **Preserve all placeholders**:
+
    ```json
    "message": "Voulez-vous supprimer {{category}} ?"
    ```
 
 3. **Translate all values**:
+
    ```json
    {
      "common": {
