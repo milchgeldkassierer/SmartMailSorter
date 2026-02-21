@@ -1,48 +1,13 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { createRequire } from 'module';
 import path from 'path';
-import Module from 'module';
+import { setupElectronMock } from './helpers/mockElectron';
 
 // Create require function for CommonJS modules
 const require = createRequire(import.meta.url);
 
-// Mock state for safeStorage
-let mockEncryptionAvailable = true;
-
-// Save original require for restoration
-const originalRequire = Module.prototype.require;
-
-// Mock Electron by intercepting require calls (same pattern as vitest-setup.js)
-Module.prototype.require = function (id: string) {
-  if (id === 'electron' && process.env.VITEST) {
-    return {
-      safeStorage: {
-        isEncryptionAvailable: () => mockEncryptionAvailable,
-        encryptString: (plaintext: string) => {
-          if (!mockEncryptionAvailable) {
-            throw new Error('Encryption not available');
-          }
-          // Simulate encryption by creating a buffer with a prefix and the plaintext
-          // In real Electron, this would be OS-level encryption
-          const encrypted = Buffer.from(`ENCRYPTED:${plaintext}`, 'utf-8');
-          return encrypted;
-        },
-        decryptString: (encrypted: Buffer) => {
-          if (!mockEncryptionAvailable) {
-            throw new Error('Encryption not available');
-          }
-          // Simulate decryption by removing the prefix
-          const decrypted = encrypted.toString('utf-8').replace('ENCRYPTED:', '');
-          return decrypted;
-        },
-      },
-      app: {
-        getPath: () => './test-data',
-      },
-    };
-  }
-  return originalRequire.apply(this, arguments as unknown as [string]);
-};
+// Set up shared Electron mock (must happen before requiring security.cjs)
+const electronMock = setupElectronMock();
 
 // Mock logger to suppress console output during tests
 const loggerPath = path.resolve(path.dirname(new URL(import.meta.url).pathname), '../utils/logger.cjs');
@@ -69,7 +34,7 @@ const security: SecurityModule = require('../utils/security.cjs');
 describe('Security Encryption Functions', () => {
   beforeEach(() => {
     // Reset mock state before each test
-    mockEncryptionAvailable = true;
+    electronMock.setEncryptionAvailable(true);
     vi.clearAllMocks();
   });
 
@@ -94,7 +59,7 @@ describe('Security Encryption Functions', () => {
     });
 
     it('should throw error when encryption is not available', () => {
-      mockEncryptionAvailable = false;
+      electronMock.setEncryptionAvailable(false);
 
       expect(() => {
         security.encryptPassword('testPassword');
@@ -159,7 +124,7 @@ describe('Security Encryption Functions', () => {
       const encrypted = security.encryptPassword(plainPassword);
 
       // Disable encryption after encrypting
-      mockEncryptionAvailable = false;
+      electronMock.setEncryptionAvailable(false);
 
       expect(() => {
         security.decryptPassword(encrypted);
@@ -267,16 +232,16 @@ describe('Security Encryption Functions', () => {
   describe('Error Handling', () => {
     it('should handle encryption availability check properly', () => {
       // First check when available
-      mockEncryptionAvailable = true;
+      electronMock.setEncryptionAvailable(true);
       expect(() => security.encryptPassword('test')).not.toThrow();
 
       // Then check when not available
-      mockEncryptionAvailable = false;
+      electronMock.setEncryptionAvailable(false);
       expect(() => security.encryptPassword('test')).toThrow();
     });
 
     it('should throw consistent error messages for unavailable encryption', () => {
-      mockEncryptionAvailable = false;
+      electronMock.setEncryptionAvailable(false);
 
       try {
         security.encryptPassword('test');

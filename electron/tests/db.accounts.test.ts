@@ -1,49 +1,13 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { createRequire } from 'module';
-import path from 'path';
-import Module from 'module';
 import { ImapAccount } from '../../src/types';
+import { setupElectronMock } from './helpers/mockElectron';
 
 // Create require function for CommonJS modules
 const require = createRequire(import.meta.url);
 
-// Mock state for safeStorage
-let mockEncryptionAvailable = true;
-
-// Save original require for restoration
-const originalRequire = Module.prototype.require;
-
-// Mock Electron by intercepting require calls (same pattern as security.encryption.test.ts)
-Module.prototype.require = function (id: string) {
-  if (id === 'electron' && process.env.VITEST) {
-    return {
-      safeStorage: {
-        isEncryptionAvailable: () => mockEncryptionAvailable,
-        encryptString: (plaintext: string) => {
-          if (!mockEncryptionAvailable) {
-            throw new Error('Encryption not available');
-          }
-          // Simulate encryption by creating a buffer with a prefix and the plaintext
-          // In real Electron, this would be OS-level encryption
-          const encrypted = Buffer.from(`ENCRYPTED:${plaintext}`, 'utf-8');
-          return encrypted;
-        },
-        decryptString: (encrypted: Buffer) => {
-          if (!mockEncryptionAvailable) {
-            throw new Error('Encryption not available');
-          }
-          // Simulate decryption by removing the prefix
-          const decrypted = encrypted.toString('utf-8').replace('ENCRYPTED:', '');
-          return decrypted;
-        },
-      },
-      app: {
-        getPath: () => './test-data',
-      },
-    };
-  }
-  return originalRequire.apply(this, arguments as unknown as [string]);
-};
+// Set up shared Electron mock (must happen before requiring db.cjs)
+const electronMock = setupElectronMock();
 
 // Define interface for db module methods (account-related)
 interface DbModule {
@@ -1364,13 +1328,16 @@ describe('Database Account CRUD Operations', () => {
   describe('Password Encryption Migration', () => {
     beforeEach(() => {
       // Reset mock state and clear mocks before each test
-      mockEncryptionAvailable = true;
+      electronMock.setEncryptionAvailable(true);
       vi.clearAllMocks();
     });
 
-    it('should migrate plaintext passwords to encrypted format', () => {
-      // Step 1: Disable encryption and add account with plaintext password
-      mockEncryptionAvailable = false;
+    it('should encrypt passwords when encryption is available and decrypt on retrieval', () => {
+      // Note: True plaintext-to-encrypted migration on existing DB rows requires
+      // persisting state across db.init() calls (e.g., a file-based DB). This test
+      // verifies the core encrypt/decrypt path: that a password added with encryption
+      // enabled is stored encrypted and retrieved as plaintext.
+      electronMock.setEncryptionAvailable(true);
 
       const account = {
         id: 'migrate-plaintext',
@@ -1386,56 +1353,18 @@ describe('Database Account CRUD Operations', () => {
 
       db.addAccount(account);
 
-      // Verify password is stored as plaintext (not encrypted)
-      const accountBeforeMigration = db.getAccountWithPassword('migrate-plaintext');
-      expect(accountBeforeMigration).toBeDefined();
-      expect(accountBeforeMigration?.password).toBe('plaintextPassword123');
+      // Verify password is stored encrypted (not plaintext) in the database
+      const rawPassword = db._getRawPasswordForTesting('migrate-plaintext');
+      expect(rawPassword).not.toBe('plaintextPassword123');
 
-      // Step 2: Enable encryption and trigger migration by re-initializing
-      mockEncryptionAvailable = true;
-      db.init(':memory:');
-
-      // Re-add the account with plaintext password directly
-      // (simulating existing plaintext password in database before migration)
-      mockEncryptionAvailable = false;
-      db.addAccount(account);
-
-      // Now enable encryption and re-init to trigger migration
-      mockEncryptionAvailable = true;
-      db.init(':memory:');
-
-      // Re-create schema and add plaintext account
-      mockEncryptionAvailable = false;
-      db.addAccount(account);
-
-      // Enable encryption and init one more time to actually run migration
-      mockEncryptionAvailable = true;
-
-      // The db module caches the database connection, so we need to work around this
-      // Instead, let's verify the encryption works by adding a new account with encryption enabled
-      const newAccount = {
-        id: 'encrypted-test',
-        name: 'Encrypted Test',
-        email: 'encrypted@test.com',
-        provider: 'gmail',
-        imapHost: 'imap.gmail.com',
-        imapPort: 993,
-        username: 'encuser',
-        password: 'encryptedPassword456',
-        color: '#654321',
-      };
-
-      db.addAccount(newAccount);
-
-      // Retrieve and verify password is decrypted correctly
-      const accountAfter = db.getAccountWithPassword('encrypted-test');
+      // Verify decryption returns the original password
+      const accountAfter = db.getAccountWithPassword('migrate-plaintext');
       expect(accountAfter).toBeDefined();
-      expect(accountAfter?.password).toBe('encryptedPassword456');
+      expect(accountAfter?.password).toBe('plaintextPassword123');
     });
 
-    it('should handle already-encrypted passwords (idempotent migration)', () => {
-      // Enable encryption from the start
-      mockEncryptionAvailable = true;
+    it('should decrypt encrypted passwords consistently across multiple retrievals', () => {
+      electronMock.setEncryptionAvailable(true);
 
       const account = {
         id: 'already-encrypted',
@@ -1452,20 +1381,18 @@ describe('Database Account CRUD Operations', () => {
       // Add account (will be encrypted)
       db.addAccount(account);
 
-      // Verify password can be retrieved and decrypted
-      const accountBefore = db.getAccountWithPassword('already-encrypted');
-      expect(accountBefore).toBeDefined();
-      expect(accountBefore?.password).toBe('alreadyEncryptedPass789');
+      // Verify password can be retrieved and decrypted consistently
+      const accountFirst = db.getAccountWithPassword('already-encrypted');
+      expect(accountFirst).toBeDefined();
+      expect(accountFirst?.password).toBe('alreadyEncryptedPass789');
 
-      // Reinitialize to trigger migration again (should be idempotent)
-      // Since password is already encrypted, migration should detect this and skip it
-      const accountAfter = db.getAccountWithPassword('already-encrypted');
-      expect(accountAfter).toBeDefined();
-      expect(accountAfter?.password).toBe('alreadyEncryptedPass789');
+      const accountSecond = db.getAccountWithPassword('already-encrypted');
+      expect(accountSecond).toBeDefined();
+      expect(accountSecond?.password).toBe('alreadyEncryptedPass789');
     });
 
     it('should handle accounts with no password', () => {
-      mockEncryptionAvailable = true;
+      electronMock.setEncryptionAvailable(true);
 
       const accountWithoutPassword = {
         id: 'no-password',
@@ -1489,7 +1416,7 @@ describe('Database Account CRUD Operations', () => {
     });
 
     it('should handle accounts with empty password', () => {
-      mockEncryptionAvailable = true;
+      electronMock.setEncryptionAvailable(true);
 
       const accountWithEmptyPassword = {
         id: 'empty-password',
@@ -1513,7 +1440,7 @@ describe('Database Account CRUD Operations', () => {
 
     it('should skip migration gracefully when encryption unavailable', () => {
       // Disable encryption
-      mockEncryptionAvailable = false;
+      electronMock.setEncryptionAvailable(false);
 
       const account = {
         id: 'migration-skip',
@@ -1541,7 +1468,7 @@ describe('Database Account CRUD Operations', () => {
     });
 
     it('should encrypt passwords with special characters', () => {
-      mockEncryptionAvailable = true;
+      electronMock.setEncryptionAvailable(true);
 
       const specialPassword = '!@#$%^&*()_+-=[]{}|;:,.<>?/~`"\'\\';
       const account = {
@@ -1564,7 +1491,7 @@ describe('Database Account CRUD Operations', () => {
     });
 
     it('should encrypt passwords with unicode characters', () => {
-      mockEncryptionAvailable = true;
+      electronMock.setEncryptionAvailable(true);
 
       const unicodePassword = '密码🔐パスワード';
       const account = {
@@ -1587,7 +1514,7 @@ describe('Database Account CRUD Operations', () => {
     });
 
     it('should encrypt long passwords', () => {
-      mockEncryptionAvailable = true;
+      electronMock.setEncryptionAvailable(true);
 
       const longPassword = 'a'.repeat(1000);
       const account = {
@@ -1610,7 +1537,7 @@ describe('Database Account CRUD Operations', () => {
     });
 
     it('should handle password encryption round-trip for multiple accounts', () => {
-      mockEncryptionAvailable = true;
+      electronMock.setEncryptionAvailable(true);
 
       const accounts = [
         {
@@ -1660,7 +1587,7 @@ describe('Database Account CRUD Operations', () => {
     });
 
     it('should verify all passwords are stored as base64-encoded encrypted buffers, not plaintext', () => {
-      mockEncryptionAvailable = true;
+      electronMock.setEncryptionAvailable(true);
 
       const testAccounts = [
         {
@@ -1742,7 +1669,7 @@ describe('Database Account CRUD Operations', () => {
 
     it('should verify plaintext passwords are not stored when encryption is disabled', () => {
       // Disable encryption
-      mockEncryptionAvailable = false;
+      electronMock.setEncryptionAvailable(false);
 
       const plaintextAccount = {
         id: 'plaintext-check',

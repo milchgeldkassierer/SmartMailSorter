@@ -1,49 +1,14 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { createRequire } from 'module';
 import path from 'path';
-import Module from 'module';
 import { ImapAccount } from '../../src/types';
+import { setupElectronMock } from './helpers/mockElectron';
 
 // Create require function for CommonJS modules
 const require = createRequire(import.meta.url);
 
-// Mock state for safeStorage
-let mockEncryptionAvailable = true;
-
-// Save original require for restoration
-const originalRequire = Module.prototype.require;
-
-// Mock Electron by intercepting require calls (same pattern as db.accounts.test.ts)
-Module.prototype.require = function (id: string) {
-  if (id === 'electron' && process.env.VITEST) {
-    return {
-      safeStorage: {
-        isEncryptionAvailable: () => mockEncryptionAvailable,
-        encryptString: (plaintext: string) => {
-          if (!mockEncryptionAvailable) {
-            throw new Error('Encryption not available');
-          }
-          // Simulate encryption by creating a buffer with a prefix and the plaintext
-          // In real Electron, this would be OS-level encryption
-          const encrypted = Buffer.from(`ENCRYPTED:${plaintext}`, 'utf-8');
-          return encrypted;
-        },
-        decryptString: (encrypted: Buffer) => {
-          if (!mockEncryptionAvailable) {
-            throw new Error('Encryption not available');
-          }
-          // Simulate decryption by removing the prefix
-          const decrypted = encrypted.toString('utf-8').replace('ENCRYPTED:', '');
-          return decrypted;
-        },
-      },
-      app: {
-        getPath: () => './test-data',
-      },
-    };
-  }
-  return originalRequire.apply(this, arguments as unknown as [string]);
-};
+// Set up shared Electron mock (must happen before requiring db.cjs)
+const electronMock = setupElectronMock();
 
 // Mock logger to suppress console output during tests
 const loggerPath = path.resolve(path.dirname(new URL(import.meta.url).pathname), '../utils/logger.cjs');
@@ -75,7 +40,7 @@ const db: DbModule = require('../db.cjs');
 describe('IMAP Authentication with Encrypted Passwords', () => {
   beforeEach(() => {
     // Reset mock state before each test
-    mockEncryptionAvailable = true;
+    electronMock.setEncryptionAvailable(true);
     vi.clearAllMocks();
 
     // Initialize with in-memory DB for test isolation
@@ -233,8 +198,7 @@ describe('IMAP Authentication with Encrypted Passwords', () => {
       // Verify password can be decrypted correctly for IMAP auth
       const accountWithPassword = db.getAccountWithPassword('imap-long');
       expect(accountWithPassword).toBeDefined();
-      expect(accountWithPassword!.password).toBe(longPassword);
-      expect(accountWithPassword!.password.length).toBe(longPassword.length);
+      expect(accountWithPassword?.password).toBe(longPassword);
     });
 
     it('should handle account with no password gracefully', () => {
@@ -279,7 +243,7 @@ describe('IMAP Authentication with Encrypted Passwords', () => {
       };
 
       // Add account with encryption available
-      mockEncryptionAvailable = true;
+      electronMock.setEncryptionAvailable(true);
       db.addAccount(account);
 
       // Verify password was encrypted
@@ -287,7 +251,7 @@ describe('IMAP Authentication with Encrypted Passwords', () => {
       expect(rawPassword).not.toBe(originalPassword);
 
       // Disable encryption
-      mockEncryptionAvailable = false;
+      electronMock.setEncryptionAvailable(false);
 
       // Retrieve account - should return encrypted password as-is (base64 string)
       // since decryption is not available
@@ -299,7 +263,7 @@ describe('IMAP Authentication with Encrypted Passwords', () => {
     });
 
     it('should store plaintext password when encryption is unavailable at time of account creation', () => {
-      mockEncryptionAvailable = false;
+      electronMock.setEncryptionAvailable(false);
 
       const plainPassword = 'plaintextPassword123';
       const account = {
@@ -413,9 +377,9 @@ describe('IMAP Authentication with Encrypted Passwords', () => {
       expect(accountForImap!.username).toBe('ready@gmail.com');
       expect(accountForImap!.password).toBe('imapReadyPassword!');
 
-      // Verify password is in plaintext (decrypted) for IMAP auth
-      expect(typeof accountForImap!.password).toBe('string');
-      expect(accountForImap!.password).not.toMatch(/^[A-Za-z0-9+/=]+$/); // Not base64
+      // Verify password is the original plaintext (decrypted), not the encrypted form
+      expect(accountForImap!.password).toBe('imapReadyPassword!');
+      expect(accountForImap!.password?.startsWith('ENCRYPTED:')).toBe(false);
 
       // Verify email can be used as fallback username
       expect(accountForImap!.email).toBe('ready@gmail.com');

@@ -117,8 +117,8 @@ describe('SavedFilterDialog', () => {
 
       await waitFor(() => {
         expect(defaultProps.onSave).toHaveBeenCalledWith('Test Filter', 'from:amazon');
+        expect(defaultProps.onClose).toHaveBeenCalledTimes(1);
       });
-      expect(defaultProps.onClose).toHaveBeenCalledTimes(1);
     });
 
     it('should clear error when user starts typing in name field', () => {
