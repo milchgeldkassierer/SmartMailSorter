@@ -252,5 +252,32 @@
   },
   "confirmDialog": {
     "confirm": "Confirm"
+  },
+  "app": {
+    "emailsFlagged": "{{count}} email(s) flagged",
+    "emailsMovedToCategory": "{{count}} email(s) moved to {{target}}",
+    "emailsMovedToFolder": "{{count}} email(s) moved to {{target}}",
+    "undoneAction": "Undone: {{description}}",
+    "loadDataError": "Error loading data",
+    "loadAccountError": "Error loading account",
+    "addAccountError": "Account could not be added. Please check your data.",
+    "newCategory": "New Category",
+    "newCategoryPrompt": "Name of the new category:",
+    "create": "Create",
+    "aiSortingProgress": "AI sorting emails... ({{provider}})",
+    "undoButton": "Undo (Ctrl+Z)"
+  },
+  "batch": {
+    "deleteTitle": "Delete emails",
+    "deleteConfirm": "Really delete {{count}} emails?",
+    "deleteError": "Some emails could not be deleted",
+    "updateError": "Some emails could not be updated",
+    "aiSettingsRequired": "AI Settings required",
+    "configureApiKey": "Please configure AI Settings (API Key)!",
+    "newFoldersSuggested": "New folders suggested",
+    "newFoldersMessage": "AI suggests the following new folders:\n\n{{folders}}\n\nShould these be created?\n(On 'Cancel', emails will be moved to 'Other')",
+    "createFolders": "Create",
+    "sortErrorTitle": "Error during sorting",
+    "sortErrorMessage": "An error occurred during sorting: {{error}}"
   }
 }

@@ -29,7 +29,7 @@ import BatchActionBar from './components/BatchActionBar';
 import ProgressBar from './components/ProgressBar';
 
 const App: React.FC = () => {
-  const { ready } = useTranslation();
+  const { t, ready } = useTranslation();
   const { accounts, activeAccountId, setAccounts, setActiveAccountId, addAccount, removeAccount, switchAccount } =
     useAccounts();
   const { aiSettings, setAiSettings } = useAISettings();
@@ -239,7 +239,7 @@ const App: React.FC = () => {
           type: 'toggle-flag',
           emailIds,
           previousState: previousStates,
-          description: `${emailIds.length} Email(s) markiert`,
+          description: t('app.emailsFlagged', { count: emailIds.length }),
           execute: () => {
             // Restore previous flag states directly without re-querying currentEmails
             updateActiveAccountData((prev) => ({
@@ -293,7 +293,7 @@ const App: React.FC = () => {
         type: 'move-category',
         emailIds,
         previousState: previousStates,
-        description: `${emailIds.length} Email(s) nach ${category} verschoben`,
+        description: t('app.emailsMovedToCategory', { count: emailIds.length, target: category }),
         execute: () => {
           updateActiveAccountData((prev) => ({
             ...prev,
@@ -312,7 +312,7 @@ const App: React.FC = () => {
         },
       });
     },
-    [currentEmails, updateActiveAccountData, handleToggleFlag, pushAction, activeAccountId]
+    [currentEmails, updateActiveAccountData, handleToggleFlag, pushAction, activeAccountId, t]
   );
 
   const handleMoveToFolder = useCallback(
@@ -342,7 +342,7 @@ const App: React.FC = () => {
         type: 'move-folder',
         emailIds,
         previousState: previousStates,
-        description: `${emailIds.length} Email(s) nach ${folder} verschoben`,
+        description: t('app.emailsMovedToFolder', { count: emailIds.length, target: folder }),
         execute: () => {
           updateActiveAccountData((prev) => ({
             ...prev,
@@ -359,7 +359,7 @@ const App: React.FC = () => {
         },
       });
     },
-    [currentEmails, updateActiveAccountData, pushAction]
+    [currentEmails, updateActiveAccountData, pushAction, t]
   );
 
   const {
@@ -379,10 +379,10 @@ const App: React.FC = () => {
     const desc = lastActionDescription;
     undo();
     if (desc) {
-      setUndoToast(`Rückgängig: ${desc}`);
+      setUndoToast(t('app.undoneAction', { description: desc }));
       setTimeout(() => setUndoToast(null), 3000);
     }
-  }, [undo, lastActionDescription]);
+  }, [undo, lastActionDescription, t]);
 
   // Load initial data
   useEffect(() => {
@@ -402,8 +402,8 @@ const App: React.FC = () => {
       } catch (error) {
         console.error('Failed to initialize app:', error);
         await dialog.alert({
-          title: 'Fehler',
-          message: 'Fehler beim Laden der Daten',
+          title: t('common.error'),
+          message: t('app.loadDataError'),
           variant: 'danger',
         });
       }
@@ -478,8 +478,8 @@ const App: React.FC = () => {
       } catch (error) {
         console.error('Failed to switch account:', error);
         await dialog.alert({
-          title: 'Fehler',
-          message: 'Fehler beim Laden des Kontos',
+          title: t('common.error'),
+          message: t('app.loadAccountError'),
           variant: 'danger',
         });
       }
@@ -503,8 +503,8 @@ const App: React.FC = () => {
         }));
       } catch {
         await dialog.alert({
-          title: 'Fehler',
-          message: 'Konto konnte nicht hinzugefügt werden. Prüfe die Daten.',
+          title: t('common.error'),
+          message: t('app.addAccountError'),
           variant: 'danger',
         });
       }
@@ -589,10 +589,10 @@ const App: React.FC = () => {
         onDropEmails={async (emailIds, targetCategory, targetType) => {
           if (targetType === 'smart' && targetCategory === '__new_category__') {
             const name = await dialog.prompt({
-              title: 'Neue Kategorie',
-              message: 'Name der neuen Kategorie:',
-              confirmText: 'Erstellen',
-              cancelText: 'Abbrechen',
+              title: t('app.newCategory'),
+              message: t('app.newCategoryPrompt'),
+              confirmText: t('app.create'),
+              cancelText: t('common.cancel'),
               variant: 'info',
             });
             if (!name || !name.trim()) return;
@@ -645,7 +645,9 @@ const App: React.FC = () => {
           aiSettings={aiSettings}
         />
 
-        {isSorting && <ProgressBar label={`AI sortiert Emails... (${aiSettings.provider})`} progress={sortProgress} />}
+        {isSorting && (
+          <ProgressBar label={t('app.aiSortingProgress', { provider: aiSettings.provider })} progress={sortProgress} />
+        )}
 
         <div className="flex-1 flex overflow-hidden">
           <EmailList
@@ -681,7 +683,7 @@ const App: React.FC = () => {
               className="bg-gray-800 text-white px-4 py-2 rounded-lg shadow-lg text-sm hover:bg-gray-700 transition-colors flex items-center gap-2"
             >
               <span>↩</span>
-              <span>Rückgängig (Ctrl+Z)</span>
+              <span>{t('app.undoButton')}</span>
             </button>
           </div>
         )}

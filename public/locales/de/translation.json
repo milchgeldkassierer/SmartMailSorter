@@ -252,5 +252,32 @@
   },
   "confirmDialog": {
     "confirm": "Bestätigen"
+  },
+  "app": {
+    "emailsFlagged": "{{count}} Email(s) markiert",
+    "emailsMovedToCategory": "{{count}} Email(s) nach {{target}} verschoben",
+    "emailsMovedToFolder": "{{count}} Email(s) nach {{target}} verschoben",
+    "undoneAction": "Rückgängig: {{description}}",
+    "loadDataError": "Fehler beim Laden der Daten",
+    "loadAccountError": "Fehler beim Laden des Kontos",
+    "addAccountError": "Konto konnte nicht hinzugefügt werden. Prüfe die Daten.",
+    "newCategory": "Neue Kategorie",
+    "newCategoryPrompt": "Name der neuen Kategorie:",
+    "create": "Erstellen",
+    "aiSortingProgress": "AI sortiert Emails... ({{provider}})",
+    "undoButton": "Rückgängig (Ctrl+Z)"
+  },
+  "batch": {
+    "deleteTitle": "Emails löschen",
+    "deleteConfirm": "{{count}} Emails wirklich löschen?",
+    "deleteError": "Einige Emails konnten nicht gelöscht werden",
+    "updateError": "Einige Emails konnten nicht aktualisiert werden",
+    "aiSettingsRequired": "AI Settings erforderlich",
+    "configureApiKey": "Bitte AI Settings (API Key) konfigurieren!",
+    "newFoldersSuggested": "Neue Ordner vorgeschlagen",
+    "newFoldersMessage": "Die KI schlägt folgende neue Ordner vor:\n\n{{folders}}\n\nSollen diese angelegt werden?\n(Bei 'Abbrechen' werden die Mails in 'Sonstiges' verschoben)",
+    "createFolders": "Anlegen",
+    "sortErrorTitle": "Fehler beim Sortieren",
+    "sortErrorMessage": "Ein Fehler ist beim Sortieren aufgetreten: {{error}}"
   }
 }
