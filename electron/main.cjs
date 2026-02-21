@@ -538,21 +538,12 @@ app.whenReady().then(() => {
   });
 
   // Auto-sync IPC handlers
-  const ALLOWED_SYNC_INTERVALS = [0, 5, 10, 15, 30];
+  const MIN_SYNC_INTERVAL = 5;
+  const MAX_SYNC_INTERVAL = 30;
   function sanitizeSyncInterval(value) {
-    const parsed = Number(value);
+    const parsed = Math.round(Number(value));
     if (!Number.isFinite(parsed) || parsed <= 0) return 0;
-    // Snap to nearest allowed preset interval
-    let closest = 0;
-    let minDiff = Infinity;
-    for (const allowed of ALLOWED_SYNC_INTERVALS) {
-      const diff = Math.abs(parsed - allowed);
-      if (diff < minDiff) {
-        minDiff = diff;
-        closest = allowed;
-      }
-    }
-    return closest;
+    return Math.max(MIN_SYNC_INTERVAL, Math.min(MAX_SYNC_INTERVAL, parsed));
   }
 
   ipcMain.handle('get-auto-sync-interval', () => {
