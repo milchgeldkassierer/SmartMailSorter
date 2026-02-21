@@ -20,10 +20,70 @@ const { TRASH_FOLDER } = require('./folderConstants.cjs');
 
 const isDev = !app.isPackaged;
 
+// Auto-sync state
+let autoSyncTimer = null;
+let autoSyncDebounceTimer = null;
+let isSyncing = false;
+
+function startAutoSync(intervalMinutes) {
+  stopAutoSync();
+  if (!intervalMinutes || intervalMinutes <= 0) {
+    logger.info('[AutoSync] Auto-sync disabled');
+    return;
+  }
+  const intervalMs = intervalMinutes * 60 * 1000;
+  logger.info(`[AutoSync] Starting auto-sync with interval: ${intervalMinutes} minutes`);
+  autoSyncTimer = setInterval(() => {
+    runAutoSync().catch((err) => {
+      logger.error('[AutoSync] Unexpected error during auto-sync:', err);
+    });
+  }, intervalMs);
+}
+
+function stopAutoSync() {
+  if (autoSyncTimer) {
+    clearInterval(autoSyncTimer);
+    autoSyncTimer = null;
+    logger.info('[AutoSync] Auto-sync timer stopped');
+  }
+}
+
+async function runAutoSync() {
+  if (isSyncing) {
+    logger.info('[AutoSync] Sync already in progress, skipping');
+    return;
+  }
+  isSyncing = true;
+  logger.info('[AutoSync] Starting automatic sync for all accounts');
+  try {
+    const accounts = db.getAccounts();
+    for (const account of accounts) {
+      try {
+        const accountWithPassword = db.getAccountWithPassword(account.id);
+        if (accountWithPassword) {
+          await imap.syncAccount(accountWithPassword);
+        }
+      } catch (error) {
+        logger.error(`[AutoSync] Failed to sync account ${account.id}:`, error);
+      }
+    }
+  } finally {
+    isSyncing = false;
+    // Notify all renderer windows (always, even on failure, so UI can recover)
+    const windows = BrowserWindow.getAllWindows();
+    for (const win of windows) {
+      if (!win.isDestroyed()) {
+        win.webContents.send('auto-sync-completed');
+      }
+    }
+    logger.info('[AutoSync] Automatic sync completed');
+  }
+}
+
 function createWindow() {
   const win = new BrowserWindow({
-    width: 1200,
-    height: 800,
+    width: 1600,
+    height: 900,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -204,13 +264,21 @@ app.whenReady().then(() => {
   });
 
   ipcMain.handle('sync-account', async (event, accountId) => {
+    if (isSyncing) {
+      return { success: false, error: 'SYNC_IN_PROGRESS', message: 'Eine Synchronisation läuft bereits. Bitte warten.' };
+    }
     // Retrieve account with decrypted password for IMAP operations
     const accountWithPassword = db.getAccountWithPassword(accountId);
     if (!accountWithPassword) {
       logger.error(`[IPC sync-account] Account not found: ${accountId}`);
       return { success: false, error: 'Account not found' };
     }
-    return await imap.syncAccount(accountWithPassword);
+    isSyncing = true;
+    try {
+      return await imap.syncAccount(accountWithPassword);
+    } finally {
+      isSyncing = false;
+    }
   });
 
   ipcMain.handle('test-connection', async (event, account) => {
@@ -222,8 +290,17 @@ app.whenReady().then(() => {
   });
 
   ipcMain.handle('reset-db', () => {
+    if (isSyncing) {
+      return { success: false, error: 'SYNC_IN_PROGRESS', message: 'Kann nicht zurücksetzen während eine Synchronisation läuft.' };
+    }
+    // Clear debounce timer to prevent stale restart after reset
+    if (autoSyncDebounceTimer) {
+      clearTimeout(autoSyncDebounceTimer);
+      autoSyncDebounceTimer = null;
+    }
+    stopAutoSync();
     db.resetDb();
-    return true;
+    return { success: true };
   });
 
   ipcMain.handle('delete-email', async (event, { accountId, emailId, uid, folder }) => {
@@ -405,19 +482,30 @@ app.whenReady().then(() => {
       accountSettings[account.id] = settings.enabled;
     });
 
-    // Load global settings (stored with special accountId)
-    const globalSettings = db.getNotificationSettings('GLOBAL');
+    // Load global settings from app_settings (not notification_settings, which has FK constraint)
+    const globalEnabled = db.getSetting('notifications_enabled');
+    const mutedCategories = notifications.getMutedCategories();
 
     // Build categorySettings with all known categories (true = enabled, false = muted)
     const allCategories = db.getCategories();
     const categorySettings = {};
+    // Include smart/custom categories from DB
     allCategories.forEach(cat => {
-      categorySettings[cat.name] = !Array.isArray(globalSettings.mutedCategories) ||
-        !globalSettings.mutedCategories.includes(cat.name);
+      categorySettings[cat.name] = true;
     });
+    // Include system folders (not stored in categories table)
+    ['Posteingang', 'Gesendet', 'Spam', 'Papierkorb'].forEach(name => {
+      categorySettings[name] = true;
+    });
+    // Mark muted categories as false
+    if (Array.isArray(mutedCategories)) {
+      mutedCategories.forEach(name => {
+        categorySettings[name] = false;
+      });
+    }
 
     return {
-      enabled: globalSettings.enabled,
+      enabled: globalEnabled !== '0',
       accountSettings,
       categorySettings,
     };
@@ -430,11 +518,9 @@ app.whenReady().then(() => {
       .filter(([, enabled]) => !enabled)
       .map(([name]) => name);
 
-    // Save global enabled + category settings
-    db.saveNotificationSettings('GLOBAL', {
-      enabled: settings.enabled,
-      mutedCategories,
-    });
+    // Save global enabled + category settings in app_settings (avoids FK constraint)
+    db.setSetting('notifications_enabled', settings.enabled ? '1' : '0');
+    db.setSetting('notifications_muted_categories', JSON.stringify(mutedCategories));
 
     // Save per-account settings
     for (const [accountId, enabled] of Object.entries(settings.accountSettings)) {
@@ -451,6 +537,38 @@ app.whenReady().then(() => {
     return notifications.updateBadgeCount(count);
   });
 
+  // Auto-sync IPC handlers
+  const MIN_SYNC_INTERVAL = 2;
+  const MAX_SYNC_INTERVAL = 30;
+  function sanitizeSyncInterval(value) {
+    const parsed = Math.round(Number(value));
+    if (!Number.isFinite(parsed) || parsed <= 0) return 0;
+    return Math.max(MIN_SYNC_INTERVAL, Math.min(MAX_SYNC_INTERVAL, parsed));
+  }
+
+  ipcMain.handle('get-auto-sync-interval', () => {
+    const value = db.getSetting('auto_sync_interval_minutes');
+    return value ? sanitizeSyncInterval(value) : 0;
+  });
+
+  ipcMain.handle('set-auto-sync-interval', (event, intervalMinutes) => {
+    const sanitized = sanitizeSyncInterval(intervalMinutes);
+    db.setSetting('auto_sync_interval_minutes', String(sanitized));
+    // Debounce timer restart so rapid +/- clicks don't spam restarts
+    if (autoSyncDebounceTimer) clearTimeout(autoSyncDebounceTimer);
+    autoSyncDebounceTimer = setTimeout(() => {
+      autoSyncDebounceTimer = null;
+      startAutoSync(sanitized);
+    }, 800);
+    return { success: true };
+  });
+
+  // Start auto-sync with persisted interval
+  const savedInterval = db.getSetting('auto_sync_interval_minutes');
+  if (savedInterval) {
+    startAutoSync(sanitizeSyncInterval(savedInterval));
+  }
+
   createWindow();
 
   app.on('activate', () => {
@@ -465,8 +583,11 @@ app.on('window-all-closed', () => {
 
 app.on('before-quit', () => {
   logger.info('App is quitting, cleaning up resources...');
-  // Perform any cleanup here if needed in the future
-  // e.g., close database connections, cancel pending operations, etc.
+  if (autoSyncDebounceTimer) {
+    clearTimeout(autoSyncDebounceTimer);
+    autoSyncDebounceTimer = null;
+  }
+  stopAutoSync();
 });
 
 app.on('will-quit', () => {
