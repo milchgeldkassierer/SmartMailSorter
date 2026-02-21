@@ -82,7 +82,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
           </div>
 
           {/* Content */}
-          <div className="flex-1 p-6 overflow-y-auto">
+          <div className="flex-1 p-6 overflow-y-auto min-h-[420px]">
             {activeTab === 'accounts' && (
               <AccountsTab accounts={accounts} onAddAccount={onAddAccount} onRemoveAccount={onRemoveAccount} />
             )}

@@ -33,7 +33,9 @@ function startAutoSync(intervalMinutes) {
   const intervalMs = intervalMinutes * 60 * 1000;
   logger.info(`[AutoSync] Starting auto-sync with interval: ${intervalMinutes} minutes`);
   autoSyncTimer = setInterval(() => {
-    runAutoSync();
+    runAutoSync().catch((err) => {
+      logger.error('[AutoSync] Unexpected error during auto-sync:', err);
+    });
   }, intervalMs);
 }
 
@@ -80,8 +82,8 @@ async function runAutoSync() {
 
 function createWindow() {
   const win = new BrowserWindow({
-    width: 1200,
-    height: 800,
+    width: 1600,
+    height: 900,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -471,19 +473,31 @@ app.whenReady().then(() => {
       accountSettings[account.id] = settings.enabled;
     });
 
-    // Load global settings (stored with special accountId)
-    const globalSettings = db.getNotificationSettings('GLOBAL');
+    // Load global settings from app_settings (not notification_settings, which has FK constraint)
+    const globalEnabled = db.getSetting('notifications_enabled');
+    const mutedCategoriesJson = db.getSetting('notifications_muted_categories');
+    const mutedCategories = mutedCategoriesJson ? JSON.parse(mutedCategoriesJson) : [];
 
     // Build categorySettings with all known categories (true = enabled, false = muted)
     const allCategories = db.getCategories();
     const categorySettings = {};
+    // Include smart/custom categories from DB
     allCategories.forEach(cat => {
-      categorySettings[cat.name] = !Array.isArray(globalSettings.mutedCategories) ||
-        !globalSettings.mutedCategories.includes(cat.name);
+      categorySettings[cat.name] = true;
     });
+    // Include system folders (not stored in categories table)
+    ['Posteingang', 'Gesendet', 'Spam', 'Papierkorb'].forEach(name => {
+      categorySettings[name] = true;
+    });
+    // Mark muted categories as false
+    if (Array.isArray(mutedCategories)) {
+      mutedCategories.forEach(name => {
+        categorySettings[name] = false;
+      });
+    }
 
     return {
-      enabled: globalSettings.enabled,
+      enabled: globalEnabled !== '0',
       accountSettings,
       categorySettings,
     };
@@ -496,11 +510,9 @@ app.whenReady().then(() => {
       .filter(([, enabled]) => !enabled)
       .map(([name]) => name);
 
-    // Save global enabled + category settings
-    db.saveNotificationSettings('GLOBAL', {
-      enabled: settings.enabled,
-      mutedCategories,
-    });
+    // Save global enabled + category settings in app_settings (avoids FK constraint)
+    db.setSetting('notifications_enabled', settings.enabled ? '1' : '0');
+    db.setSetting('notifications_muted_categories', JSON.stringify(mutedCategories));
 
     // Save per-account settings
     for (const [accountId, enabled] of Object.entries(settings.accountSettings)) {
@@ -518,21 +530,35 @@ app.whenReady().then(() => {
   });
 
   // Auto-sync IPC handlers
+  function sanitizeSyncInterval(value) {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed) || parsed < 0) return 0;
+    if (parsed > 30) return 30;
+    return Math.round(parsed);
+  }
+
   ipcMain.handle('get-auto-sync-interval', () => {
     const value = db.getSetting('auto_sync_interval_minutes');
-    return value ? parseInt(value, 10) : 0;
+    return value ? sanitizeSyncInterval(value) : 0;
   });
 
+  let autoSyncDebounceTimer = null;
   ipcMain.handle('set-auto-sync-interval', (event, intervalMinutes) => {
-    db.setSetting('auto_sync_interval_minutes', String(intervalMinutes));
-    startAutoSync(intervalMinutes);
+    const sanitized = sanitizeSyncInterval(intervalMinutes);
+    db.setSetting('auto_sync_interval_minutes', String(sanitized));
+    // Debounce timer restart so rapid +/- clicks don't spam restarts
+    if (autoSyncDebounceTimer) clearTimeout(autoSyncDebounceTimer);
+    autoSyncDebounceTimer = setTimeout(() => {
+      autoSyncDebounceTimer = null;
+      startAutoSync(sanitized);
+    }, 800);
     return { success: true };
   });
 
   // Start auto-sync with persisted interval
   const savedInterval = db.getSetting('auto_sync_interval_minutes');
   if (savedInterval) {
-    startAutoSync(parseInt(savedInterval, 10));
+    startAutoSync(sanitizeSyncInterval(savedInterval));
   }
 
   createWindow();

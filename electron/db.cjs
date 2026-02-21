@@ -483,6 +483,7 @@ function updateEmailFlagStatus(id, isFlagged) {
 function resetDb() {
   db.exec('DROP TABLE IF EXISTS emails');
   db.exec('DROP TABLE IF EXISTS accounts');
+  db.exec('DELETE FROM app_settings');
   createSchema(); // Re-create tables immediately
 }
 

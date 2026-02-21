@@ -73,7 +73,7 @@ describe('GeneralTab', () => {
     it('should render with proper layout spacing', () => {
       const { container } = renderWithDialog(<GeneralTab />);
       const wrapper = container.firstChild as HTMLElement;
-      expect(wrapper).toHaveClass('space-y-8');
+      expect(wrapper).toHaveClass('space-y-6');
     });
   });
 

@@ -86,7 +86,7 @@ declare global {
 
       // Auto-Sync
       getAutoSyncInterval: () => Promise<number>;
-      setAutoSyncInterval: (minutes: number) => Promise<void>;
+      setAutoSyncInterval: (minutes: number) => Promise<{ success: boolean; error?: string }>;
       onAutoSyncCompleted: (callback: () => void) => void;
       removeAutoSyncCompletedListener: (callback: () => void) => void;
 
