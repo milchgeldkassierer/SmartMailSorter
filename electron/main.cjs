@@ -22,6 +22,7 @@ const isDev = !app.isPackaged;
 
 // Auto-sync state
 let autoSyncTimer = null;
+let autoSyncDebounceTimer = null;
 let isSyncing = false;
 
 function startAutoSync(intervalMinutes) {
@@ -289,6 +290,14 @@ app.whenReady().then(() => {
   });
 
   ipcMain.handle('reset-db', () => {
+    if (isSyncing) {
+      return { success: false, error: 'SYNC_IN_PROGRESS', message: 'Kann nicht zurücksetzen während eine Synchronisation läuft.' };
+    }
+    // Clear debounce timer to prevent stale restart after reset
+    if (autoSyncDebounceTimer) {
+      clearTimeout(autoSyncDebounceTimer);
+      autoSyncDebounceTimer = null;
+    }
     stopAutoSync();
     db.resetDb();
     return true;
@@ -551,7 +560,6 @@ app.whenReady().then(() => {
     return value ? sanitizeSyncInterval(value) : 0;
   });
 
-  let autoSyncDebounceTimer = null;
   ipcMain.handle('set-auto-sync-interval', (event, intervalMinutes) => {
     const sanitized = sanitizeSyncInterval(intervalMinutes);
     db.setSetting('auto_sync_interval_minutes', String(sanitized));
