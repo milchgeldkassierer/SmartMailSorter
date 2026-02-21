@@ -289,6 +289,21 @@ beforeAll(async () => {
             sortErrorTitle: 'Fehler beim Sortieren',
             sortErrorMessage: 'Ein Fehler ist beim Sortieren aufgetreten: {{error}}',
           },
+          savedFilterDialog: {
+            createTitle: 'Suchfilter speichern',
+            editTitle: 'Suchfilter bearbeiten',
+            nameLabel: 'Filtername',
+            namePlaceholder: 'z.B. Amazon Rechnungen',
+            queryLabel: 'Suchanfrage',
+            queryPlaceholder: 'z.B. from:amazon category:Rechnungen',
+            helpText: 'Verwenden Sie Suchoperatoren wie from:, to:, subject:, category:, has:attachment, before:, after:',
+            saveButton: 'Filter speichern',
+            updateButton: 'Filter aktualisieren',
+            errors: {
+              nameRequired: 'Filtername ist erforderlich',
+              queryRequired: 'Suchanfrage ist erforderlich',
+            },
+          },
         },
         categories: {
           categories: {
@@ -572,6 +587,21 @@ beforeAll(async () => {
             createFolders: 'Create',
             sortErrorTitle: 'Error during sorting',
             sortErrorMessage: 'An error occurred during sorting: {{error}}',
+          },
+          savedFilterDialog: {
+            createTitle: 'Save Search Filter',
+            editTitle: 'Edit Search Filter',
+            nameLabel: 'Filter Name',
+            namePlaceholder: 'e.g. Amazon Invoices',
+            queryLabel: 'Search Query',
+            queryPlaceholder: 'e.g. from:amazon category:Rechnungen',
+            helpText: 'Use search operators like from:, to:, subject:, category:, has:attachment, before:, after:',
+            saveButton: 'Save Filter',
+            updateButton: 'Update Filter',
+            errors: {
+              nameRequired: 'Filter name is required',
+              queryRequired: 'Search query is required',
+            },
           },
         },
         categories: {

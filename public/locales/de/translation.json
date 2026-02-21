@@ -279,5 +279,20 @@
     "createFolders": "Anlegen",
     "sortErrorTitle": "Fehler beim Sortieren",
     "sortErrorMessage": "Ein Fehler ist beim Sortieren aufgetreten: {{error}}"
+  },
+  "savedFilterDialog": {
+    "createTitle": "Suchfilter speichern",
+    "editTitle": "Suchfilter bearbeiten",
+    "nameLabel": "Filtername",
+    "namePlaceholder": "z.B. Amazon Rechnungen",
+    "queryLabel": "Suchanfrage",
+    "queryPlaceholder": "z.B. from:amazon category:Rechnungen",
+    "helpText": "Verwenden Sie Suchoperatoren wie from:, to:, subject:, category:, has:attachment, before:, after:",
+    "saveButton": "Filter speichern",
+    "updateButton": "Filter aktualisieren",
+    "errors": {
+      "nameRequired": "Filtername ist erforderlich",
+      "queryRequired": "Suchanfrage ist erforderlich"
+    }
   }
 }
