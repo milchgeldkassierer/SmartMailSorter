@@ -4,12 +4,14 @@ import { Email, Attachment } from '../types';
 import { CategoryIcon, BrainCircuit, Paperclip } from './Icon';
 import { sanitizeHtml } from '../utils/sanitizeHtml';
 import { blockRemoteImages, buildIframeDoc } from '../utils/emailHtml';
+import { highlightMatches } from '../utils/highlightMatches';
 
 interface EmailViewProps {
   email: Email | null;
+  searchQuery?: string;
 }
 
-const EmailView: React.FC<EmailViewProps> = ({ email }) => {
+const EmailView: React.FC<EmailViewProps> = ({ email, searchQuery }) => {
   const { t } = useTranslation();
   const [showHtml, setShowHtml] = useState(true);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
@@ -80,6 +82,11 @@ const EmailView: React.FC<EmailViewProps> = ({ email }) => {
           setBlockedImageCount(0);
         }
 
+        // Apply search term highlighting
+        if (searchQuery) {
+          html = highlightMatches(html, searchQuery);
+        }
+
         setIframeSrcDoc(buildIframeDoc(html));
       } catch (err) {
         console.error('Failed to sanitize email HTML:', err);
@@ -93,7 +100,7 @@ const EmailView: React.FC<EmailViewProps> = ({ email }) => {
       cancelled = true;
       clearTimeout(timeoutId);
     };
-  }, [email?.id, email?.bodyHtml, imagesLoaded]);
+  }, [email?.id, email?.bodyHtml, imagesLoaded, searchQuery]);
 
   // Intercept link clicks inside iframe to open in external browser
   const handleIframeLoad = useCallback(() => {
@@ -322,9 +329,12 @@ const EmailView: React.FC<EmailViewProps> = ({ email }) => {
               />
             )
           ) : (
-            <div className="prose prose-slate max-w-none whitespace-pre-wrap font-sans text-slate-800 p-8 overflow-y-auto flex-1">
-              {email.body}
-            </div>
+            <div
+              className="prose prose-slate max-w-none whitespace-pre-wrap font-sans text-slate-800 p-8 overflow-y-auto flex-1"
+              dangerouslySetInnerHTML={{
+                __html: highlightMatches(email.body, searchQuery),
+              }}
+            />
           )}
         </div>
       </div>

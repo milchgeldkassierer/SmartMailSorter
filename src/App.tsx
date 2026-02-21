@@ -665,8 +665,9 @@ const App: React.FC = () => {
             onDragStart={onEmailDragStart}
             onDragEnd={onDragEnd}
             draggedEmailIds={draggedEmailIds}
+            searchQuery={searchTerm}
           />
-          <EmailView email={selectedEmail} />
+          <EmailView email={selectedEmail} searchQuery={searchTerm} />
         </div>
 
         {undoToast && (
