@@ -474,8 +474,13 @@ app.whenReady().then(() => {
             ) {
               throw new Error(`Invalid API key for ${settings.provider}: Authentication failed`);
             }
-            // Other errors (network, rate limit) are not key-related - allow save
-            logger.warn('[IPC] API key validation skipped due to non-auth error:', msg);
+            if (validationError instanceof SyntaxError) {
+              // JSON parse failure from non-JSON response - validation call succeeded (key is valid)
+              logger.info('[IPC] AI API key validated (response was not JSON, but auth succeeded)');
+            } else {
+              // Other errors (network, rate limit) are not key-related - allow save
+              logger.warn('[IPC] API key validation skipped due to non-auth error:', msg);
+            }
           }
         } else {
           logger.info('[IPC] Settings unchanged, skipping validation');
@@ -548,7 +553,7 @@ app.whenReady().then(() => {
       return null;
     } catch (error) {
       logger.error('[IPC] Failed to load AI settings:', error);
-      throw error;
+      return null;
     }
   });
 
