@@ -93,7 +93,12 @@
     "apiKeyPlaceholderOptional": "Optional (uses default key)",
     "geminiKeyInfo": "A demo key is already configured for Google Gemini. You can override it.",
     "apiKeyInfo": "The API key is only used locally in the browser for simulation.",
-    "saveSettings": "Save settings"
+    "saveSettings": "Save settings",
+    "ollamaDetecting": "Detecting Ollama...",
+    "ollamaAvailable": "Ollama connected",
+    "ollamaUnavailable": "Ollama not reachable",
+    "ollamaNoApiKey": "No API key required - runs locally",
+    "ollamaFetchingModels": "Fetching models..."
   },
   "notificationsTab": {
     "title": "Desktop Notifications",

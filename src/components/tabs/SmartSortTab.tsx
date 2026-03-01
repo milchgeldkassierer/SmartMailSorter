@@ -134,18 +134,18 @@ const SmartSortTab: React.FC<SmartSortTabProps> = ({ aiSettings, onSave }) => {
               {ollamaStatus.checking ? (
                 <>
                   <RefreshCw className="w-4 h-4 text-blue-500 animate-spin" />
-                  <span className="text-xs text-slate-600">Detecting Ollama...</span>
+                  <span className="text-xs text-slate-600">{t('smartSortTab.ollamaDetecting')}</span>
                 </>
               ) : ollamaStatus.available ? (
                 <>
                   <CheckCircle className="w-4 h-4 text-green-500" />
-                  <span className="text-xs text-green-700">Ollama connected</span>
+                  <span className="text-xs text-green-700">{t('smartSortTab.ollamaAvailable')}</span>
                 </>
               ) : (
                 <>
                   <AlertCircle className="w-4 h-4 text-red-500" />
                   <span className="text-xs text-red-700">
-                    Ollama not reachable {ollamaStatus.error && `- ${ollamaStatus.error}`}
+                    {t('smartSortTab.ollamaUnavailable')} {ollamaStatus.error && `- ${ollamaStatus.error}`}
                   </span>
                 </>
               )}
@@ -166,7 +166,7 @@ const SmartSortTab: React.FC<SmartSortTabProps> = ({ aiSettings, onSave }) => {
             disabled={fetchingModels}
           >
             {fetchingModels ? (
-              <option>Fetching models...</option>
+              <option>{t('smartSortTab.ollamaFetchingModels')}</option>
             ) : (
               (() => {
                 // For Ollama: merge fetched models with static fallback
@@ -217,7 +217,7 @@ const SmartSortTab: React.FC<SmartSortTabProps> = ({ aiSettings, onSave }) => {
             </label>
             <div className="bg-green-50 border border-green-200 rounded-lg px-3 py-2">
               <p className="text-sm text-green-700">
-                No API key required - runs locally
+                {t('smartSortTab.ollamaNoApiKey')}
               </p>
             </div>
           </div>
