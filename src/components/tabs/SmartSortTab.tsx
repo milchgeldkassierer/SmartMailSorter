@@ -212,7 +212,13 @@ const SmartSortTab: React.FC<SmartSortTabProps> = ({ aiSettings, onSave, saveErr
               <input
                 type="password"
                 className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-900 focus:border-blue-500 outline-none placeholder-slate-400"
-                placeholder={t('smartSortTab.apiKeyPlaceholder')}
+                placeholder={
+                  tempAISettings.provider === LLMProvider.GEMINI
+                    ? 'gen-lang-client-...'
+                    : tempAISettings.provider === LLMProvider.ANTHROPIC
+                      ? 'sk-ant-...'
+                      : 'sk-...'
+                }
                 value={tempAISettings.apiKey}
                 data-testid="api-key-input"
                 onChange={(e) => {
