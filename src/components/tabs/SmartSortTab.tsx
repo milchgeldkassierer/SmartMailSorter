@@ -1,21 +1,60 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AISettings, LLMProvider, AVAILABLE_MODELS } from '../../types';
-import { Bot, Key, Cpu, BrainCircuit } from '../Icon';
+import { Bot, Key, Cpu, BrainCircuit, CheckCircle, AlertCircle, RefreshCw } from '../Icon';
 
 interface SmartSortTabProps {
   aiSettings: AISettings;
   onSave: (settings: AISettings) => void;
 }
 
+interface OllamaStatus {
+  available: boolean;
+  error?: string;
+  checking?: boolean;
+}
+
 const SmartSortTab: React.FC<SmartSortTabProps> = ({ aiSettings, onSave }) => {
   const { t } = useTranslation();
   const [tempAISettings, setTempAISettings] = useState<AISettings>(aiSettings);
+  const [ollamaStatus, setOllamaStatus] = useState<OllamaStatus>({ available: false, checking: false });
 
   // Sync prop changes to internal state
   useEffect(() => {
     setTempAISettings(aiSettings);
   }, [aiSettings]);
+
+  // Detect Ollama connection status on mount and when provider changes to Ollama
+  useEffect(() => {
+    const detectOllama = async () => {
+      // Only check if Ollama is selected or on initial mount
+      if (tempAISettings.provider !== LLMProvider.OLLAMA) {
+        return;
+      }
+
+      setOllamaStatus({ available: false, checking: true });
+
+      try {
+        if (window.electron) {
+          const result = await window.electron.ollamaDetect();
+          setOllamaStatus({
+            available: result.available,
+            error: result.error,
+            checking: false,
+          });
+        }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Failed to detect Ollama';
+        setOllamaStatus({
+          available: false,
+          error: message,
+          checking: false,
+        });
+      }
+    };
+
+    detectOllama();
+  }, [tempAISettings.provider]);
 
   const handleSaveAI = () => {
     onSave(tempAISettings);
@@ -60,6 +99,30 @@ const SmartSortTab: React.FC<SmartSortTabProps> = ({ aiSettings, onSave }) => {
               </option>
             ))}
           </select>
+
+          {/* Ollama Connection Status */}
+          {tempAISettings.provider === LLMProvider.OLLAMA && (
+            <div className="mt-2 flex items-center gap-2">
+              {ollamaStatus.checking ? (
+                <>
+                  <RefreshCw className="w-4 h-4 text-blue-500 animate-spin" />
+                  <span className="text-xs text-slate-600">Detecting Ollama...</span>
+                </>
+              ) : ollamaStatus.available ? (
+                <>
+                  <CheckCircle className="w-4 h-4 text-green-500" />
+                  <span className="text-xs text-green-700">Ollama connected</span>
+                </>
+              ) : (
+                <>
+                  <AlertCircle className="w-4 h-4 text-red-500" />
+                  <span className="text-xs text-red-700">
+                    Ollama not reachable {ollamaStatus.error && `- ${ollamaStatus.error}`}
+                  </span>
+                </>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Model */}
