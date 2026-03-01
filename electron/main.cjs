@@ -499,6 +499,29 @@ app.whenReady().then(() => {
     }
   });
 
+  ipcMain.handle('ollama-detect', async () => {
+    try {
+      logger.debug('[Ollama] Detecting running Ollama instance...');
+      const response = await fetchWithTimeout('http://localhost:11434/api/tags', {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+      }, 5000);
+
+      if (!response.ok) {
+        logger.warn(`[Ollama] API returned status ${response.status}`);
+        return { available: false, models: [] };
+      }
+
+      const data = await response.json();
+      const models = data.models || [];
+      logger.info(`[Ollama] Detected ${models.length} available models`);
+      return { available: true, models };
+    } catch (error) {
+      logger.debug('[Ollama] Ollama not available:', error.message);
+      return { available: false, models: [] };
+    }
+  });
+
   // --- AI Provider Helpers ---
 
   /** Fetch with AbortController timeout to prevent hung UI */
