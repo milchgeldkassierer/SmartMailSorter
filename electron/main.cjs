@@ -440,14 +440,20 @@ app.whenReady().then(() => {
       if (settings.apiKey !== undefined && typeof settings.apiKey !== 'string') {
         throw new Error('Invalid settings: apiKey must be a string');
       }
+      if (settings.apiKey) settings.apiKey = settings.apiKey.trim();
 
-      // Validate API key with a lightweight test call (only if key changed)
+      // Validate API key with a lightweight test call (only if settings changed)
       const isOllama = settings.provider === LLMProviders.OLLAMA;
-      if (!isOllama && (!settings.apiKey || settings.apiKey.trim() === '')) {
+      if (!isOllama && !settings.apiKey) {
         throw new Error(`Missing API key for ${settings.provider}`);
       }
       if (!isOllama && settings.apiKey) {
-        const existingSettings = loadAISettings();
+        let existingSettings = null;
+        try {
+          existingSettings = loadAISettings();
+        } catch (e) {
+          logger.warn('[IPC] Could not load existing settings for comparison:', e.message);
+        }
         const needsValidation =
           !existingSettings ||
           existingSettings.apiKey !== settings.apiKey ||
