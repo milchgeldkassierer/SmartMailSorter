@@ -10,6 +10,8 @@ import {
   NotificationSettings,
   NotificationOperationResult,
   SavedFilter,
+  CategorizationFeedback,
+  CategorizationFeedbackOperationResult,
 } from './types';
 
 export {};
@@ -84,6 +86,13 @@ declare global {
       getSearchHistory: () => Promise<Array<{ id: string; query: string; timestamp: number }>>;
       addSearchHistory: (id: string, query: string) => Promise<{ success: boolean; changes: number }>;
       clearSearchHistory: () => Promise<{ success: boolean; changes: number }>;
+
+      // Categorization Feedback (AI Learning)
+      saveCategorizationFeedback: (feedback: CategorizationFeedback) => Promise<CategorizationFeedbackOperationResult>;
+      getCategorizationFeedback: (accountId: string, limit?: number) => Promise<CategorizationFeedback[]>;
+      getRecentFeedbackForSender: (accountId: string, senderEmail: string, limit?: number) => Promise<CategorizationFeedback[]>;
+      exportCategorizationFeedback: (accountId: string) => Promise<CategorizationFeedback[]>;
+      clearCategorizationFeedback: (accountId: string) => Promise<CategorizationFeedbackOperationResult>;
 
       // AI Settings (safeStorage)
       saveAISettings: (settings: AISettings) => Promise<{ success: boolean; encrypted?: boolean; warning?: string }>;

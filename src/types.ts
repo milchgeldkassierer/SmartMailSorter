@@ -195,3 +195,24 @@ export interface SavedFilter {
   query: string;
   createdAt: number;
 }
+
+// Categorization Feedback Types
+export interface CategorizationFeedback {
+  id: string;
+  emailId: string;
+  accountId: string;
+  originalCategory: string;
+  correctedCategory: string;
+  sender: string;
+  senderEmail: string;
+  subject: string;
+  aiSummary: string | null;
+  aiReasoning: string | null;
+  confidence: number | null;
+  correctedAt: number;
+}
+
+export interface CategorizationFeedbackOperationResult {
+  success: boolean;
+  changes?: number;
+}
