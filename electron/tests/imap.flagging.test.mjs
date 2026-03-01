@@ -368,10 +368,11 @@ describe('IMAP Flag Operations (setEmailFlag)', () => {
       expect(result.success).toBe(true);
     });
 
-    it('should handle arbitrary folder name', async () => {
+    it('should fail for unmapped arbitrary folder name', async () => {
       const result = await imap.setEmailFlag(testAccount, 1001, '\\Seen', true, 'CustomFolder');
 
-      expect(result.success).toBe(true);
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('Could not map folder');
     });
   });
 

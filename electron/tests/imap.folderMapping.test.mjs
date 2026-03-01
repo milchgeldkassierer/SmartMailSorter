@@ -188,12 +188,13 @@ describe('IMAP Folder Mapping', () => {
       expect(result.success).toBe(true);
     });
 
-    it('should use INBOX when folder not found in list', async () => {
+    it('should fail when folder not found in list', async () => {
       setFolderList([{ name: 'INBOX', path: 'INBOX', delimiter: '.', specialUse: null }]);
 
       const result = await imap.deleteEmail(testAccount, 100, 'UnknownFolder');
 
-      expect(result.success).toBe(true);
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('Could not map folder');
     });
   });
 

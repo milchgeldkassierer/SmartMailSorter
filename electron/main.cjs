@@ -17,6 +17,7 @@ const notifications = require('./notifications.cjs');
 const { sanitizeFilename } = require('./utils/security.cjs');
 const { createCspHeaderHandler } = require('./utils/csp-config.cjs');
 const { TRASH_FOLDER } = require('./folderConstants.cjs');
+const { LLMProviders } = require('./providerConstants.cjs');
 
 const isDev = !app.isPackaged;
 
@@ -416,6 +417,7 @@ app.whenReady().then(() => {
   // AI Settings safeStorage IPC handlers
   const AI_SETTINGS_FILE = path.join(app.getPath('userData'), 'ai-settings.encrypted');
   const AI_SETTINGS_FILE_PLAINTEXT = path.join(app.getPath('userData'), 'ai-settings.json');
+  const OLLAMA_BASE_URL = 'http://localhost:11434';
 
   ipcMain.handle('ai-settings-save', async (event, settings) => {
     try {
@@ -426,11 +428,66 @@ app.whenReady().then(() => {
       if (typeof settings.provider !== 'string' || typeof settings.model !== 'string') {
         throw new Error('Invalid settings: provider and model must be strings');
       }
+      settings.provider = settings.provider.trim();
+      settings.model = settings.model.trim();
+      if (!settings.provider || !settings.model) {
+        throw new Error('Invalid settings: provider and model must be non-empty strings');
+      }
+      const allowedProviders = Object.values(LLMProviders);
+      if (!allowedProviders.includes(settings.provider)) {
+        throw new Error(`Invalid settings: unknown provider "${settings.provider}". Allowed: ${allowedProviders.join(', ')}`);
+      }
       if (settings.apiKey !== undefined && typeof settings.apiKey !== 'string') {
         throw new Error('Invalid settings: apiKey must be a string');
       }
+      if (settings.apiKey) settings.apiKey = settings.apiKey.trim();
 
-      const settingsJson = JSON.stringify(settings);
+      // Validate API key with a lightweight test call (only if settings changed)
+      const isOllama = settings.provider === LLMProviders.OLLAMA;
+      if (!isOllama && !settings.apiKey) {
+        throw new Error(`Missing API key for ${settings.provider}`);
+      }
+      if (!isOllama && settings.apiKey) {
+        const existingSettings = loadAISettings();
+        const needsValidation =
+          !existingSettings ||
+          existingSettings.apiKey !== settings.apiKey ||
+          existingSettings.provider !== settings.provider ||
+          existingSettings.model !== settings.model;
+        if (needsValidation) {
+          try {
+            await callAIProvider(settings, 'Reply with exactly: {"ok":true}', 'Test');
+            logger.info('[IPC] AI API key validated successfully');
+          } catch (validationError) {
+            // NOTE: Auth detection relies on string-matching error messages because provider
+            // functions throw Error with embedded HTTP status text rather than structured codes.
+            // If providers change error formats, invalid keys may be saved — but subsequent AI
+            // calls will fail with clear errors, so this is low-risk.
+            const msg = validationError instanceof Error ? validationError.message : String(validationError);
+            const msgLower = msg.toLowerCase();
+            if (
+              msg.includes('401') ||
+              msg.includes('403') ||
+              msgLower.includes('api key not valid') ||
+              msgLower.includes('incorrect api key')
+            ) {
+              throw new Error(`Invalid API key for ${settings.provider}: Authentication failed`);
+            }
+            if (validationError instanceof SyntaxError) {
+              // JSON parse failure from non-JSON response - validation call succeeded (key is valid)
+              logger.info('[IPC] AI API key validated (response was not JSON, but auth succeeded)');
+            } else {
+              // Other errors (network, rate limit) are not key-related - allow save
+              logger.warn('[IPC] API key validation skipped due to non-auth error:', msg);
+            }
+          }
+        } else {
+          logger.info('[IPC] Settings unchanged, skipping validation');
+        }
+      }
+
+      const sanitized = { provider: settings.provider, model: settings.model, apiKey: settings.apiKey };
+      const settingsJson = JSON.stringify(sanitized);
 
       if (!safeStorage.isEncryptionAvailable()) {
         logger.warn('[IPC] safeStorage encryption is not available - falling back to plaintext storage');
@@ -468,7 +525,7 @@ app.whenReady().then(() => {
           logger.warn('[IPC] Removing stale plaintext settings file in favor of encrypted file');
           fs.unlinkSync(AI_SETTINGS_FILE_PLAINTEXT);
         }
-        return settings;
+        return { provider: settings.provider, model: settings.model, apiKey: settings.apiKey };
       }
 
       // Encrypted file exists but encryption is unavailable
@@ -488,14 +545,49 @@ app.whenReady().then(() => {
         const settingsJson = fs.readFileSync(AI_SETTINGS_FILE_PLAINTEXT, 'utf8');
         const settings = JSON.parse(settingsJson);
         logger.debug('[IPC] AI settings loaded successfully (plaintext)');
-        return settings;
+        return { provider: settings.provider, model: settings.model, apiKey: settings.apiKey };
       }
 
       logger.debug('[IPC] No AI settings file found');
       return null;
     } catch (error) {
       logger.error('[IPC] Failed to load AI settings:', error);
-      throw error;
+      return null;
+    }
+  });
+
+  ipcMain.handle('ollama-detect', async () => {
+    try {
+      logger.debug('[Ollama] Detecting running Ollama instance...');
+      const response = await fetchWithTimeout(
+        OLLAMA_BASE_URL + '/api/tags',
+        {
+          method: 'GET',
+        },
+        5000
+      );
+
+      if (!response.ok) {
+        logger.warn(`[Ollama] API returned status ${response.status}`);
+        return { available: false, models: [] };
+      }
+
+      const data = await response.json();
+      if (!data || !Array.isArray(data.models)) {
+        logger.warn('[Ollama] Unexpected response shape from /api/tags:', JSON.stringify(data).slice(0, 200));
+        return { available: true, models: [] };
+      }
+      const models = data.models
+        .filter((m) => typeof m?.name === 'string' && m.name.trim().length > 0)
+        .map((m) => m.name.trim());
+      if (models.length !== data.models.length) {
+        logger.warn(`[Ollama] Filtered out ${data.models.length - models.length} models with invalid names`);
+      }
+      logger.info(`[Ollama] Detected ${models.length} available models: ${models.join(', ')}`);
+      return { available: true, models };
+    } catch (error) {
+      logger.debug('[Ollama] Ollama not available:', error.message);
+      return { available: false, models: [] };
     }
   });
 
@@ -518,23 +610,60 @@ app.whenReady().then(() => {
     const hasEncryptedFile = fs.existsSync(AI_SETTINGS_FILE);
     const hasPlaintextFile = fs.existsSync(AI_SETTINGS_FILE_PLAINTEXT);
 
-    if (hasEncryptedFile && safeStorage.isEncryptionAvailable()) {
-      const encrypted = fs.readFileSync(AI_SETTINGS_FILE);
-      const decrypted = safeStorage.decryptString(encrypted);
-      return JSON.parse(decrypted);
-    }
-    if (hasPlaintextFile) {
-      return JSON.parse(fs.readFileSync(AI_SETTINGS_FILE_PLAINTEXT, 'utf8'));
+    try {
+      if (hasEncryptedFile && safeStorage.isEncryptionAvailable()) {
+        const encrypted = fs.readFileSync(AI_SETTINGS_FILE);
+        const decrypted = safeStorage.decryptString(encrypted);
+        return JSON.parse(decrypted);
+      }
+      if (hasPlaintextFile) {
+        return JSON.parse(fs.readFileSync(AI_SETTINGS_FILE_PLAINTEXT, 'utf8'));
+      }
+    } catch (e) {
+      logger.error('[Settings] Settings file corrupted, please reconfigure:', e.message);
+      return null;
     }
     return null;
   }
 
-  /** Clean markdown code fences from AI response text */
-  function cleanMarkdown(text) {
-    return text.replace(/```json/g, '').replace(/```/g, '').trim();
+  /** Load AI settings and validate they are configured (throws if not) */
+  function loadAndValidateAISettings() {
+    const settings = loadAISettings();
+    if (!settings) {
+      throw new Error('AI settings not configured');
+    }
+    if (typeof settings.provider !== 'string' || !settings.provider.trim()) {
+      throw new Error('AI settings must include a valid provider');
+    }
+    settings.provider = settings.provider.trim();
+    const allowedProviders = Object.values(LLMProviders);
+    if (!allowedProviders.includes(settings.provider)) {
+      throw new Error(`Invalid provider "${settings.provider}". Allowed: ${allowedProviders.join(', ')}`);
+    }
+    if (typeof settings.model !== 'string' || !settings.model.trim()) {
+      throw new Error('AI settings must include a valid model');
+    }
+    settings.model = settings.model.trim();
+    const isOllama = settings.provider === LLMProviders.OLLAMA;
+    if (typeof settings.apiKey === 'string') settings.apiKey = settings.apiKey.trim();
+    if (!isOllama && (!settings.apiKey || typeof settings.apiKey !== 'string')) {
+      throw new Error(`Missing API key for ${settings.provider}`);
+    }
+    return { provider: settings.provider, model: settings.model, apiKey: settings.apiKey };
   }
 
-  /** Call Google Gemini API and return parsed JSON */
+  /** Clean markdown code fences from AI response text */
+  function cleanMarkdown(text) {
+    return text
+      .replace(/```json/g, '')
+      .replace(/```/g, '')
+      .trim();
+  }
+
+  /** Call Google Gemini API and return parsed JSON.
+   *  NOTE: This function is only used for NL search queries via the parse-natural-language-query
+   *  IPC handler. The responseSchema is hardcoded to the search-query format. For email
+   *  categorization, Gemini is called directly from the renderer via the Google GenAI SDK. */
   async function callGeminiApi(settings, systemInstruction, userPrompt) {
     if (!/^[a-zA-Z0-9._-]+$/.test(settings.model)) throw new Error('Invalid model name');
     const response = await fetchWithTimeout(
@@ -567,7 +696,10 @@ app.whenReady().then(() => {
   }
 
   /** Call OpenAI API and return parsed JSON */
-  async function callOpenAIApi(settings, systemInstruction, userPrompt) {
+  async function callOpenAIApi(settings, systemInstruction, userPrompt, jsonSchema) {
+    const responseFormat = jsonSchema
+      ? { type: 'json_schema', json_schema: { name: 'response', strict: true, schema: jsonSchema } }
+      : { type: 'json_object' };
     const response = await fetchWithTimeout('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${settings.apiKey}` },
@@ -577,7 +709,7 @@ app.whenReady().then(() => {
           { role: 'system', content: systemInstruction },
           { role: 'user', content: userPrompt },
         ],
-        response_format: { type: 'json_object' },
+        response_format: responseFormat,
       }),
     });
     if (!response.ok) {
@@ -591,7 +723,10 @@ app.whenReady().then(() => {
   }
 
   /** Call Anthropic Claude API and return parsed JSON */
-  async function callAnthropicApi(settings, systemInstruction, userPrompt) {
+  async function callAnthropicApi(settings, systemInstruction, userPrompt, jsonSchema) {
+    const system = jsonSchema
+      ? `${systemInstruction}\n\nYou MUST respond with valid JSON matching this schema:\n${JSON.stringify(jsonSchema, null, 2)}`
+      : systemInstruction;
     const response = await fetchWithTimeout('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -601,8 +736,8 @@ app.whenReady().then(() => {
       },
       body: JSON.stringify({
         model: settings.model,
-        max_tokens: 256,
-        system: systemInstruction,
+        max_tokens: 4096,
+        system: system,
         messages: [{ role: 'user', content: userPrompt }],
       }),
     });
@@ -616,13 +751,89 @@ app.whenReady().then(() => {
     return JSON.parse(cleanMarkdown(content));
   }
 
+  /** Call Ollama local API and return parsed JSON */
+  async function callOllamaApi(settings, systemInstruction, userPrompt, jsonSchema) {
+    let response;
+    try {
+      response = await fetchWithTimeout(
+        OLLAMA_BASE_URL + '/api/chat',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: settings.model,
+            messages: [
+              { role: 'system', content: systemInstruction },
+              { role: 'user', content: userPrompt },
+            ],
+            stream: false,
+            format: jsonSchema || 'json',
+          }),
+        },
+        120000
+      );
+    } catch (err) {
+      if (err.message && err.message.includes('timed out')) {
+        throw new Error(`Ollama request timed out after 120s. Try a smaller model or ensure Ollama is fully loaded.`);
+      }
+      throw err;
+    }
+    if (!response.ok) {
+      const errorBody = await response.text();
+      throw new Error(`Ollama API error (${response.status}): ${errorBody.slice(0, 200)}`);
+    }
+    const data = await response.json();
+    const text = data.message?.content;
+    if (!text) throw new Error('Failed to extract text from Ollama response');
+    try {
+      return JSON.parse(cleanMarkdown(text));
+    } catch (e) {
+      const crypto = require('crypto');
+      const digest = crypto.createHash('sha256').update(text).digest('hex').slice(0, 12);
+      throw new Error(`Ollama returned invalid JSON (length=${text.length}, sha256=${digest})`);
+    }
+  }
+
+  /**
+   * Normalize a Gemini SDK schema to standard JSON Schema.
+   * Gemini uses uppercase type names (STRING, OBJECT, ARRAY, etc.);
+   * JSON Schema and all other providers require lowercase.
+   */
+  function normalizeJsonSchema(schema, depth = 0) {
+    if (depth > 20) return schema;
+    if (!schema || typeof schema !== 'object') return schema;
+    const out = Array.isArray(schema) ? [] : Object.create(null);
+    for (const [key, value] of Object.entries(schema)) {
+      if (key === '__proto__' || key === 'constructor' || key === 'prototype') continue;
+      if (key === 'type' && typeof value === 'string') {
+        out[key] = value.toLowerCase();
+      } else if (typeof value === 'object' && value !== null) {
+        out[key] = normalizeJsonSchema(value, depth + 1);
+      } else {
+        out[key] = value;
+      }
+    }
+    return out;
+  }
+
   /** Route to the correct AI provider based on settings */
-  async function callAIProvider(settings, systemInstruction, userPrompt) {
-    const providerLower = settings.provider.toLowerCase();
-    if (providerLower.includes('gemini')) return callGeminiApi(settings, systemInstruction, userPrompt);
-    if (providerLower.includes('openai')) return callOpenAIApi(settings, systemInstruction, userPrompt);
-    if (providerLower.includes('anthropic')) return callAnthropicApi(settings, systemInstruction, userPrompt);
-    throw new Error(`Unknown AI provider: ${settings.provider}`);
+  async function callAIProvider(settings, systemInstruction, userPrompt, jsonSchema) {
+    const normalizedSchema = jsonSchema ? normalizeJsonSchema(jsonSchema) : null;
+    switch (settings.provider) {
+      case LLMProviders.GEMINI:
+        if (normalizedSchema) {
+          throw new Error('Gemini provider does not support custom JSON schemas via IPC. Gemini categorization uses the renderer SDK.');
+        }
+        return callGeminiApi(settings, systemInstruction, userPrompt);
+      case LLMProviders.OPENAI:
+        return callOpenAIApi(settings, systemInstruction, userPrompt, normalizedSchema);
+      case LLMProviders.ANTHROPIC:
+        return callAnthropicApi(settings, systemInstruction, userPrompt, normalizedSchema);
+      case LLMProviders.OLLAMA:
+        return callOllamaApi(settings, systemInstruction, userPrompt, normalizedSchema);
+      default:
+        throw new Error(`Unknown AI provider: ${settings.provider}`);
+    }
   }
 
   // Natural Language Search IPC handler
@@ -635,10 +846,7 @@ app.whenReady().then(() => {
         throw new Error('Search query too long (max 500 characters)');
       }
 
-      const settings = loadAISettings();
-      if (!settings || !settings.apiKey) {
-        throw new Error('AI settings not configured');
-      }
+      const settings = loadAndValidateAISettings();
 
       const systemInstruction = `Du bist ein Such-Query-Übersetzer für ein Email-System.
 
@@ -682,6 +890,24 @@ Antworte NUR mit dem JSON-Objekt mit dem "query" Feld.`;
       logger.error('[NL Search] Failed to parse natural language query:', error);
       throw new Error('AI query conversion failed');
     }
+  });
+
+  // Generic AI call handler - routes through main process to avoid CORS issues
+  ipcMain.handle('ai-call', async (event, args) => {
+    if (!args || typeof args !== 'object') throw new Error('Invalid ai-call payload: expected an object');
+    const { systemInstruction, userPrompt, jsonSchema } = args;
+    if (!systemInstruction || typeof systemInstruction !== 'string' || !systemInstruction.trim())
+      throw new Error('Invalid systemInstruction');
+    if (!userPrompt || typeof userPrompt !== 'string' || !userPrompt.trim()) throw new Error('Invalid userPrompt');
+    if (systemInstruction.length > 10000) throw new Error('systemInstruction too long (max 10000 characters)');
+    if (userPrompt.length > 200000) throw new Error('userPrompt too long (max 200000 characters)');
+    if (jsonSchema !== undefined && (typeof jsonSchema !== 'object' || jsonSchema === null || Array.isArray(jsonSchema)))
+      throw new Error('Invalid jsonSchema: expected an object');
+    if (jsonSchema && JSON.stringify(jsonSchema).length > 50000)
+      throw new Error('jsonSchema too large (max 50000 characters)');
+
+    const settings = loadAndValidateAISettings();
+    return await callAIProvider(settings, systemInstruction, userPrompt, jsonSchema || null);
   });
 
   // Notification Settings IPC handlers

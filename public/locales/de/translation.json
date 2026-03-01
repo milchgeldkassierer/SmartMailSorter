@@ -90,10 +90,13 @@
     "model": "Modell",
     "apiKey": "API Key",
     "apiKeyPlaceholder": "sk-...",
-    "apiKeyPlaceholderOptional": "Optional (verwendet Standard-Key)",
-    "geminiKeyInfo": "Für Google Gemini ist bereits ein Demo-Key hinterlegt. Du kannst ihn überschreiben.",
-    "apiKeyInfo": "Der API Key wird nur lokal im Browser für die Simulation verwendet.",
-    "saveSettings": "Einstellungen speichern"
+    "apiKeyInfo": "Der API Key wird nur lokal gespeichert.",
+    "saveSettings": "Einstellungen speichern",
+    "ollamaDetecting": "Ollama wird erkannt...",
+    "ollamaAvailable": "Ollama verbunden",
+    "ollamaUnavailable": "Ollama nicht erreichbar",
+    "ollamaNoApiKey": "Kein API-Schlüssel erforderlich - läuft lokal",
+    "ollamaFetchingModels": "Modelle werden geladen..."
   },
   "notificationsTab": {
     "title": "Desktop-Benachrichtigungen",
@@ -202,7 +205,7 @@
     "star": "Markieren",
     "unstar": "Markierung entfernen",
     "aiConfidence": "KI-Konfidenz",
-    "aiAnalysis": "Gemini Analyse"
+    "aiAnalysis": "Smart Sort Analyse"
   },
   "categories": {
     "inbox": "Posteingang",
@@ -260,11 +263,11 @@
     "title": "GMX AI Sorter",
     "subtitle": "Intelligenter E-Mail-Kategorisierungs-Prototyp",
     "simulationModeTitle": "Simulationsmodus:",
-    "simulationModeDescription": "Direkter IMAP-Zugriff ist im Browser nicht möglich. Diese App verwendet Gemini AI, um realistische E-Mail-Daten zu erzeugen und den KI-Sortieralgorithmus zu demonstrieren.",
-    "description": "Klicken Sie auf \"Verbinden\", um den Simulator zu starten. Gemini generiert Beispiel-Emails und sortiert diese automatisch in die richtigen Ordner.",
+    "simulationModeDescription": "Direkter IMAP-Zugriff ist im Browser nicht möglich. Diese App verwendet KI, um realistische E-Mail-Daten zu erzeugen und den KI-Sortieralgorithmus zu demonstrieren.",
+    "description": "Klicken Sie auf \"Verbinden\", um den Simulator zu starten. Die KI generiert Beispiel-Emails und sortiert diese automatisch in die richtigen Ordner.",
     "connecting": "Generiere Postfach...",
     "connectButton": "Mit Demo-Postfach verbinden",
-    "poweredBy": "Bereitgestellt von Gemini 3 Flash Preview"
+    "poweredBy": "Bereitgestellt von Smart Sort Analyse"
   },
   "confirmDialog": {
     "confirm": "Bestätigen"

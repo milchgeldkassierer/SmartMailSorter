@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Email, AISettings, DefaultEmailCategory, SortResult, Category } from '../types';
+import { Email, AISettings, DefaultEmailCategory, SortResult, Category, LLMProvider } from '../types';
 import { categorizeBatchWithAI } from '../services/geminiService';
 import { UseDialogReturn } from './useDialog';
 
@@ -31,6 +31,7 @@ interface UseBatchOperationsReturn {
   handleBatchFlag: () => Promise<void>;
 }
 
+/** Hook providing batch email operations: delete, smart-sort, mark-read, flag. */
 export const useBatchOperations = ({
   selectedIds,
   currentEmails,
@@ -51,7 +52,7 @@ export const useBatchOperations = ({
   const [isSorting, setIsSorting] = useState(false);
   const [sortProgress, setSortProgress] = useState(0);
 
-  // Helper: Enrich emails with missing content
+  /** Fetch full body content for emails that only have headers loaded. */
   const enrichEmailsWithContent = async (emails: Email[]): Promise<Email[]> => {
     return Promise.all(
       emails.map(async (e) => {
@@ -66,7 +67,7 @@ export const useBatchOperations = ({
     );
   };
 
-  // Helper: Process emails in chunks with AI categorization
+  /** Process emails in fixed-size chunks through AI categorization, tracking progress. */
   const processEmailsInChunks = async (
     emailsToSort: Email[],
     onProgress: (progress: number) => void
@@ -103,7 +104,7 @@ export const useBatchOperations = ({
     return { emailResults, newCategories: newCategoriesFound };
   };
 
-  // Helper: Apply categorization updates to backend and state
+  /** Persist AI categorization results to backend and return update records. */
   const applyCategorizationUpdates = async (
     emailResults: Map<string, SortResult>,
     newCategoriesFound: Set<string>,
@@ -140,6 +141,7 @@ export const useBatchOperations = ({
     return updates;
   };
 
+  /** Delete all selected emails after user confirmation. */
   const handleBatchDelete = async () => {
     if (selectedIds.size === 0) return;
 
@@ -170,6 +172,7 @@ export const useBatchOperations = ({
     }
   };
 
+  /** Factory for batch toggle handlers (read/flag) that apply to all selected emails. */
   const createBatchToggleHandler = (
     getState: (email: Email) => boolean,
     toggleFn: (id: string) => Promise<void>,
@@ -216,9 +219,12 @@ export const useBatchOperations = ({
     'Failed to update flag status:'
   );
 
+  const isOllama = aiSettings.provider === LLMProvider.OLLAMA;
+
+  /** Run AI-powered smart sort on all selected emails with progress tracking. */
   const handleBatchSmartSort = async () => {
     if (selectedIds.size === 0) return;
-    if (!aiSettings.apiKey) {
+    if (!isOllama && !aiSettings.apiKey?.trim()) {
       await dialog.alert({
         title: t('batch.aiSettingsRequired'),
         message: t('batch.configureApiKey'),
@@ -303,7 +309,7 @@ export const useBatchOperations = ({
     }
   };
 
-  const canSmartSort = Boolean(selectedIds.size > 0 && aiSettings.provider && aiSettings.apiKey);
+  const canSmartSort = Boolean(selectedIds.size > 0 && aiSettings.provider && (isOllama || aiSettings.apiKey?.trim()));
 
   return {
     isSorting,

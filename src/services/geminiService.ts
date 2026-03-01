@@ -18,14 +18,6 @@ interface CategorizationResult {
   confidence?: number;
 }
 
-interface OpenAIResponse {
-  choices?: Array<{
-    message?: {
-      content: string | null;
-    };
-  }>;
-}
-
 interface GeminiConfig {
   responseMimeType: string;
   responseSchema: Schema;
@@ -57,13 +49,13 @@ interface GeminiResponse {
   text?: string | (() => string);
 }
 
+/** Extract and return the API key from settings, or empty string if missing. */
 const getApiKey = (settings?: AISettings) => {
-  if (settings?.apiKey && settings.apiKey.trim() !== '') return settings.apiKey;
+  if (settings?.apiKey && settings.apiKey.trim() !== '') return settings.apiKey.trim();
   return '';
 };
 
-const _wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-
+/** Route an LLM call to the configured provider and return parsed JSON. */
 async function callLLM(
   prompt: string,
   systemInstruction: string,
@@ -154,49 +146,36 @@ async function callLLM(
     }
   }
 
-  // --- OPENAI ---
-  if (settings.provider === LLMProvider.OPENAI) {
-    const apiKey = getApiKey(settings);
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
-      body: JSON.stringify({
-        model: settings.model,
-        messages: [
-          { role: 'system', content: systemInstruction },
-          { role: 'user', content: prompt },
-        ],
-        response_format: { type: 'json_object' },
-      }),
-    });
-
-    if (!response.ok) {
-      const errorBody = await response.text();
-      throw new Error(`OpenAI API error (${response.status}): ${errorBody}`);
+  // --- OPENAI / ANTHROPIC / OLLAMA ---
+  // Route through Electron main process via IPC to avoid CORS restrictions
+  if (
+    settings.provider === LLMProvider.OPENAI ||
+    settings.provider === LLMProvider.ANTHROPIC ||
+    settings.provider === LLMProvider.OLLAMA
+  ) {
+    if (!window.electron?.aiCall) {
+      throw new Error('Electron IPC not available for AI call');
     }
-
-    const data = (await response.json()) as OpenAIResponse;
-    const content = data.choices?.[0]?.message?.content;
-    if (!content) throw new Error('OpenAI returned empty response');
-    return JSON.parse(content);
+    return await window.electron.aiCall({
+      systemInstruction,
+      userPrompt: prompt,
+      jsonSchema: jsonSchema as unknown as Record<string, unknown>,
+    });
   }
 
   throw new Error('Unknown Provider');
 }
 
+/** Generate synthetic demo emails via AI for testing/preview purposes. */
 export const generateDemoEmails = async (count: number = 5, settings?: AISettings): Promise<Email[]> => {
+  if (!settings) return [];
   const emailSchema: Schema = {
     type: Type.ARRAY,
     items: { type: Type.OBJECT, properties: { sender: { type: Type.STRING } } },
   };
   try {
     const prompt = `Generiere ${count} realistische Emails auf Deutsch. Format: JSON Array.`;
-    const rawData = await callLLM(
-      prompt,
-      'You are a data generator.',
-      emailSchema,
-      settings || { provider: LLMProvider.GEMINI, model: 'gemini-2.5-flash', apiKey: '' }
-    );
+    const rawData = await callLLM(prompt, 'You are a data generator.', emailSchema, settings);
     return (Array.isArray(rawData) ? rawData : [])
       .filter((item: unknown): item is object => typeof item === 'object' && item !== null)
       .map((item: unknown, index: number) => {
@@ -219,6 +198,7 @@ export const generateDemoEmails = async (count: number = 5, settings?: AISetting
   }
 };
 
+/** Categorize a single email with AI (delegates to batch categorization). */
 export const categorizeEmailWithAI = async (
   email: Email,
   availableCategories: string[],
@@ -236,9 +216,7 @@ export const categorizeEmailWithAI = async (
   );
 };
 
-/**
- * BATCH PROCESSING
- */
+/** Categorize a batch of emails using the configured AI provider, returning sort results with categories and confidence. */
 export const categorizeBatchWithAI = async (
   emails: Email[],
   availableCategories: string[],
@@ -263,18 +241,38 @@ export const categorizeBatchWithAI = async (
   };
 
   // Construct lightweight input list (save tokens)
+  // For local models (Ollama), use smaller context window
+  const bodyPreviewLength = settings.provider === LLMProvider.OLLAMA ? 500 : 1500;
   const inputs = emails.map((e) => ({
     id: e.id,
     sender: e.sender,
     subject: e.subject,
-    body_preview: (e.body || '').substring(0, 1500), // 1500 chars limit per email
+    body_preview: (e.body || '').substring(0, bodyPreviewLength),
   }));
 
-  const prompt = `
+  // Gemini returns bare arrays (enforced by SDK schema). All IPC-routed providers
+  // (OpenAI, Anthropic, Ollama) return {results: [...]} wrappers via prompt instruction.
+  const jsonFormatHint =
+    settings.provider === LLMProvider.GEMINI
+      ? "Antworte als JSON Array von Objekten. Jedes Objekt MUSS die 'id' der entsprechenden Email enthalten."
+      : 'Antworte als JSON Objekt mit einem "results" Array. Jedes Element MUSS die exakte \'id\' der Email enthalten. Beispiel: {"results": [{"id": "...", "category": "...", "summary": "..."}]}';
+
+  const prompt =
+    settings.provider === LLMProvider.OLLAMA
+      ? `Sortiere diese ${emails.length} Emails.
+
+Emails: ${JSON.stringify(inputs)}
+
+Kategorien: ${targetCategories.join(', ')}
+
+Nutze existierende Kategorien. Falls keine passt, schlage neue vor (1 Wort). Vermeide "Sonstiges".
+
+${jsonFormatHint}`
+      : `
       Du bist ein strenger Email-Sortierer. Sortiere die folgenden ${emails.length} Emails.
 
       Eingabedaten (JSON):
-      ${JSON.stringify(inputs, null, 2)}
+      ${JSON.stringify(inputs)}
 
       EXISTIERENDE KATEGORIEN: ${targetCategories.join(', ')}.
 
@@ -283,37 +281,77 @@ export const categorizeBatchWithAI = async (
       2. NUR wenn absolut nichts passt, schlage eine NEUE, sprechende Kategorie vor (1 Wort, z.B. "Reisen").
       3. Vermeide "Sonstiges".
 
-      Antworte als JSON Array von Objekten. Jedes Objekt MUSS die 'id' der entsprechenden Email enthalten.
+      ${jsonFormatHint}
     `;
 
   try {
     const rawResults = await callLLM(prompt, 'Batch Email Sorter. Output JSON Array.', schema, settings);
 
-    const resultMap = new Map<string, CategorizationResult>();
+    // Gemini returns a bare array; OpenAI/Ollama wrap it in an object like { results: [...] }
+    let resultsArray: unknown[] | null = null;
     if (Array.isArray(rawResults)) {
-      rawResults.forEach((r: unknown) => {
-        if (typeof r !== 'object' || r === null) return;
-        const result = r as CategorizationResult;
-        resultMap.set(result.id, result);
-      });
+      resultsArray = rawResults;
+    } else if (rawResults && typeof rawResults === 'object') {
+      const obj = rawResults as Record<string, unknown>;
+      if (Array.isArray(obj.results)) {
+        resultsArray = obj.results;
+      }
     }
 
-    // Map back to original order, ensuring no missing items
-    return emails.map((email) => {
-      const res = resultMap.get(email.id);
-      if (res) {
+    if (!resultsArray) {
+      console.warn(
+        '[SmartSort] AI returned no results array. Type:',
+        typeof rawResults,
+        'IsArray:',
+        Array.isArray(rawResults),
+        'Keys:',
+        rawResults && typeof rawResults === 'object' ? Object.keys(rawResults as object).join(',') : 'N/A'
+      );
+      resultsArray = [];
+    }
+
+    // Build ID-based lookup map
+    const resultMap = new Map<string, CategorizationResult>();
+    const resultsList: CategorizationResult[] = [];
+    resultsArray.forEach((r: unknown) => {
+      if (typeof r !== 'object' || r === null) return;
+      const result = r as CategorizationResult;
+      resultsList.push(result);
+      if (result.id) {
+        resultMap.set(result.id, result);
+      }
+    });
+
+    // Map back to original order: try ID match first, fall back to index only when
+    // no email IDs matched (indicating the AI didn't return correct IDs at all)
+    const idMatchCount = emails.filter((e) => resultMap.has(e.id)).length;
+    const useIndexFallback = idMatchCount === 0 && resultsList.length === emails.length;
+    if (useIndexFallback) {
+      console.warn(
+        '[AI] No email IDs matched in AI response — using positional index fallback for',
+        emails.length,
+        'emails'
+      );
+    }
+    const FALLBACK_CONFIDENCE_FACTOR = 0.5;
+    return emails.map((email, index) => {
+      const idMatch = resultMap.get(email.id);
+      const res = idMatch || (useIndexFallback ? resultsList[index] : undefined);
+      if (res && res.category) {
+        const isFallback = !idMatch && useIndexFallback;
+        const rawConfidence = res.confidence || 0.8;
         return {
           categoryId: res.category || DefaultEmailCategory.OTHER,
           summary: res.summary || 'Analysiert',
           reasoning: res.reasoning || 'Batch OK',
-          confidence: res.confidence || 0.8,
+          confidence: isFallback ? rawConfidence * FALLBACK_CONFIDENCE_FACTOR : rawConfidence,
+          indexFallbackUsed: isFallback,
         };
       }
-      // Fallback for missing items (should not happen with good AI)
       return {
         categoryId: DefaultEmailCategory.OTHER,
         summary: 'Fehler',
-        reasoning: 'AI lieferte kein Ergebnis für diese ID',
+        reasoning: 'AI lieferte kein Ergebnis für diese Email',
         confidence: 0,
       };
     });

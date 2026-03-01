@@ -41,6 +41,7 @@ describe('SmartSortTab', () => {
       expect(options[0]).toHaveTextContent(LLMProvider.GEMINI);
       expect(options[1]).toHaveTextContent(LLMProvider.OPENAI);
       expect(options[2]).toHaveTextContent(LLMProvider.ANTHROPIC);
+      expect(options[3]).toHaveTextContent(LLMProvider.OLLAMA);
     });
 
     it('should render model select with current value', () => {
@@ -59,10 +60,11 @@ describe('SmartSortTab', () => {
       expect(options[1]).toHaveTextContent('gemini-2.5-pro');
     });
 
-    it('should render API key input with correct placeholder for Gemini', () => {
+    it('should render API key input with provider-specific placeholder for Gemini', () => {
       render(<SmartSortTab {...defaultProps} />);
-      const apiKeyInput = screen.getByPlaceholderText('Optional (verwendet Standard-Key)');
+      const apiKeyInput = screen.getByTestId('api-key-input');
       expect(apiKeyInput).toBeInTheDocument();
+      expect(apiKeyInput).toHaveAttribute('placeholder', 'gen-lang-client-...');
       expect(apiKeyInput).toHaveAttribute('type', 'password');
     });
 
@@ -73,27 +75,24 @@ describe('SmartSortTab', () => {
         apiKey: '',
       };
       render(<SmartSortTab aiSettings={openAISettings} onSave={vi.fn()} />);
-      const apiKeyInput = screen.getByPlaceholderText('sk-...');
-      expect(apiKeyInput).toBeInTheDocument();
+      const apiKeyInput = screen.getByTestId('api-key-input');
+      expect(apiKeyInput).toHaveAttribute('placeholder', 'sk-...');
     });
 
-    it('should render Gemini-specific help text', () => {
-      render(<SmartSortTab {...defaultProps} />);
-      expect(
-        screen.getByText('Für Google Gemini ist bereits ein Demo-Key hinterlegt. Du kannst ihn überschreiben.')
-      ).toBeInTheDocument();
-    });
-
-    it('should render non-Gemini help text for other providers', () => {
-      const openAISettings: AISettings = {
-        provider: LLMProvider.OPENAI,
-        model: 'gpt-4.1',
+    it('should render API key input with correct placeholder for Anthropic', () => {
+      const anthropicSettings: AISettings = {
+        provider: LLMProvider.ANTHROPIC,
+        model: 'claude-sonnet-4-6',
         apiKey: '',
       };
-      render(<SmartSortTab aiSettings={openAISettings} onSave={vi.fn()} />);
-      expect(
-        screen.getByText('Der API Key wird nur lokal im Browser für die Simulation verwendet.')
-      ).toBeInTheDocument();
+      render(<SmartSortTab aiSettings={anthropicSettings} onSave={vi.fn()} />);
+      const apiKeyInput = screen.getByTestId('api-key-input');
+      expect(apiKeyInput).toHaveAttribute('placeholder', 'sk-ant-...');
+    });
+
+    it('should render API key help text for non-Ollama providers', () => {
+      render(<SmartSortTab {...defaultProps} />);
+      expect(screen.getByText('Der API Key wird nur lokal gespeichert.')).toBeInTheDocument();
     });
 
     it('should render save button', () => {
@@ -163,24 +162,19 @@ describe('SmartSortTab', () => {
       expect(options).toHaveLength(AVAILABLE_MODELS[LLMProvider.ANTHROPIC].length);
     });
 
-    it('should update placeholder and help text when switching from Gemini', () => {
+    it('should update placeholder when switching from Gemini to OpenAI', () => {
       render(<SmartSortTab {...defaultProps} />);
 
       // Initially Gemini
-      expect(screen.getByPlaceholderText('Optional (verwendet Standard-Key)')).toBeInTheDocument();
-      expect(
-        screen.getByText('Für Google Gemini ist bereits ein Demo-Key hinterlegt. Du kannst ihn überschreiben.')
-      ).toBeInTheDocument();
+      const apiKeyInput = screen.getByTestId('api-key-input');
+      expect(apiKeyInput).toHaveAttribute('placeholder', 'gen-lang-client-...');
 
       // Switch to OpenAI
       const providerSelect = screen.getByDisplayValue(LLMProvider.GEMINI);
       fireEvent.change(providerSelect, { target: { value: LLMProvider.OPENAI } });
 
-      // Should show OpenAI placeholder and help text
-      expect(screen.getByPlaceholderText('sk-...')).toBeInTheDocument();
-      expect(
-        screen.getByText('Der API Key wird nur lokal im Browser für die Simulation verwendet.')
-      ).toBeInTheDocument();
+      // Should show OpenAI placeholder
+      expect(screen.getByTestId('api-key-input')).toHaveAttribute('placeholder', 'sk-...');
     });
   });
 
@@ -241,7 +235,7 @@ describe('SmartSortTab', () => {
   describe('API Key Input', () => {
     it('should update API key when typing', () => {
       render(<SmartSortTab {...defaultProps} />);
-      const apiKeyInput = screen.getByPlaceholderText('Optional (verwendet Standard-Key)') as HTMLInputElement;
+      const apiKeyInput = screen.getByTestId('api-key-input') as HTMLInputElement;
 
       fireEvent.change(apiKeyInput, { target: { value: 'new-api-key-456' } });
 
@@ -262,7 +256,7 @@ describe('SmartSortTab', () => {
 
     it('should be password type for security', () => {
       render(<SmartSortTab {...defaultProps} />);
-      const apiKeyInput = screen.getByPlaceholderText('Optional (verwendet Standard-Key)');
+      const apiKeyInput = screen.getByTestId('api-key-input');
 
       expect(apiKeyInput).toHaveAttribute('type', 'password');
     });
@@ -291,7 +285,7 @@ describe('SmartSortTab', () => {
       const modelSelect = screen.getByDisplayValue(AVAILABLE_MODELS[LLMProvider.OPENAI][0]);
       fireEvent.change(modelSelect, { target: { value: 'gpt-4.1-mini' } });
 
-      const apiKeyInput = screen.getByPlaceholderText('sk-...');
+      const apiKeyInput = screen.getByTestId('api-key-input');
       fireEvent.change(apiKeyInput, { target: { value: 'sk-test-key' } });
 
       // Click save
@@ -370,7 +364,7 @@ describe('SmartSortTab', () => {
       const { rerender } = render(<SmartSortTab {...defaultProps} />);
 
       // Make local changes
-      const apiKeyInput = screen.getByPlaceholderText('Optional (verwendet Standard-Key)');
+      const apiKeyInput = screen.getByTestId('api-key-input');
       fireEvent.change(apiKeyInput, { target: { value: 'local-change' } });
       expect(screen.getByDisplayValue('local-change')).toBeInTheDocument();
 
@@ -391,7 +385,7 @@ describe('SmartSortTab', () => {
   describe('Edge Cases', () => {
     it('should handle empty API key', () => {
       render(<SmartSortTab {...defaultProps} />);
-      const apiKeyInput = screen.getByPlaceholderText('Optional (verwendet Standard-Key)') as HTMLInputElement;
+      const apiKeyInput = screen.getByTestId('api-key-input') as HTMLInputElement;
 
       expect(apiKeyInput.value).toBe('');
 
@@ -418,7 +412,7 @@ describe('SmartSortTab', () => {
       const onSave = vi.fn();
       render(<SmartSortTab {...defaultProps} onSave={onSave} />);
 
-      const apiKeyInput = screen.getByPlaceholderText('Optional (verwendet Standard-Key)');
+      const apiKeyInput = screen.getByTestId('api-key-input');
       const specialKey = 'sk-proj-!@#$%^&*()_+-=[]{}|;:,.<>?';
       fireEvent.change(apiKeyInput, { target: { value: specialKey } });
 
@@ -426,6 +420,160 @@ describe('SmartSortTab', () => {
       fireEvent.click(saveButton);
 
       expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ apiKey: specialKey }));
+    });
+  });
+
+  describe('Ollama Provider', () => {
+    const ollamaSettings: AISettings = {
+      provider: LLMProvider.OLLAMA,
+      model: 'llama3',
+      apiKey: '',
+    };
+
+    it('should render Ollama as a provider option', () => {
+      render(<SmartSortTab {...defaultProps} />);
+      const providerSelect = screen.getByDisplayValue(LLMProvider.GEMINI);
+      const options = providerSelect.querySelectorAll('option');
+
+      const ollamaOption = Array.from(options).find((opt) => opt.textContent === LLMProvider.OLLAMA);
+      expect(ollamaOption).toBeTruthy();
+    });
+
+    it('should not show API key input for Ollama', () => {
+      render(<SmartSortTab aiSettings={ollamaSettings} onSave={vi.fn()} />);
+
+      // API key input should not exist for Ollama provider
+      expect(screen.queryByTestId('api-key-input')).toBeNull();
+    });
+
+    it('should show no API key required message for Ollama', () => {
+      render(<SmartSortTab aiSettings={ollamaSettings} onSave={vi.fn()} />);
+
+      expect(screen.getByText('Kein API-Schlüssel erforderlich - läuft lokal')).toBeInTheDocument();
+    });
+
+    it('should show Ollama models when provider is Ollama', () => {
+      render(<SmartSortTab aiSettings={ollamaSettings} onSave={vi.fn()} />);
+      const modelSelect = screen.getByDisplayValue('llama3');
+      expect(modelSelect).toBeInTheDocument();
+
+      const options = modelSelect.querySelectorAll('option');
+      expect(options.length).toBeGreaterThan(0);
+    });
+
+    it('should reset API key when switching to Ollama', () => {
+      const settingsWithKey: AISettings = {
+        provider: LLMProvider.OPENAI,
+        model: 'gpt-4.1',
+        apiKey: 'sk-test-key',
+      };
+      render(<SmartSortTab aiSettings={settingsWithKey} onSave={vi.fn()} />);
+
+      const providerSelect = screen.getByDisplayValue(LLMProvider.OPENAI);
+      fireEvent.change(providerSelect, { target: { value: LLMProvider.OLLAMA } });
+
+      // API key input should not exist for Ollama provider
+      expect(screen.queryByTestId('api-key-input')).toBeNull();
+    });
+
+    it('should switch from Ollama to other providers correctly', () => {
+      render(<SmartSortTab aiSettings={ollamaSettings} onSave={vi.fn()} />);
+
+      // Initially Ollama - no API key input
+      expect(screen.queryByTestId('api-key-input')).toBeNull();
+
+      // Switch to OpenAI
+      const providerSelect = screen.getByDisplayValue(LLMProvider.OLLAMA);
+      fireEvent.change(providerSelect, { target: { value: LLMProvider.OPENAI } });
+
+      // Should now show API key input with OpenAI placeholder
+      const apiKeyInput = screen.getByTestId('api-key-input');
+      expect(apiKeyInput).toHaveAttribute('placeholder', 'sk-...');
+    });
+
+    it('should save Ollama settings with empty API key', () => {
+      const onSave = vi.fn();
+      render(<SmartSortTab aiSettings={ollamaSettings} onSave={onSave} />);
+
+      const saveButton = screen.getByText('Einstellungen speichern');
+      fireEvent.click(saveButton);
+
+      expect(onSave).toHaveBeenCalledWith({
+        provider: LLMProvider.OLLAMA,
+        model: 'llama3',
+        apiKey: '',
+      });
+    });
+
+    it('should show correct model for Ollama after provider change', () => {
+      render(<SmartSortTab {...defaultProps} />);
+      const providerSelect = screen.getByDisplayValue(LLMProvider.GEMINI);
+
+      fireEvent.change(providerSelect, { target: { value: LLMProvider.OLLAMA } });
+
+      // Should show first Ollama model
+      const modelSelect = screen.getByDisplayValue(AVAILABLE_MODELS[LLMProvider.OLLAMA][0]);
+      expect(modelSelect).toBeInTheDocument();
+    });
+
+    it('should update model selection when switching to Ollama', () => {
+      const onSave = vi.fn();
+      render(<SmartSortTab {...defaultProps} onSave={onSave} />);
+
+      const providerSelect = screen.getByDisplayValue(LLMProvider.GEMINI);
+      fireEvent.change(providerSelect, { target: { value: LLMProvider.OLLAMA } });
+
+      const modelSelect = screen.getByDisplayValue(AVAILABLE_MODELS[LLMProvider.OLLAMA][0]);
+      fireEvent.change(modelSelect, { target: { value: 'mistral' } });
+
+      const saveButton = screen.getByText('Einstellungen speichern');
+      fireEvent.click(saveButton);
+
+      expect(onSave).toHaveBeenCalledWith({
+        provider: LLMProvider.OLLAMA,
+        model: 'mistral',
+        apiKey: '',
+      });
+    });
+
+    it('should maintain Ollama selection after model change', () => {
+      render(<SmartSortTab aiSettings={ollamaSettings} onSave={vi.fn()} />);
+
+      const modelSelect = screen.getByDisplayValue('llama3');
+      fireEvent.change(modelSelect, { target: { value: 'mistral' } });
+
+      const providerSelect = screen.getByDisplayValue(LLMProvider.OLLAMA);
+      expect(providerSelect).toHaveValue(LLMProvider.OLLAMA);
+    });
+
+    it('should show available Ollama models in dropdown', () => {
+      render(<SmartSortTab aiSettings={ollamaSettings} onSave={vi.fn()} />);
+      const modelSelect = screen.getByDisplayValue('llama3');
+      const options = modelSelect.querySelectorAll('option');
+
+      expect(options).toHaveLength(AVAILABLE_MODELS[LLMProvider.OLLAMA].length);
+      expect(options[0]).toHaveTextContent('llama3');
+      expect(options[1]).toHaveTextContent('mistral');
+      expect(options[2]).toHaveTextContent('phi3');
+      expect(options[3]).toHaveTextContent('gemma2');
+    });
+
+    it('should handle switching between all providers including Ollama', () => {
+      render(<SmartSortTab {...defaultProps} />);
+      const providerSelect = screen.getByDisplayValue(LLMProvider.GEMINI);
+
+      // Switch to each provider
+      fireEvent.change(providerSelect, { target: { value: LLMProvider.OPENAI } });
+      expect(providerSelect).toHaveValue(LLMProvider.OPENAI);
+
+      fireEvent.change(providerSelect, { target: { value: LLMProvider.OLLAMA } });
+      expect(providerSelect).toHaveValue(LLMProvider.OLLAMA);
+
+      fireEvent.change(providerSelect, { target: { value: LLMProvider.ANTHROPIC } });
+      expect(providerSelect).toHaveValue(LLMProvider.ANTHROPIC);
+
+      fireEvent.change(providerSelect, { target: { value: LLMProvider.OLLAMA } });
+      expect(providerSelect).toHaveValue(LLMProvider.OLLAMA);
     });
   });
 });

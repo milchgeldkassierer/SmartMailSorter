@@ -98,6 +98,8 @@ export interface SortResult {
   summary: string;
   reasoning: string;
   confidence: number;
+  /** True when the result was matched by array position rather than email ID. */
+  indexFallbackUsed?: boolean;
 }
 
 // Email Sort Types
@@ -127,10 +129,12 @@ export interface SearchConfig {
 }
 
 // AI Specific Types
+// Keep in sync with electron/providerConstants.cjs
 export enum LLMProvider {
   GEMINI = 'Google Gemini',
   OPENAI = 'OpenAI',
   ANTHROPIC = 'Anthropic',
+  OLLAMA = 'Ollama',
 }
 
 export interface AISettings {
@@ -143,6 +147,7 @@ export const AVAILABLE_MODELS: Record<LLMProvider, string[]> = {
   [LLMProvider.GEMINI]: ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-3-flash-preview', 'gemini-3.1-pro-preview'],
   [LLMProvider.OPENAI]: ['gpt-4.1', 'gpt-4.1-mini', 'gpt-4.1-nano', 'gpt-5.2', 'gpt-5-mini', 'gpt-5-nano'],
   [LLMProvider.ANTHROPIC]: ['claude-sonnet-4-6', 'claude-haiku-4-5', 'claude-opus-4-6'],
+  [LLMProvider.OLLAMA]: ['llama3', 'mistral', 'phi3', 'gemma2'],
 };
 
 // Attachment Types

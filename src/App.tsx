@@ -35,7 +35,7 @@ const App: React.FC = () => {
   const { t, ready } = useTranslation();
   const { accounts, activeAccountId, setAccounts, setActiveAccountId, addAccount, removeAccount, switchAccount } =
     useAccounts();
-  const { aiSettings, setAiSettings } = useAISettings();
+  const { aiSettings, setAiSettings, saveError: aiSaveError } = useAISettings();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const dialog = useDialogContext();
 
@@ -776,6 +776,7 @@ const App: React.FC = () => {
           }}
           aiSettings={aiSettings}
           onSaveAISettings={setAiSettings}
+          aiSaveError={aiSaveError}
         />
       </div>
     </div>

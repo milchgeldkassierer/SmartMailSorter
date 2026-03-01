@@ -90,10 +90,13 @@
     "model": "Model",
     "apiKey": "API Key",
     "apiKeyPlaceholder": "sk-...",
-    "apiKeyPlaceholderOptional": "Optional (uses default key)",
-    "geminiKeyInfo": "A demo key is already configured for Google Gemini. You can override it.",
-    "apiKeyInfo": "The API key is only used locally in the browser for simulation.",
-    "saveSettings": "Save settings"
+    "apiKeyInfo": "The API key is only stored locally.",
+    "saveSettings": "Save settings",
+    "ollamaDetecting": "Detecting Ollama...",
+    "ollamaAvailable": "Ollama connected",
+    "ollamaUnavailable": "Ollama not reachable",
+    "ollamaNoApiKey": "No API key required - runs locally",
+    "ollamaFetchingModels": "Fetching models..."
   },
   "notificationsTab": {
     "title": "Desktop Notifications",
@@ -260,11 +263,11 @@
     "title": "GMX AI Sorter",
     "subtitle": "Intelligent Email Categorization Prototype",
     "simulationModeTitle": "Simulation Mode:",
-    "simulationModeDescription": "Direct IMAP access is not possible from a browser. This app uses Gemini AI to generate realistic email data and demonstrate how the AI sorting algorithm functions.",
-    "description": "Click \"Connect\" to start the simulator. Gemini will generate sample emails and automatically sort them into the correct folders.",
+    "simulationModeDescription": "Direct IMAP access is not possible from a browser. This app uses AI to generate realistic email data and demonstrate how the AI sorting algorithm functions.",
+    "description": "Click \"Connect\" to start the simulator. The AI will generate sample emails and automatically sort them into the correct folders.",
     "connecting": "Generating mailbox...",
     "connectButton": "Connect with demo mailbox",
-    "poweredBy": "Powered by Gemini 3 Flash Preview"
+    "poweredBy": "Powered by Smart Sort Analysis"
   },
   "confirmDialog": {
     "confirm": "Confirm"

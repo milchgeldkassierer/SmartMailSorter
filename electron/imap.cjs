@@ -173,7 +173,60 @@ async function processMessages(client, messages, account, targetCategory) {
 
     if (all) {
       try {
+        const bodySize = all.body ? all.body.length : 0;
+        const bodySizeKB = (bodySize / 1024).toFixed(0);
+        logger.debug(`[Sync Debug] Parsing UID ${currentUid} (${bodySizeKB} KB)...`);
+
+        // Skip oversized emails to prevent event loop blocking (simpleParser is CPU-bound)
+        const MAX_PARSE_SIZE = 2 * 1024 * 1024; // 2 MB
+        if (bodySize > MAX_PARSE_SIZE) {
+          logger.warn(
+            `[Sync] Skipping UID ${currentUid}: too large (${bodySizeKB} KB > ${MAX_PARSE_SIZE / 1024} KB limit). Saving header only.`
+          );
+          // Extract minimal headers using simpleParser on just the header portion
+          let headerEnd = all.body.indexOf('\r\n\r\n');
+          if (headerEnd < 0) headerEnd = all.body.indexOf('\n\n');
+          const headerText = headerEnd > 0 ? all.body.substring(0, headerEnd) : all.body.substring(0, 4096);
+          const headerParsed = await simpleParser(headerText);
+
+          // Safe date parsing — fallback to now on malformed dates
+          let parsedDate = new Date().toISOString();
+          if (headerParsed.date) {
+            try {
+              const d = new Date(headerParsed.date);
+              if (!isNaN(d.getTime())) parsedDate = d.toISOString();
+            } catch {
+              // keep default
+            }
+          }
+
+          // Check for attachment indicators in raw headers
+          const hasAttachmentHeader =
+            /Content-Disposition:\s*attachment/i.test(headerText) ||
+            /Content-Type:\s*multipart\/mixed/i.test(headerText);
+
+          saveEmail({
+            id: id,
+            accountId: account.id,
+            sender: headerParsed.from?.text || 'Unknown',
+            senderEmail: headerParsed.from?.value?.[0]?.address || '',
+            subject: headerParsed.subject || '(Large Email)',
+            body: `[Email too large to parse: ${bodySizeKB} KB]`,
+            bodyHtml: null,
+            date: parsedDate,
+            folder: targetCategory,
+            smartCategory: null,
+            isRead: message.attributes.flags?.has('\\Seen') || false,
+            isFlagged: message.attributes.flags?.has('\\Flagged') || false,
+            hasAttachments: hasAttachmentHeader,
+            uid: currentUid,
+          });
+          savedCount++;
+          continue;
+        }
+
         const parsed = await simpleParser(all.body);
+        logger.debug(`[Sync Debug] Parsed UID ${currentUid}: ${(parsed.attachments || []).length} attachments`);
         const attachments = (parsed.attachments || []).map((att) => ({
           filename: att.filename || 'attachment',
           contentType: att.contentType,
@@ -205,6 +258,7 @@ async function processMessages(client, messages, account, targetCategory) {
 
         saveEmail(email);
         savedCount++;
+        logger.debug(`[Sync Debug] Saved UID ${currentUid} to DB.`);
 
         // Queue notification for new unread emails (shown after AI categorization)
         if (!email.isRead) {
@@ -360,7 +414,7 @@ async function fetchUidBatch(client, seqRange) {
     headers.push({
       attributes: {
         uid: message.uid,
-        flags: message.flags || [],
+        flags: message.flags instanceof Set ? message.flags : new Set(message.flags || []),
       },
     });
   }
@@ -407,7 +461,7 @@ async function downloadMessageBatch(client, chunkUids, account, targetCategory) 
         parts: [],
         attributes: {
           uid: message.uid,
-          flags: message.flags || [],
+          flags: message.flags instanceof Set ? message.flags : new Set(message.flags || []),
         },
       };
 
@@ -601,7 +655,6 @@ async function syncAccount(account) {
     const unreadCount = getTotalUnreadEmailCount();
     notifications.updateBadgeCount(unreadCount);
 
-    await client.logout();
     logger.info(`Sync completed. Total new messages: ${totalNew}, Total unread count: ${unreadCount}`);
     return { success: true, count: totalNew };
   } catch (error) {
@@ -609,9 +662,16 @@ async function syncAccount(account) {
       logger.error('IMAP Error:', error);
     }
     return { success: false, error: error.message };
+  } finally {
+    try {
+      await client.logout();
+    } catch {
+      // swallow logout errors to avoid masking original error
+    }
   }
 }
 
+/** Test IMAP connection by connecting, locking INBOX, and logging out. */
 async function testConnection(account) {
   const client = createImapClient(account);
 
@@ -619,16 +679,22 @@ async function testConnection(account) {
     await client.connect();
     const lock = await client.getMailboxLock('INBOX');
     lock.release();
-    await client.logout();
     return { success: true };
   } catch (error) {
     if (process.env.NODE_ENV !== 'test') {
       logger.error('IMAP Error:', error);
     }
     return { success: false, error: error.message };
+  } finally {
+    try {
+      await client.logout();
+    } catch {
+      // swallow logout errors to avoid masking original error
+    }
   }
 }
 
+/** Delete an email by UID from the IMAP server (moves to Trash or expunges). */
 async function deleteEmail(account, uid, dbFolder) {
   if (!uid) return { success: false, error: 'No UID' };
 
@@ -639,12 +705,14 @@ async function deleteEmail(account, uid, dbFolder) {
 
     // Resolve Server Path from DB Folder Name using helper
     const foundPath = await findServerFolderForDbName(client, dbFolder);
+
+    if (!foundPath && dbFolder && dbFolder !== INBOX_FOLDER) {
+      return { success: false, error: `Could not map folder '${dbFolder}' to a server path` };
+    }
     const serverPath = foundPath || 'INBOX';
 
     if (foundPath) {
       logger.debug(`[Delete] Mapped DB folder '${dbFolder}' to Server folder '${serverPath}'`);
-    } else if (dbFolder && dbFolder !== INBOX_FOLDER) {
-      logger.warn(`[Delete] Could not map '${dbFolder}' to server path. Defaulting to INBOX.`);
     }
 
     // Find the Trash folder on the server
@@ -658,7 +726,6 @@ async function deleteEmail(account, uid, dbFolder) {
       } finally {
         lock.release();
       }
-      await client.logout();
       return { success: true, movedToTrash: false };
     }
 
@@ -671,7 +738,6 @@ async function deleteEmail(account, uid, dbFolder) {
       } finally {
         lock.release();
       }
-      await client.logout();
       return { success: true, movedToTrash: true };
     } else {
       // No Trash folder found on server, fall back to permanent delete
@@ -682,15 +748,21 @@ async function deleteEmail(account, uid, dbFolder) {
       } finally {
         lock.release();
       }
-      await client.logout();
       return { success: true, movedToTrash: false };
     }
   } catch (error) {
     logger.error('Delete Error:', error);
     return { success: false, error: error.message };
+  } finally {
+    try {
+      await client.logout();
+    } catch {
+      // swallow logout errors to avoid masking original error
+    }
   }
 }
 
+/** Set or clear an IMAP flag (e.g. \Seen, \Flagged) on a message by UID. */
 async function setEmailFlag(account, uid, flag, value, dbFolder) {
   if (!uid) return { success: false, error: 'No UID' };
 
@@ -701,12 +773,14 @@ async function setEmailFlag(account, uid, flag, value, dbFolder) {
 
     // Resolve Server Path from DB Folder Name using helper
     const foundPath = await findServerFolderForDbName(client, dbFolder);
+
+    if (!foundPath && dbFolder && dbFolder !== INBOX_FOLDER) {
+      return { success: false, error: `Could not map folder '${dbFolder}' to a server path` };
+    }
     const serverPath = foundPath || 'INBOX';
 
     if (foundPath) {
       logger.debug(`[Flag] Mapped DB folder '${dbFolder}' to Server folder '${serverPath}'`);
-    } else if (dbFolder && dbFolder !== INBOX_FOLDER) {
-      logger.warn(`[Flag] Could not map '${dbFolder}' to server path. Defaulting to INBOX.`);
     }
 
     // Get mailbox lock for the target folder
@@ -722,11 +796,16 @@ async function setEmailFlag(account, uid, flag, value, dbFolder) {
       lock.release();
     }
 
-    await client.logout();
     return { success: true };
   } catch (error) {
     logger.error('Flag Update Error:', error);
     return { success: false, error: error.message };
+  } finally {
+    try {
+      await client.logout();
+    } catch {
+      // swallow logout errors to avoid masking original error
+    }
   }
 }
 

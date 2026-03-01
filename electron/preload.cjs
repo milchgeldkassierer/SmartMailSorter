@@ -43,6 +43,12 @@ contextBridge.exposeInMainWorld('electron', {
   loadAISettings: () => ipcRenderer.invoke('ai-settings-load'),
   parseNaturalLanguageQuery: (query) => ipcRenderer.invoke('parse-natural-language-query', query),
 
+  // AI call (routed through main process to avoid CORS)
+  aiCall: (params) => ipcRenderer.invoke('ai-call', params),
+
+  // Ollama
+  ollamaDetect: () => ipcRenderer.invoke('ollama-detect'),
+
   // Notification Settings (Global + Per-Account)
   loadNotificationSettings: () => ipcRenderer.invoke('load-notification-settings'),
   saveNotificationSettings: (settings) => ipcRenderer.invoke('save-notification-settings', settings),
