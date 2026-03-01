@@ -296,14 +296,28 @@ export const categorizeBatchWithAI = async (
   };
 
   // Construct lightweight input list (save tokens)
+  // For local models (Ollama), use smaller context window
+  const bodyPreviewLength = settings.provider === LLMProvider.OLLAMA ? 500 : 1500;
   const inputs = emails.map((e) => ({
     id: e.id,
     sender: e.sender,
     subject: e.subject,
-    body_preview: (e.body || '').substring(0, 1500), // 1500 chars limit per email
+    body_preview: (e.body || '').substring(0, bodyPreviewLength),
   }));
 
-  const prompt = `
+  // Use shorter prompt for local models to fit in smaller context windows
+  const prompt =
+    settings.provider === LLMProvider.OLLAMA
+      ? `Sortiere diese ${emails.length} Emails.
+
+Emails: ${JSON.stringify(inputs)}
+
+Kategorien: ${targetCategories.join(', ')}
+
+Nutze existierende Kategorien. Falls keine passt, schlage neue vor (1 Wort). Vermeide "Sonstiges".
+
+JSON Array mit 'id', 'category', 'summary' pro Email.`
+      : `
       Du bist ein strenger Email-Sortierer. Sortiere die folgenden ${emails.length} Emails.
 
       Eingabedaten (JSON):
