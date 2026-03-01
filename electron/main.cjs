@@ -416,6 +416,7 @@ app.whenReady().then(() => {
   // AI Settings safeStorage IPC handlers
   const AI_SETTINGS_FILE = path.join(app.getPath('userData'), 'ai-settings.encrypted');
   const AI_SETTINGS_FILE_PLAINTEXT = path.join(app.getPath('userData'), 'ai-settings.json');
+  const OLLAMA_BASE_URL = 'http://localhost:11434';
 
   ipcMain.handle('ai-settings-save', async (event, settings) => {
     try {
@@ -438,7 +439,8 @@ app.whenReady().then(() => {
           logger.info('[IPC] AI API key validated successfully');
         } catch (validationError) {
           const msg = validationError instanceof Error ? validationError.message : String(validationError);
-          if (msg.includes('401') || msg.includes('403') || msg.includes('Incorrect API key') || msg.includes('invalid')) {
+          const msgLower = msg.toLowerCase();
+          if (msg.includes('401') || msg.includes('403') || msgLower.includes('api key not valid') || msgLower.includes('incorrect api key')) {
             throw new Error(`Invalid API key for ${settings.provider}: Authentication failed`);
           }
           // Other errors (network, rate limit) are not key-related - allow save
@@ -518,9 +520,8 @@ app.whenReady().then(() => {
   ipcMain.handle('ollama-detect', async () => {
     try {
       logger.debug('[Ollama] Detecting running Ollama instance...');
-      const response = await fetchWithTimeout('http://localhost:11434/api/tags', {
+      const response = await fetchWithTimeout(OLLAMA_BASE_URL + '/api/tags', {
         method: 'GET',
-        headers: { 'Content-Type': 'application/json' },
       }, 5000);
 
       if (!response.ok) {
@@ -529,36 +530,12 @@ app.whenReady().then(() => {
       }
 
       const data = await response.json();
-      const models = data.models || [];
-      logger.info(`[Ollama] Detected ${models.length} available models`);
+      const models = (data.models || []).map((m) => m.name);
+      logger.info(`[Ollama] Detected ${models.length} available models: ${models.join(', ')}`);
       return { available: true, models };
     } catch (error) {
       logger.debug('[Ollama] Ollama not available:', error.message);
       return { available: false, models: [] };
-    }
-  });
-
-  ipcMain.handle('ollama-list-models', async () => {
-    try {
-      logger.debug('[Ollama] Fetching available models...');
-      const response = await fetchWithTimeout('http://localhost:11434/api/tags', {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' },
-      }, 5000);
-
-      if (!response.ok) {
-        logger.warn(`[Ollama] API returned status ${response.status}`);
-        return [];
-      }
-
-      const data = await response.json();
-      const models = data.models || [];
-      const modelNames = models.map((model) => model.name);
-      logger.info(`[Ollama] Found ${modelNames.length} models: ${modelNames.join(', ')}`);
-      return modelNames;
-    } catch (error) {
-      logger.debug('[Ollama] Failed to fetch models:', error.message);
-      return [];
     }
   });
 
@@ -590,6 +567,16 @@ app.whenReady().then(() => {
       return JSON.parse(fs.readFileSync(AI_SETTINGS_FILE_PLAINTEXT, 'utf8'));
     }
     return null;
+  }
+
+  /** Load AI settings and validate they are configured (throws if not) */
+  function loadAndValidateAISettings() {
+    const settings = loadAISettings();
+    const isOllama = settings?.provider?.toLowerCase().includes('ollama');
+    if (!settings || (!isOllama && !settings.apiKey)) {
+      throw new Error('AI settings not configured');
+    }
+    return settings;
   }
 
   /** Clean markdown code fences from AI response text */
@@ -682,7 +669,7 @@ app.whenReady().then(() => {
   /** Call Ollama local API and return parsed JSON */
   async function callOllamaApi(settings, systemInstruction, userPrompt) {
     const response = await fetchWithTimeout(
-      'http://localhost:11434/api/chat',
+      OLLAMA_BASE_URL + '/api/chat',
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -728,11 +715,7 @@ app.whenReady().then(() => {
         throw new Error('Search query too long (max 500 characters)');
       }
 
-      const settings = loadAISettings();
-      const isOllama = settings && settings.provider && settings.provider.toLowerCase().includes('ollama');
-      if (!settings || (!isOllama && !settings.apiKey)) {
-        throw new Error('AI settings not configured');
-      }
+      const settings = loadAndValidateAISettings();
 
       const systemInstruction = `Du bist ein Such-Query-Übersetzer für ein Email-System.
 
@@ -780,11 +763,7 @@ Antworte NUR mit dem JSON-Objekt mit dem "query" Feld.`;
 
   // Generic AI call handler - routes through main process to avoid CORS issues
   ipcMain.handle('ai-call', async (event, { systemInstruction, userPrompt }) => {
-    const settings = loadAISettings();
-    const isOllama = settings && settings.provider && settings.provider.toLowerCase().includes('ollama');
-    if (!settings || (!isOllama && !settings.apiKey)) {
-      throw new Error('AI settings not configured');
-    }
+    const settings = loadAndValidateAISettings();
     return await callAIProvider(settings, systemInstruction, userPrompt);
   });
 

@@ -18,20 +18,6 @@ interface CategorizationResult {
   confidence?: number;
 }
 
-interface OpenAIResponse {
-  choices?: Array<{
-    message?: {
-      content: string | null;
-    };
-  }>;
-}
-
-interface OllamaResponse {
-  message?: {
-    content: string;
-  };
-}
-
 interface GeminiConfig {
   responseMimeType: string;
   responseSchema: Schema;

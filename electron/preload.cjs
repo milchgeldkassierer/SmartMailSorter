@@ -48,7 +48,6 @@ contextBridge.exposeInMainWorld('electron', {
 
   // Ollama
   ollamaDetect: () => ipcRenderer.invoke('ollama-detect'),
-  ollamaListModels: () => ipcRenderer.invoke('ollama-list-models'),
 
   // Notification Settings (Global + Per-Account)
   loadNotificationSettings: () => ipcRenderer.invoke('load-notification-settings'),

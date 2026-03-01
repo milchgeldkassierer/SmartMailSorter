@@ -20,7 +20,6 @@ const SmartSortTab: React.FC<SmartSortTabProps> = ({ aiSettings, onSave, saveErr
   const [tempAISettings, setTempAISettings] = useState<AISettings>(aiSettings);
   const [ollamaStatus, setOllamaStatus] = useState<OllamaStatus>({ available: false, checking: false });
   const [ollamaModels, setOllamaModels] = useState<string[]>([]);
-  const [fetchingModels, setFetchingModels] = useState(false);
   const [saved, setSaved] = useState(false);
 
   // Sync prop changes to internal state
@@ -28,72 +27,51 @@ const SmartSortTab: React.FC<SmartSortTabProps> = ({ aiSettings, onSave, saveErr
     setTempAISettings(aiSettings);
   }, [aiSettings]);
 
-  // Detect Ollama connection status on mount and when provider changes to Ollama
+  // Detect Ollama and fetch models in a single call
   useEffect(() => {
-    const detectOllama = async () => {
-      // Only check if Ollama is selected or on initial mount
-      if (tempAISettings.provider !== LLMProvider.OLLAMA) {
-        return;
-      }
+    if (tempAISettings.provider !== LLMProvider.OLLAMA) {
+      setOllamaModels([]);
+      return;
+    }
 
-      setOllamaStatus({ available: false, checking: true });
+    let cancelled = false;
+    setOllamaStatus({ available: false, checking: true });
 
+    const detectAndFetchModels = async () => {
       try {
-        if (window.electron) {
-          const result = await window.electron.ollamaDetect();
-          setOllamaStatus({
-            available: result.available,
-            error: result.error,
-            checking: false,
+        if (!window.electron) return;
+        const result = await window.electron.ollamaDetect();
+        if (cancelled) return;
+
+        setOllamaStatus({
+          available: result.available,
+          error: result.error,
+          checking: false,
+        });
+
+        const models = result.available ? result.models : [];
+        setOllamaModels(models);
+
+        // Auto-select first real model if current model isn't installed
+        if (models.length > 0) {
+          setTempAISettings((prev) => {
+            if (!models.includes(prev.model)) {
+              return { ...prev, model: models[0] };
+            }
+            return prev;
           });
         }
       } catch (error) {
+        if (cancelled) return;
         const message = error instanceof Error ? error.message : 'Failed to detect Ollama';
-        setOllamaStatus({
-          available: false,
-          error: message,
-          checking: false,
-        });
+        setOllamaStatus({ available: false, error: message, checking: false });
+        setOllamaModels([]);
       }
     };
 
-    detectOllama();
+    detectAndFetchModels();
+    return () => { cancelled = true; };
   }, [tempAISettings.provider]);
-
-  // Fetch available Ollama models when Ollama is available
-  useEffect(() => {
-    const fetchOllamaModels = async () => {
-      if (tempAISettings.provider !== LLMProvider.OLLAMA || !ollamaStatus.available) {
-        setOllamaModels([]);
-        return;
-      }
-
-      setFetchingModels(true);
-
-      try {
-        if (window.electron) {
-          const models = await window.electron.ollamaListModels();
-          setOllamaModels(models);
-          // Auto-select first real model if current model isn't installed
-          if (models.length > 0) {
-            setTempAISettings((prev) => {
-              if (!models.includes(prev.model)) {
-                return { ...prev, model: models[0] };
-              }
-              return prev;
-            });
-          }
-        }
-      } catch (error) {
-        // Fall back to static models on error
-        setOllamaModels([]);
-      } finally {
-        setFetchingModels(false);
-      }
-    };
-
-    fetchOllamaModels();
-  }, [tempAISettings.provider, ollamaStatus.available]);
 
   const handleSaveAI = () => {
     onSave(tempAISettings);
@@ -110,10 +88,14 @@ const SmartSortTab: React.FC<SmartSortTabProps> = ({ aiSettings, onSave, saveErr
       ...tempAISettings,
       provider,
       model: defaultModel,
-      // Keep existing apiKey when switching between cloud providers; clear only for Ollama
-      apiKey: provider === LLMProvider.OLLAMA ? '' : tempAISettings.apiKey,
+      apiKey: '',
     });
   };
+
+  const availableModels =
+    tempAISettings.provider === LLMProvider.OLLAMA && ollamaModels.length > 0
+      ? ollamaModels
+      : AVAILABLE_MODELS[tempAISettings.provider];
 
   return (
     <div className="space-y-6">
@@ -181,24 +163,16 @@ const SmartSortTab: React.FC<SmartSortTabProps> = ({ aiSettings, onSave, saveErr
             className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-900 focus:border-blue-500 outline-none"
             value={tempAISettings.model}
             onChange={(e) => setTempAISettings({ ...tempAISettings, model: e.target.value })}
-            disabled={fetchingModels}
+            disabled={ollamaStatus.checking}
           >
-            {fetchingModels ? (
+            {ollamaStatus.checking ? (
               <option>{t('smartSortTab.ollamaFetchingModels')}</option>
             ) : (
-              (() => {
-                // For Ollama: merge fetched models with static fallback
-                const availableModels =
-                  tempAISettings.provider === LLMProvider.OLLAMA && ollamaModels.length > 0
-                    ? ollamaModels
-                    : AVAILABLE_MODELS[tempAISettings.provider];
-
-                return availableModels.map((m) => (
-                  <option key={m} value={m}>
-                    {m}
-                  </option>
-                ));
-              })()
+              availableModels.map((m) => (
+                <option key={m} value={m}>
+                  {m}
+                </option>
+              ))
             )}
           </select>
         </div>
@@ -213,18 +187,12 @@ const SmartSortTab: React.FC<SmartSortTabProps> = ({ aiSettings, onSave, saveErr
             <input
               type="password"
               className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-900 focus:border-blue-500 outline-none placeholder-slate-400"
-              placeholder={
-                tempAISettings.provider === LLMProvider.GEMINI
-                  ? t('smartSortTab.apiKeyPlaceholderOptional')
-                  : t('smartSortTab.apiKeyPlaceholder')
-              }
+              placeholder={t('smartSortTab.apiKeyPlaceholder')}
               value={tempAISettings.apiKey}
               onChange={(e) => setTempAISettings({ ...tempAISettings, apiKey: e.target.value })}
             />
             <p className="text-xs text-slate-500 mt-1">
-              {tempAISettings.provider === LLMProvider.GEMINI
-                ? t('smartSortTab.geminiKeyInfo')
-                : t('smartSortTab.apiKeyInfo')}
+              {t('smartSortTab.apiKeyInfo')}
             </p>
           </div>
         ) : (

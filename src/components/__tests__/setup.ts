@@ -209,7 +209,7 @@ beforeAll(async () => {
             star: 'Markieren',
             unstar: 'Markierung entfernen',
             aiConfidence: 'KI-Konfidenz',
-            aiAnalysis: 'Gemini Analyse',
+            aiAnalysis: 'Smart Sort Analyse',
           },
           categories: {
             inbox: 'Posteingang',
@@ -268,12 +268,12 @@ beforeAll(async () => {
             subtitle: 'Intelligenter E-Mail-Kategorisierungs-Prototyp',
             simulationModeTitle: 'Simulationsmodus:',
             simulationModeDescription:
-              'Direkter IMAP-Zugriff ist im Browser nicht möglich. Diese App verwendet Gemini AI, um realistische E-Mail-Daten zu erzeugen und den KI-Sortieralgorithmus zu demonstrieren.',
+              'Direkter IMAP-Zugriff ist im Browser nicht möglich. Diese App verwendet KI, um realistische E-Mail-Daten zu erzeugen und den KI-Sortieralgorithmus zu demonstrieren.',
             description:
-              'Klicken Sie auf "Verbinden", um den Simulator zu starten. Gemini generiert Beispiel-Emails und sortiert diese automatisch in die richtigen Ordner.',
+              'Klicken Sie auf "Verbinden", um den Simulator zu starten. Die KI generiert Beispiel-Emails und sortiert diese automatisch in die richtigen Ordner.',
             connecting: 'Generiere Postfach...',
             connectButton: 'Mit Demo-Postfach verbinden',
-            poweredBy: 'Bereitgestellt von Gemini 3 Flash Preview',
+            poweredBy: 'Bereitgestellt von Smart Sort Analyse',
           },
           confirmDialog: {
             confirm: 'Bestätigen',
@@ -584,12 +584,12 @@ beforeAll(async () => {
             subtitle: 'Intelligent Email Categorization Prototype',
             simulationModeTitle: 'Simulation Mode:',
             simulationModeDescription:
-              'Direct IMAP access is not possible from a browser. This app uses Gemini AI to generate realistic email data and demonstrate how the AI sorting algorithm functions.',
+              'Direct IMAP access is not possible from a browser. This app uses AI to generate realistic email data and demonstrate how the AI sorting algorithm functions.',
             description:
-              'Click "Connect" to start the simulator. Gemini will generate example emails and automatically sort them into the correct folders.',
+              'Click "Connect" to start the simulator. The AI will generate sample emails and automatically sort them into the correct folders.',
             connecting: 'Generating mailbox...',
             connectButton: 'Connect with demo mailbox',
-            poweredBy: 'Powered by Gemini 3 Flash Preview',
+            poweredBy: 'Powered by Smart Sort Analysis',
           },
           confirmDialog: {
             confirm: 'Confirm',

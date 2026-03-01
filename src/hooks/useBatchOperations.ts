@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Email, AISettings, DefaultEmailCategory, SortResult, Category } from '../types';
+import { Email, AISettings, DefaultEmailCategory, SortResult, Category, LLMProvider } from '../types';
 import { categorizeBatchWithAI } from '../services/geminiService';
 import { UseDialogReturn } from './useDialog';
 
@@ -216,10 +216,11 @@ export const useBatchOperations = ({
     'Failed to update flag status:'
   );
 
+  const isOllama = aiSettings.provider === LLMProvider.OLLAMA;
+
   const handleBatchSmartSort = async () => {
     if (selectedIds.size === 0) return;
-    const isOllamaProvider = aiSettings.provider === 'Ollama';
-    if (!isOllamaProvider && !aiSettings.apiKey) {
+    if (!isOllama && !aiSettings.apiKey) {
       await dialog.alert({
         title: t('batch.aiSettingsRequired'),
         message: t('batch.configureApiKey'),
@@ -304,7 +305,6 @@ export const useBatchOperations = ({
     }
   };
 
-  const isOllama = aiSettings.provider === 'Ollama';
   const canSmartSort = Boolean(selectedIds.size > 0 && aiSettings.provider && (isOllama || aiSettings.apiKey));
 
   return {

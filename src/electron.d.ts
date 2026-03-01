@@ -94,8 +94,7 @@ declare global {
       aiCall: (params: { systemInstruction: string; userPrompt: string }) => Promise<unknown>;
 
       // Ollama Integration
-      ollamaDetect: () => Promise<{ available: boolean; error?: string }>;
-      ollamaListModels: () => Promise<string[]>;
+      ollamaDetect: () => Promise<{ available: boolean; models: string[]; error?: string }>;
 
       // Notification Settings
       loadNotificationSettings: () => Promise<NotificationSettings | null>;
