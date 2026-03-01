@@ -55,6 +55,7 @@ const getApiKey = (settings?: AISettings) => {
   return '';
 };
 
+/** Delay execution for the given number of milliseconds. */
 const _wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /** Route an LLM call to the configured provider and return parsed JSON. */
@@ -218,9 +219,7 @@ export const categorizeEmailWithAI = async (
   );
 };
 
-/**
- * BATCH PROCESSING
- */
+/** Categorize a batch of emails using the configured AI provider, returning sort results with categories and confidence. */
 export const categorizeBatchWithAI = async (
   emails: Email[],
   availableCategories: string[],

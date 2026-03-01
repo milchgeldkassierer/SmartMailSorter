@@ -115,6 +115,7 @@ const SmartSortTab: React.FC<SmartSortTabProps> = ({ aiSettings, onSave, saveErr
     };
   }, [tempAISettings.provider]);
 
+  /** Trigger an async save of the current AI settings and track the save attempt via token. */
   const handleSaveAI = () => {
     saveTokenRef.current++;
     pendingTokenRef.current = saveTokenRef.current;
@@ -122,6 +123,7 @@ const SmartSortTab: React.FC<SmartSortTabProps> = ({ aiSettings, onSave, saveErr
     onSave(tempAISettings);
   };
 
+  /** Switch AI provider, preserving per-provider API keys and selecting the default model. */
   const handleProviderChange = (provider: LLMProvider) => {
     // Save current API key before switching
     if (tempAISettings.provider !== LLMProvider.OLLAMA && tempAISettings.apiKey) {
