@@ -17,6 +17,7 @@ const notifications = require('./notifications.cjs');
 const { sanitizeFilename } = require('./utils/security.cjs');
 const { createCspHeaderHandler } = require('./utils/csp-config.cjs');
 const { TRASH_FOLDER } = require('./folderConstants.cjs');
+const { LLMProviders } = require('./providerConstants.cjs');
 
 const isDev = !app.isPackaged;
 
@@ -436,28 +437,34 @@ app.whenReady().then(() => {
         throw new Error('Invalid settings: apiKey must be a string');
       }
 
-      // Validate API key with a lightweight test call
-      const isOllama = settings.provider === 'Ollama';
+      // Validate API key with a lightweight test call (only if key changed)
+      const isOllama = settings.provider === LLMProviders.OLLAMA;
       if (!isOllama && (!settings.apiKey || settings.apiKey.trim() === '')) {
         throw new Error(`Missing API key for ${settings.provider}`);
       }
       if (!isOllama && settings.apiKey) {
-        try {
-          await callAIProvider(settings, 'Reply with exactly: {"ok":true}', 'Test');
-          logger.info('[IPC] AI API key validated successfully');
-        } catch (validationError) {
-          const msg = validationError instanceof Error ? validationError.message : String(validationError);
-          const msgLower = msg.toLowerCase();
-          if (
-            msg.includes('401') ||
-            msg.includes('403') ||
-            msgLower.includes('api key not valid') ||
-            msgLower.includes('incorrect api key')
-          ) {
-            throw new Error(`Invalid API key for ${settings.provider}: Authentication failed`);
+        const existingSettings = loadAISettings();
+        const keyChanged = !existingSettings || existingSettings.apiKey !== settings.apiKey;
+        if (keyChanged) {
+          try {
+            await callAIProvider(settings, 'Reply with exactly: {"ok":true}', 'Test');
+            logger.info('[IPC] AI API key validated successfully');
+          } catch (validationError) {
+            const msg = validationError instanceof Error ? validationError.message : String(validationError);
+            const msgLower = msg.toLowerCase();
+            if (
+              msg.includes('401') ||
+              msg.includes('403') ||
+              msgLower.includes('api key not valid') ||
+              msgLower.includes('incorrect api key')
+            ) {
+              throw new Error(`Invalid API key for ${settings.provider}: Authentication failed`);
+            }
+            // Other errors (network, rate limit) are not key-related - allow save
+            logger.warn('[IPC] API key validation skipped due to non-auth error:', msg);
           }
-          // Other errors (network, rate limit) are not key-related - allow save
-          logger.warn('[IPC] API key validation skipped due to non-auth error:', msg);
+        } else {
+          logger.info('[IPC] API key unchanged, skipping validation');
         }
       }
 
@@ -605,7 +612,7 @@ app.whenReady().then(() => {
     if (typeof settings.model !== 'string' || !settings.model.trim()) {
       throw new Error('AI settings must include a valid model');
     }
-    const isOllama = settings.provider === 'Ollama';
+    const isOllama = settings.provider === LLMProviders.OLLAMA;
     if (!isOllama && (!settings.apiKey || !settings.apiKey.trim())) {
       throw new Error(`Missing API key for ${settings.provider}`);
     }
@@ -745,13 +752,13 @@ app.whenReady().then(() => {
   /** Route to the correct AI provider based on settings */
   async function callAIProvider(settings, systemInstruction, userPrompt) {
     switch (settings.provider) {
-      case 'Google Gemini':
+      case LLMProviders.GEMINI:
         return callGeminiApi(settings, systemInstruction, userPrompt);
-      case 'OpenAI':
+      case LLMProviders.OPENAI:
         return callOpenAIApi(settings, systemInstruction, userPrompt);
-      case 'Anthropic':
+      case LLMProviders.ANTHROPIC:
         return callAnthropicApi(settings, systemInstruction, userPrompt);
-      case 'Ollama':
+      case LLMProviders.OLLAMA:
         return callOllamaApi(settings, systemInstruction, userPrompt);
       default:
         throw new Error(`Unknown AI provider: ${settings.provider}`);
@@ -818,8 +825,9 @@ Antworte NUR mit dem JSON-Objekt mit dem "query" Feld.`;
   ipcMain.handle('ai-call', async (event, args) => {
     if (!args || typeof args !== 'object') throw new Error('Invalid ai-call payload: expected an object');
     const { systemInstruction, userPrompt } = args;
-    if (!systemInstruction || typeof systemInstruction !== 'string') throw new Error('Invalid systemInstruction');
-    if (!userPrompt || typeof userPrompt !== 'string') throw new Error('Invalid userPrompt');
+    if (!systemInstruction || typeof systemInstruction !== 'string' || !systemInstruction.trim())
+      throw new Error('Invalid systemInstruction');
+    if (!userPrompt || typeof userPrompt !== 'string' || !userPrompt.trim()) throw new Error('Invalid userPrompt');
     if (systemInstruction.length > 10000) throw new Error('systemInstruction too long (max 10000 characters)');
     if (userPrompt.length > 200000) throw new Error('userPrompt too long (max 200000 characters)');
 

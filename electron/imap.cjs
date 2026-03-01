@@ -183,26 +183,41 @@ async function processMessages(client, messages, account, targetCategory) {
           logger.warn(
             `[Sync] Skipping UID ${currentUid}: too large (${bodySizeKB} KB > ${MAX_PARSE_SIZE / 1024} KB limit). Saving header only.`
           );
-          // Extract minimal headers without full parse
+          // Extract minimal headers using simpleParser on just the header portion
           const headerEnd = all.body.indexOf('\r\n\r\n');
           const headerText = headerEnd > 0 ? all.body.substring(0, headerEnd) : all.body.substring(0, 4096);
-          const subjectMatch = headerText.match(/^Subject:\s*(.+)/im);
-          const fromMatch = headerText.match(/^From:\s*(.+)/im);
-          const dateMatch = headerText.match(/^Date:\s*(.+)/im);
+          const headerParsed = await simpleParser(headerText);
+
+          // Safe date parsing — fallback to now on malformed dates
+          let parsedDate = new Date().toISOString();
+          if (headerParsed.date) {
+            try {
+              const d = new Date(headerParsed.date);
+              if (!isNaN(d.getTime())) parsedDate = d.toISOString();
+            } catch {
+              // keep default
+            }
+          }
+
+          // Check for attachment indicators in raw headers
+          const hasAttachmentHeader =
+            /Content-Disposition:\s*attachment/i.test(headerText) ||
+            /Content-Type:\s*multipart\/mixed/i.test(headerText);
+
           saveEmail({
             id: id,
             accountId: account.id,
-            sender: fromMatch ? fromMatch[1].trim() : 'Unknown',
-            senderEmail: '',
-            subject: subjectMatch ? subjectMatch[1].trim() : '(Large Email)',
+            sender: headerParsed.from?.text || 'Unknown',
+            senderEmail: headerParsed.from?.value?.[0]?.address || '',
+            subject: headerParsed.subject || '(Large Email)',
             body: `[Email too large to parse: ${bodySizeKB} KB]`,
             bodyHtml: null,
-            date: dateMatch ? new Date(dateMatch[1].trim()).toISOString() : new Date().toISOString(),
+            date: parsedDate,
             folder: targetCategory,
             smartCategory: null,
             isRead: message.attributes.flags?.has('\\Seen') || false,
             isFlagged: message.attributes.flags?.has('\\Flagged') || false,
-            hasAttachments: true,
+            hasAttachments: hasAttachmentHeader,
             uid: currentUid,
           });
           savedCount++;

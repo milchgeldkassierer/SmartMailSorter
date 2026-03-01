@@ -127,6 +127,7 @@ export interface SearchConfig {
 }
 
 // AI Specific Types
+// Keep in sync with electron/providerConstants.cjs
 export enum LLMProvider {
   GEMINI = 'Google Gemini',
   OPENAI = 'OpenAI',
