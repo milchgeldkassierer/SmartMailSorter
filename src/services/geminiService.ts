@@ -271,7 +271,7 @@ ${jsonFormatHint}`
       Du bist ein strenger Email-Sortierer. Sortiere die folgenden ${emails.length} Emails.
 
       Eingabedaten (JSON):
-      ${JSON.stringify(inputs, null, 2)}
+      ${JSON.stringify(inputs)}
 
       EXISTIERENDE KATEGORIEN: ${targetCategories.join(', ')}.
 
@@ -291,15 +291,15 @@ ${jsonFormatHint}`
     if (Array.isArray(rawResults)) {
       resultsArray = rawResults;
     } else if (rawResults && typeof rawResults === 'object') {
-      const values = Object.values(rawResults as Record<string, unknown>);
-      const found = values.find((v) => Array.isArray(v));
-      if (Array.isArray(found)) {
-        resultsArray = found;
+      const obj = rawResults as Record<string, unknown>;
+      if (Array.isArray(obj.results)) {
+        resultsArray = obj.results;
       }
     }
 
     if (!resultsArray) {
       console.warn('[SmartSort] AI returned no results array. Raw:', JSON.stringify(rawResults).slice(0, 500));
+      resultsArray = [];
     }
 
     // Build ID-based lookup map

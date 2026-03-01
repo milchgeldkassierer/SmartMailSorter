@@ -432,7 +432,7 @@ app.whenReady().then(() => {
       }
 
       // Validate API key with a lightweight test call
-      const isOllama = settings.provider.toLowerCase().includes('ollama');
+      const isOllama = settings.provider === 'Ollama';
       if (!isOllama && settings.apiKey) {
         try {
           await callAIProvider(settings, 'Reply with exactly: {"ok":true}', 'Test');
@@ -572,7 +572,7 @@ app.whenReady().then(() => {
   /** Load AI settings and validate they are configured (throws if not) */
   function loadAndValidateAISettings() {
     const settings = loadAISettings();
-    const isOllama = settings?.provider?.toLowerCase().includes('ollama');
+    const isOllama = settings?.provider === 'Ollama';
     if (!settings || (!isOllama && !settings.apiKey)) {
       throw new Error('AI settings not configured');
     }
@@ -697,12 +697,13 @@ app.whenReady().then(() => {
 
   /** Route to the correct AI provider based on settings */
   async function callAIProvider(settings, systemInstruction, userPrompt) {
-    const providerLower = settings.provider.toLowerCase();
-    if (providerLower.includes('gemini')) return callGeminiApi(settings, systemInstruction, userPrompt);
-    if (providerLower.includes('openai')) return callOpenAIApi(settings, systemInstruction, userPrompt);
-    if (providerLower.includes('anthropic')) return callAnthropicApi(settings, systemInstruction, userPrompt);
-    if (providerLower.includes('ollama')) return callOllamaApi(settings, systemInstruction, userPrompt);
-    throw new Error(`Unknown AI provider: ${settings.provider}`);
+    switch (settings.provider) {
+      case 'Google Gemini': return callGeminiApi(settings, systemInstruction, userPrompt);
+      case 'OpenAI': return callOpenAIApi(settings, systemInstruction, userPrompt);
+      case 'Anthropic': return callAnthropicApi(settings, systemInstruction, userPrompt);
+      case 'Ollama': return callOllamaApi(settings, systemInstruction, userPrompt);
+      default: throw new Error(`Unknown AI provider: ${settings.provider}`);
+    }
   }
 
   // Natural Language Search IPC handler

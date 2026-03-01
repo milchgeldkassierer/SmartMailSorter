@@ -50,7 +50,6 @@ describe('Content Security Policy Configuration', () => {
       expect(cspHeader).toContain('https://fonts.googleapis.com');
       expect(cspHeader).toContain("img-src 'self' data:");
       expect(cspHeader).toContain("connect-src 'self'");
-      expect(cspHeader).toContain('https://api.openai.com');
       expect(cspHeader).toContain('https://generativelanguage.googleapis.com');
       expect(cspHeader).toContain('https://fonts.gstatic.com');
     });

@@ -13,13 +13,13 @@ interface OllamaStatus {
   available: boolean;
   error?: string;
   checking?: boolean;
+  models: string[];
 }
 
 const SmartSortTab: React.FC<SmartSortTabProps> = ({ aiSettings, onSave, saveError }) => {
   const { t } = useTranslation();
   const [tempAISettings, setTempAISettings] = useState<AISettings>(aiSettings);
-  const [ollamaStatus, setOllamaStatus] = useState<OllamaStatus>({ available: false, checking: false });
-  const [ollamaModels, setOllamaModels] = useState<string[]>([]);
+  const [ollamaStatus, setOllamaStatus] = useState<OllamaStatus>({ available: false, checking: false, models: [] });
   const [saved, setSaved] = useState(false);
 
   // Sync prop changes to internal state
@@ -30,12 +30,12 @@ const SmartSortTab: React.FC<SmartSortTabProps> = ({ aiSettings, onSave, saveErr
   // Detect Ollama and fetch models in a single call
   useEffect(() => {
     if (tempAISettings.provider !== LLMProvider.OLLAMA) {
-      setOllamaModels([]);
+      setOllamaStatus((prev) => ({ ...prev, models: [] }));
       return;
     }
 
     let cancelled = false;
-    setOllamaStatus({ available: false, checking: true });
+    setOllamaStatus({ available: false, checking: true, models: [] });
 
     const detectAndFetchModels = async () => {
       try {
@@ -43,14 +43,13 @@ const SmartSortTab: React.FC<SmartSortTabProps> = ({ aiSettings, onSave, saveErr
         const result = await window.electron.ollamaDetect();
         if (cancelled) return;
 
+        const models = result.available ? result.models : [];
         setOllamaStatus({
           available: result.available,
           error: result.error,
           checking: false,
+          models,
         });
-
-        const models = result.available ? result.models : [];
-        setOllamaModels(models);
 
         // Auto-select first real model if current model isn't installed
         if (models.length > 0) {
@@ -64,8 +63,7 @@ const SmartSortTab: React.FC<SmartSortTabProps> = ({ aiSettings, onSave, saveErr
       } catch (error) {
         if (cancelled) return;
         const message = error instanceof Error ? error.message : 'Failed to detect Ollama';
-        setOllamaStatus({ available: false, error: message, checking: false });
-        setOllamaModels([]);
+        setOllamaStatus({ available: false, error: message, checking: false, models: [] });
       }
     };
 
@@ -81,8 +79,8 @@ const SmartSortTab: React.FC<SmartSortTabProps> = ({ aiSettings, onSave, saveErr
 
   const handleProviderChange = (provider: LLMProvider) => {
     const defaultModel =
-      provider === LLMProvider.OLLAMA && ollamaModels.length > 0
-        ? ollamaModels[0]
+      provider === LLMProvider.OLLAMA && ollamaStatus.models.length > 0
+        ? ollamaStatus.models[0]
         : AVAILABLE_MODELS[provider][0];
     setTempAISettings({
       ...tempAISettings,
@@ -93,8 +91,8 @@ const SmartSortTab: React.FC<SmartSortTabProps> = ({ aiSettings, onSave, saveErr
   };
 
   const availableModels =
-    tempAISettings.provider === LLMProvider.OLLAMA && ollamaModels.length > 0
-      ? ollamaModels
+    tempAISettings.provider === LLMProvider.OLLAMA && ollamaStatus.models.length > 0
+      ? ollamaStatus.models
       : AVAILABLE_MODELS[tempAISettings.provider];
 
   return (
@@ -178,36 +176,32 @@ const SmartSortTab: React.FC<SmartSortTabProps> = ({ aiSettings, onSave, saveErr
         </div>
 
         {/* API Key */}
-        {tempAISettings.provider !== LLMProvider.OLLAMA ? (
-          <div>
-            <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-2">
-              <Key className="w-4 h-4 text-amber-500" />
-              {t('smartSortTab.apiKey')}
-            </label>
-            <input
-              type="password"
-              className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-900 focus:border-blue-500 outline-none placeholder-slate-400"
-              placeholder={t('smartSortTab.apiKeyPlaceholder')}
-              value={tempAISettings.apiKey}
-              onChange={(e) => setTempAISettings({ ...tempAISettings, apiKey: e.target.value })}
-            />
-            <p className="text-xs text-slate-500 mt-1">
-              {t('smartSortTab.apiKeyInfo')}
-            </p>
-          </div>
-        ) : (
-          <div>
-            <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-2">
-              <Key className="w-4 h-4 text-amber-500" />
-              {t('smartSortTab.apiKey')}
-            </label>
+        <div>
+          <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-2">
+            <Key className="w-4 h-4 text-amber-500" />
+            {t('smartSortTab.apiKey')}
+          </label>
+          {tempAISettings.provider === LLMProvider.OLLAMA ? (
             <div className="bg-green-50 border border-green-200 rounded-lg px-3 py-2">
               <p className="text-sm text-green-700">
                 {t('smartSortTab.ollamaNoApiKey')}
               </p>
             </div>
-          </div>
-        )}
+          ) : (
+            <>
+              <input
+                type="password"
+                className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-900 focus:border-blue-500 outline-none placeholder-slate-400"
+                placeholder={t('smartSortTab.apiKeyPlaceholder')}
+                value={tempAISettings.apiKey}
+                onChange={(e) => setTempAISettings({ ...tempAISettings, apiKey: e.target.value })}
+              />
+              <p className="text-xs text-slate-500 mt-1">
+                {t('smartSortTab.apiKeyInfo')}
+              </p>
+            </>
+          )}
+        </div>
       </div>
 
       {saveError && (
