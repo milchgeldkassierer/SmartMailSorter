@@ -213,7 +213,7 @@ describe('IMAP Folder Mapping and Special Folders', () => {
       expect(result.success).toBe(true);
     });
 
-    it('should default to INBOX when folder not found', async () => {
+    it('should fail when folder not found', async () => {
       setFolderList([{ name: 'INBOX', path: 'INBOX', delimiter: '.', specialUse: null }]);
 
       const account = createTestAccount({ id: 'delete-unknown' });
@@ -221,7 +221,8 @@ describe('IMAP Folder Mapping and Special Folders', () => {
 
       const result = await imap.deleteEmail(account, 100, 'UnknownFolder');
 
-      expect(result.success).toBe(true);
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('Could not map folder');
     });
   });
 
@@ -379,7 +380,7 @@ describe('IMAP Folder Mapping and Special Folders', () => {
       expect(result.success).toBe(true);
     });
 
-    it('should default to INBOX when folder not found', async () => {
+    it('should fail when folder not found', async () => {
       setFolderList([{ name: 'INBOX', path: 'INBOX', delimiter: '.', specialUse: null }]);
 
       const account = createTestAccount({ id: 'flag-unknown' });
@@ -387,7 +388,8 @@ describe('IMAP Folder Mapping and Special Folders', () => {
 
       const result = await imap.setEmailFlag(account, 100, '\\Seen', true, 'UnknownFolder');
 
-      expect(result.success).toBe(true);
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('Could not map folder');
     });
   });
 

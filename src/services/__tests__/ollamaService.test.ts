@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach, afterAll } from 'vitest';
 import { categorizeEmailWithAI, categorizeBatchWithAI, parseNaturalLanguageQuery } from '../geminiService';
 import { LLMProvider, DefaultEmailCategory, Email, AISettings, INBOX_FOLDER } from '../../types';
 
@@ -7,6 +7,8 @@ const mockAiCall = vi.fn();
 
 // Keep fetch mock for backward compat tests
 const mockFetch = vi.fn();
+const originalFetch = global.fetch;
+const originalWindow = global.window;
 global.fetch = mockFetch;
 
 Object.defineProperty(global, 'window', {
@@ -16,6 +18,11 @@ Object.defineProperty(global, 'window', {
     },
   },
   writable: true,
+});
+
+afterAll(() => {
+  global.fetch = originalFetch;
+  Object.defineProperty(global, 'window', { value: originalWindow, writable: true });
 });
 
 describe('Ollama Integration Tests', () => {

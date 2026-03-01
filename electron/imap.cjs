@@ -673,13 +673,18 @@ async function testConnection(account) {
     await client.connect();
     const lock = await client.getMailboxLock('INBOX');
     lock.release();
-    await client.logout();
     return { success: true };
   } catch (error) {
     if (process.env.NODE_ENV !== 'test') {
       logger.error('IMAP Error:', error);
     }
     return { success: false, error: error.message };
+  } finally {
+    try {
+      await client.logout();
+    } catch {
+      // swallow logout errors to avoid masking original error
+    }
   }
 }
 
@@ -694,12 +699,14 @@ async function deleteEmail(account, uid, dbFolder) {
 
     // Resolve Server Path from DB Folder Name using helper
     const foundPath = await findServerFolderForDbName(client, dbFolder);
+
+    if (!foundPath && dbFolder && dbFolder !== INBOX_FOLDER) {
+      return { success: false, error: `Could not map folder '${dbFolder}' to a server path` };
+    }
     const serverPath = foundPath || 'INBOX';
 
     if (foundPath) {
       logger.debug(`[Delete] Mapped DB folder '${dbFolder}' to Server folder '${serverPath}'`);
-    } else if (dbFolder && dbFolder !== INBOX_FOLDER) {
-      logger.warn(`[Delete] Could not map '${dbFolder}' to server path. Defaulting to INBOX.`);
     }
 
     // Find the Trash folder on the server
@@ -713,7 +720,6 @@ async function deleteEmail(account, uid, dbFolder) {
       } finally {
         lock.release();
       }
-      await client.logout();
       return { success: true, movedToTrash: false };
     }
 
@@ -726,7 +732,6 @@ async function deleteEmail(account, uid, dbFolder) {
       } finally {
         lock.release();
       }
-      await client.logout();
       return { success: true, movedToTrash: true };
     } else {
       // No Trash folder found on server, fall back to permanent delete
@@ -737,12 +742,17 @@ async function deleteEmail(account, uid, dbFolder) {
       } finally {
         lock.release();
       }
-      await client.logout();
       return { success: true, movedToTrash: false };
     }
   } catch (error) {
     logger.error('Delete Error:', error);
     return { success: false, error: error.message };
+  } finally {
+    try {
+      await client.logout();
+    } catch {
+      // swallow logout errors to avoid masking original error
+    }
   }
 }
 
@@ -757,12 +767,14 @@ async function setEmailFlag(account, uid, flag, value, dbFolder) {
 
     // Resolve Server Path from DB Folder Name using helper
     const foundPath = await findServerFolderForDbName(client, dbFolder);
+
+    if (!foundPath && dbFolder && dbFolder !== INBOX_FOLDER) {
+      return { success: false, error: `Could not map folder '${dbFolder}' to a server path` };
+    }
     const serverPath = foundPath || 'INBOX';
 
     if (foundPath) {
       logger.debug(`[Flag] Mapped DB folder '${dbFolder}' to Server folder '${serverPath}'`);
-    } else if (dbFolder && dbFolder !== INBOX_FOLDER) {
-      logger.warn(`[Flag] Could not map '${dbFolder}' to server path. Defaulting to INBOX.`);
     }
 
     // Get mailbox lock for the target folder
@@ -778,11 +790,16 @@ async function setEmailFlag(account, uid, flag, value, dbFolder) {
       lock.release();
     }
 
-    await client.logout();
     return { success: true };
   } catch (error) {
     logger.error('Flag Update Error:', error);
     return { success: false, error: error.message };
+  } finally {
+    try {
+      await client.logout();
+    } catch {
+      // swallow logout errors to avoid masking original error
+    }
   }
 }
 

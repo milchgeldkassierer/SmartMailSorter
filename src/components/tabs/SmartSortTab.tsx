@@ -23,6 +23,15 @@ const SmartSortTab: React.FC<SmartSortTabProps> = ({ aiSettings, onSave, saveErr
   const [ollamaStatus, setOllamaStatus] = useState<OllamaStatus>({ available: false, checking: false, models: [] });
   const [saved, setSaved] = useState(false);
 
+  // Store API keys per provider so switching doesn't lose them
+  const [apiKeysByProvider, setApiKeysByProvider] = useState<Partial<Record<LLMProvider, string>>>(() => {
+    const keys: Partial<Record<LLMProvider, string>> = {};
+    if (aiSettings.apiKey) {
+      keys[aiSettings.provider] = aiSettings.apiKey;
+    }
+    return keys;
+  });
+
   // Sync prop changes to internal state
   useEffect(() => {
     setTempAISettings(aiSettings);
@@ -83,15 +92,6 @@ const SmartSortTab: React.FC<SmartSortTabProps> = ({ aiSettings, onSave, saveErr
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);
   };
-
-  // Store API keys per provider so switching doesn't lose them
-  const [apiKeysByProvider, setApiKeysByProvider] = useState<Partial<Record<LLMProvider, string>>>(() => {
-    const keys: Partial<Record<LLMProvider, string>> = {};
-    if (aiSettings.apiKey) {
-      keys[aiSettings.provider] = aiSettings.apiKey;
-    }
-    return keys;
-  });
 
   const handleProviderChange = (provider: LLMProvider) => {
     // Save current API key before switching
