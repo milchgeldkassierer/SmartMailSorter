@@ -35,6 +35,21 @@ interface SearchHistory {
   timestamp: number;
 }
 
+interface CategorizationFeedback {
+  id: string;
+  emailId: string;
+  accountId: string;
+  originalCategory: string;
+  correctedCategory: string;
+  sender: string;
+  senderEmail: string;
+  subject: string;
+  aiSummary: string | null;
+  aiReasoning: string | null;
+  confidence: number;
+  correctedAt: number;
+}
+
 interface DbModule {
   init: (path: string) => void;
   addAccount: (account: Partial<ImapAccount> & { id: string; username?: string; password?: string }) => void;
@@ -49,6 +64,12 @@ interface DbModule {
   getSearchHistory: () => SearchHistory[];
   addSearchHistory: (id: string, query: string) => { success: boolean; changes: number };
   clearSearchHistory: () => { success: boolean; changes: number };
+  saveCategorizationFeedback: (feedback: CategorizationFeedback) => void;
+  getCategorizationFeedback: (accountId: string, limit: number) => CategorizationFeedback[];
+  getRecentFeedbackForSender: (accountId: string, senderEmail: string, limit: number) => CategorizationFeedback[];
+  exportCategorizationFeedback: (accountId: string) => CategorizationFeedback[];
+  clearCategorizationFeedback: (accountId: string) => { success: boolean; changes: number };
+  deleteEmail: (emailId: string) => void;
 }
 
 // Import the database module under test
@@ -282,6 +303,393 @@ describe('Database Module', () => {
 
       expect(result.success).toBe(true);
       expect(result.changes).toBe(0);
+    });
+  });
+
+  describe('Categorization Feedback', () => {
+    beforeEach(() => {
+      db.init(':memory:');
+
+      // Add test account (required for foreign key)
+      const account = {
+        id: 'test-acc',
+        name: 'Test Account',
+        email: 'test@example.com',
+        provider: 'test',
+        imapHost: 'imap.test.com',
+        imapPort: 993,
+        username: 'test',
+        password: 'pass',
+        color: '#FF0000',
+      };
+      db.addAccount(account);
+
+      // Add test email (required for foreign key)
+      const email = {
+        id: 'test-email-1',
+        accountId: 'test-acc',
+        sender: 'John Doe',
+        senderEmail: 'john@example.com',
+        subject: 'Test Email',
+        body: 'Test Body',
+        date: new Date().toISOString(),
+        category: 'Inbox',
+        isRead: false,
+        isFlagged: false,
+        uid: 1,
+      };
+      db.saveEmail(email);
+    });
+
+    it('should save and retrieve categorization feedback', () => {
+      // Create feedback object
+      const feedback = {
+        id: 'feedback1',
+        emailId: 'test-email-1',
+        accountId: 'test-acc',
+        originalCategory: 'Inbox',
+        correctedCategory: 'Important',
+        sender: 'John Doe',
+        senderEmail: 'john@example.com',
+        subject: 'Test Email',
+        aiSummary: 'Email summary',
+        aiReasoning: 'AI reasoning',
+        confidence: 0.85,
+        correctedAt: Date.now()
+      };
+
+      // Save feedback
+      db.saveCategorizationFeedback(feedback);
+
+      // Retrieve feedback
+      const result = db.getCategorizationFeedback('test-acc', 100);
+
+      // Assertions
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe('feedback1');
+      expect(result[0].originalCategory).toBe('Inbox');
+      expect(result[0].correctedCategory).toBe('Important');
+      expect(result[0].senderEmail).toBe('john@example.com');
+      expect(result[0].confidence).toBe(0.85);
+    });
+
+    it('should get recent feedback for specific sender', () => {
+      // Add multiple emails from same sender
+      const email2 = {
+        id: 'test-email-2',
+        accountId: 'test-acc',
+        sender: 'John Doe',
+        senderEmail: 'john@example.com',
+        subject: 'Second Email',
+        body: 'Body',
+        date: new Date().toISOString(),
+        category: 'Inbox',
+        isRead: false,
+        isFlagged: false,
+        uid: 2,
+      };
+      db.saveEmail(email2);
+
+      // Add feedback for both emails
+      db.saveCategorizationFeedback({
+        id: 'f1',
+        emailId: 'test-email-1',
+        accountId: 'test-acc',
+        originalCategory: 'Inbox',
+        correctedCategory: 'Important',
+        sender: 'John Doe',
+        senderEmail: 'john@example.com',
+        subject: 'Test Email',
+        aiSummary: null,
+        aiReasoning: null,
+        confidence: 0.8,
+        correctedAt: Date.now() - 1000
+      });
+
+      db.saveCategorizationFeedback({
+        id: 'f2',
+        emailId: 'test-email-2',
+        accountId: 'test-acc',
+        originalCategory: 'Inbox',
+        correctedCategory: 'Work',
+        sender: 'John Doe',
+        senderEmail: 'john@example.com',
+        subject: 'Second Email',
+        aiSummary: null,
+        aiReasoning: null,
+        confidence: 0.9,
+        correctedAt: Date.now()
+      });
+
+      // Get feedback for sender
+      const result = db.getRecentFeedbackForSender('test-acc', 'john@example.com', 10);
+
+      expect(result).toHaveLength(2);
+      expect(result[0].id).toBe('f2'); // Most recent first
+      expect(result[1].id).toBe('f1');
+    });
+
+    it('should limit recent feedback to specified count', () => {
+      // Add 10 emails and feedback entries
+      for (let i = 0; i < 10; i++) {
+        const email = {
+          id: `email-${i}`,
+          accountId: 'test-acc',
+          sender: 'Sender',
+          senderEmail: 'sender@example.com',
+          subject: `Email ${i}`,
+          body: 'Body',
+          date: new Date().toISOString(),
+          category: 'Inbox',
+          isRead: false,
+          isFlagged: false,
+          uid: i + 10,
+        };
+        db.saveEmail(email);
+
+        db.saveCategorizationFeedback({
+          id: `f-${i}`,
+          emailId: `email-${i}`,
+          accountId: 'test-acc',
+          originalCategory: 'Inbox',
+          correctedCategory: 'Important',
+          sender: 'Sender',
+          senderEmail: 'sender@example.com',
+          subject: `Email ${i}`,
+          aiSummary: null,
+          aiReasoning: null,
+          confidence: 0.8,
+          correctedAt: Date.now() + i
+        });
+      }
+
+      // Limit to 5
+      const result = db.getRecentFeedbackForSender('test-acc', 'sender@example.com', 5);
+
+      expect(result).toHaveLength(5);
+      // Should be most recent 5 (highest indices)
+      expect(result[0].id).toBe('f-9');
+      expect(result[4].id).toBe('f-5');
+    });
+
+    it('should export categorization feedback with all data', () => {
+      const feedback = {
+        id: 'export-test',
+        emailId: 'test-email-1',
+        accountId: 'test-acc',
+        originalCategory: 'Inbox',
+        correctedCategory: 'Important',
+        sender: 'John Doe',
+        senderEmail: 'john@example.com',
+        subject: 'Test',
+        aiSummary: 'Summary',
+        aiReasoning: 'Reasoning',
+        confidence: 0.9,
+        correctedAt: Date.now()
+      };
+
+      db.saveCategorizationFeedback(feedback);
+
+      const exported = db.exportCategorizationFeedback('test-acc');
+
+      expect(exported).toHaveLength(1);
+      expect(exported[0].id).toBe('export-test');
+      expect(exported[0].originalCategory).toBe('Inbox');
+      expect(exported[0].aiSummary).toBe('Summary');
+    });
+
+    it('should clear categorization feedback for account', () => {
+      db.saveCategorizationFeedback({
+        id: 'clear-test',
+        emailId: 'test-email-1',
+        accountId: 'test-acc',
+        originalCategory: 'Inbox',
+        correctedCategory: 'Important',
+        sender: 'John',
+        senderEmail: 'john@example.com',
+        subject: 'Test',
+        aiSummary: null,
+        aiReasoning: null,
+        confidence: 0.8,
+        correctedAt: Date.now()
+      });
+
+      let feedback = db.getCategorizationFeedback('test-acc', 100);
+      expect(feedback.length).toBeGreaterThan(0);
+
+      const result = db.clearCategorizationFeedback('test-acc');
+
+      expect(result.success).toBe(true);
+      expect(result.changes).toBeGreaterThan(0);
+
+      feedback = db.getCategorizationFeedback('test-acc', 100);
+      expect(feedback).toEqual([]);
+    });
+
+    it('should return empty array when no feedback exists', () => {
+      const feedback = db.getCategorizationFeedback('test-acc', 100);
+      expect(feedback).toEqual([]);
+    });
+
+    it('should cascade delete feedback when email is deleted', () => {
+      // Add feedback
+      db.saveCategorizationFeedback({
+        id: 'cascade-test',
+        emailId: 'test-email-1',
+        accountId: 'test-acc',
+        originalCategory: 'Inbox',
+        correctedCategory: 'Important',
+        sender: 'John',
+        senderEmail: 'john@example.com',
+        subject: 'Test',
+        aiSummary: null,
+        aiReasoning: null,
+        confidence: 0.8,
+        correctedAt: Date.now()
+      });
+
+      let feedback = db.getCategorizationFeedback('test-acc', 100);
+      expect(feedback).toHaveLength(1);
+
+      // Delete the email (this should cascade delete feedback)
+      db.deleteEmail('test-email-1');
+
+      feedback = db.getCategorizationFeedback('test-acc', 100);
+      expect(feedback).toEqual([]);
+    });
+
+    it('should order feedback by correctedAt DESC', () => {
+      const email2 = {
+        id: 'email-2',
+        accountId: 'test-acc',
+        sender: 'Jane',
+        senderEmail: 'jane@example.com',
+        subject: 'Email 2',
+        body: 'Body',
+        date: new Date().toISOString(),
+        category: 'Inbox',
+        isRead: false,
+        isFlagged: false,
+        uid: 99,
+      };
+      db.saveEmail(email2);
+
+      const now = Date.now();
+
+      db.saveCategorizationFeedback({
+        id: 'f-old',
+        emailId: 'test-email-1',
+        accountId: 'test-acc',
+        originalCategory: 'Inbox',
+        correctedCategory: 'Important',
+        sender: 'John',
+        senderEmail: 'john@example.com',
+        subject: 'Test',
+        aiSummary: null,
+        aiReasoning: null,
+        confidence: 0.8,
+        correctedAt: now - 10000
+      });
+
+      db.saveCategorizationFeedback({
+        id: 'f-new',
+        emailId: 'email-2',
+        accountId: 'test-acc',
+        originalCategory: 'Inbox',
+        correctedCategory: 'Work',
+        sender: 'Jane',
+        senderEmail: 'jane@example.com',
+        subject: 'Email 2',
+        aiSummary: null,
+        aiReasoning: null,
+        confidence: 0.9,
+        correctedAt: now
+      });
+
+      const feedback = db.getCategorizationFeedback('test-acc', 100);
+
+      expect(feedback[0].id).toBe('f-new'); // Most recent first
+      expect(feedback[1].id).toBe('f-old');
+      expect(feedback[0].correctedAt).toBeGreaterThan(feedback[1].correctedAt);
+    });
+
+    it('should filter feedback by accountId', () => {
+      // Add second account
+      const account2 = {
+        id: 'acc2',
+        name: 'Account 2',
+        email: 'test2@example.com',
+        provider: 'test',
+        imapHost: 'imap.test.com',
+        imapPort: 993,
+        username: 'test2',
+        password: 'pass',
+        color: '#00FF00',
+      };
+      db.addAccount(account2);
+
+      const email2 = {
+        id: 'email-acc2',
+        accountId: 'acc2',
+        sender: 'Other',
+        senderEmail: 'other@example.com',
+        subject: 'Other Email',
+        body: 'Body',
+        date: new Date().toISOString(),
+        category: 'Inbox',
+        isRead: false,
+        isFlagged: false,
+        uid: 1,
+      };
+      db.saveEmail(email2);
+
+      // Add feedback for both accounts
+      db.saveCategorizationFeedback({
+        id: 'f-acc1',
+        emailId: 'test-email-1',
+        accountId: 'test-acc',
+        originalCategory: 'Inbox',
+        correctedCategory: 'Important',
+        sender: 'John',
+        senderEmail: 'john@example.com',
+        subject: 'Test',
+        aiSummary: null,
+        aiReasoning: null,
+        confidence: 0.8,
+        correctedAt: Date.now()
+      });
+
+      db.saveCategorizationFeedback({
+        id: 'f-acc2',
+        emailId: 'email-acc2',
+        accountId: 'acc2',
+        originalCategory: 'Inbox',
+        correctedCategory: 'Work',
+        sender: 'Other',
+        senderEmail: 'other@example.com',
+        subject: 'Other Email',
+        aiSummary: null,
+        aiReasoning: null,
+        confidence: 0.9,
+        correctedAt: Date.now()
+      });
+
+      // Get feedback for each account
+      const acc1Feedback = db.getCategorizationFeedback('test-acc', 100);
+      const acc2Feedback = db.getCategorizationFeedback('acc2', 100);
+
+      expect(acc1Feedback).toHaveLength(1);
+      expect(acc1Feedback[0].id).toBe('f-acc1');
+
+      expect(acc2Feedback).toHaveLength(1);
+      expect(acc2Feedback[0].id).toBe('f-acc2');
+    });
+
+    it('should handle clearing empty feedback', () => {
+      const result = db.clearCategorizationFeedback('test-acc');
+
+      expect(result.success).toBe(true);
+      expect(result.changes).toBe(0); // Nothing to delete
     });
   });
 });
