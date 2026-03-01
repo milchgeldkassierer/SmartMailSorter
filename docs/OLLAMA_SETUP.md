@@ -21,6 +21,18 @@ SmartMailSorter supports **Ollama** as a local AI provider, enabling fully offli
 - **Performance**: Categorization takes 2-10 seconds locally vs. <2s for cloud APIs
 - **Model Quality**: Smaller local models may be less accurate than large cloud models for edge cases
 
+## Minimum Ollama Version
+
+SmartMailSorter requires **Ollama 0.5.0 or later**. The structured JSON output feature (`format: json_schema`) used for reliable email categorization was introduced in Ollama 0.5.0. Earlier versions will fail with format errors.
+
+```bash
+# Check your version
+ollama --version
+
+# Update if needed (Linux)
+curl -fsSL https://ollama.com/install.sh | sh
+```
+
 ## Prerequisites
 
 ### Hardware Requirements

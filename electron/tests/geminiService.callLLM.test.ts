@@ -1,9 +1,12 @@
-import { describe, it, expect, vi, beforeEach, afterEach, Mock } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach, afterAll, Mock } from 'vitest';
 import { Email, DefaultEmailCategory, AISettings, LLMProvider } from '../../src/types';
 import { INBOX_FOLDER } from '../folderConstants.cjs';
 
 // Store the original fetch
 const originalFetch = global.fetch;
+
+// Store the original window to restore later
+const originalWindow = global.window;
 
 // Mock window.electron.aiCall for OpenAI/Anthropic/Ollama (they now route through IPC)
 const mockAiCall = vi.fn();
@@ -131,6 +134,14 @@ describe('GeminiService - callLLM Function', () => {
   afterEach(() => {
     vi.restoreAllMocks();
     global.fetch = originalFetch;
+  });
+
+  afterAll(() => {
+    Object.defineProperty(global, 'window', {
+      value: originalWindow,
+      writable: true,
+      configurable: true,
+    });
   });
 
   describe('Gemini Provider', () => {

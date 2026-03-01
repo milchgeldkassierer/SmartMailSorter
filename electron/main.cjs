@@ -752,7 +752,11 @@ app.whenReady().then(() => {
     const data = await response.json();
     const text = data.message?.content;
     if (!text) throw new Error('Failed to extract text from Ollama response');
-    return JSON.parse(cleanMarkdown(text));
+    try {
+      return JSON.parse(cleanMarkdown(text));
+    } catch (e) {
+      throw new Error(`Ollama returned invalid JSON: ${text.slice(0, 200)}`);
+    }
   }
 
   /** Route to the correct AI provider based on settings */

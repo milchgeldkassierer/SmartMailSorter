@@ -184,7 +184,8 @@ async function processMessages(client, messages, account, targetCategory) {
             `[Sync] Skipping UID ${currentUid}: too large (${bodySizeKB} KB > ${MAX_PARSE_SIZE / 1024} KB limit). Saving header only.`
           );
           // Extract minimal headers using simpleParser on just the header portion
-          const headerEnd = all.body.indexOf('\r\n\r\n');
+          let headerEnd = all.body.indexOf('\r\n\r\n');
+          if (headerEnd < 0) headerEnd = all.body.indexOf('\n\n');
           const headerText = headerEnd > 0 ? all.body.substring(0, headerEnd) : all.body.substring(0, 4096);
           const headerParsed = await simpleParser(headerText);
 
@@ -654,7 +655,6 @@ async function syncAccount(account) {
     const unreadCount = getTotalUnreadEmailCount();
     notifications.updateBadgeCount(unreadCount);
 
-    await client.logout();
     logger.info(`Sync completed. Total new messages: ${totalNew}, Total unread count: ${unreadCount}`);
     return { success: true, count: totalNew };
   } catch (error) {
@@ -662,6 +662,12 @@ async function syncAccount(account) {
       logger.error('IMAP Error:', error);
     }
     return { success: false, error: error.message };
+  } finally {
+    try {
+      await client.logout();
+    } catch {
+      // swallow logout errors to avoid masking original error
+    }
   }
 }
 
