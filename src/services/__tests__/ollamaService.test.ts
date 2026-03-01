@@ -62,6 +62,7 @@ describe('Ollama Integration Tests', () => {
       expect(mockAiCall).toHaveBeenCalledWith({
         systemInstruction: expect.any(String),
         userPrompt: expect.stringContaining('Sortiere'),
+        jsonSchema: expect.any(Object),
       });
 
       expect(result.categoryId).toBe('Bestellungen');
@@ -363,6 +364,7 @@ describe('Ollama Integration Tests', () => {
       expect(mockAiCall).toHaveBeenCalledWith({
         systemInstruction: expect.any(String),
         userPrompt: expect.any(String),
+        jsonSchema: expect.any(Object),
       });
     });
   });

@@ -663,7 +663,10 @@ app.whenReady().then(() => {
   }
 
   /** Call OpenAI API and return parsed JSON */
-  async function callOpenAIApi(settings, systemInstruction, userPrompt) {
+  async function callOpenAIApi(settings, systemInstruction, userPrompt, jsonSchema) {
+    const responseFormat = jsonSchema
+      ? { type: 'json_schema', json_schema: { name: 'response', strict: true, schema: jsonSchema } }
+      : { type: 'json_object' };
     const response = await fetchWithTimeout('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${settings.apiKey}` },
@@ -673,7 +676,7 @@ app.whenReady().then(() => {
           { role: 'system', content: systemInstruction },
           { role: 'user', content: userPrompt },
         ],
-        response_format: { type: 'json_object' },
+        response_format: responseFormat,
       }),
     });
     if (!response.ok) {
@@ -687,7 +690,10 @@ app.whenReady().then(() => {
   }
 
   /** Call Anthropic Claude API and return parsed JSON */
-  async function callAnthropicApi(settings, systemInstruction, userPrompt) {
+  async function callAnthropicApi(settings, systemInstruction, userPrompt, jsonSchema) {
+    const system = jsonSchema
+      ? `${systemInstruction}\n\nYou MUST respond with valid JSON matching this schema:\n${JSON.stringify(jsonSchema, null, 2)}`
+      : systemInstruction;
     const response = await fetchWithTimeout('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -698,7 +704,7 @@ app.whenReady().then(() => {
       body: JSON.stringify({
         model: settings.model,
         max_tokens: 4096,
-        system: systemInstruction,
+        system: system,
         messages: [{ role: 'user', content: userPrompt }],
       }),
     });
@@ -713,7 +719,7 @@ app.whenReady().then(() => {
   }
 
   /** Call Ollama local API and return parsed JSON */
-  async function callOllamaApi(settings, systemInstruction, userPrompt) {
+  async function callOllamaApi(settings, systemInstruction, userPrompt, jsonSchema) {
     let response;
     try {
       response = await fetchWithTimeout(
@@ -728,7 +734,7 @@ app.whenReady().then(() => {
               { role: 'user', content: userPrompt },
             ],
             stream: false,
-            format: 'json',
+            format: jsonSchema || 'json',
           }),
         },
         120000
@@ -750,16 +756,16 @@ app.whenReady().then(() => {
   }
 
   /** Route to the correct AI provider based on settings */
-  async function callAIProvider(settings, systemInstruction, userPrompt) {
+  async function callAIProvider(settings, systemInstruction, userPrompt, jsonSchema) {
     switch (settings.provider) {
       case LLMProviders.GEMINI:
         return callGeminiApi(settings, systemInstruction, userPrompt);
       case LLMProviders.OPENAI:
-        return callOpenAIApi(settings, systemInstruction, userPrompt);
+        return callOpenAIApi(settings, systemInstruction, userPrompt, jsonSchema);
       case LLMProviders.ANTHROPIC:
-        return callAnthropicApi(settings, systemInstruction, userPrompt);
+        return callAnthropicApi(settings, systemInstruction, userPrompt, jsonSchema);
       case LLMProviders.OLLAMA:
-        return callOllamaApi(settings, systemInstruction, userPrompt);
+        return callOllamaApi(settings, systemInstruction, userPrompt, jsonSchema);
       default:
         throw new Error(`Unknown AI provider: ${settings.provider}`);
     }
@@ -824,15 +830,17 @@ Antworte NUR mit dem JSON-Objekt mit dem "query" Feld.`;
   // Generic AI call handler - routes through main process to avoid CORS issues
   ipcMain.handle('ai-call', async (event, args) => {
     if (!args || typeof args !== 'object') throw new Error('Invalid ai-call payload: expected an object');
-    const { systemInstruction, userPrompt } = args;
+    const { systemInstruction, userPrompt, jsonSchema } = args;
     if (!systemInstruction || typeof systemInstruction !== 'string' || !systemInstruction.trim())
       throw new Error('Invalid systemInstruction');
     if (!userPrompt || typeof userPrompt !== 'string' || !userPrompt.trim()) throw new Error('Invalid userPrompt');
     if (systemInstruction.length > 10000) throw new Error('systemInstruction too long (max 10000 characters)');
     if (userPrompt.length > 200000) throw new Error('userPrompt too long (max 200000 characters)');
+    if (jsonSchema !== undefined && (typeof jsonSchema !== 'object' || jsonSchema === null))
+      throw new Error('Invalid jsonSchema: expected an object');
 
     const settings = loadAndValidateAISettings();
-    return await callAIProvider(settings, systemInstruction, userPrompt);
+    return await callAIProvider(settings, systemInstruction, userPrompt, jsonSchema || null);
   });
 
   // Notification Settings IPC handlers

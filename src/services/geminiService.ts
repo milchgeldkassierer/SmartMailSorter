@@ -158,7 +158,11 @@ async function callLLM(
     if (!window.electron?.aiCall) {
       throw new Error('Electron IPC not available for AI call');
     }
-    return await window.electron.aiCall({ systemInstruction, userPrompt: prompt });
+    return await window.electron.aiCall({
+      systemInstruction,
+      userPrompt: prompt,
+      jsonSchema: jsonSchema as unknown as Record<string, unknown>,
+    });
   }
 
   throw new Error('Unknown Provider');

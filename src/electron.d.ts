@@ -91,7 +91,11 @@ declare global {
       parseNaturalLanguageQuery: (query: string) => Promise<string>;
 
       // AI call (routed through main process to avoid CORS)
-      aiCall: (params: { systemInstruction: string; userPrompt: string }) => Promise<unknown>;
+      aiCall: (params: {
+        systemInstruction: string;
+        userPrompt: string;
+        jsonSchema?: Record<string, unknown>;
+      }) => Promise<unknown>;
 
       // Ollama Integration
       ollamaDetect: () => Promise<{ available: boolean; models: string[]; error?: string }>;
