@@ -433,6 +433,9 @@ app.whenReady().then(() => {
 
       // Validate API key with a lightweight test call
       const isOllama = settings.provider === 'Ollama';
+      if (!isOllama && (!settings.apiKey || settings.apiKey.trim() === '')) {
+        throw new Error(`Missing API key for ${settings.provider}`);
+      }
       if (!isOllama && settings.apiKey) {
         try {
           await callAIProvider(settings, 'Reply with exactly: {"ok":true}', 'Test');
@@ -530,7 +533,16 @@ app.whenReady().then(() => {
       }
 
       const data = await response.json();
-      const models = (data.models || []).map((m) => m.name);
+      if (!data || !Array.isArray(data.models)) {
+        logger.warn('[Ollama] Unexpected response shape from /api/tags:', JSON.stringify(data).slice(0, 200));
+        return { available: true, models: [] };
+      }
+      const models = data.models
+        .filter((m) => typeof m?.name === 'string')
+        .map((m) => m.name);
+      if (models.length !== data.models.length) {
+        logger.warn(`[Ollama] Filtered out ${data.models.length - models.length} models with invalid names`);
+      }
       logger.info(`[Ollama] Detected ${models.length} available models: ${models.join(', ')}`);
       return { available: true, models };
     } catch (error) {
@@ -572,9 +584,18 @@ app.whenReady().then(() => {
   /** Load AI settings and validate they are configured (throws if not) */
   function loadAndValidateAISettings() {
     const settings = loadAISettings();
-    const isOllama = settings?.provider === 'Ollama';
-    if (!settings || (!isOllama && !settings.apiKey)) {
+    if (!settings) {
       throw new Error('AI settings not configured');
+    }
+    if (!settings.provider || typeof settings.provider !== 'string') {
+      throw new Error('AI settings must include a valid provider');
+    }
+    if (!settings.model || typeof settings.model !== 'string') {
+      throw new Error('AI settings must include a valid model');
+    }
+    const isOllama = settings.provider === 'Ollama';
+    if (!isOllama && !settings.apiKey) {
+      throw new Error(`Missing API key for ${settings.provider}`);
     }
     return settings;
   }
@@ -774,7 +795,9 @@ Antworte NUR mit dem JSON-Objekt mit dem "query" Feld.`;
   });
 
   // Generic AI call handler - routes through main process to avoid CORS issues
-  ipcMain.handle('ai-call', async (event, { systemInstruction, userPrompt }) => {
+  ipcMain.handle('ai-call', async (event, args) => {
+    if (!args || typeof args !== 'object') throw new Error('Invalid ai-call payload: expected an object');
+    const { systemInstruction, userPrompt } = args;
     if (!systemInstruction || typeof systemInstruction !== 'string') throw new Error('Invalid systemInstruction');
     if (!userPrompt || typeof userPrompt !== 'string') throw new Error('Invalid userPrompt');
     if (systemInstruction.length > 5000) throw new Error('systemInstruction too long (max 5000 characters)');

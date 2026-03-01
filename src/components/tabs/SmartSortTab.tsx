@@ -77,7 +77,20 @@ const SmartSortTab: React.FC<SmartSortTabProps> = ({ aiSettings, onSave, saveErr
     setTimeout(() => setSaved(false), 3000);
   };
 
+  // Store API keys per provider so switching doesn't lose them
+  const [apiKeysByProvider, setApiKeysByProvider] = useState<Partial<Record<LLMProvider, string>>>(() => {
+    const keys: Partial<Record<LLMProvider, string>> = {};
+    if (aiSettings.apiKey) {
+      keys[aiSettings.provider] = aiSettings.apiKey;
+    }
+    return keys;
+  });
+
   const handleProviderChange = (provider: LLMProvider) => {
+    // Save current API key before switching
+    if (tempAISettings.provider !== LLMProvider.OLLAMA && tempAISettings.apiKey) {
+      setApiKeysByProvider((prev) => ({ ...prev, [tempAISettings.provider]: tempAISettings.apiKey }));
+    }
     const defaultModel =
       provider === LLMProvider.OLLAMA && ollamaStatus.models.length > 0
         ? ollamaStatus.models[0]
@@ -86,7 +99,7 @@ const SmartSortTab: React.FC<SmartSortTabProps> = ({ aiSettings, onSave, saveErr
       ...tempAISettings,
       provider,
       model: defaultModel,
-      apiKey: '',
+      apiKey: apiKeysByProvider[provider] || '',
     });
   };
 
@@ -194,7 +207,12 @@ const SmartSortTab: React.FC<SmartSortTabProps> = ({ aiSettings, onSave, saveErr
                 className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-900 focus:border-blue-500 outline-none placeholder-slate-400"
                 placeholder={t('smartSortTab.apiKeyPlaceholder')}
                 value={tempAISettings.apiKey}
-                onChange={(e) => setTempAISettings({ ...tempAISettings, apiKey: e.target.value })}
+                data-testid="api-key-input"
+                onChange={(e) => {
+                  const newKey = e.target.value;
+                  setTempAISettings({ ...tempAISettings, apiKey: newKey });
+                  setApiKeysByProvider((prev) => ({ ...prev, [tempAISettings.provider]: newKey }));
+                }}
               />
               <p className="text-xs text-slate-500 mt-1">
                 {t('smartSortTab.apiKeyInfo')}

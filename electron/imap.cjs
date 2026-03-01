@@ -396,7 +396,7 @@ async function fetchUidBatch(client, seqRange) {
     headers.push({
       attributes: {
         uid: message.uid,
-        flags: message.flags || [],
+        flags: message.flags instanceof Set ? message.flags : new Set(message.flags || []),
       },
     });
   }

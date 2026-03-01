@@ -1,5 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
+interface OllamaModel {
+  name: string;
+  size: number;
+  digest?: string;
+  modified_at?: string;
+}
+
 // Store the original fetch
 const originalFetch = global.fetch;
 
@@ -11,7 +18,7 @@ describe('Ollama IPC Handlers', () => {
     vi.clearAllMocks();
     // Create a fresh mock for each test
     mockFetch = vi.fn();
-    global.fetch = mockFetch as any;
+    global.fetch = mockFetch as typeof globalThis.fetch;
   });
 
   afterEach(() => {
@@ -21,7 +28,7 @@ describe('Ollama IPC Handlers', () => {
 
   describe('ollama-detect handler', () => {
     it('should detect running Ollama instance successfully', async () => {
-      const mockModels = [
+      const mockModels: OllamaModel[] = [
         { name: 'llama3:latest', size: 4661211136 },
         { name: 'mistral:latest', size: 4109864384 },
       ];
@@ -82,8 +89,10 @@ describe('Ollama IPC Handlers', () => {
           method: 'GET',
           headers: { 'Content-Type': 'application/json' },
         });
-      } catch (error: any) {
-        expect(error.message).toBe('fetch failed');
+      } catch (error: unknown) {
+        if (error instanceof Error) {
+          expect(error.message).toBe('fetch failed');
+        }
       }
 
       // Simulate handler's catch block
@@ -133,7 +142,7 @@ describe('Ollama IPC Handlers', () => {
 
   describe('ollama-detect model listing behavior', () => {
     it('should list available Ollama models successfully', async () => {
-      const mockModels = [
+      const mockModels: OllamaModel[] = [
         { name: 'llama3:latest', size: 4661211136 },
         { name: 'mistral:latest', size: 4109864384 },
         { name: 'phi3:latest', size: 2176045056 },
@@ -152,7 +161,7 @@ describe('Ollama IPC Handlers', () => {
 
       expect(response.ok).toBe(true);
       const data = await response.json();
-      const modelNames = (data.models || []).map((model: any) => model.name);
+      const modelNames = (data.models || []).map((model: OllamaModel) => model.name);
 
       expect(modelNames).toHaveLength(3);
       expect(modelNames).toEqual(['llama3:latest', 'mistral:latest', 'phi3:latest']);
@@ -191,8 +200,10 @@ describe('Ollama IPC Handlers', () => {
           method: 'GET',
           headers: { 'Content-Type': 'application/json' },
         });
-      } catch (error: any) {
-        expect(error.message).toBe('ECONNREFUSED');
+      } catch (error: unknown) {
+        if (error instanceof Error) {
+          expect(error.message).toBe('ECONNREFUSED');
+        }
       }
 
       // Simulate handler's catch block
@@ -213,7 +224,7 @@ describe('Ollama IPC Handlers', () => {
       });
 
       const data = await response.json();
-      const modelNames = (data.models || []).map((model: any) => model.name);
+      const modelNames = (data.models || []).map((model: OllamaModel) => model.name);
 
       expect(modelNames).toEqual([]);
     });
@@ -231,13 +242,13 @@ describe('Ollama IPC Handlers', () => {
       });
 
       const data = await response.json();
-      const modelNames = (data.models || []).map((model: any) => model.name);
+      const modelNames = (data.models || []).map((model: OllamaModel) => model.name);
 
       expect(modelNames).toEqual([]);
     });
 
     it('should extract model names from complex model objects', async () => {
-      const mockModels = [
+      const mockModels: OllamaModel[] = [
         {
           name: 'gemma2:2b',
           size: 1628827472,
@@ -264,7 +275,7 @@ describe('Ollama IPC Handlers', () => {
       });
 
       const data = await response.json();
-      const modelNames = (data.models || []).map((model: any) => model.name);
+      const modelNames = (data.models || []).map((model: OllamaModel) => model.name);
 
       expect(modelNames).toEqual(['gemma2:2b', 'llama3:8b']);
     });
@@ -277,8 +288,10 @@ describe('Ollama IPC Handlers', () => {
           method: 'GET',
           headers: { 'Content-Type': 'application/json' },
         });
-      } catch (error: any) {
-        expect(error.message).toBe('Request timeout');
+      } catch (error: unknown) {
+        if (error instanceof Error) {
+          expect(error.message).toBe('Request timeout');
+        }
       }
 
       // Simulate handler's catch block

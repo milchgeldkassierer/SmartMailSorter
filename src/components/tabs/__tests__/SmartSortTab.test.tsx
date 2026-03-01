@@ -449,10 +449,8 @@ describe('SmartSortTab', () => {
     it('should not show API key input for Ollama', () => {
       render(<SmartSortTab aiSettings={ollamaSettings} onSave={vi.fn()} />);
 
-      // Should not have password input
-      const passwordInputs = screen.queryAllByDisplayValue('');
-      const hasPasswordInput = passwordInputs.some((input) => input.getAttribute('type') === 'password');
-      expect(hasPasswordInput).toBe(false);
+      // API key input should not exist for Ollama provider
+      expect(screen.queryByTestId('api-key-input')).toBeNull();
     });
 
     it('should show no API key required message for Ollama', () => {

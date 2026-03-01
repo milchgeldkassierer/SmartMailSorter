@@ -73,11 +73,13 @@ Alternatively, download the `.dmg` installer from [ollama.com/download](https://
 #### Windows
 
 1. Install **WSL2** (Windows Subsystem for Linux) if not already installed:
+
    ```powershell
    wsl --install
    ```
 
 2. Open WSL2 terminal and install Ollama:
+
    ```bash
    curl -fsSL https://ollama.com/install.sh | sh
    ```
@@ -259,6 +261,7 @@ For **bulk categorization** (100+ emails):
 **Solutions:**
 
 1. **Verify Ollama is running:**
+
    ```bash
    # Check if Ollama service is running
    curl http://localhost:11434/api/tags
@@ -268,6 +271,7 @@ For **bulk categorization** (100+ emails):
    ```
 
 2. **Check port availability:**
+
    ```bash
    # Verify port 11434 is open
    lsof -i :11434   # Linux/macOS
@@ -279,6 +283,7 @@ For **bulk categorization** (100+ emails):
    - On Linux: `sudo ufw allow 11434/tcp` (if using ufw)
 
 4. **Restart Ollama service:**
+
    ```bash
    # Stop Ollama
    pkill ollama
@@ -296,13 +301,16 @@ For **bulk categorization** (100+ emails):
 **Solutions:**
 
 1. **Switch to smaller model:**
+
    ```bash
    # Pull and use phi3 (fastest)
    ollama pull phi3
    ```
+
    Then select `phi3:latest` in SmartMailSorter settings.
 
 2. **Check system resources:**
+
    ```bash
    # Monitor CPU/RAM usage during categorization
    htop   # or top on macOS/Linux
@@ -311,6 +319,7 @@ For **bulk categorization** (100+ emails):
    ```
 
 3. **Verify GPU is being used (if available):**
+
    ```bash
    # Run during categorization
    nvidia-smi   # Should show Ollama process using GPU
@@ -335,6 +344,7 @@ For **bulk categorization** (100+ emails):
    - Restart SmartMailSorter
 
 2. **Verify model is installed:**
+
    ```bash
    ollama list
    # Should show model in list
@@ -356,6 +366,7 @@ For **bulk categorization** (100+ emails):
 **Solutions:**
 
 1. **Upgrade to larger model:**
+
    ```bash
    # Switch from phi3 → mistral or llama3
    ollama pull llama3
@@ -382,6 +393,7 @@ For **bulk categorization** (100+ emails):
 **Solutions:**
 
 1. **Switch to smaller model:**
+
    ```bash
    # Use phi3 (2.3GB) instead of llama3 (4.7GB)
    ollama pull phi3
@@ -392,6 +404,7 @@ For **bulk categorization** (100+ emails):
    - Close browser tabs, IDEs, etc.
 
 3. **Increase system swap:**
+
    ```bash
    # Linux: Add swap space
    sudo fallocate -l 8G /swapfile

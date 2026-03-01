@@ -486,7 +486,7 @@ SmartMailSorter implements a **strict Content Security Policy** to provide defen
 | `script-src`  | `'self' https://cdn.tailwindcss.com https://esm.sh`                               | Allow scripts from: app bundle, Tailwind CSS CDN, ES modules from esm.sh. **Blocks inline scripts and `eval()`** to prevent XSS |
 | `style-src`   | `'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.tailwindcss.com` | Allow styles from: app bundle, inline styles (required for React), Google Fonts, Tailwind CDN                                   |
 | `font-src`    | `'self' https://fonts.gstatic.com`                                                | Allow fonts from: app bundle, Google Fonts CDN                                                                                  |
-| `connect-src` | `'self' https://api.openai.com https://generativelanguage.googleapis.com`         | Restrict network connections to: app origin, OpenAI API, Google Gemini API. **Blocks connections to arbitrary external hosts**  |
+| `connect-src` | `'self' https://generativelanguage.googleapis.com`                                | Restrict network connections to: app origin, Google Gemini API. OpenAI/Anthropic/Ollama calls are routed via IPC. **Blocks connections to arbitrary external hosts** |
 | `img-src`     | `'self' data: https:`                                                             | Allow images from: app bundle, data URIs (inline images), HTTPS sources                                                         |
 | `frame-src`   | `'self'`                                                                          | **Restrict iframe embedding** to same-origin only, preventing clickjacking attacks                                              |
 
@@ -495,8 +495,7 @@ SmartMailSorter implements a **strict Content Security Policy** to provide defen
 - **`https://cdn.tailwindcss.com`**: Application uses Tailwind CSS via CDN for styling
 - **`https://esm.sh`**: Application loads React and dependencies as ES modules from esm.sh CDN
 - **`https://fonts.googleapis.com` / `https://fonts.gstatic.com`**: Application uses Inter font from Google Fonts
-- **`https://api.openai.com`**: Required for OpenAI GPT models (gpt-4o, gpt-4o-mini, gpt-4-turbo)
-- **`https://generativelanguage.googleapis.com`**: Required for Google Gemini AI models (gemini-3-flash-preview, gemini-3-pro-preview)
+- **`https://generativelanguage.googleapis.com`**: Required for Google Gemini AI models (called from renderer via SDK). OpenAI, Anthropic, and Ollama calls are routed through the Electron main process via IPC, so they do not require CSP allowances
 
 **Development vs Production:**
 
