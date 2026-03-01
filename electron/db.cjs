@@ -844,6 +844,87 @@ function clearSearchHistory() {
   return { success: true, changes: info.changes };
 }
 
+// --- Categorization Feedback Methods ---
+
+/** Save a new categorization feedback entry. */
+function saveCategorizationFeedback(feedback) {
+  const stmt = db.prepare(`
+    INSERT INTO categorization_feedback (
+      id, emailId, accountId, originalCategory, correctedCategory,
+      sender, senderEmail, subject, aiSummary, aiReasoning, confidence, correctedAt
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+  const info = stmt.run(
+    feedback.id,
+    feedback.emailId,
+    feedback.accountId,
+    feedback.originalCategory,
+    feedback.correctedCategory,
+    feedback.sender,
+    feedback.senderEmail,
+    feedback.subject,
+    feedback.aiSummary,
+    feedback.aiReasoning,
+    feedback.confidence,
+    feedback.correctedAt
+  );
+  return { success: true, changes: info.changes };
+}
+
+/** Retrieve categorization feedback for an account, ordered by most recent first. */
+function getCategorizationFeedback(accountId, limit = 100) {
+  return db
+    .prepare(
+      `
+    SELECT id, emailId, accountId, originalCategory, correctedCategory,
+           sender, senderEmail, subject, aiSummary, aiReasoning, confidence, correctedAt
+    FROM categorization_feedback
+    WHERE accountId = ?
+    ORDER BY correctedAt DESC
+    LIMIT ?
+  `
+    )
+    .all(accountId, limit);
+}
+
+/** Get recent feedback for a specific sender within an account. */
+function getRecentFeedbackForSender(accountId, senderEmail, limit = 5) {
+  return db
+    .prepare(
+      `
+    SELECT id, emailId, accountId, originalCategory, correctedCategory,
+           sender, senderEmail, subject, aiSummary, aiReasoning, confidence, correctedAt
+    FROM categorization_feedback
+    WHERE accountId = ? AND senderEmail = ?
+    ORDER BY correctedAt DESC
+    LIMIT ?
+  `
+    )
+    .all(accountId, senderEmail, limit);
+}
+
+/** Export all categorization feedback for an account. */
+function exportCategorizationFeedback(accountId) {
+  return db
+    .prepare(
+      `
+    SELECT id, emailId, accountId, originalCategory, correctedCategory,
+           sender, senderEmail, subject, aiSummary, aiReasoning, confidence, correctedAt
+    FROM categorization_feedback
+    WHERE accountId = ?
+    ORDER BY correctedAt DESC
+  `
+    )
+    .all(accountId);
+}
+
+/** Clear all categorization feedback for an account. */
+function clearCategorizationFeedback(accountId) {
+  const stmt = db.prepare('DELETE FROM categorization_feedback WHERE accountId = ?');
+  const info = stmt.run(accountId);
+  return { success: true, changes: info.changes };
+}
+
 module.exports = {
   init,
   close,
@@ -922,6 +1003,13 @@ module.exports = {
   getSearchHistory,
   addSearchHistory,
   clearSearchHistory,
+
+  // Categorization Feedback Methods
+  saveCategorizationFeedback,
+  getCategorizationFeedback,
+  getRecentFeedbackForSender,
+  exportCategorizationFeedback,
+  clearCategorizationFeedback,
 
   // Test Helper Methods - only exposed in test environment
   ...(process.env.VITEST || process.env.NODE_ENV === 'test'
