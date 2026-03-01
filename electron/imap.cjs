@@ -173,7 +173,42 @@ async function processMessages(client, messages, account, targetCategory) {
 
     if (all) {
       try {
+        const bodySize = all.body ? all.body.length : 0;
+        const bodySizeKB = (bodySize / 1024).toFixed(0);
+        logger.debug(`[Sync Debug] Parsing UID ${currentUid} (${bodySizeKB} KB)...`);
+
+        // Skip oversized emails to prevent event loop blocking (simpleParser is CPU-bound)
+        const MAX_PARSE_SIZE = 2 * 1024 * 1024; // 2 MB
+        if (bodySize > MAX_PARSE_SIZE) {
+          logger.warn(`[Sync] Skipping UID ${currentUid}: too large (${bodySizeKB} KB > ${MAX_PARSE_SIZE / 1024} KB limit). Saving header only.`);
+          // Extract minimal headers without full parse
+          const headerEnd = all.body.indexOf('\r\n\r\n');
+          const headerText = headerEnd > 0 ? all.body.substring(0, headerEnd) : all.body.substring(0, 4096);
+          const subjectMatch = headerText.match(/^Subject:\s*(.+)/mi);
+          const fromMatch = headerText.match(/^From:\s*(.+)/mi);
+          const dateMatch = headerText.match(/^Date:\s*(.+)/mi);
+          saveEmail({
+            id: id,
+            accountId: account.id,
+            sender: fromMatch ? fromMatch[1].trim() : 'Unknown',
+            senderEmail: '',
+            subject: subjectMatch ? subjectMatch[1].trim() : '(Large Email)',
+            body: `[Email too large to parse: ${bodySizeKB} KB]`,
+            bodyHtml: null,
+            date: dateMatch ? new Date(dateMatch[1].trim()).toISOString() : new Date().toISOString(),
+            folder: targetCategory,
+            smartCategory: null,
+            isRead: message.attributes.flags?.has('\\Seen') || false,
+            isFlagged: message.attributes.flags?.has('\\Flagged') || false,
+            hasAttachments: true,
+            uid: currentUid,
+          });
+          savedCount++;
+          continue;
+        }
+
         const parsed = await simpleParser(all.body);
+        logger.debug(`[Sync Debug] Parsed UID ${currentUid}: "${parsed.subject}" (${(parsed.attachments || []).length} attachments)`);
         const attachments = (parsed.attachments || []).map((att) => ({
           filename: att.filename || 'attachment',
           contentType: att.contentType,
@@ -205,6 +240,7 @@ async function processMessages(client, messages, account, targetCategory) {
 
         saveEmail(email);
         savedCount++;
+        logger.debug(`[Sync Debug] Saved UID ${currentUid} to DB.`);
 
         // Queue notification for new unread emails (shown after AI categorization)
         if (!email.isRead) {
@@ -407,7 +443,7 @@ async function downloadMessageBatch(client, chunkUids, account, targetCategory) 
         parts: [],
         attributes: {
           uid: message.uid,
-          flags: message.flags || [],
+          flags: message.flags instanceof Set ? message.flags : new Set(message.flags || []),
         },
       };
 
