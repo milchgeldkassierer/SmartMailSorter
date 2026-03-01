@@ -202,10 +202,11 @@ export const generateDemoEmails = async (count: number = 5, settings?: AISetting
 export const categorizeEmailWithAI = async (
   email: Email,
   availableCategories: string[],
-  settings: AISettings
+  settings: AISettings,
+  accountId?: string
 ): Promise<SortResult> => {
   // Legacy Single Item Wrapper
-  const results = await categorizeBatchWithAI([email], availableCategories, settings);
+  const results = await categorizeBatchWithAI([email], availableCategories, settings, accountId);
   return (
     results[0] || {
       categoryId: DefaultEmailCategory.OTHER,
@@ -220,9 +221,36 @@ export const categorizeEmailWithAI = async (
 export const categorizeBatchWithAI = async (
   emails: Email[],
   availableCategories: string[],
-  settings: AISettings
+  settings: AISettings,
+  accountId?: string
 ): Promise<SortResult[]> => {
   if (emails.length === 0) return [];
+
+  // Fetch recent feedback examples for few-shot learning (if accountId provided)
+  const feedbackExamples: Array<{ senderEmail: string; originalCategory: string; correctedCategory: string; subject: string }> = [];
+  if (accountId && window.electron?.getRecentFeedbackForSender) {
+    // Extract unique sender emails from the batch
+    const uniqueSenders = Array.from(new Set(emails.map(e => e.senderEmail).filter(Boolean)));
+
+    // Fetch recent feedback for each unique sender (limit 5 per sender)
+    for (const senderEmail of uniqueSenders) {
+      try {
+        const feedback = await window.electron.getRecentFeedbackForSender(accountId, senderEmail, 5);
+        // Collect relevant fields for prompt injection (will be used in subtask-4-2)
+        feedback.forEach(f => {
+          feedbackExamples.push({
+            senderEmail: f.senderEmail,
+            originalCategory: f.originalCategory,
+            correctedCategory: f.correctedCategory,
+            subject: f.subject
+          });
+        });
+      } catch (error) {
+        // Silently continue if feedback fetch fails - categorization should still work
+        console.warn(`Failed to fetch feedback for sender ${senderEmail}:`, error);
+      }
+    }
+  }
 
   const targetCategories = availableCategories.filter((c) => c !== DefaultEmailCategory.INBOX);
 
