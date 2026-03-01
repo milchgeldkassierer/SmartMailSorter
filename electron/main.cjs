@@ -645,7 +645,7 @@ app.whenReady().then(() => {
     if (!isOllama && !settings.apiKey) {
       throw new Error(`Missing API key for ${settings.provider}`);
     }
-    return settings;
+    return { provider: settings.provider, model: settings.model, apiKey: settings.apiKey };
   }
 
   /** Clean markdown code fences from AI response text */
