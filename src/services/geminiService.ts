@@ -323,7 +323,11 @@ ${jsonFormatHint}`
     const idMatchCount = emails.filter((e) => resultMap.has(e.id)).length;
     const useIndexFallback = idMatchCount === 0 && resultsList.length === emails.length;
     if (useIndexFallback) {
-      console.warn('[AI] No email IDs matched in AI response — using positional index fallback for', emails.length, 'emails');
+      console.warn(
+        '[AI] No email IDs matched in AI response — using positional index fallback for',
+        emails.length,
+        'emails'
+      );
     }
     return emails.map((email, index) => {
       const res = resultMap.get(email.id) || (useIndexFallback ? resultsList[index] : undefined);
