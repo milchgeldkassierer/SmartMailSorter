@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AISettings, LLMProvider, AVAILABLE_MODELS } from '../../types';
 import { Bot, Key, Cpu, BrainCircuit, CheckCircle, AlertCircle, RefreshCw } from '../Icon';
@@ -22,6 +22,13 @@ const SmartSortTab: React.FC<SmartSortTabProps> = ({ aiSettings, onSave, saveErr
   const [tempAISettings, setTempAISettings] = useState<AISettings>(aiSettings);
   const [ollamaStatus, setOllamaStatus] = useState<OllamaStatus>({ available: false, checking: false, models: [] });
   const [saved, setSaved] = useState(false);
+  const saveTimerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (saveTimerRef.current !== null) clearTimeout(saveTimerRef.current);
+    };
+  }, []);
 
   // Store API keys per provider so switching doesn't lose them
   const [apiKeysByProvider, setApiKeysByProvider] = useState<Partial<Record<LLMProvider, string>>>(() => {
@@ -90,7 +97,11 @@ const SmartSortTab: React.FC<SmartSortTabProps> = ({ aiSettings, onSave, saveErr
   const handleSaveAI = () => {
     onSave(tempAISettings);
     setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
+    if (saveTimerRef.current !== null) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = window.setTimeout(() => {
+      setSaved(false);
+      saveTimerRef.current = null;
+    }, 3000);
   };
 
   const handleProviderChange = (provider: LLMProvider) => {

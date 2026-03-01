@@ -425,13 +425,17 @@ app.whenReady().then(() => {
       if (!settings || typeof settings !== 'object') {
         throw new Error('Invalid settings: expected an object');
       }
-      if (
-        typeof settings.provider !== 'string' ||
-        !settings.provider.trim() ||
-        typeof settings.model !== 'string' ||
-        !settings.model.trim()
-      ) {
+      if (typeof settings.provider !== 'string' || typeof settings.model !== 'string') {
+        throw new Error('Invalid settings: provider and model must be strings');
+      }
+      settings.provider = settings.provider.trim();
+      settings.model = settings.model.trim();
+      if (!settings.provider || !settings.model) {
         throw new Error('Invalid settings: provider and model must be non-empty strings');
+      }
+      const allowedProviders = Object.values(LLMProviders);
+      if (!allowedProviders.includes(settings.provider)) {
+        throw new Error(`Invalid settings: unknown provider "${settings.provider}". Allowed: ${allowedProviders.join(', ')}`);
       }
       if (settings.apiKey !== undefined && typeof settings.apiKey !== 'string') {
         throw new Error('Invalid settings: apiKey must be a string');
@@ -444,8 +448,12 @@ app.whenReady().then(() => {
       }
       if (!isOllama && settings.apiKey) {
         const existingSettings = loadAISettings();
-        const keyChanged = !existingSettings || existingSettings.apiKey !== settings.apiKey;
-        if (keyChanged) {
+        const needsValidation =
+          !existingSettings ||
+          existingSettings.apiKey !== settings.apiKey ||
+          existingSettings.provider !== settings.provider ||
+          existingSettings.model !== settings.model;
+        if (needsValidation) {
           try {
             await callAIProvider(settings, 'Reply with exactly: {"ok":true}', 'Test');
             logger.info('[IPC] AI API key validated successfully');
@@ -464,7 +472,7 @@ app.whenReady().then(() => {
             logger.warn('[IPC] API key validation skipped due to non-auth error:', msg);
           }
         } else {
-          logger.info('[IPC] API key unchanged, skipping validation');
+          logger.info('[IPC] Settings unchanged, skipping validation');
         }
       }
 
@@ -558,7 +566,9 @@ app.whenReady().then(() => {
         logger.warn('[Ollama] Unexpected response shape from /api/tags:', JSON.stringify(data).slice(0, 200));
         return { available: true, models: [] };
       }
-      const models = data.models.filter((m) => typeof m?.name === 'string').map((m) => m.name);
+      const models = data.models
+        .filter((m) => typeof m?.name === 'string' && m.name.trim().length > 0)
+        .map((m) => m.name.trim());
       if (models.length !== data.models.length) {
         logger.warn(`[Ollama] Filtered out ${data.models.length - models.length} models with invalid names`);
       }
@@ -608,6 +618,10 @@ app.whenReady().then(() => {
     }
     if (typeof settings.provider !== 'string' || !settings.provider.trim()) {
       throw new Error('AI settings must include a valid provider');
+    }
+    const allowedProviders = Object.values(LLMProviders);
+    if (!allowedProviders.includes(settings.provider.trim())) {
+      throw new Error(`Invalid provider "${settings.provider}". Allowed: ${allowedProviders.join(', ')}`);
     }
     if (typeof settings.model !== 'string' || !settings.model.trim()) {
       throw new Error('AI settings must include a valid model');
