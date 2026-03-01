@@ -18,6 +18,8 @@ const SmartSortTab: React.FC<SmartSortTabProps> = ({ aiSettings, onSave }) => {
   const { t } = useTranslation();
   const [tempAISettings, setTempAISettings] = useState<AISettings>(aiSettings);
   const [ollamaStatus, setOllamaStatus] = useState<OllamaStatus>({ available: false, checking: false });
+  const [ollamaModels, setOllamaModels] = useState<string[]>([]);
+  const [fetchingModels, setFetchingModels] = useState(false);
 
   // Sync prop changes to internal state
   useEffect(() => {
@@ -55,6 +57,32 @@ const SmartSortTab: React.FC<SmartSortTabProps> = ({ aiSettings, onSave }) => {
 
     detectOllama();
   }, [tempAISettings.provider]);
+
+  // Fetch available Ollama models when Ollama is available
+  useEffect(() => {
+    const fetchOllamaModels = async () => {
+      if (tempAISettings.provider !== LLMProvider.OLLAMA || !ollamaStatus.available) {
+        setOllamaModels([]);
+        return;
+      }
+
+      setFetchingModels(true);
+
+      try {
+        if (window.electron) {
+          const models = await window.electron.ollamaListModels();
+          setOllamaModels(models);
+        }
+      } catch (error) {
+        // Fall back to static models on error
+        setOllamaModels([]);
+      } finally {
+        setFetchingModels(false);
+      }
+    };
+
+    fetchOllamaModels();
+  }, [tempAISettings.provider, ollamaStatus.available]);
 
   const handleSaveAI = () => {
     onSave(tempAISettings);
@@ -135,12 +163,25 @@ const SmartSortTab: React.FC<SmartSortTabProps> = ({ aiSettings, onSave }) => {
             className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-900 focus:border-blue-500 outline-none"
             value={tempAISettings.model}
             onChange={(e) => setTempAISettings({ ...tempAISettings, model: e.target.value })}
+            disabled={fetchingModels}
           >
-            {AVAILABLE_MODELS[tempAISettings.provider].map((m) => (
-              <option key={m} value={m}>
-                {m}
-              </option>
-            ))}
+            {fetchingModels ? (
+              <option>Fetching models...</option>
+            ) : (
+              (() => {
+                // For Ollama: merge fetched models with static fallback
+                const availableModels =
+                  tempAISettings.provider === LLMProvider.OLLAMA && ollamaModels.length > 0
+                    ? ollamaModels
+                    : AVAILABLE_MODELS[tempAISettings.provider];
+
+                return availableModels.map((m) => (
+                  <option key={m} value={m}>
+                    {m}
+                  </option>
+                ));
+              })()
+            )}
           </select>
         </div>
 
