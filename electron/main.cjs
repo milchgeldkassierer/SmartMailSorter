@@ -759,17 +759,38 @@ app.whenReady().then(() => {
     }
   }
 
+  /**
+   * Normalize a Gemini SDK schema to standard JSON Schema.
+   * Gemini uses uppercase type names (STRING, OBJECT, ARRAY, etc.);
+   * JSON Schema and all other providers require lowercase.
+   */
+  function normalizeJsonSchema(schema) {
+    if (!schema || typeof schema !== 'object') return schema;
+    const out = Array.isArray(schema) ? [] : {};
+    for (const [key, value] of Object.entries(schema)) {
+      if (key === 'type' && typeof value === 'string') {
+        out[key] = value.toLowerCase();
+      } else if (typeof value === 'object' && value !== null) {
+        out[key] = normalizeJsonSchema(value);
+      } else {
+        out[key] = value;
+      }
+    }
+    return out;
+  }
+
   /** Route to the correct AI provider based on settings */
   async function callAIProvider(settings, systemInstruction, userPrompt, jsonSchema) {
+    const normalizedSchema = jsonSchema ? normalizeJsonSchema(jsonSchema) : null;
     switch (settings.provider) {
       case LLMProviders.GEMINI:
         return callGeminiApi(settings, systemInstruction, userPrompt);
       case LLMProviders.OPENAI:
-        return callOpenAIApi(settings, systemInstruction, userPrompt, jsonSchema);
+        return callOpenAIApi(settings, systemInstruction, userPrompt, normalizedSchema);
       case LLMProviders.ANTHROPIC:
-        return callAnthropicApi(settings, systemInstruction, userPrompt, jsonSchema);
+        return callAnthropicApi(settings, systemInstruction, userPrompt, normalizedSchema);
       case LLMProviders.OLLAMA:
-        return callOllamaApi(settings, systemInstruction, userPrompt, jsonSchema);
+        return callOllamaApi(settings, systemInstruction, userPrompt, normalizedSchema);
       default:
         throw new Error(`Unknown AI provider: ${settings.provider}`);
     }
