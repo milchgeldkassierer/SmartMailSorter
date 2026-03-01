@@ -448,12 +448,7 @@ app.whenReady().then(() => {
         throw new Error(`Missing API key for ${settings.provider}`);
       }
       if (!isOllama && settings.apiKey) {
-        let existingSettings = null;
-        try {
-          existingSettings = loadAISettings();
-        } catch (e) {
-          logger.warn('[IPC] Could not load existing settings for comparison:', e.message);
-        }
+        const existingSettings = loadAISettings();
         const needsValidation =
           !existingSettings ||
           existingSettings.apiKey !== settings.apiKey ||
