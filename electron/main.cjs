@@ -459,6 +459,10 @@ app.whenReady().then(() => {
             await callAIProvider(settings, 'Reply with exactly: {"ok":true}', 'Test');
             logger.info('[IPC] AI API key validated successfully');
           } catch (validationError) {
+            // NOTE: Auth detection relies on string-matching error messages because provider
+            // functions throw Error with embedded HTTP status text rather than structured codes.
+            // If providers change error formats, invalid keys may be saved — but subsequent AI
+            // calls will fail with clear errors, so this is low-risk.
             const msg = validationError instanceof Error ? validationError.message : String(validationError);
             const msgLower = msg.toLowerCase();
             if (
@@ -521,7 +525,7 @@ app.whenReady().then(() => {
           logger.warn('[IPC] Removing stale plaintext settings file in favor of encrypted file');
           fs.unlinkSync(AI_SETTINGS_FILE_PLAINTEXT);
         }
-        return settings;
+        return { provider: settings.provider, model: settings.model, apiKey: settings.apiKey };
       }
 
       // Encrypted file exists but encryption is unavailable
@@ -541,7 +545,7 @@ app.whenReady().then(() => {
         const settingsJson = fs.readFileSync(AI_SETTINGS_FILE_PLAINTEXT, 'utf8');
         const settings = JSON.parse(settingsJson);
         logger.debug('[IPC] AI settings loaded successfully (plaintext)');
-        return settings;
+        return { provider: settings.provider, model: settings.model, apiKey: settings.apiKey };
       }
 
       logger.debug('[IPC] No AI settings file found');
@@ -899,6 +903,8 @@ Antworte NUR mit dem JSON-Objekt mit dem "query" Feld.`;
     if (userPrompt.length > 200000) throw new Error('userPrompt too long (max 200000 characters)');
     if (jsonSchema !== undefined && (typeof jsonSchema !== 'object' || jsonSchema === null || Array.isArray(jsonSchema)))
       throw new Error('Invalid jsonSchema: expected an object');
+    if (jsonSchema && JSON.stringify(jsonSchema).length > 50000)
+      throw new Error('jsonSchema too large (max 50000 characters)');
 
     const settings = loadAndValidateAISettings();
     return await callAIProvider(settings, systemInstruction, userPrompt, jsonSchema || null);
