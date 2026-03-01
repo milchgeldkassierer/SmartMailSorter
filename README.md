@@ -55,7 +55,9 @@ This application is designed for:
 - **Flexible AI Providers**: Support for multiple AI backends:
   - **Google Gemini**: `gemini-2.5-flash`, `gemini-2.5-pro`, `gemini-3-flash-preview`, `gemini-3.1-pro-preview`
   - **OpenAI**: `gpt-4.1`, `gpt-4.1-mini`, `gpt-4.1-nano`, `gpt-5.2`, `gpt-5-mini`, `gpt-5-nano`
+  - **Ollama (Local AI)**: `llama3`, `mistral`, `phi3`, `gemma2` — fully offline AI processing with zero API costs and maximum privacy ([Setup Guide](docs/OLLAMA_SETUP.md))
   - **Anthropic Claude** _(planned)_: `claude-sonnet-4-6`, `claude-haiku-4-5`, `claude-opus-4-6` — models are selectable in the UI but the API integration is not yet implemented
+- **Local AI Support**: Run email categorization completely offline with Ollama — no cloud APIs, zero data transmission, free forever
 - **Intelligent Categorization**: AI analyzes email content, sender patterns, and context for accurate classification
 - **Confidence Scoring**: Each AI categorization includes a confidence score for transparency
 - **AI Summaries**: Automatic generation of email summaries and reasoning for categorization decisions
