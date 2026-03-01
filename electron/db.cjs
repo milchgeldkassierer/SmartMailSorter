@@ -199,6 +199,29 @@ function createSchema() {
       timestamp INTEGER NOT NULL
     )
   `);
+
+  // Create Categorization Feedback Table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS categorization_feedback (
+      id TEXT PRIMARY KEY,
+      emailId TEXT,
+      accountId TEXT,
+      originalCategory TEXT,
+      correctedCategory TEXT,
+      sender TEXT,
+      senderEmail TEXT,
+      subject TEXT,
+      aiSummary TEXT,
+      aiReasoning TEXT,
+      confidence REAL,
+      correctedAt INTEGER,
+      FOREIGN KEY(emailId) REFERENCES emails(id) ON DELETE CASCADE
+    )
+  `);
+
+  // Create indexes for categorization_feedback for fast few-shot retrieval
+  db.exec('CREATE INDEX IF NOT EXISTS idx_categorization_feedback_accountId ON categorization_feedback(accountId)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_categorization_feedback_senderEmail ON categorization_feedback(senderEmail)');
 }
 
 /** Migrate plaintext passwords to encrypted format using Electron safeStorage. */
