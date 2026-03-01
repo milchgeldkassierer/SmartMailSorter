@@ -49,6 +49,7 @@ interface GeminiResponse {
   text?: string | (() => string);
 }
 
+/** Extract and return the API key from settings, or empty string if missing. */
 const getApiKey = (settings?: AISettings) => {
   if (settings?.apiKey && settings.apiKey.trim() !== '') return settings.apiKey;
   return '';
@@ -56,6 +57,7 @@ const getApiKey = (settings?: AISettings) => {
 
 const _wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+/** Route an LLM call to the configured provider and return parsed JSON. */
 async function callLLM(
   prompt: string,
   systemInstruction: string,
@@ -162,6 +164,7 @@ async function callLLM(
   throw new Error('Unknown Provider');
 }
 
+/** Generate synthetic demo emails via AI for testing/preview purposes. */
 export const generateDemoEmails = async (count: number = 5, settings?: AISettings): Promise<Email[]> => {
   const emailSchema: Schema = {
     type: Type.ARRAY,
@@ -197,6 +200,7 @@ export const generateDemoEmails = async (count: number = 5, settings?: AISetting
   }
 };
 
+/** Categorize a single email with AI (delegates to batch categorization). */
 export const categorizeEmailWithAI = async (
   email: Email,
   availableCategories: string[],

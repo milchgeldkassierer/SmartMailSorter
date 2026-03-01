@@ -648,6 +648,7 @@ async function syncAccount(account) {
   }
 }
 
+/** Test IMAP connection by connecting, locking INBOX, and logging out. */
 async function testConnection(account) {
   const client = createImapClient(account);
 
@@ -665,6 +666,7 @@ async function testConnection(account) {
   }
 }
 
+/** Delete an email by UID from the IMAP server (moves to Trash or expunges). */
 async function deleteEmail(account, uid, dbFolder) {
   if (!uid) return { success: false, error: 'No UID' };
 
@@ -727,6 +729,7 @@ async function deleteEmail(account, uid, dbFolder) {
   }
 }
 
+/** Set or clear an IMAP flag (e.g. \Seen, \Flagged) on a message by UID. */
 async function setEmailFlag(account, uid, flag, value, dbFolder) {
   if (!uid) return { success: false, error: 'No UID' };
 

@@ -16,6 +16,7 @@ interface OllamaStatus {
   models: string[];
 }
 
+/** Settings tab for configuring AI provider, model, and API key for smart email sorting. */
 const SmartSortTab: React.FC<SmartSortTabProps> = ({ aiSettings, onSave, saveError }) => {
   const { t } = useTranslation();
   const [tempAISettings, setTempAISettings] = useState<AISettings>(aiSettings);
