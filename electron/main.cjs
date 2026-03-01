@@ -641,8 +641,8 @@ app.whenReady().then(() => {
     }
     settings.model = settings.model.trim();
     const isOllama = settings.provider === LLMProviders.OLLAMA;
-    if (settings.apiKey) settings.apiKey = settings.apiKey.trim();
-    if (!isOllama && !settings.apiKey) {
+    if (typeof settings.apiKey === 'string') settings.apiKey = settings.apiKey.trim();
+    if (!isOllama && (!settings.apiKey || typeof settings.apiKey !== 'string')) {
       throw new Error(`Missing API key for ${settings.provider}`);
     }
     return { provider: settings.provider, model: settings.model, apiKey: settings.apiKey };
@@ -784,7 +784,9 @@ app.whenReady().then(() => {
     try {
       return JSON.parse(cleanMarkdown(text));
     } catch (e) {
-      throw new Error(`Ollama returned invalid JSON: ${text.slice(0, 200)}`);
+      const crypto = require('crypto');
+      const digest = crypto.createHash('sha256').update(text).digest('hex').slice(0, 12);
+      throw new Error(`Ollama returned invalid JSON (length=${text.length}, sha256=${digest})`);
     }
   }
 
@@ -895,7 +897,7 @@ Antworte NUR mit dem JSON-Objekt mit dem "query" Feld.`;
     if (!userPrompt || typeof userPrompt !== 'string' || !userPrompt.trim()) throw new Error('Invalid userPrompt');
     if (systemInstruction.length > 10000) throw new Error('systemInstruction too long (max 10000 characters)');
     if (userPrompt.length > 200000) throw new Error('userPrompt too long (max 200000 characters)');
-    if (jsonSchema !== undefined && (typeof jsonSchema !== 'object' || jsonSchema === null))
+    if (jsonSchema !== undefined && (typeof jsonSchema !== 'object' || jsonSchema === null || Array.isArray(jsonSchema)))
       throw new Error('Invalid jsonSchema: expected an object');
 
     const settings = loadAndValidateAISettings();
