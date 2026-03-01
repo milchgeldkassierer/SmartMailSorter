@@ -170,8 +170,9 @@ describe('EmailView', () => {
     });
 
     it('should render email category', () => {
-      const email = createEmail({ category: 'Rechnungen' });
-      render(<EmailView email={email} />);
+      const email = createEmail({ smartCategory: 'Rechnungen' });
+      const categories = [{ name: 'Rechnungen', type: 'custom' }];
+      render(<EmailView email={email} categories={categories} />);
 
       expect(screen.getByText('Rechnungen')).toBeInTheDocument();
     });
@@ -326,7 +327,7 @@ describe('EmailView', () => {
       });
       render(<EmailView email={email} />);
 
-      expect(screen.getByText('Gemini Analyse')).toBeInTheDocument();
+      expect(screen.getByText('Smart Sort Analyse')).toBeInTheDocument();
       expect(
         screen.getByText('This email appears to be an invoice based on keywords like "payment" and "amount due".')
       ).toBeInTheDocument();
