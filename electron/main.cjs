@@ -606,13 +606,18 @@ app.whenReady().then(() => {
     const hasEncryptedFile = fs.existsSync(AI_SETTINGS_FILE);
     const hasPlaintextFile = fs.existsSync(AI_SETTINGS_FILE_PLAINTEXT);
 
-    if (hasEncryptedFile && safeStorage.isEncryptionAvailable()) {
-      const encrypted = fs.readFileSync(AI_SETTINGS_FILE);
-      const decrypted = safeStorage.decryptString(encrypted);
-      return JSON.parse(decrypted);
-    }
-    if (hasPlaintextFile) {
-      return JSON.parse(fs.readFileSync(AI_SETTINGS_FILE_PLAINTEXT, 'utf8'));
+    try {
+      if (hasEncryptedFile && safeStorage.isEncryptionAvailable()) {
+        const encrypted = fs.readFileSync(AI_SETTINGS_FILE);
+        const decrypted = safeStorage.decryptString(encrypted);
+        return JSON.parse(decrypted);
+      }
+      if (hasPlaintextFile) {
+        return JSON.parse(fs.readFileSync(AI_SETTINGS_FILE_PLAINTEXT, 'utf8'));
+      }
+    } catch (e) {
+      logger.error('[Settings] Settings file corrupted, please reconfigure:', e.message);
+      return null;
     }
     return null;
   }
