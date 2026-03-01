@@ -285,10 +285,29 @@ export const categorizeBatchWithAI = async (
       ? "Antworte als JSON Array von Objekten. Jedes Objekt MUSS die 'id' der entsprechenden Email enthalten."
       : 'Antworte als JSON Objekt mit einem "results" Array. Jedes Element MUSS die exakte \'id\' der Email enthalten. Beispiel: {"results": [{"id": "...", "category": "...", "summary": "..."}]}';
 
+  // Build learned preferences section from feedback examples (few-shot learning)
+  let learnedPreferencesSection = '';
+  if (feedbackExamples.length > 0) {
+    // Limit to 5 examples to keep token budget reasonable
+    const limitedExamples = feedbackExamples.slice(0, 5);
+    const exampleLines = limitedExamples.map(ex =>
+      `  - ${ex.senderEmail}: Emails wurden von "${ex.originalCategory}" zu "${ex.correctedCategory}" korrigiert (Betreff: "${ex.subject}")`
+    ).join('\n');
+
+    learnedPreferencesSection = `
+GELERNTE PRÄFERENZEN:
+Der Benutzer hat folgende Korrekturen vorgenommen:
+${exampleLines}
+
+Berücksichtige diese Präferenzen bei ähnlichen Emails.
+
+`;
+  }
+
   const prompt =
     settings.provider === LLMProvider.OLLAMA
       ? `Sortiere diese ${emails.length} Emails.
-
+${learnedPreferencesSection}
 Emails: ${JSON.stringify(inputs)}
 
 Kategorien: ${targetCategories.join(', ')}
@@ -298,7 +317,7 @@ Nutze existierende Kategorien. Falls keine passt, schlage neue vor (1 Wort). Ver
 ${jsonFormatHint}`
       : `
       Du bist ein strenger Email-Sortierer. Sortiere die folgenden ${emails.length} Emails.
-
+${learnedPreferencesSection}
       Eingabedaten (JSON):
       ${JSON.stringify(inputs)}
 
