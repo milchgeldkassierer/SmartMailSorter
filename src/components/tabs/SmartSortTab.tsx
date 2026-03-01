@@ -26,12 +26,15 @@ const SmartSortTab: React.FC<SmartSortTabProps> = ({ aiSettings, onSave, saveErr
   // Sync prop changes to internal state
   useEffect(() => {
     setTempAISettings(aiSettings);
+    if (aiSettings.apiKey) {
+      setApiKeysByProvider((prev) => ({ ...prev, [aiSettings.provider]: aiSettings.apiKey }));
+    }
   }, [aiSettings]);
 
   // Detect Ollama and fetch models in a single call
   useEffect(() => {
     if (tempAISettings.provider !== LLMProvider.OLLAMA) {
-      setOllamaStatus((prev) => ({ ...prev, models: [] }));
+      setOllamaStatus((prev) => ({ ...prev, models: [], checking: false }));
       return;
     }
 
@@ -40,7 +43,10 @@ const SmartSortTab: React.FC<SmartSortTabProps> = ({ aiSettings, onSave, saveErr
 
     const detectAndFetchModels = async () => {
       try {
-        if (!window.electron) return;
+        if (!window.electron) {
+          setOllamaStatus((prev) => ({ ...prev, checking: false }));
+          return;
+        }
         const result = await window.electron.ollamaDetect();
         if (cancelled) return;
 

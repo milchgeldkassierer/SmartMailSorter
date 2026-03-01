@@ -479,10 +479,8 @@ describe('SmartSortTab', () => {
       const providerSelect = screen.getByDisplayValue(LLMProvider.OPENAI);
       fireEvent.change(providerSelect, { target: { value: LLMProvider.OLLAMA } });
 
-      // Should not show password input anymore
-      const passwordInputs = screen.queryAllByDisplayValue('');
-      const hasPasswordInput = passwordInputs.some((input) => input.getAttribute('type') === 'password');
-      expect(hasPasswordInput).toBe(false);
+      // API key input should not exist for Ollama provider
+      expect(screen.queryByTestId('api-key-input')).toBeNull();
     });
 
     it('should switch from Ollama to other providers correctly', () => {

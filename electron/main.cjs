@@ -800,8 +800,8 @@ Antworte NUR mit dem JSON-Objekt mit dem "query" Feld.`;
     const { systemInstruction, userPrompt } = args;
     if (!systemInstruction || typeof systemInstruction !== 'string') throw new Error('Invalid systemInstruction');
     if (!userPrompt || typeof userPrompt !== 'string') throw new Error('Invalid userPrompt');
-    if (systemInstruction.length > 5000) throw new Error('systemInstruction too long (max 5000 characters)');
-    if (userPrompt.length > 50000) throw new Error('userPrompt too long (max 50000 characters)');
+    if (systemInstruction.length > 10000) throw new Error('systemInstruction too long (max 10000 characters)');
+    if (userPrompt.length > 200000) throw new Error('userPrompt too long (max 200000 characters)');
 
     const settings = loadAndValidateAISettings();
     return await callAIProvider(settings, systemInstruction, userPrompt);
