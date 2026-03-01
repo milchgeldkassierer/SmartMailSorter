@@ -90,6 +90,10 @@ declare global {
       loadAISettings: () => Promise<AISettings | null>;
       parseNaturalLanguageQuery: (query: string) => Promise<string>;
 
+      // Ollama Integration
+      ollamaDetect: () => Promise<{ available: boolean; error?: string }>;
+      ollamaListModels: () => Promise<string[]>;
+
       // Notification Settings
       loadNotificationSettings: () => Promise<NotificationSettings | null>;
       saveNotificationSettings: (settings: NotificationSettings) => Promise<NotificationOperationResult>;
