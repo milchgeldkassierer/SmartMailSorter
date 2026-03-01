@@ -371,6 +371,59 @@ const App: React.FC = () => {
     [currentEmails, updateActiveAccountData, pushAction, t]
   );
 
+  const handleCategoryChange = useCallback(
+    async (emailId: string, newCategory: string) => {
+      if (!activeAccountId || !window.electron) return;
+
+      const email = currentEmails.find((e) => e.id === emailId);
+      if (!email) return;
+
+      const originalCategory = email.smartCategory;
+      if (originalCategory === newCategory) return;
+
+      // Optimistic update
+      updateActiveAccountData((prev) => ({
+        ...prev,
+        emails: prev.emails.map((e) => (e.id === emailId ? { ...e, smartCategory: newCategory } : e)),
+      }));
+
+      try {
+        // Persist category change
+        await window.electron.updateEmailSmartCategory({
+          emailId,
+          category: newCategory
+        });
+
+        // Save feedback if there was an original AI category
+        if (originalCategory && originalCategory !== newCategory) {
+          const feedbackId = `${emailId}-${Date.now()}`;
+          await window.electron.saveCategorizationFeedback({
+            id: feedbackId,
+            emailId,
+            accountId: activeAccountId,
+            originalCategory,
+            correctedCategory: newCategory,
+            sender: email.sender,
+            senderEmail: email.senderEmail,
+            subject: email.subject,
+            aiSummary: email.aiSummary ?? null,
+            aiReasoning: email.aiReasoning ?? null,
+            confidence: email.confidence ?? null,
+            correctedAt: Date.now(),
+          });
+        }
+      } catch (error) {
+        // Rollback on error
+        updateActiveAccountData((prev) => ({
+          ...prev,
+          emails: prev.emails.map((e) => (e.id === emailId ? { ...e, smartCategory: originalCategory } : e)),
+        }));
+        throw error;
+      }
+    },
+    [currentEmails, updateActiveAccountData, activeAccountId]
+  );
+
   const {
     isDragging,
     draggedEmailIds,
@@ -710,7 +763,12 @@ const App: React.FC = () => {
             draggedEmailIds={draggedEmailIds}
             searchQuery={searchTerm}
           />
-          <EmailView email={selectedEmail} searchQuery={searchTerm} />
+          <EmailView
+            email={selectedEmail}
+            searchQuery={searchTerm}
+            categories={currentCategories}
+            onCategoryChange={handleCategoryChange}
+          />
         </div>
 
         {undoToast && (

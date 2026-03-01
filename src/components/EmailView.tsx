@@ -263,15 +263,15 @@ const EmailView: React.FC<EmailViewProps> = ({ email, searchQuery, categories = 
           </div>
 
           {/* Category Selector Dropdown */}
-          {email.category && (
+          {email.smartCategory && (
             <div className="relative" ref={categoryDropdownRef}>
               <button
                 onClick={() => setIsCategoryDropdownOpen(!isCategoryDropdownOpen)}
                 className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-full border border-slate-200 transition-colors cursor-pointer"
                 disabled={!onCategoryChange || categories.length === 0}
               >
-                <CategoryIcon category={email.category} className="w-4 h-4 text-slate-600" />
-                <span className="text-sm font-medium text-slate-700">{getCategoryDisplayName(email.category)}</span>
+                <CategoryIcon category={email.smartCategory} className="w-4 h-4 text-slate-600" />
+                <span className="text-sm font-medium text-slate-700">{getCategoryDisplayName(email.smartCategory)}</span>
                 {onCategoryChange && categories.length > 0 && (
                   <ChevronDown className="w-3.5 h-3.5 text-slate-500" />
                 )}
@@ -284,13 +284,13 @@ const EmailView: React.FC<EmailViewProps> = ({ email, searchQuery, categories = 
                     <button
                       key={cat.name}
                       onClick={() => {
-                        if (email.id && cat.name !== email.category) {
+                        if (email.id && cat.name !== email.smartCategory) {
                           onCategoryChange(email.id, cat.name);
                         }
                         setIsCategoryDropdownOpen(false);
                       }}
                       className={`w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-slate-50 transition-colors ${
-                        cat.name === email.category ? 'bg-blue-50 text-blue-700' : 'text-slate-700'
+                        cat.name === email.smartCategory ? 'bg-blue-50 text-blue-700' : 'text-slate-700'
                       }`}
                     >
                       <CategoryIcon category={cat.name} className="w-4 h-4" />
