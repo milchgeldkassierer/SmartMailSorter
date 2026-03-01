@@ -522,6 +522,30 @@ app.whenReady().then(() => {
     }
   });
 
+  ipcMain.handle('ollama-list-models', async () => {
+    try {
+      logger.debug('[Ollama] Fetching available models...');
+      const response = await fetchWithTimeout('http://localhost:11434/api/tags', {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+      }, 5000);
+
+      if (!response.ok) {
+        logger.warn(`[Ollama] API returned status ${response.status}`);
+        return [];
+      }
+
+      const data = await response.json();
+      const models = data.models || [];
+      const modelNames = models.map((model) => model.name);
+      logger.info(`[Ollama] Found ${modelNames.length} models: ${modelNames.join(', ')}`);
+      return modelNames;
+    } catch (error) {
+      logger.debug('[Ollama] Failed to fetch models:', error.message);
+      return [];
+    }
+  });
+
   // --- AI Provider Helpers ---
 
   /** Fetch with AbortController timeout to prevent hung UI */
