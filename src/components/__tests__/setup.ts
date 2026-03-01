@@ -112,6 +112,11 @@ beforeAll(async () => {
             geminiKeyInfo: 'Für Google Gemini ist bereits ein Demo-Key hinterlegt. Du kannst ihn überschreiben.',
             apiKeyInfo: 'Der API Key wird nur lokal im Browser für die Simulation verwendet.',
             saveSettings: 'Einstellungen speichern',
+            ollamaDetecting: 'Ollama wird erkannt...',
+            ollamaAvailable: 'Ollama verbunden',
+            ollamaUnavailable: 'Ollama nicht erreichbar',
+            ollamaNoApiKey: 'Kein API-Schlüssel erforderlich - läuft lokal',
+            ollamaFetchingModels: 'Modelle werden geladen...',
           },
           generalTab: {
             language: 'Sprache',
@@ -423,6 +428,11 @@ beforeAll(async () => {
             geminiKeyInfo: 'A demo key is already configured for Google Gemini. You can override it.',
             apiKeyInfo: 'The API key is only used locally in the browser for simulation.',
             saveSettings: 'Save settings',
+            ollamaDetecting: 'Detecting Ollama...',
+            ollamaAvailable: 'Ollama connected',
+            ollamaUnavailable: 'Ollama not reachable',
+            ollamaNoApiKey: 'No API key required - runs locally',
+            ollamaFetchingModels: 'Fetching models...',
           },
           generalTab: {
             language: 'Language',
