@@ -180,13 +180,15 @@ async function processMessages(client, messages, account, targetCategory) {
         // Skip oversized emails to prevent event loop blocking (simpleParser is CPU-bound)
         const MAX_PARSE_SIZE = 2 * 1024 * 1024; // 2 MB
         if (bodySize > MAX_PARSE_SIZE) {
-          logger.warn(`[Sync] Skipping UID ${currentUid}: too large (${bodySizeKB} KB > ${MAX_PARSE_SIZE / 1024} KB limit). Saving header only.`);
+          logger.warn(
+            `[Sync] Skipping UID ${currentUid}: too large (${bodySizeKB} KB > ${MAX_PARSE_SIZE / 1024} KB limit). Saving header only.`
+          );
           // Extract minimal headers without full parse
           const headerEnd = all.body.indexOf('\r\n\r\n');
           const headerText = headerEnd > 0 ? all.body.substring(0, headerEnd) : all.body.substring(0, 4096);
-          const subjectMatch = headerText.match(/^Subject:\s*(.+)/mi);
-          const fromMatch = headerText.match(/^From:\s*(.+)/mi);
-          const dateMatch = headerText.match(/^Date:\s*(.+)/mi);
+          const subjectMatch = headerText.match(/^Subject:\s*(.+)/im);
+          const fromMatch = headerText.match(/^From:\s*(.+)/im);
+          const dateMatch = headerText.match(/^Date:\s*(.+)/im);
           saveEmail({
             id: id,
             accountId: account.id,
@@ -208,7 +210,7 @@ async function processMessages(client, messages, account, targetCategory) {
         }
 
         const parsed = await simpleParser(all.body);
-        logger.debug(`[Sync Debug] Parsed UID ${currentUid}: "${parsed.subject}" (${(parsed.attachments || []).length} attachments)`);
+        logger.debug(`[Sync Debug] Parsed UID ${currentUid}: ${(parsed.attachments || []).length} attachments`);
         const attachments = (parsed.attachments || []).map((att) => ({
           filename: att.filename || 'attachment',
           contentType: att.contentType,

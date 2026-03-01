@@ -166,18 +166,14 @@ async function callLLM(
 
 /** Generate synthetic demo emails via AI for testing/preview purposes. */
 export const generateDemoEmails = async (count: number = 5, settings?: AISettings): Promise<Email[]> => {
+  if (!settings) return [];
   const emailSchema: Schema = {
     type: Type.ARRAY,
     items: { type: Type.OBJECT, properties: { sender: { type: Type.STRING } } },
   };
   try {
     const prompt = `Generiere ${count} realistische Emails auf Deutsch. Format: JSON Array.`;
-    const rawData = await callLLM(
-      prompt,
-      'You are a data generator.',
-      emailSchema,
-      settings || { provider: LLMProvider.GEMINI, model: 'gemini-2.5-flash', apiKey: '' }
-    );
+    const rawData = await callLLM(prompt, 'You are a data generator.', emailSchema, settings);
     return (Array.isArray(rawData) ? rawData : [])
       .filter((item: unknown): item is object => typeof item === 'object' && item !== null)
       .map((item: unknown, index: number) => {

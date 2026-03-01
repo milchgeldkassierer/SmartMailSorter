@@ -424,8 +424,13 @@ app.whenReady().then(() => {
       if (!settings || typeof settings !== 'object') {
         throw new Error('Invalid settings: expected an object');
       }
-      if (typeof settings.provider !== 'string' || typeof settings.model !== 'string') {
-        throw new Error('Invalid settings: provider and model must be strings');
+      if (
+        typeof settings.provider !== 'string' ||
+        !settings.provider.trim() ||
+        typeof settings.model !== 'string' ||
+        !settings.model.trim()
+      ) {
+        throw new Error('Invalid settings: provider and model must be non-empty strings');
       }
       if (settings.apiKey !== undefined && typeof settings.apiKey !== 'string') {
         throw new Error('Invalid settings: apiKey must be a string');
@@ -443,7 +448,12 @@ app.whenReady().then(() => {
         } catch (validationError) {
           const msg = validationError instanceof Error ? validationError.message : String(validationError);
           const msgLower = msg.toLowerCase();
-          if (msg.includes('401') || msg.includes('403') || msgLower.includes('api key not valid') || msgLower.includes('incorrect api key')) {
+          if (
+            msg.includes('401') ||
+            msg.includes('403') ||
+            msgLower.includes('api key not valid') ||
+            msgLower.includes('incorrect api key')
+          ) {
             throw new Error(`Invalid API key for ${settings.provider}: Authentication failed`);
           }
           // Other errors (network, rate limit) are not key-related - allow save
@@ -523,9 +533,13 @@ app.whenReady().then(() => {
   ipcMain.handle('ollama-detect', async () => {
     try {
       logger.debug('[Ollama] Detecting running Ollama instance...');
-      const response = await fetchWithTimeout(OLLAMA_BASE_URL + '/api/tags', {
-        method: 'GET',
-      }, 5000);
+      const response = await fetchWithTimeout(
+        OLLAMA_BASE_URL + '/api/tags',
+        {
+          method: 'GET',
+        },
+        5000
+      );
 
       if (!response.ok) {
         logger.warn(`[Ollama] API returned status ${response.status}`);
@@ -537,9 +551,7 @@ app.whenReady().then(() => {
         logger.warn('[Ollama] Unexpected response shape from /api/tags:', JSON.stringify(data).slice(0, 200));
         return { available: true, models: [] };
       }
-      const models = data.models
-        .filter((m) => typeof m?.name === 'string')
-        .map((m) => m.name);
+      const models = data.models.filter((m) => typeof m?.name === 'string').map((m) => m.name);
       if (models.length !== data.models.length) {
         logger.warn(`[Ollama] Filtered out ${data.models.length - models.length} models with invalid names`);
       }
@@ -587,14 +599,14 @@ app.whenReady().then(() => {
     if (!settings) {
       throw new Error('AI settings not configured');
     }
-    if (!settings.provider || typeof settings.provider !== 'string') {
+    if (typeof settings.provider !== 'string' || !settings.provider.trim()) {
       throw new Error('AI settings must include a valid provider');
     }
-    if (!settings.model || typeof settings.model !== 'string') {
+    if (typeof settings.model !== 'string' || !settings.model.trim()) {
       throw new Error('AI settings must include a valid model');
     }
     const isOllama = settings.provider === 'Ollama';
-    if (!isOllama && !settings.apiKey) {
+    if (!isOllama && (!settings.apiKey || !settings.apiKey.trim())) {
       throw new Error(`Missing API key for ${settings.provider}`);
     }
     return settings;
@@ -602,7 +614,10 @@ app.whenReady().then(() => {
 
   /** Clean markdown code fences from AI response text */
   function cleanMarkdown(text) {
-    return text.replace(/```json/g, '').replace(/```/g, '').trim();
+    return text
+      .replace(/```json/g, '')
+      .replace(/```/g, '')
+      .trim();
   }
 
   /** Call Google Gemini API and return parsed JSON.
@@ -730,11 +745,16 @@ app.whenReady().then(() => {
   /** Route to the correct AI provider based on settings */
   async function callAIProvider(settings, systemInstruction, userPrompt) {
     switch (settings.provider) {
-      case 'Google Gemini': return callGeminiApi(settings, systemInstruction, userPrompt);
-      case 'OpenAI': return callOpenAIApi(settings, systemInstruction, userPrompt);
-      case 'Anthropic': return callAnthropicApi(settings, systemInstruction, userPrompt);
-      case 'Ollama': return callOllamaApi(settings, systemInstruction, userPrompt);
-      default: throw new Error(`Unknown AI provider: ${settings.provider}`);
+      case 'Google Gemini':
+        return callGeminiApi(settings, systemInstruction, userPrompt);
+      case 'OpenAI':
+        return callOpenAIApi(settings, systemInstruction, userPrompt);
+      case 'Anthropic':
+        return callAnthropicApi(settings, systemInstruction, userPrompt);
+      case 'Ollama':
+        return callOllamaApi(settings, systemInstruction, userPrompt);
+      default:
+        throw new Error(`Unknown AI provider: ${settings.provider}`);
     }
   }
 

@@ -224,7 +224,7 @@ export const useBatchOperations = ({
   /** Run AI-powered smart sort on all selected emails with progress tracking. */
   const handleBatchSmartSort = async () => {
     if (selectedIds.size === 0) return;
-    if (!isOllama && !aiSettings.apiKey) {
+    if (!isOllama && !aiSettings.apiKey?.trim()) {
       await dialog.alert({
         title: t('batch.aiSettingsRequired'),
         message: t('batch.configureApiKey'),
@@ -309,7 +309,7 @@ export const useBatchOperations = ({
     }
   };
 
-  const canSmartSort = Boolean(selectedIds.size > 0 && aiSettings.provider && (isOllama || aiSettings.apiKey));
+  const canSmartSort = Boolean(selectedIds.size > 0 && aiSettings.provider && (isOllama || aiSettings.apiKey?.trim()));
 
   return {
     isSorting,
