@@ -68,7 +68,9 @@ const SmartSortTab: React.FC<SmartSortTabProps> = ({ aiSettings, onSave, saveErr
     };
 
     detectAndFetchModels();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [tempAISettings.provider]);
 
   const handleSaveAI = () => {
@@ -196,9 +198,7 @@ const SmartSortTab: React.FC<SmartSortTabProps> = ({ aiSettings, onSave, saveErr
           </label>
           {tempAISettings.provider === LLMProvider.OLLAMA ? (
             <div className="bg-green-50 border border-green-200 rounded-lg px-3 py-2">
-              <p className="text-sm text-green-700">
-                {t('smartSortTab.ollamaNoApiKey')}
-              </p>
+              <p className="text-sm text-green-700">{t('smartSortTab.ollamaNoApiKey')}</p>
             </div>
           ) : (
             <>
@@ -214,9 +214,7 @@ const SmartSortTab: React.FC<SmartSortTabProps> = ({ aiSettings, onSave, saveErr
                   setApiKeysByProvider((prev) => ({ ...prev, [tempAISettings.provider]: newKey }));
                 }}
               />
-              <p className="text-xs text-slate-500 mt-1">
-                {t('smartSortTab.apiKeyInfo')}
-              </p>
+              <p className="text-xs text-slate-500 mt-1">{t('smartSortTab.apiKeyInfo')}</p>
             </>
           )}
         </div>

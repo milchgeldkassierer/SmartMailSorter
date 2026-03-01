@@ -91,7 +91,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
               <AccountsTab accounts={accounts} onAddAccount={onAddAccount} onRemoveAccount={onRemoveAccount} />
             )}
 
-            {activeTab === 'smartsort' && <SmartSortTab aiSettings={aiSettings} onSave={onSaveAISettings} saveError={aiSaveError} />}
+            {activeTab === 'smartsort' && (
+              <SmartSortTab aiSettings={aiSettings} onSave={onSaveAISettings} saveError={aiSaveError} />
+            )}
 
             {activeTab === 'notifications' && <NotificationsTab accounts={accounts} />}
 

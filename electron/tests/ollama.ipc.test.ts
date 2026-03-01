@@ -317,10 +317,7 @@ describe('Ollama IPC Handlers', () => {
         headers: { 'Content-Type': 'application/json' },
       });
 
-      expect(mockFetch).toHaveBeenCalledWith(
-        endpoint,
-        expect.objectContaining({ method: 'GET' })
-      );
+      expect(mockFetch).toHaveBeenCalledWith(endpoint, expect.objectContaining({ method: 'GET' }));
 
       mockFetch.mockClear();
 
@@ -330,10 +327,7 @@ describe('Ollama IPC Handlers', () => {
         headers: { 'Content-Type': 'application/json' },
       });
 
-      expect(mockFetch).toHaveBeenCalledWith(
-        endpoint,
-        expect.objectContaining({ method: 'GET' })
-      );
+      expect(mockFetch).toHaveBeenCalledWith(endpoint, expect.objectContaining({ method: 'GET' }));
     });
 
     it('should use correct HTTP method (GET)', () => {
@@ -348,10 +342,7 @@ describe('Ollama IPC Handlers', () => {
         headers: { 'Content-Type': 'application/json' },
       });
 
-      expect(mockFetch).toHaveBeenCalledWith(
-        expect.any(String),
-        expect.objectContaining({ method: 'GET' })
-      );
+      expect(mockFetch).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({ method: 'GET' }));
     });
 
     it('should include correct Content-Type header', () => {

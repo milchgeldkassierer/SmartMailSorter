@@ -254,7 +254,7 @@ export const categorizeBatchWithAI = async (
   // (OpenAI, Anthropic, Ollama) return {results: [...]} wrappers via prompt instruction.
   const jsonFormatHint =
     settings.provider === LLMProvider.GEMINI
-      ? 'Antworte als JSON Array von Objekten. Jedes Objekt MUSS die \'id\' der entsprechenden Email enthalten.'
+      ? "Antworte als JSON Array von Objekten. Jedes Objekt MUSS die 'id' der entsprechenden Email enthalten."
       : 'Antworte als JSON Objekt mit einem "results" Array. Jedes Element MUSS die exakte \'id\' der Email enthalten. Beispiel: {"results": [{"id": "...", "category": "...", "summary": "..."}]}';
 
   const prompt =
