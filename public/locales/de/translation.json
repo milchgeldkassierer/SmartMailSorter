@@ -111,6 +111,8 @@
   "generalTab": {
     "language": "Sprache",
     "selectLanguage": "Sprache auswählen",
+    "aiLearning": "KI-Lernen",
+    "viewFeedbackHistory": "Feedback-Verlauf anzeigen",
     "dataManagement": "Datenverwaltung",
     "resetDatabase": "Datenbank komplett zurücksetzen & neu starten",
     "resetDatabaseTitle": "Datenbank zurücksetzen",

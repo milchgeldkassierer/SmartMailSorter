@@ -14,6 +14,7 @@ import Sidebar from './components/Sidebar';
 import EmailList from './components/EmailList';
 import EmailView from './components/EmailView';
 import SettingsModal from './components/SettingsModal';
+import FeedbackHistoryModal from './components/FeedbackHistoryModal';
 import { generateDemoEmails } from './services/geminiService';
 import { useAccounts } from './hooks/useAccounts';
 import { useAISettings } from './hooks/useAISettings';
@@ -37,6 +38,7 @@ const App: React.FC = () => {
     useAccounts();
   const { aiSettings, setAiSettings, saveError: aiSaveError } = useAISettings();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isFeedbackHistoryOpen, setIsFeedbackHistoryOpen] = useState(false);
   const dialog = useDialogContext();
 
   // Saved Filters
@@ -835,6 +837,16 @@ const App: React.FC = () => {
           aiSettings={aiSettings}
           onSaveAISettings={setAiSettings}
           aiSaveError={aiSaveError}
+          onOpenFeedbackHistory={() => {
+            setIsSettingsOpen(false);
+            setIsFeedbackHistoryOpen(true);
+          }}
+        />
+
+        <FeedbackHistoryModal
+          isOpen={isFeedbackHistoryOpen}
+          onClose={() => setIsFeedbackHistoryOpen(false)}
+          accountId={activeAccountId || ''}
         />
       </div>
     </div>
