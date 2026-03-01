@@ -793,14 +793,16 @@ app.whenReady().then(() => {
    * Gemini uses uppercase type names (STRING, OBJECT, ARRAY, etc.);
    * JSON Schema and all other providers require lowercase.
    */
-  function normalizeJsonSchema(schema) {
+  function normalizeJsonSchema(schema, depth = 0) {
+    if (depth > 20) return schema;
     if (!schema || typeof schema !== 'object') return schema;
-    const out = Array.isArray(schema) ? [] : {};
+    const out = Array.isArray(schema) ? [] : Object.create(null);
     for (const [key, value] of Object.entries(schema)) {
+      if (key === '__proto__' || key === 'constructor' || key === 'prototype') continue;
       if (key === 'type' && typeof value === 'string') {
         out[key] = value.toLowerCase();
       } else if (typeof value === 'object' && value !== null) {
-        out[key] = normalizeJsonSchema(value);
+        out[key] = normalizeJsonSchema(value, depth + 1);
       } else {
         out[key] = value;
       }
