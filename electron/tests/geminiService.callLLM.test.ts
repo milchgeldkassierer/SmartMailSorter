@@ -352,6 +352,7 @@ describe('GeminiService - callLLM Function', () => {
       expect(mockAiCall).toHaveBeenCalledWith({
         systemInstruction: expect.any(String),
         userPrompt: expect.any(String),
+        jsonSchema: expect.any(Object),
       });
     });
 
@@ -367,6 +368,7 @@ describe('GeminiService - callLLM Function', () => {
       expect(mockAiCall).toHaveBeenCalledWith({
         systemInstruction: expect.any(String),
         userPrompt: expect.any(String),
+        jsonSchema: expect.any(Object),
       });
     });
 
@@ -382,6 +384,7 @@ describe('GeminiService - callLLM Function', () => {
       expect(mockAiCall).toHaveBeenCalledWith({
         systemInstruction: expect.any(String),
         userPrompt: expect.any(String),
+        jsonSchema: expect.any(Object),
       });
     });
 
@@ -514,6 +517,7 @@ describe('GeminiService - callLLM Function', () => {
       expect(mockAiCall).toHaveBeenCalledWith({
         systemInstruction: expect.any(String),
         userPrompt: expect.any(String),
+        jsonSchema: expect.any(Object),
       });
     });
 
@@ -529,6 +533,7 @@ describe('GeminiService - callLLM Function', () => {
       expect(mockAiCall).toHaveBeenCalledWith({
         systemInstruction: expect.any(String),
         userPrompt: expect.any(String),
+        jsonSchema: expect.any(Object),
       });
       // Verify systemInstruction is non-empty
       const callArgs = mockAiCall.mock.calls[0][0];
@@ -547,6 +552,7 @@ describe('GeminiService - callLLM Function', () => {
       expect(mockAiCall).toHaveBeenCalledWith({
         systemInstruction: expect.any(String),
         userPrompt: expect.any(String),
+        jsonSchema: expect.any(Object),
       });
       // Verify userPrompt is non-empty
       const callArgs = mockAiCall.mock.calls[0][0];
