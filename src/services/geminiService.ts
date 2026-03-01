@@ -55,9 +55,6 @@ const getApiKey = (settings?: AISettings) => {
   return '';
 };
 
-/** Delay execution for the given number of milliseconds. */
-const _wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-
 /** Route an LLM call to the configured provider and return parsed JSON. */
 async function callLLM(
   prompt: string,
@@ -329,14 +326,19 @@ ${jsonFormatHint}`
         'emails'
       );
     }
+    const FALLBACK_CONFIDENCE_FACTOR = 0.5;
     return emails.map((email, index) => {
-      const res = resultMap.get(email.id) || (useIndexFallback ? resultsList[index] : undefined);
+      const idMatch = resultMap.get(email.id);
+      const res = idMatch || (useIndexFallback ? resultsList[index] : undefined);
       if (res && res.category) {
+        const isFallback = !idMatch && useIndexFallback;
+        const rawConfidence = res.confidence || 0.8;
         return {
           categoryId: res.category || DefaultEmailCategory.OTHER,
           summary: res.summary || 'Analysiert',
           reasoning: res.reasoning || 'Batch OK',
-          confidence: res.confidence || 0.8,
+          confidence: isFallback ? rawConfidence * FALLBACK_CONFIDENCE_FACTOR : rawConfidence,
+          ...(isFallback && { indexFallbackUsed: true }),
         };
       }
       return {

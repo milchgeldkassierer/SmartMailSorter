@@ -98,6 +98,8 @@ export interface SortResult {
   summary: string;
   reasoning: string;
   confidence: number;
+  /** True when the result was matched by array position rather than email ID. */
+  indexFallbackUsed?: boolean;
 }
 
 // Email Sort Types
