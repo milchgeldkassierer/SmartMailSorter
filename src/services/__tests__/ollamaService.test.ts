@@ -2,9 +2,21 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { categorizeEmailWithAI, categorizeBatchWithAI, parseNaturalLanguageQuery } from '../geminiService';
 import { LLMProvider, DefaultEmailCategory, Email, AISettings, INBOX_FOLDER } from '../../types';
 
-// Mock fetch globally
+// Mock window.electron.aiCall (Ollama/OpenAI/Anthropic now route through IPC)
+const mockAiCall = vi.fn();
+
+// Keep fetch mock for backward compat tests
 const mockFetch = vi.fn();
 global.fetch = mockFetch;
+
+Object.defineProperty(global, 'window', {
+  value: {
+    electron: {
+      aiCall: mockAiCall,
+    },
+  },
+  writable: true,
+});
 
 describe('Ollama Integration Tests', () => {
   const mockSettings: AISettings = {
@@ -27,6 +39,7 @@ describe('Ollama Integration Tests', () => {
   };
 
   beforeEach(() => {
+    mockAiCall.mockClear();
     mockFetch.mockClear();
   });
 
@@ -34,73 +47,29 @@ describe('Ollama Integration Tests', () => {
     vi.clearAllMocks();
   });
 
-  describe('callLLM with Ollama Provider', () => {
-    it('should successfully call Ollama API for email categorization', async () => {
-      mockFetch.mockResolvedValue({
-        ok: true,
-        json: async () => ({
-          message: {
-            content: JSON.stringify([
-              {
-                id: 'test-email-1',
-                category: 'Bestellungen',
-                summary: 'Amazon Bestellbestätigung',
-              },
-            ]),
-          },
-        }),
-      });
+  describe('callLLM with Ollama Provider (via IPC)', () => {
+    it('should successfully call AI via IPC for email categorization', async () => {
+      mockAiCall.mockResolvedValue([
+        {
+          id: 'test-email-1',
+          category: 'Bestellungen',
+          summary: 'Amazon Bestellbestätigung',
+        },
+      ]);
 
       const result = await categorizeEmailWithAI(mockEmail, ['Bestellungen', 'Newsletter'], mockSettings);
 
-      expect(mockFetch).toHaveBeenCalledWith('http://localhost:11434/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: expect.stringContaining('"model":"llama3"'),
+      expect(mockAiCall).toHaveBeenCalledWith({
+        systemInstruction: expect.any(String),
+        userPrompt: expect.stringContaining('Sortiere'),
       });
 
       expect(result.categoryId).toBe('Bestellungen');
       expect(result.summary).toBe('Amazon Bestellbestätigung');
     });
 
-    it('should send correct request format to Ollama API', async () => {
-      mockFetch.mockResolvedValue({
-        ok: true,
-        json: async () => ({
-          message: {
-            content: JSON.stringify([
-              {
-                id: 'test-email-1',
-                category: 'Bestellungen',
-                summary: 'Test',
-              },
-            ]),
-          },
-        }),
-      });
-
-      await categorizeEmailWithAI(mockEmail, ['Bestellungen'], mockSettings);
-
-      const callArgs = mockFetch.mock.calls[0];
-      expect(callArgs[0]).toBe('http://localhost:11434/api/chat');
-
-      const requestBody = JSON.parse(callArgs[1].body);
-      expect(requestBody).toMatchObject({
-        model: 'llama3',
-        format: 'json',
-        stream: false,
-      });
-      expect(requestBody.messages).toHaveLength(2);
-      expect(requestBody.messages[0].role).toBe('system');
-      expect(requestBody.messages[1].role).toBe('user');
-    });
-
     it('should handle API error responses gracefully', async () => {
-      mockFetch.mockResolvedValue({
-        ok: false,
-        status: 500,
-        text: async () => 'Internal Server Error',
-      });
+      mockAiCall.mockRejectedValue(new Error('Ollama API error (500): Internal Server Error'));
 
       const result = await categorizeEmailWithAI(mockEmail, ['Bestellungen'], mockSettings);
 
@@ -110,7 +79,7 @@ describe('Ollama Integration Tests', () => {
     });
 
     it('should handle network errors when Ollama is unavailable', async () => {
-      mockFetch.mockRejectedValue(new Error('fetch failed'));
+      mockAiCall.mockRejectedValue(new Error('fetch failed'));
 
       const result = await categorizeEmailWithAI(mockEmail, ['Bestellungen'], mockSettings);
 
@@ -119,13 +88,8 @@ describe('Ollama Integration Tests', () => {
       expect(result.reasoning).toContain('Batch API Error');
     });
 
-    it('should handle empty response from Ollama', async () => {
-      mockFetch.mockResolvedValue({
-        ok: true,
-        json: async () => ({
-          message: {},
-        }),
-      });
+    it('should handle empty response from IPC', async () => {
+      mockAiCall.mockResolvedValue(null);
 
       const result = await categorizeEmailWithAI(mockEmail, ['Bestellungen'], mockSettings);
 
@@ -134,14 +98,7 @@ describe('Ollama Integration Tests', () => {
     });
 
     it('should handle malformed JSON response', async () => {
-      mockFetch.mockResolvedValue({
-        ok: true,
-        json: async () => ({
-          message: {
-            content: 'This is not valid JSON',
-          },
-        }),
-      });
+      mockAiCall.mockResolvedValue('This is not an array or object');
 
       const result = await categorizeEmailWithAI(mockEmail, ['Bestellungen'], mockSettings);
 
@@ -179,16 +136,11 @@ describe('Ollama Integration Tests', () => {
     ];
 
     it('should process multiple emails in batch', async () => {
-      mockFetch.mockResolvedValue({
-        ok: true,
-        json: async () => ({
-          message: {
-            content: JSON.stringify([
-              { id: 'email-1', category: 'Bestellungen', summary: 'Amazon Order' },
-              { id: 'email-2', category: 'Jobs', summary: 'LinkedIn Job Alert' },
-            ]),
-          },
-        }),
+      mockAiCall.mockResolvedValue({
+        results: [
+          { id: 'email-1', category: 'Bestellungen', summary: 'Amazon Order' },
+          { id: 'email-2', category: 'Jobs', summary: 'LinkedIn Job Alert' },
+        ],
       });
 
       const results = await categorizeBatchWithAI(mockEmails, ['Bestellungen', 'Jobs'], mockSettings);
@@ -198,76 +150,43 @@ describe('Ollama Integration Tests', () => {
       expect(results[1].categoryId).toBe('Jobs');
     });
 
-    it('should use shorter body preview for Ollama (500 chars)', async () => {
-      const longBodyEmail: Email = {
-        ...mockEmail,
-        body: 'A'.repeat(2000),
-      };
-
-      mockFetch.mockResolvedValue({
-        ok: true,
-        json: async () => ({
-          message: {
-            content: JSON.stringify([
-              {
-                id: longBodyEmail.id,
-                category: 'Test',
-                summary: 'Test',
-              },
-            ]),
-          },
-        }),
+    it('should handle wrapped object response with results array', async () => {
+      mockAiCall.mockResolvedValue({
+        results: [
+          { id: 'email-1', category: 'Bestellungen', summary: 'Amazon Order' },
+          { id: 'email-2', category: 'Jobs', summary: 'LinkedIn Job Alert' },
+        ],
       });
 
-      await categorizeEmailWithAI(longBodyEmail, ['Test'], mockSettings);
+      const results = await categorizeBatchWithAI(mockEmails, ['Bestellungen', 'Jobs'], mockSettings);
 
-      const callArgs = mockFetch.mock.calls[0];
-      const requestBody = JSON.parse(callArgs[1].body);
-      const userMessage = requestBody.messages[1].content;
-
-      // Check that body_preview is truncated to 500 chars for Ollama
-      expect(userMessage).toContain('"body_preview":"' + 'A'.repeat(500) + '"');
-      expect(userMessage).not.toContain('A'.repeat(501));
+      expect(results).toHaveLength(2);
+      expect(results[0].categoryId).toBe('Bestellungen');
+      expect(results[1].categoryId).toBe('Jobs');
     });
 
-    it('should use shorter prompt for Ollama', async () => {
-      mockFetch.mockResolvedValue({
-        ok: true,
-        json: async () => ({
-          message: {
-            content: JSON.stringify([
-              {
-                id: mockEmail.id,
-                category: 'Test',
-                summary: 'Test',
-              },
-            ]),
-          },
-        }),
+    it('should fall back to index matching when IDs differ', async () => {
+      mockAiCall.mockResolvedValue({
+        results: [
+          { id: 'wrong-id-1', category: 'Bestellungen', summary: 'Amazon Order' },
+          { id: 'wrong-id-2', category: 'Jobs', summary: 'LinkedIn Job Alert' },
+        ],
       });
 
-      await categorizeEmailWithAI(mockEmail, ['Test'], mockSettings);
+      const results = await categorizeBatchWithAI(mockEmails, ['Bestellungen', 'Jobs'], mockSettings);
 
-      const callArgs = mockFetch.mock.calls[0];
-      const requestBody = JSON.parse(callArgs[1].body);
-      const userMessage = requestBody.messages[1].content;
-
-      // Ollama should get the shorter prompt
-      expect(userMessage).toContain('Sortiere diese');
-      expect(userMessage).not.toContain('Du bist ein strenger Email-Sortierer');
+      expect(results).toHaveLength(2);
+      // Index-based fallback should still match
+      expect(results[0].categoryId).toBe('Bestellungen');
+      expect(results[1].categoryId).toBe('Jobs');
     });
 
     it('should handle partial batch responses gracefully', async () => {
-      mockFetch.mockResolvedValue({
-        ok: true,
-        json: async () => ({
-          message: {
-            content: JSON.stringify([
-              { id: 'email-1', category: 'Bestellungen', summary: 'Amazon Order' },
-              // email-2 missing from response
-            ]),
-          },
-        }),
+      mockAiCall.mockResolvedValue({
+        results: [
+          { id: 'email-1', category: 'Bestellungen', summary: 'Amazon Order' },
+          // email-2 missing from response
+        ],
       });
 
       const results = await categorizeBatchWithAI(mockEmails, ['Bestellungen'], mockSettings);
@@ -283,21 +202,14 @@ describe('Ollama Integration Tests', () => {
       const results = await categorizeBatchWithAI([], ['Test'], mockSettings);
 
       expect(results).toEqual([]);
-      expect(mockFetch).not.toHaveBeenCalled();
+      expect(mockAiCall).not.toHaveBeenCalled();
     });
   });
 
   describe('Natural Language Query with Ollama', () => {
     it('should convert natural language to search operators', async () => {
-      mockFetch.mockResolvedValue({
-        ok: true,
-        json: async () => ({
-          message: {
-            content: JSON.stringify({
-              query: 'category:Rechnungen after:2026-01-01',
-            }),
-          },
-        }),
+      mockAiCall.mockResolvedValue({
+        query: 'category:Rechnungen after:2026-01-01',
       });
 
       const result = await parseNaturalLanguageQuery('Rechnungen von letztem Monat', mockSettings);
@@ -310,19 +222,12 @@ describe('Ollama Integration Tests', () => {
       const result = await parseNaturalLanguageQuery('', mockSettings);
 
       expect(result).toBe('');
-      expect(mockFetch).not.toHaveBeenCalled();
+      expect(mockAiCall).not.toHaveBeenCalled();
     });
 
     it('should preserve free text when no operators match', async () => {
-      mockFetch.mockResolvedValue({
-        ok: true,
-        json: async () => ({
-          message: {
-            content: JSON.stringify({
-              query: 'meeting notes',
-            }),
-          },
-        }),
+      mockAiCall.mockResolvedValue({
+        query: 'meeting notes',
       });
 
       const result = await parseNaturalLanguageQuery('meeting notes', mockSettings);
@@ -331,15 +236,8 @@ describe('Ollama Integration Tests', () => {
     });
 
     it('should handle complex queries with multiple operators', async () => {
-      mockFetch.mockResolvedValue({
-        ok: true,
-        json: async () => ({
-          message: {
-            content: JSON.stringify({
-              query: 'from:amazon category:Rechnungen after:2026-01-01 has:attachment',
-            }),
-          },
-        }),
+      mockAiCall.mockResolvedValue({
+        query: 'from:amazon category:Rechnungen after:2026-01-01 has:attachment',
       });
 
       const result = await parseNaturalLanguageQuery(
@@ -353,34 +251,14 @@ describe('Ollama Integration Tests', () => {
     });
 
     it('should handle API errors gracefully', async () => {
-      mockFetch.mockRejectedValue(new Error('Network error'));
-
-      await expect(parseNaturalLanguageQuery('test query', mockSettings)).rejects.toThrow();
-    });
-
-    it('should handle malformed response', async () => {
-      mockFetch.mockResolvedValue({
-        ok: true,
-        json: async () => ({
-          message: {
-            content: 'not valid json',
-          },
-        }),
-      });
+      mockAiCall.mockRejectedValue(new Error('Network error'));
 
       await expect(parseNaturalLanguageQuery('test query', mockSettings)).rejects.toThrow();
     });
 
     it('should handle missing query field in response', async () => {
-      mockFetch.mockResolvedValue({
-        ok: true,
-        json: async () => ({
-          message: {
-            content: JSON.stringify({
-              // missing 'query' field
-            }),
-          },
-        }),
+      mockAiCall.mockResolvedValue({
+        // missing 'query' field
       });
 
       const result = await parseNaturalLanguageQuery('test query', mockSettings);
@@ -391,11 +269,7 @@ describe('Ollama Integration Tests', () => {
 
   describe('Ollama-specific Error Handling', () => {
     it('should provide descriptive error when Ollama returns 404', async () => {
-      mockFetch.mockResolvedValue({
-        ok: false,
-        status: 404,
-        text: async () => 'Model not found',
-      });
+      mockAiCall.mockRejectedValue(new Error('Ollama API error (404): Model not found'));
 
       const result = await categorizeEmailWithAI(mockEmail, ['Test'], mockSettings);
 
@@ -404,7 +278,7 @@ describe('Ollama Integration Tests', () => {
     });
 
     it('should handle connection refused (Ollama not running)', async () => {
-      mockFetch.mockRejectedValue(new Error('Failed to fetch'));
+      mockAiCall.mockRejectedValue(new Error('Failed to fetch'));
 
       const result = await categorizeEmailWithAI(mockEmail, ['Test'], mockSettings);
 
@@ -413,7 +287,7 @@ describe('Ollama Integration Tests', () => {
     });
 
     it('should handle timeout errors', async () => {
-      mockFetch.mockRejectedValue(new Error('Request timeout'));
+      mockAiCall.mockRejectedValue(new Error('Request timeout'));
 
       const result = await categorizeEmailWithAI(mockEmail, ['Test'], mockSettings);
 
@@ -423,21 +297,14 @@ describe('Ollama Integration Tests', () => {
   });
 
   describe('Response Format Handling', () => {
-    it('should handle response with nested message.content', async () => {
-      mockFetch.mockResolvedValue({
-        ok: true,
-        json: async () => ({
-          message: {
-            content: JSON.stringify([
-              {
-                id: 'test-email-1',
-                category: 'Test',
-                summary: 'Test Summary',
-              },
-            ]),
-          },
-        }),
-      });
+    it('should handle bare array response', async () => {
+      mockAiCall.mockResolvedValue([
+        {
+          id: 'test-email-1',
+          category: 'Test',
+          summary: 'Test Summary',
+        },
+      ]);
 
       const result = await categorizeEmailWithAI(mockEmail, ['Test'], mockSettings);
 
@@ -445,90 +312,13 @@ describe('Ollama Integration Tests', () => {
       expect(result.summary).toBe('Test Summary');
     });
 
-    it('should handle response with missing message field', async () => {
-      mockFetch.mockResolvedValue({
-        ok: true,
-        json: async () => ({}),
-      });
+    it('should handle null IPC response', async () => {
+      mockAiCall.mockResolvedValue(null);
 
       const result = await categorizeEmailWithAI(mockEmail, ['Test'], mockSettings);
 
       expect(result.categoryId).toBe(DefaultEmailCategory.OTHER);
       expect(result.summary).toBe('Fehler');
-    });
-
-    it('should handle response with null content', async () => {
-      mockFetch.mockResolvedValue({
-        ok: true,
-        json: async () => ({
-          message: {
-            content: null,
-          },
-        }),
-      });
-
-      const result = await categorizeEmailWithAI(mockEmail, ['Test'], mockSettings);
-
-      expect(result.categoryId).toBe(DefaultEmailCategory.OTHER);
-      expect(result.summary).toBe('Fehler');
-    });
-  });
-
-  describe('Model Configuration', () => {
-    it('should use the specified model in the request', async () => {
-      const customSettings = {
-        ...mockSettings,
-        model: 'mistral',
-      };
-
-      mockFetch.mockResolvedValue({
-        ok: true,
-        json: async () => ({
-          message: {
-            content: JSON.stringify([
-              {
-                id: 'test-email-1',
-                category: 'Test',
-                summary: 'Test',
-              },
-            ]),
-          },
-        }),
-      });
-
-      await categorizeEmailWithAI(mockEmail, ['Test'], customSettings);
-
-      const callArgs = mockFetch.mock.calls[0];
-      const requestBody = JSON.parse(callArgs[1].body);
-      expect(requestBody.model).toBe('mistral');
-    });
-
-    it('should work with different Ollama models', async () => {
-      const models = ['llama3', 'mistral', 'phi3', 'gemma2'];
-
-      for (const model of models) {
-        mockFetch.mockClear();
-        mockFetch.mockResolvedValue({
-          ok: true,
-          json: async () => ({
-            message: {
-              content: JSON.stringify([
-                {
-                  id: 'test-email-1',
-                  category: 'Test',
-                  summary: 'Test',
-                },
-              ]),
-            },
-          }),
-        });
-
-        await categorizeEmailWithAI(mockEmail, ['Test'], { ...mockSettings, model });
-
-        const callArgs = mockFetch.mock.calls[0];
-        const requestBody = JSON.parse(callArgs[1].body);
-        expect(requestBody.model).toBe(model);
-      }
     });
   });
 
@@ -539,52 +329,41 @@ describe('Ollama Integration Tests', () => {
         apiKey: '',
       };
 
-      mockFetch.mockResolvedValue({
-        ok: true,
-        json: async () => ({
-          message: {
-            content: JSON.stringify([
-              {
-                id: 'test-email-1',
-                category: 'Test',
-                summary: 'Test',
-              },
-            ]),
-          },
-        }),
-      });
+      mockAiCall.mockResolvedValue([
+        {
+          id: 'test-email-1',
+          category: 'Test',
+          summary: 'Test',
+        },
+      ]);
 
       const result = await categorizeEmailWithAI(mockEmail, ['Test'], settingsWithoutKey);
 
       expect(result.categoryId).toBe('Test');
-      expect(mockFetch).toHaveBeenCalled();
+      expect(mockAiCall).toHaveBeenCalled();
     });
 
-    it('should ignore API key even if provided', async () => {
+    it('should route through IPC without Authorization header', async () => {
       const settingsWithKey = {
         ...mockSettings,
         apiKey: 'this-should-be-ignored',
       };
 
-      mockFetch.mockResolvedValue({
-        ok: true,
-        json: async () => ({
-          message: {
-            content: JSON.stringify([
-              {
-                id: 'test-email-1',
-                category: 'Test',
-                summary: 'Test',
-              },
-            ]),
-          },
-        }),
-      });
+      mockAiCall.mockResolvedValue([
+        {
+          id: 'test-email-1',
+          category: 'Test',
+          summary: 'Test',
+        },
+      ]);
 
       await categorizeEmailWithAI(mockEmail, ['Test'], settingsWithKey);
 
-      const callArgs = mockFetch.mock.calls[0];
-      expect(callArgs[1].headers).not.toHaveProperty('Authorization');
+      // IPC call should use systemInstruction/userPrompt, not raw HTTP
+      expect(mockAiCall).toHaveBeenCalledWith({
+        systemInstruction: expect.any(String),
+        userPrompt: expect.any(String),
+      });
     });
   });
 });

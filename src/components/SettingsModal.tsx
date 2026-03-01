@@ -16,6 +16,7 @@ interface SettingsModalProps {
   // AI Settings
   aiSettings: AISettings;
   onSaveAISettings: (settings: AISettings) => void;
+  aiSaveError?: string | null;
 }
 
 const SettingsModal: React.FC<SettingsModalProps> = ({
@@ -26,6 +27,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   onRemoveAccount,
   aiSettings,
   onSaveAISettings,
+  aiSaveError,
 }) => {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<'accounts' | 'smartsort' | 'notifications' | 'general'>('accounts');
@@ -89,7 +91,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
               <AccountsTab accounts={accounts} onAddAccount={onAddAccount} onRemoveAccount={onRemoveAccount} />
             )}
 
-            {activeTab === 'smartsort' && <SmartSortTab aiSettings={aiSettings} onSave={onSaveAISettings} />}
+            {activeTab === 'smartsort' && <SmartSortTab aiSettings={aiSettings} onSave={onSaveAISettings} saveError={aiSaveError} />}
 
             {activeTab === 'notifications' && <NotificationsTab accounts={accounts} />}
 

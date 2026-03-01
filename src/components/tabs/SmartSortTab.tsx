@@ -6,6 +6,7 @@ import { Bot, Key, Cpu, BrainCircuit, CheckCircle, AlertCircle, RefreshCw } from
 interface SmartSortTabProps {
   aiSettings: AISettings;
   onSave: (settings: AISettings) => void;
+  saveError?: string | null;
 }
 
 interface OllamaStatus {
@@ -14,12 +15,13 @@ interface OllamaStatus {
   checking?: boolean;
 }
 
-const SmartSortTab: React.FC<SmartSortTabProps> = ({ aiSettings, onSave }) => {
+const SmartSortTab: React.FC<SmartSortTabProps> = ({ aiSettings, onSave, saveError }) => {
   const { t } = useTranslation();
   const [tempAISettings, setTempAISettings] = useState<AISettings>(aiSettings);
   const [ollamaStatus, setOllamaStatus] = useState<OllamaStatus>({ available: false, checking: false });
   const [ollamaModels, setOllamaModels] = useState<string[]>([]);
   const [fetchingModels, setFetchingModels] = useState(false);
+  const [saved, setSaved] = useState(false);
 
   // Sync prop changes to internal state
   useEffect(() => {
@@ -72,6 +74,15 @@ const SmartSortTab: React.FC<SmartSortTabProps> = ({ aiSettings, onSave }) => {
         if (window.electron) {
           const models = await window.electron.ollamaListModels();
           setOllamaModels(models);
+          // Auto-select first real model if current model isn't installed
+          if (models.length > 0) {
+            setTempAISettings((prev) => {
+              if (!models.includes(prev.model)) {
+                return { ...prev, model: models[0] };
+              }
+              return prev;
+            });
+          }
         }
       } catch (error) {
         // Fall back to static models on error
@@ -86,14 +97,21 @@ const SmartSortTab: React.FC<SmartSortTabProps> = ({ aiSettings, onSave }) => {
 
   const handleSaveAI = () => {
     onSave(tempAISettings);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 3000);
   };
 
   const handleProviderChange = (provider: LLMProvider) => {
+    const defaultModel =
+      provider === LLMProvider.OLLAMA && ollamaModels.length > 0
+        ? ollamaModels[0]
+        : AVAILABLE_MODELS[provider][0];
     setTempAISettings({
       ...tempAISettings,
       provider,
-      model: AVAILABLE_MODELS[provider][0], // Reset model to first available
-      apiKey: '', // Reset API key on provider switch for safety/clarity
+      model: defaultModel,
+      // Keep existing apiKey when switching between cloud providers; clear only for Ollama
+      apiKey: provider === LLMProvider.OLLAMA ? '' : tempAISettings.apiKey,
     });
   };
 
@@ -224,6 +242,18 @@ const SmartSortTab: React.FC<SmartSortTabProps> = ({ aiSettings, onSave }) => {
         )}
       </div>
 
+      {saveError && (
+        <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+          <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
+          <p className="text-sm text-red-700">{saveError}</p>
+        </div>
+      )}
+      {saved && !saveError && (
+        <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg">
+          <CheckCircle className="w-4 h-4 text-green-500 shrink-0" />
+          <p className="text-sm text-green-700">{t('smartSortTab.settingsSaved', 'Settings saved successfully')}</p>
+        </div>
+      )}
       <div className="flex justify-end">
         <button
           onClick={handleSaveAI}

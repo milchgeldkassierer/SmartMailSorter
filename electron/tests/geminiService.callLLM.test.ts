@@ -5,6 +5,18 @@ import { INBOX_FOLDER } from '../folderConstants.cjs';
 // Store the original fetch
 const originalFetch = global.fetch;
 
+// Mock window.electron.aiCall for OpenAI/Anthropic/Ollama (they now route through IPC)
+const mockAiCall = vi.fn();
+Object.defineProperty(global, 'window', {
+  value: {
+    electron: {
+      aiCall: mockAiCall,
+    },
+  },
+  writable: true,
+  configurable: true,
+});
+
 // Define types for Gemini API mocks
 interface GeminiGenerateContentRequest {
   model: string;
@@ -111,8 +123,9 @@ describe('GeminiService - callLLM Function', () => {
     vi.clearAllMocks();
     // Reset fetch to original
     global.fetch = originalFetch;
-    // Reset mock
+    // Reset mocks
     mockGenerateContent = vi.fn();
+    mockAiCall.mockReset();
   });
 
   afterEach(() => {
@@ -325,21 +338,9 @@ describe('GeminiService - callLLM Function', () => {
 
   describe('OpenAI Provider', () => {
     it('should successfully call OpenAI API', async () => {
-      // Mock fetch for OpenAI
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            choices: [
-              {
-                message: {
-                  content: JSON.stringify([
-                    { id: 'email-1', category: DefaultEmailCategory.PRIVATE, summary: 'Private Email' },
-                  ]),
-                },
-              },
-            ],
-          }),
+      // Mock aiCall for OpenAI (IPC handles HTTP details)
+      mockAiCall.mockResolvedValue({
+        results: [{ id: 'email-1', category: DefaultEmailCategory.PRIVATE, summary: 'Private Email' }],
       });
 
       const email = createTestEmail('email-1', 'Personal Matter');
@@ -348,60 +349,44 @@ describe('GeminiService - callLLM Function', () => {
       expect(results).toHaveLength(1);
       expect(results[0].categoryId).toBe(DefaultEmailCategory.PRIVATE);
       expect(results[0].summary).toBe('Private Email');
-      expect(global.fetch).toHaveBeenCalledWith(
-        'https://api.openai.com/v1/chat/completions',
-        expect.objectContaining({
-          method: 'POST',
-          headers: expect.objectContaining({
-            'Content-Type': 'application/json',
-            Authorization: 'Bearer test-openai-api-key',
-          }),
-        })
-      );
+      expect(mockAiCall).toHaveBeenCalledWith({
+        systemInstruction: expect.any(String),
+        userPrompt: expect.any(String),
+      });
     });
 
     it('should pass correct model to OpenAI API', async () => {
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            choices: [{ message: { content: JSON.stringify([{ id: 'email-1', category: 'Test', summary: 'Test' }]) } }],
-          }),
+      mockAiCall.mockResolvedValue({
+        results: [{ id: 'email-1', category: 'Test', summary: 'Test' }],
       });
 
       const email = createTestEmail('email-1', 'Test');
       await geminiService.categorizeBatchWithAI([email], availableCategories, openaiSettings);
 
-      expect(global.fetch).toHaveBeenCalledWith(
-        expect.any(String),
-        expect.objectContaining({
-          body: expect.stringContaining('"model":"gpt-4o"'),
-        })
-      );
+      // Model/headers are handled by the main process; IPC only passes prompts
+      expect(mockAiCall).toHaveBeenCalledWith({
+        systemInstruction: expect.any(String),
+        userPrompt: expect.any(String),
+      });
     });
 
     it('should use json_object response format for OpenAI', async () => {
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            choices: [{ message: { content: JSON.stringify([{ id: 'email-1', category: 'Test', summary: 'Test' }]) } }],
-          }),
+      mockAiCall.mockResolvedValue({
+        results: [{ id: 'email-1', category: 'Test', summary: 'Test' }],
       });
 
       const email = createTestEmail('email-1', 'Test');
       await geminiService.categorizeBatchWithAI([email], availableCategories, openaiSettings);
 
-      expect(global.fetch).toHaveBeenCalledWith(
-        expect.any(String),
-        expect.objectContaining({
-          body: expect.stringContaining('"response_format":{"type":"json_object"}'),
-        })
-      );
+      // HTTP details like response_format are handled by the main process
+      expect(mockAiCall).toHaveBeenCalledWith({
+        systemInstruction: expect.any(String),
+        userPrompt: expect.any(String),
+      });
     });
 
     it('should handle OpenAI API errors', async () => {
-      global.fetch = vi.fn().mockRejectedValue(new Error('OpenAI API Error'));
+      mockAiCall.mockRejectedValue(new Error('OpenAI API Error'));
 
       const email = createTestEmail('email-1', 'Test');
       const results = await geminiService.categorizeBatchWithAI([email], availableCategories, openaiSettings);
@@ -412,8 +397,7 @@ describe('GeminiService - callLLM Function', () => {
     });
 
     it('should handle OpenAI rate limit errors (429)', async () => {
-      // Mock fetch to throw a rate limit error
-      global.fetch = vi.fn().mockRejectedValue(new Error('Rate limit exceeded 429'));
+      mockAiCall.mockRejectedValue(new Error('Rate limit exceeded 429'));
 
       const email = createTestEmail('email-1', 'Test Email');
       const results = await geminiService.categorizeBatchWithAI([email], availableCategories, openaiSettings);
@@ -424,7 +408,7 @@ describe('GeminiService - callLLM Function', () => {
     });
 
     it('should handle OpenAI network timeout', async () => {
-      global.fetch = vi.fn().mockRejectedValue(new Error('Network timeout'));
+      mockAiCall.mockRejectedValue(new Error('Network timeout'));
 
       const email = createTestEmail('email-1', 'Test Email');
       const results = await geminiService.categorizeBatchWithAI([email], availableCategories, openaiSettings);
@@ -435,22 +419,12 @@ describe('GeminiService - callLLM Function', () => {
     });
 
     it('should categorize multiple emails in batch with OpenAI', async () => {
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            choices: [
-              {
-                message: {
-                  content: JSON.stringify([
-                    { id: 'email-1', category: DefaultEmailCategory.INVOICE, summary: 'Invoice from vendor' },
-                    { id: 'email-2', category: DefaultEmailCategory.NEWSLETTER, summary: 'Weekly digest' },
-                    { id: 'email-3', category: DefaultEmailCategory.SPAM, summary: 'Promotional offer' },
-                  ]),
-                },
-              },
-            ],
-          }),
+      mockAiCall.mockResolvedValue({
+        results: [
+          { id: 'email-1', category: DefaultEmailCategory.INVOICE, summary: 'Invoice from vendor' },
+          { id: 'email-2', category: DefaultEmailCategory.NEWSLETTER, summary: 'Weekly digest' },
+          { id: 'email-3', category: DefaultEmailCategory.SPAM, summary: 'Promotional offer' },
+        ],
       });
 
       const emails = [
@@ -468,23 +442,13 @@ describe('GeminiService - callLLM Function', () => {
     });
 
     it('should preserve OpenAI email order when mapping results back', async () => {
-      // OpenAI returns results in different order than input
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            choices: [
-              {
-                message: {
-                  content: JSON.stringify([
-                    { id: 'email-3', category: DefaultEmailCategory.BUSINESS, summary: 'Third' },
-                    { id: 'email-1', category: DefaultEmailCategory.PRIVATE, summary: 'First' },
-                    { id: 'email-2', category: DefaultEmailCategory.NEWSLETTER, summary: 'Second' },
-                  ]),
-                },
-              },
-            ],
-          }),
+      // IPC returns results in different order than input
+      mockAiCall.mockResolvedValue({
+        results: [
+          { id: 'email-3', category: DefaultEmailCategory.BUSINESS, summary: 'Third' },
+          { id: 'email-1', category: DefaultEmailCategory.PRIVATE, summary: 'First' },
+          { id: 'email-2', category: DefaultEmailCategory.NEWSLETTER, summary: 'Second' },
+        ],
       });
 
       const emails = [
@@ -502,19 +466,7 @@ describe('GeminiService - callLLM Function', () => {
     });
 
     it('should handle OpenAI invalid JSON response', async () => {
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            choices: [
-              {
-                message: {
-                  content: 'This is not valid JSON',
-                },
-              },
-            ],
-          }),
-      });
+      mockAiCall.mockRejectedValue(new Error('Invalid JSON response'));
 
       const email = createTestEmail('email-1', 'Test');
       const results = await geminiService.categorizeBatchWithAI([email], availableCategories, openaiSettings);
@@ -525,13 +477,7 @@ describe('GeminiService - callLLM Function', () => {
     });
 
     it('should handle OpenAI empty choices array', async () => {
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            choices: [],
-          }),
-      });
+      mockAiCall.mockRejectedValue(new Error('Empty response from API'));
 
       const email = createTestEmail('email-1', 'Test');
       const results = await geminiService.categorizeBatchWithAI([email], availableCategories, openaiSettings);
@@ -541,19 +487,7 @@ describe('GeminiService - callLLM Function', () => {
     });
 
     it('should handle OpenAI missing message content', async () => {
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            choices: [
-              {
-                message: {
-                  content: null,
-                },
-              },
-            ],
-          }),
-      });
+      mockAiCall.mockRejectedValue(new Error('No content in response'));
 
       const email = createTestEmail('email-1', 'Test');
       const results = await geminiService.categorizeBatchWithAI([email], availableCategories, openaiSettings);
@@ -563,12 +497,8 @@ describe('GeminiService - callLLM Function', () => {
     });
 
     it('should use different OpenAI models when specified', async () => {
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            choices: [{ message: { content: JSON.stringify([{ id: 'email-1', category: 'Test', summary: 'Test' }]) } }],
-          }),
+      mockAiCall.mockResolvedValue({
+        results: [{ id: 'email-1', category: 'Test', summary: 'Test' }],
       });
 
       const customOpenAISettings: AISettings = {
@@ -580,73 +510,56 @@ describe('GeminiService - callLLM Function', () => {
       const email = createTestEmail('email-1', 'Test');
       await geminiService.categorizeBatchWithAI([email], availableCategories, customOpenAISettings);
 
-      expect(global.fetch).toHaveBeenCalledWith(
-        expect.any(String),
-        expect.objectContaining({
-          body: expect.stringContaining('"model":"gpt-4-turbo"'),
-        })
-      );
+      // Model selection is handled by the main process; IPC only passes prompts
+      expect(mockAiCall).toHaveBeenCalledWith({
+        systemInstruction: expect.any(String),
+        userPrompt: expect.any(String),
+      });
     });
 
     it('should include system instruction in OpenAI request', async () => {
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            choices: [{ message: { content: JSON.stringify([{ id: 'email-1', category: 'Test', summary: 'Test' }]) } }],
-          }),
+      mockAiCall.mockResolvedValue({
+        results: [{ id: 'email-1', category: 'Test', summary: 'Test' }],
       });
 
       const email = createTestEmail('email-1', 'Test');
       await geminiService.categorizeBatchWithAI([email], availableCategories, openaiSettings);
 
-      // Check that system role message is included
-      expect(global.fetch).toHaveBeenCalledWith(
-        expect.any(String),
-        expect.objectContaining({
-          body: expect.stringContaining('"role":"system"'),
-        })
-      );
+      // Check that system instruction is passed via IPC
+      expect(mockAiCall).toHaveBeenCalledWith({
+        systemInstruction: expect.any(String),
+        userPrompt: expect.any(String),
+      });
+      // Verify systemInstruction is non-empty
+      const callArgs = mockAiCall.mock.calls[0][0];
+      expect(callArgs.systemInstruction.length).toBeGreaterThan(0);
     });
 
     it('should include user prompt in OpenAI request', async () => {
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            choices: [{ message: { content: JSON.stringify([{ id: 'email-1', category: 'Test', summary: 'Test' }]) } }],
-          }),
+      mockAiCall.mockResolvedValue({
+        results: [{ id: 'email-1', category: 'Test', summary: 'Test' }],
       });
 
       const email = createTestEmail('email-1', 'Test');
       await geminiService.categorizeBatchWithAI([email], availableCategories, openaiSettings);
 
-      // Check that user role message is included
-      expect(global.fetch).toHaveBeenCalledWith(
-        expect.any(String),
-        expect.objectContaining({
-          body: expect.stringContaining('"role":"user"'),
-        })
-      );
+      // Check that user prompt is passed via IPC
+      expect(mockAiCall).toHaveBeenCalledWith({
+        systemInstruction: expect.any(String),
+        userPrompt: expect.any(String),
+      });
+      // Verify userPrompt is non-empty
+      const callArgs = mockAiCall.mock.calls[0][0];
+      expect(callArgs.userPrompt.length).toBeGreaterThan(0);
     });
 
     it('should handle OpenAI partial results (missing email IDs)', async () => {
-      // OpenAI returns fewer results than input emails
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            choices: [
-              {
-                message: {
-                  content: JSON.stringify([
-                    { id: 'email-1', category: DefaultEmailCategory.INVOICE, summary: 'Invoice' },
-                    // email-2 is missing from response
-                  ]),
-                },
-              },
-            ],
-          }),
+      // IPC returns fewer results than input emails
+      mockAiCall.mockResolvedValue({
+        results: [
+          { id: 'email-1', category: DefaultEmailCategory.INVOICE, summary: 'Invoice' },
+          // email-2 is missing from response
+        ],
       });
 
       const emails = [createTestEmail('email-1', 'Invoice Email'), createTestEmail('email-2', 'Missing Email')];
@@ -661,18 +574,8 @@ describe('GeminiService - callLLM Function', () => {
     });
 
     it('should handle OpenAI response with extra whitespace', async () => {
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            choices: [
-              {
-                message: {
-                  content: '  \n  [{"id": "email-1", "category": "Geschäftlich", "summary": "Business"}]  \n  ',
-                },
-              },
-            ],
-          }),
+      mockAiCall.mockResolvedValue({
+        results: [{ id: 'email-1', category: DefaultEmailCategory.BUSINESS, summary: 'Business' }],
       });
 
       const email = createTestEmail('email-1', 'Test');
@@ -683,20 +586,8 @@ describe('GeminiService - callLLM Function', () => {
     });
 
     it('should categorize single email with OpenAI via categorizeEmailWithAI wrapper', async () => {
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            choices: [
-              {
-                message: {
-                  content: JSON.stringify([
-                    { id: 'email-1', category: DefaultEmailCategory.SPAM, summary: 'Spam detected' },
-                  ]),
-                },
-              },
-            ],
-          }),
+      mockAiCall.mockResolvedValue({
+        results: [{ id: 'email-1', category: DefaultEmailCategory.SPAM, summary: 'Spam detected' }],
       });
 
       const email = createTestEmail('email-1', 'Win a prize!');
@@ -707,12 +598,8 @@ describe('GeminiService - callLLM Function', () => {
     });
 
     it('should handle OpenAI HTTP error status', async () => {
-      // Mock fetch to return non-ok response
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: false,
-        status: 500,
-        text: () => Promise.resolve(JSON.stringify({ error: { message: 'Internal Server Error' } })),
-      });
+      // HTTP errors are now surfaced as rejected promises from IPC
+      mockAiCall.mockRejectedValue(new Error('Internal Server Error'));
 
       const email = createTestEmail('email-1', 'Test');
       const results = await geminiService.categorizeBatchWithAI([email], availableCategories, openaiSettings);
@@ -1093,11 +980,7 @@ describe('GeminiService - callLLM Function', () => {
     });
 
     it('should handle OpenAI 429 status in response', async () => {
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: false,
-        status: 429,
-        text: () => Promise.resolve(JSON.stringify({ error: { message: 'Rate limit exceeded' } })),
-      });
+      mockAiCall.mockRejectedValue(new Error('Rate limit exceeded'));
 
       const email = createTestEmail('email-1', 'Test Email');
       const results = await geminiService.categorizeBatchWithAI([email], availableCategories, openaiSettings);
@@ -1185,10 +1068,7 @@ describe('GeminiService - callLLM Function', () => {
     });
 
     it('should handle OpenAI empty response body', async () => {
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve({}),
-      });
+      mockAiCall.mockRejectedValue(new Error('Empty response body'));
 
       const email = createTestEmail('email-1', 'Test Email');
       const results = await geminiService.categorizeBatchWithAI([email], availableCategories, openaiSettings);
@@ -1198,13 +1078,7 @@ describe('GeminiService - callLLM Function', () => {
     });
 
     it('should handle OpenAI null message content', async () => {
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            choices: [{ message: { content: null } }],
-          }),
-      });
+      mockAiCall.mockRejectedValue(new Error('Null content in response'));
 
       const email = createTestEmail('email-1', 'Test Email');
       const results = await geminiService.categorizeBatchWithAI([email], availableCategories, openaiSettings);
@@ -1214,13 +1088,7 @@ describe('GeminiService - callLLM Function', () => {
     });
 
     it('should handle OpenAI undefined message', async () => {
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            choices: [{ message: undefined }],
-          }),
-      });
+      mockAiCall.mockRejectedValue(new Error('Undefined message in response'));
 
       const email = createTestEmail('email-1', 'Test Email');
       const results = await geminiService.categorizeBatchWithAI([email], availableCategories, openaiSettings);
@@ -1371,7 +1239,7 @@ describe('GeminiService - callLLM Function', () => {
     });
 
     it('should handle OpenAI fetch throwing TypeError', async () => {
-      global.fetch = vi.fn().mockRejectedValue(new TypeError('Failed to fetch'));
+      mockAiCall.mockRejectedValue(new TypeError('Failed to fetch'));
 
       const email = createTestEmail('email-1', 'Test Email');
       const results = await geminiService.categorizeBatchWithAI([email], availableCategories, openaiSettings);
@@ -1382,10 +1250,7 @@ describe('GeminiService - callLLM Function', () => {
     });
 
     it('should handle OpenAI response json() throwing', async () => {
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: () => Promise.reject(new Error('Invalid JSON')),
-      });
+      mockAiCall.mockRejectedValue(new Error('Invalid JSON'));
 
       const email = createTestEmail('email-1', 'Test Email');
       const results = await geminiService.categorizeBatchWithAI([email], availableCategories, openaiSettings);

@@ -430,6 +430,22 @@ app.whenReady().then(() => {
         throw new Error('Invalid settings: apiKey must be a string');
       }
 
+      // Validate API key with a lightweight test call
+      const isOllama = settings.provider.toLowerCase().includes('ollama');
+      if (!isOllama && settings.apiKey) {
+        try {
+          await callAIProvider(settings, 'Reply with exactly: {"ok":true}', 'Test');
+          logger.info('[IPC] AI API key validated successfully');
+        } catch (validationError) {
+          const msg = validationError instanceof Error ? validationError.message : String(validationError);
+          if (msg.includes('401') || msg.includes('403') || msg.includes('Incorrect API key') || msg.includes('invalid')) {
+            throw new Error(`Invalid API key for ${settings.provider}: Authentication failed`);
+          }
+          // Other errors (network, rate limit) are not key-related - allow save
+          logger.warn('[IPC] API key validation skipped due to non-auth error:', msg);
+        }
+      }
+
       const settingsJson = JSON.stringify(settings);
 
       if (!safeStorage.isEncryptionAvailable()) {
@@ -648,7 +664,7 @@ app.whenReady().then(() => {
       },
       body: JSON.stringify({
         model: settings.model,
-        max_tokens: 256,
+        max_tokens: 4096,
         system: systemInstruction,
         messages: [{ role: 'user', content: userPrompt }],
       }),
@@ -663,12 +679,42 @@ app.whenReady().then(() => {
     return JSON.parse(cleanMarkdown(content));
   }
 
+  /** Call Ollama local API and return parsed JSON */
+  async function callOllamaApi(settings, systemInstruction, userPrompt) {
+    const response = await fetchWithTimeout(
+      'http://localhost:11434/api/chat',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: settings.model,
+          messages: [
+            { role: 'system', content: systemInstruction },
+            { role: 'user', content: userPrompt },
+          ],
+          stream: false,
+          format: 'json',
+        }),
+      },
+      30000
+    );
+    if (!response.ok) {
+      const errorBody = await response.text();
+      throw new Error(`Ollama API error (${response.status}): ${errorBody.slice(0, 200)}`);
+    }
+    const data = await response.json();
+    const text = data.message?.content;
+    if (!text) throw new Error('Failed to extract text from Ollama response');
+    return JSON.parse(cleanMarkdown(text));
+  }
+
   /** Route to the correct AI provider based on settings */
   async function callAIProvider(settings, systemInstruction, userPrompt) {
     const providerLower = settings.provider.toLowerCase();
     if (providerLower.includes('gemini')) return callGeminiApi(settings, systemInstruction, userPrompt);
     if (providerLower.includes('openai')) return callOpenAIApi(settings, systemInstruction, userPrompt);
     if (providerLower.includes('anthropic')) return callAnthropicApi(settings, systemInstruction, userPrompt);
+    if (providerLower.includes('ollama')) return callOllamaApi(settings, systemInstruction, userPrompt);
     throw new Error(`Unknown AI provider: ${settings.provider}`);
   }
 
@@ -683,7 +729,8 @@ app.whenReady().then(() => {
       }
 
       const settings = loadAISettings();
-      if (!settings || !settings.apiKey) {
+      const isOllama = settings && settings.provider && settings.provider.toLowerCase().includes('ollama');
+      if (!settings || (!isOllama && !settings.apiKey)) {
         throw new Error('AI settings not configured');
       }
 
@@ -729,6 +776,16 @@ Antworte NUR mit dem JSON-Objekt mit dem "query" Feld.`;
       logger.error('[NL Search] Failed to parse natural language query:', error);
       throw new Error('AI query conversion failed');
     }
+  });
+
+  // Generic AI call handler - routes through main process to avoid CORS issues
+  ipcMain.handle('ai-call', async (event, { systemInstruction, userPrompt }) => {
+    const settings = loadAISettings();
+    const isOllama = settings && settings.provider && settings.provider.toLowerCase().includes('ollama');
+    if (!settings || (!isOllama && !settings.apiKey)) {
+      throw new Error('AI settings not configured');
+    }
+    return await callAIProvider(settings, systemInstruction, userPrompt);
   });
 
   // Notification Settings IPC handlers

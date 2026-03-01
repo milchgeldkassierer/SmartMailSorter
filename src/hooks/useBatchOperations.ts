@@ -218,7 +218,8 @@ export const useBatchOperations = ({
 
   const handleBatchSmartSort = async () => {
     if (selectedIds.size === 0) return;
-    if (!aiSettings.apiKey) {
+    const isOllamaProvider = aiSettings.provider === 'Ollama';
+    if (!isOllamaProvider && !aiSettings.apiKey) {
       await dialog.alert({
         title: t('batch.aiSettingsRequired'),
         message: t('batch.configureApiKey'),
@@ -303,7 +304,8 @@ export const useBatchOperations = ({
     }
   };
 
-  const canSmartSort = Boolean(selectedIds.size > 0 && aiSettings.provider && aiSettings.apiKey);
+  const isOllama = aiSettings.provider === 'Ollama';
+  const canSmartSort = Boolean(selectedIds.size > 0 && aiSettings.provider && (isOllama || aiSettings.apiKey));
 
   return {
     isSorting,

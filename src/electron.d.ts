@@ -90,6 +90,9 @@ declare global {
       loadAISettings: () => Promise<AISettings | null>;
       parseNaturalLanguageQuery: (query: string) => Promise<string>;
 
+      // AI call (routed through main process to avoid CORS)
+      aiCall: (params: { systemInstruction: string; userPrompt: string }) => Promise<unknown>;
+
       // Ollama Integration
       ollamaDetect: () => Promise<{ available: boolean; error?: string }>;
       ollamaListModels: () => Promise<string[]>;

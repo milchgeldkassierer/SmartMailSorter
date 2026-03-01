@@ -160,58 +160,17 @@ async function callLLM(
     }
   }
 
-  // --- OPENAI ---
-  if (settings.provider === LLMProvider.OPENAI) {
-    const apiKey = getApiKey(settings);
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
-      body: JSON.stringify({
-        model: settings.model,
-        messages: [
-          { role: 'system', content: systemInstruction },
-          { role: 'user', content: prompt },
-        ],
-        response_format: { type: 'json_object' },
-      }),
-    });
-
-    if (!response.ok) {
-      const errorBody = await response.text();
-      throw new Error(`OpenAI API error (${response.status}): ${errorBody}`);
+  // --- OPENAI / ANTHROPIC / OLLAMA ---
+  // Route through Electron main process via IPC to avoid CORS restrictions
+  if (
+    settings.provider === LLMProvider.OPENAI ||
+    settings.provider === LLMProvider.ANTHROPIC ||
+    settings.provider === LLMProvider.OLLAMA
+  ) {
+    if (!window.electron?.aiCall) {
+      throw new Error('Electron IPC not available for AI call');
     }
-
-    const data = (await response.json()) as OpenAIResponse;
-    const content = data.choices?.[0]?.message?.content;
-    if (!content) throw new Error('OpenAI returned empty response');
-    return JSON.parse(content);
-  }
-
-  // --- OLLAMA ---
-  if (settings.provider === LLMProvider.OLLAMA) {
-    const response = await fetch('http://localhost:11434/api/chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: settings.model,
-        messages: [
-          { role: 'system', content: systemInstruction },
-          { role: 'user', content: prompt },
-        ],
-        format: 'json',
-        stream: false,
-      }),
-    });
-
-    if (!response.ok) {
-      const errorBody = await response.text();
-      throw new Error(`Ollama API error (${response.status}): ${errorBody}`);
-    }
-
-    const data = (await response.json()) as OllamaResponse;
-    const content = data.message?.content;
-    if (!content) throw new Error('Ollama returned empty response');
-    return JSON.parse(content);
+    return await window.electron.aiCall({ systemInstruction, userPrompt: prompt });
   }
 
   throw new Error('Unknown Provider');
@@ -306,6 +265,11 @@ export const categorizeBatchWithAI = async (
   }));
 
   // Use shorter prompt for local models to fit in smaller context windows
+  const jsonFormatHint =
+    settings.provider === LLMProvider.GEMINI
+      ? 'Antworte als JSON Array von Objekten. Jedes Objekt MUSS die \'id\' der entsprechenden Email enthalten.'
+      : 'Antworte als JSON Objekt mit einem "results" Array. Jedes Element MUSS die exakte \'id\' der Email enthalten. Beispiel: {"results": [{"id": "...", "category": "...", "summary": "..."}]}';
+
   const prompt =
     settings.provider === LLMProvider.OLLAMA
       ? `Sortiere diese ${emails.length} Emails.
@@ -316,7 +280,7 @@ Kategorien: ${targetCategories.join(', ')}
 
 Nutze existierende Kategorien. Falls keine passt, schlage neue vor (1 Wort). Vermeide "Sonstiges".
 
-JSON Array mit 'id', 'category', 'summary' pro Email.`
+${jsonFormatHint}`
       : `
       Du bist ein strenger Email-Sortierer. Sortiere die folgenden ${emails.length} Emails.
 
@@ -330,25 +294,44 @@ JSON Array mit 'id', 'category', 'summary' pro Email.`
       2. NUR wenn absolut nichts passt, schlage eine NEUE, sprechende Kategorie vor (1 Wort, z.B. "Reisen").
       3. Vermeide "Sonstiges".
 
-      Antworte als JSON Array von Objekten. Jedes Objekt MUSS die 'id' der entsprechenden Email enthalten.
+      ${jsonFormatHint}
     `;
 
   try {
     const rawResults = await callLLM(prompt, 'Batch Email Sorter. Output JSON Array.', schema, settings);
 
-    const resultMap = new Map<string, CategorizationResult>();
+    // Gemini returns a bare array; OpenAI/Ollama wrap it in an object like { results: [...] }
+    let resultsArray: unknown[] | null = null;
     if (Array.isArray(rawResults)) {
-      rawResults.forEach((r: unknown) => {
-        if (typeof r !== 'object' || r === null) return;
-        const result = r as CategorizationResult;
-        resultMap.set(result.id, result);
-      });
+      resultsArray = rawResults;
+    } else if (rawResults && typeof rawResults === 'object') {
+      const values = Object.values(rawResults as Record<string, unknown>);
+      const found = values.find((v) => Array.isArray(v));
+      if (Array.isArray(found)) {
+        resultsArray = found;
+      }
     }
 
-    // Map back to original order, ensuring no missing items
-    return emails.map((email) => {
-      const res = resultMap.get(email.id);
-      if (res) {
+    if (!resultsArray) {
+      console.warn('[SmartSort] AI returned no results array. Raw:', JSON.stringify(rawResults).slice(0, 500));
+    }
+
+    // Build ID-based lookup map
+    const resultMap = new Map<string, CategorizationResult>();
+    const resultsList: CategorizationResult[] = [];
+    resultsArray.forEach((r: unknown) => {
+      if (typeof r !== 'object' || r === null) return;
+      const result = r as CategorizationResult;
+      resultsList.push(result);
+      if (result.id) {
+        resultMap.set(result.id, result);
+      }
+    });
+
+    // Map back to original order: try ID match first, fall back to index match
+    return emails.map((email, index) => {
+      const res = resultMap.get(email.id) || (resultsList.length === emails.length ? resultsList[index] : undefined);
+      if (res && res.category) {
         return {
           categoryId: res.category || DefaultEmailCategory.OTHER,
           summary: res.summary || 'Analysiert',
@@ -356,11 +339,10 @@ JSON Array mit 'id', 'category', 'summary' pro Email.`
           confidence: res.confidence || 0.8,
         };
       }
-      // Fallback for missing items (should not happen with good AI)
       return {
         categoryId: DefaultEmailCategory.OTHER,
         summary: 'Fehler',
-        reasoning: 'AI lieferte kein Ergebnis für diese ID',
+        reasoning: 'AI lieferte kein Ergebnis für diese Email',
         confidence: 0,
       };
     });
