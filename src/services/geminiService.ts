@@ -250,7 +250,8 @@ export const categorizeBatchWithAI = async (
     body_preview: (e.body || '').substring(0, bodyPreviewLength),
   }));
 
-  // Use shorter prompt for local models to fit in smaller context windows
+  // Gemini returns bare arrays (enforced by SDK schema). All IPC-routed providers
+  // (OpenAI, Anthropic, Ollama) return {results: [...]} wrappers via prompt instruction.
   const jsonFormatHint =
     settings.provider === LLMProvider.GEMINI
       ? 'Antworte als JSON Array von Objekten. Jedes Objekt MUSS die \'id\' der entsprechenden Email enthalten.'
@@ -314,9 +315,12 @@ ${jsonFormatHint}`
       }
     });
 
-    // Map back to original order: try ID match first, fall back to index match
+    // Map back to original order: try ID match first, fall back to index only when
+    // no email IDs matched (indicating the AI didn't return correct IDs at all)
+    const idMatchCount = emails.filter((e) => resultMap.has(e.id)).length;
+    const useIndexFallback = idMatchCount === 0 && resultsList.length === emails.length;
     return emails.map((email, index) => {
-      const res = resultMap.get(email.id) || (resultsList.length === emails.length ? resultsList[index] : undefined);
+      const res = resultMap.get(email.id) || (useIndexFallback ? resultsList[index] : undefined);
       if (res && res.category) {
         return {
           categoryId: res.category || DefaultEmailCategory.OTHER,

@@ -584,7 +584,10 @@ app.whenReady().then(() => {
     return text.replace(/```json/g, '').replace(/```/g, '').trim();
   }
 
-  /** Call Google Gemini API and return parsed JSON */
+  /** Call Google Gemini API and return parsed JSON.
+   *  NOTE: This function is only used for NL search queries via the parse-natural-language-query
+   *  IPC handler. The responseSchema is hardcoded to the search-query format. For email
+   *  categorization, Gemini is called directly from the renderer via the Google GenAI SDK. */
   async function callGeminiApi(settings, systemInstruction, userPrompt) {
     if (!/^[a-zA-Z0-9._-]+$/.test(settings.model)) throw new Error('Invalid model name');
     const response = await fetchWithTimeout(
@@ -668,23 +671,31 @@ app.whenReady().then(() => {
 
   /** Call Ollama local API and return parsed JSON */
   async function callOllamaApi(settings, systemInstruction, userPrompt) {
-    const response = await fetchWithTimeout(
-      OLLAMA_BASE_URL + '/api/chat',
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: settings.model,
-          messages: [
-            { role: 'system', content: systemInstruction },
-            { role: 'user', content: userPrompt },
-          ],
-          stream: false,
-          format: 'json',
-        }),
-      },
-      30000
-    );
+    let response;
+    try {
+      response = await fetchWithTimeout(
+        OLLAMA_BASE_URL + '/api/chat',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: settings.model,
+            messages: [
+              { role: 'system', content: systemInstruction },
+              { role: 'user', content: userPrompt },
+            ],
+            stream: false,
+            format: 'json',
+          }),
+        },
+        120000
+      );
+    } catch (err) {
+      if (err.message && err.message.includes('timed out')) {
+        throw new Error(`Ollama request timed out after 120s. Try a smaller model or ensure Ollama is fully loaded.`);
+      }
+      throw err;
+    }
     if (!response.ok) {
       const errorBody = await response.text();
       throw new Error(`Ollama API error (${response.status}): ${errorBody.slice(0, 200)}`);
@@ -764,6 +775,11 @@ Antworte NUR mit dem JSON-Objekt mit dem "query" Feld.`;
 
   // Generic AI call handler - routes through main process to avoid CORS issues
   ipcMain.handle('ai-call', async (event, { systemInstruction, userPrompt }) => {
+    if (!systemInstruction || typeof systemInstruction !== 'string') throw new Error('Invalid systemInstruction');
+    if (!userPrompt || typeof userPrompt !== 'string') throw new Error('Invalid userPrompt');
+    if (systemInstruction.length > 5000) throw new Error('systemInstruction too long (max 5000 characters)');
+    if (userPrompt.length > 50000) throw new Error('userPrompt too long (max 50000 characters)');
+
     const settings = loadAndValidateAISettings();
     return await callAIProvider(settings, systemInstruction, userPrompt);
   });

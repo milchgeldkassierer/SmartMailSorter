@@ -131,7 +131,7 @@ describe('Ollama IPC Handlers', () => {
     });
   });
 
-  describe('ollama-list-models handler', () => {
+  describe('ollama-detect model listing behavior', () => {
     it('should list available Ollama models successfully', async () => {
       const mockModels = [
         { name: 'llama3:latest', size: 4661211136 },
@@ -311,7 +311,7 @@ describe('Ollama IPC Handlers', () => {
 
       mockFetch.mockClear();
 
-      // Test endpoint for list-models
+      // Test endpoint for model listing (part of ollama-detect)
       fetch(endpoint, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' },

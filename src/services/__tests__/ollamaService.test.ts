@@ -176,7 +176,7 @@ describe('Ollama Integration Tests', () => {
       const results = await categorizeBatchWithAI(mockEmails, ['Bestellungen', 'Jobs'], mockSettings);
 
       expect(results).toHaveLength(2);
-      // Index-based fallback should still match
+      // When no IDs match at all, index-based fallback is used
       expect(results[0].categoryId).toBe('Bestellungen');
       expect(results[1].categoryId).toBe('Jobs');
     });
