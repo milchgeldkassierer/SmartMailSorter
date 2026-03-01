@@ -620,15 +620,18 @@ app.whenReady().then(() => {
     if (typeof settings.provider !== 'string' || !settings.provider.trim()) {
       throw new Error('AI settings must include a valid provider');
     }
+    settings.provider = settings.provider.trim();
     const allowedProviders = Object.values(LLMProviders);
-    if (!allowedProviders.includes(settings.provider.trim())) {
+    if (!allowedProviders.includes(settings.provider)) {
       throw new Error(`Invalid provider "${settings.provider}". Allowed: ${allowedProviders.join(', ')}`);
     }
     if (typeof settings.model !== 'string' || !settings.model.trim()) {
       throw new Error('AI settings must include a valid model');
     }
+    settings.model = settings.model.trim();
     const isOllama = settings.provider === LLMProviders.OLLAMA;
-    if (!isOllama && (!settings.apiKey || !settings.apiKey.trim())) {
+    if (settings.apiKey) settings.apiKey = settings.apiKey.trim();
+    if (!isOllama && !settings.apiKey) {
       throw new Error(`Missing API key for ${settings.provider}`);
     }
     return settings;

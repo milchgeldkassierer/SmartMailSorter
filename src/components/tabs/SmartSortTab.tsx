@@ -23,12 +23,30 @@ const SmartSortTab: React.FC<SmartSortTabProps> = ({ aiSettings, onSave, saveErr
   const [ollamaStatus, setOllamaStatus] = useState<OllamaStatus>({ available: false, checking: false, models: [] });
   const [saved, setSaved] = useState(false);
   const saveTimerRef = useRef<number | null>(null);
+  const saveTokenRef = useRef(0);
 
   useEffect(() => {
     return () => {
       if (saveTimerRef.current !== null) clearTimeout(saveTimerRef.current);
     };
   }, []);
+
+  // Show success feedback only after async save completes without error
+  useEffect(() => {
+    const token = saveTokenRef.current;
+    if (token === 0) return; // no save attempted yet
+    if (saveError) {
+      setSaved(false);
+      return;
+    }
+    // Save succeeded — show confirmation and start hide timer
+    setSaved(true);
+    if (saveTimerRef.current !== null) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = window.setTimeout(() => {
+      setSaved(false);
+      saveTimerRef.current = null;
+    }, 3000);
+  }, [saveError, aiSettings]); // aiSettings changes after successful save propagation
 
   // Store API keys per provider so switching doesn't lose them
   const [apiKeysByProvider, setApiKeysByProvider] = useState<Partial<Record<LLMProvider, string>>>(() => {
@@ -95,13 +113,9 @@ const SmartSortTab: React.FC<SmartSortTabProps> = ({ aiSettings, onSave, saveErr
   }, [tempAISettings.provider]);
 
   const handleSaveAI = () => {
+    saveTokenRef.current++;
+    setSaved(false);
     onSave(tempAISettings);
-    setSaved(true);
-    if (saveTimerRef.current !== null) clearTimeout(saveTimerRef.current);
-    saveTimerRef.current = window.setTimeout(() => {
-      setSaved(false);
-      saveTimerRef.current = null;
-    }, 3000);
   };
 
   const handleProviderChange = (provider: LLMProvider) => {
