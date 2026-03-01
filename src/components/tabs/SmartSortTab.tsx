@@ -24,6 +24,7 @@ const SmartSortTab: React.FC<SmartSortTabProps> = ({ aiSettings, onSave, saveErr
   const [saved, setSaved] = useState(false);
   const saveTimerRef = useRef<number | null>(null);
   const saveTokenRef = useRef(0);
+  const pendingTokenRef = useRef(0);
 
   useEffect(() => {
     return () => {
@@ -32,14 +33,16 @@ const SmartSortTab: React.FC<SmartSortTabProps> = ({ aiSettings, onSave, saveErr
   }, []);
 
   // Show success feedback only after async save completes without error
+  // and only if the form hasn't been re-saved since (token match)
   useEffect(() => {
-    const token = saveTokenRef.current;
-    if (token === 0) return; // no save attempted yet
+    if (pendingTokenRef.current === 0) return; // no save attempted yet
     if (saveError) {
       setSaved(false);
       return;
     }
-    // Save succeeded — show confirmation and start hide timer
+    // Only show success if no newer save has been triggered
+    if (pendingTokenRef.current !== saveTokenRef.current) return;
+    pendingTokenRef.current = 0;
     setSaved(true);
     if (saveTimerRef.current !== null) clearTimeout(saveTimerRef.current);
     saveTimerRef.current = window.setTimeout(() => {
@@ -114,6 +117,7 @@ const SmartSortTab: React.FC<SmartSortTabProps> = ({ aiSettings, onSave, saveErr
 
   const handleSaveAI = () => {
     saveTokenRef.current++;
+    pendingTokenRef.current = saveTokenRef.current;
     setSaved(false);
     onSave(tempAISettings);
   };
