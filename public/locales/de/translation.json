@@ -313,5 +313,28 @@
       "nameRequired": "Filtername ist erforderlich",
       "queryRequired": "Suchanfrage ist erforderlich"
     }
+  },
+  "feedbackHistory": {
+    "title": "KI-Korrekturverlauf",
+    "searchPlaceholder": "Nach Absender, Betreff oder Kategorie suchen...",
+    "loading": "Lade Korrekturverlauf...",
+    "noFeedback": "Keine Korrekturen vorhanden",
+    "noFeedbackHint": "Wenn Sie eine E-Mail-Kategorie korrigieren, wird die Korrektur hier angezeigt und die KI lernt daraus.",
+    "noResults": "Keine Ergebnisse für Ihre Suche",
+    "totalCount": "{{count}} Korrektur(en) insgesamt",
+    "export": "Exportieren",
+    "clearAll": "Alle löschen",
+    "columns": {
+      "date": "Datum",
+      "subject": "Betreff",
+      "sender": "Absender",
+      "correction": "Korrektur",
+      "confidence": "Konfidenz"
+    },
+    "clearConfirm": {
+      "title": "Alle Korrekturen löschen?",
+      "message": "Möchten Sie wirklich alle {{count}} Korrektur(en) löschen? Diese Aktion kann nicht rückgängig gemacht werden und die KI verliert alle gelernten Präferenzen.",
+      "confirm": "Alle löschen"
+    }
   }
 }

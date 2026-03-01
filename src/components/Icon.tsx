@@ -44,6 +44,10 @@ import {
   Clock,
   Bell,
   BellOff,
+  Download,
+  ArrowRight,
+  History,
+  Trash,
 } from 'lucide-react';
 import { DefaultEmailCategory, SENT_FOLDER, SPAM_FOLDER, TRASH_FOLDER } from '../types';
 
@@ -127,4 +131,8 @@ export {
   Clock,
   Bell,
   BellOff,
+  Download,
+  ArrowRight,
+  History,
+  Trash,
 };

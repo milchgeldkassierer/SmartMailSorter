@@ -313,5 +313,28 @@
       "nameRequired": "Filter name is required",
       "queryRequired": "Search query is required"
     }
+  },
+  "feedbackHistory": {
+    "title": "AI Correction History",
+    "searchPlaceholder": "Search by sender, subject, or category...",
+    "loading": "Loading correction history...",
+    "noFeedback": "No corrections available",
+    "noFeedbackHint": "When you correct an email category, the correction will appear here and the AI will learn from it.",
+    "noResults": "No results for your search",
+    "totalCount": "{{count}} correction(s) total",
+    "export": "Export",
+    "clearAll": "Clear All",
+    "columns": {
+      "date": "Date",
+      "subject": "Subject",
+      "sender": "Sender",
+      "correction": "Correction",
+      "confidence": "Confidence"
+    },
+    "clearConfirm": {
+      "title": "Clear all corrections?",
+      "message": "Are you sure you want to delete all {{count}} correction(s)? This action cannot be undone and the AI will lose all learned preferences.",
+      "confirm": "Clear All"
+    }
   }
 }
