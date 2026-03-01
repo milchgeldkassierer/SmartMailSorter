@@ -51,7 +51,7 @@ interface GeminiResponse {
 
 /** Extract and return the API key from settings, or empty string if missing. */
 const getApiKey = (settings?: AISettings) => {
-  if (settings?.apiKey && settings.apiKey.trim() !== '') return settings.apiKey;
+  if (settings?.apiKey && settings.apiKey.trim() !== '') return settings.apiKey.trim();
   return '';
 };
 
@@ -299,7 +299,14 @@ ${jsonFormatHint}`
     }
 
     if (!resultsArray) {
-      console.warn('[SmartSort] AI returned no results array. Raw:', JSON.stringify(rawResults).slice(0, 500));
+      console.warn(
+        '[SmartSort] AI returned no results array. Type:',
+        typeof rawResults,
+        'IsArray:',
+        Array.isArray(rawResults),
+        'Keys:',
+        rawResults && typeof rawResults === 'object' ? Object.keys(rawResults as object).join(',') : 'N/A'
+      );
       resultsArray = [];
     }
 
@@ -338,7 +345,7 @@ ${jsonFormatHint}`
           summary: res.summary || 'Analysiert',
           reasoning: res.reasoning || 'Batch OK',
           confidence: isFallback ? rawConfidence * FALLBACK_CONFIDENCE_FACTOR : rawConfidence,
-          ...(isFallback && { indexFallbackUsed: true }),
+          indexFallbackUsed: isFallback,
         };
       }
       return {
