@@ -26,6 +26,12 @@ interface OpenAIResponse {
   }>;
 }
 
+interface OllamaResponse {
+  message?: {
+    content: string;
+  };
+}
+
 interface GeminiConfig {
   responseMimeType: string;
   responseSchema: Schema;
@@ -178,6 +184,33 @@ async function callLLM(
     const data = (await response.json()) as OpenAIResponse;
     const content = data.choices?.[0]?.message?.content;
     if (!content) throw new Error('OpenAI returned empty response');
+    return JSON.parse(content);
+  }
+
+  // --- OLLAMA ---
+  if (settings.provider === LLMProvider.OLLAMA) {
+    const response = await fetch('http://localhost:11434/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: settings.model,
+        messages: [
+          { role: 'system', content: systemInstruction },
+          { role: 'user', content: prompt },
+        ],
+        format: 'json',
+        stream: false,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorBody = await response.text();
+      throw new Error(`Ollama API error (${response.status}): ${errorBody}`);
+    }
+
+    const data = (await response.json()) as OllamaResponse;
+    const content = data.message?.content;
+    if (!content) throw new Error('Ollama returned empty response');
     return JSON.parse(content);
   }
 
