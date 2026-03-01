@@ -476,7 +476,8 @@ app.whenReady().then(() => {
         }
       }
 
-      const settingsJson = JSON.stringify(settings);
+      const sanitized = { provider: settings.provider, model: settings.model, apiKey: settings.apiKey };
+      const settingsJson = JSON.stringify(sanitized);
 
       if (!safeStorage.isEncryptionAvailable()) {
         logger.warn('[IPC] safeStorage encryption is not available - falling back to plaintext storage');
@@ -798,6 +799,9 @@ app.whenReady().then(() => {
     const normalizedSchema = jsonSchema ? normalizeJsonSchema(jsonSchema) : null;
     switch (settings.provider) {
       case LLMProviders.GEMINI:
+        if (normalizedSchema) {
+          throw new Error('Gemini provider does not support custom JSON schemas via IPC. Gemini categorization uses the renderer SDK.');
+        }
         return callGeminiApi(settings, systemInstruction, userPrompt);
       case LLMProviders.OPENAI:
         return callOpenAIApi(settings, systemInstruction, userPrompt, normalizedSchema);
