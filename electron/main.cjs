@@ -414,6 +414,23 @@ app.whenReady().then(() => {
   ipcMain.handle('save-search-history', (event, id, query) => db.addSearchHistory(id, query));
   ipcMain.handle('clear-search-history', () => db.clearSearchHistory());
 
+  // Categorization Feedback IPC handlers
+  ipcMain.handle('save-categorization-feedback', (event, feedback) => {
+    return db.saveCategorizationFeedback(feedback);
+  });
+  ipcMain.handle('get-categorization-feedback', (event, accountId, limit) => {
+    return db.getCategorizationFeedback(accountId, limit);
+  });
+  ipcMain.handle('get-recent-feedback-for-sender', (event, accountId, senderEmail, limit) => {
+    return db.getRecentFeedbackForSender(accountId, senderEmail, limit);
+  });
+  ipcMain.handle('export-categorization-feedback', (event, accountId) => {
+    return db.exportCategorizationFeedback(accountId);
+  });
+  ipcMain.handle('clear-categorization-feedback', (event, accountId) => {
+    return db.clearCategorizationFeedback(accountId);
+  });
+
   // AI Settings safeStorage IPC handlers
   const AI_SETTINGS_FILE = path.join(app.getPath('userData'), 'ai-settings.encrypted');
   const AI_SETTINGS_FILE_PLAINTEXT = path.join(app.getPath('userData'), 'ai-settings.json');

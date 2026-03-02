@@ -17,6 +17,8 @@ interface SettingsModalProps {
   aiSettings: AISettings;
   onSaveAISettings: (settings: AISettings) => void;
   aiSaveError?: string | null;
+  // Feedback History
+  onOpenFeedbackHistory?: () => void;
 }
 
 const SettingsModal: React.FC<SettingsModalProps> = ({
@@ -28,6 +30,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   aiSettings,
   onSaveAISettings,
   aiSaveError,
+  onOpenFeedbackHistory,
 }) => {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<'accounts' | 'smartsort' | 'notifications' | 'general'>('accounts');
@@ -97,7 +100,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 
             {activeTab === 'notifications' && <NotificationsTab accounts={accounts} />}
 
-            {activeTab === 'general' && <GeneralTab />}
+            {activeTab === 'general' && <GeneralTab onOpenFeedbackHistory={onOpenFeedbackHistory} />}
           </div>
         </div>
       </div>

@@ -1,13 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Trash2 } from '../Icon';
+import { Trash2, History } from '../Icon';
 import { useOptionalDialogContext } from '../../contexts/DialogContext';
 import { useLanguage } from '../../hooks/useLanguage';
 
 const MIN_SYNC_INTERVAL = 2;
 const MAX_SYNC_INTERVAL = 30;
 
-const GeneralTab: React.FC = () => {
+interface GeneralTabProps {
+  onOpenFeedbackHistory?: () => void;
+}
+
+const GeneralTab: React.FC<GeneralTabProps> = ({ onOpenFeedbackHistory }) => {
   const { t } = useTranslation();
   const dialog = useOptionalDialogContext();
   const { currentLanguage, changeLanguage, availableLanguages, languageLabels } = useLanguage();
@@ -200,6 +204,21 @@ const GeneralTab: React.FC = () => {
           {autoSyncInterval === 0 && <span className="text-sm text-slate-500">{t('generalTab.disabled')}</span>}
         </div>
       </div>
+
+      {/* AI Learning */}
+      {onOpenFeedbackHistory && (
+        <div className="space-y-4">
+          <h3 className="font-semibold text-slate-800">{t('generalTab.aiLearning')}</h3>
+          <button
+            type="button"
+            onClick={onOpenFeedbackHistory}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 border border-blue-200 rounded hover:bg-blue-100 transition-colors"
+          >
+            <History className="w-4 h-4" />
+            {t('generalTab.viewFeedbackHistory')}
+          </button>
+        </div>
+      )}
 
       {/* Datenverwaltung */}
       <div className="space-y-4">

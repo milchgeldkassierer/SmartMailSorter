@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   DefaultEmailCategory,
@@ -14,6 +14,7 @@ import Sidebar from './components/Sidebar';
 import EmailList from './components/EmailList';
 import EmailView from './components/EmailView';
 import SettingsModal from './components/SettingsModal';
+import FeedbackHistoryModal from './components/FeedbackHistoryModal';
 import { generateDemoEmails } from './services/geminiService';
 import { useAccounts } from './hooks/useAccounts';
 import { useAISettings } from './hooks/useAISettings';
@@ -37,6 +38,7 @@ const App: React.FC = () => {
     useAccounts();
   const { aiSettings, setAiSettings, saveError: aiSaveError } = useAISettings();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isFeedbackHistoryOpen, setIsFeedbackHistoryOpen] = useState(false);
   const dialog = useDialogContext();
 
   // Saved Filters
@@ -208,6 +210,7 @@ const App: React.FC = () => {
     currentEmails,
     currentCategories,
     aiSettings,
+    accountId: activeAccountId,
     onDeleteEmail: handleDeleteEmail,
     onToggleRead: handleToggleRead,
     onToggleFlag: handleToggleFlag,
@@ -369,6 +372,83 @@ const App: React.FC = () => {
       });
     },
     [currentEmails, updateActiveAccountData, pushAction, t]
+  );
+
+  const pendingCategoryChanges = useRef(new Set<string>());
+
+  const handleCategoryChange = useCallback(
+    async (emailId: string, newCategory: string) => {
+      if (pendingCategoryChanges.current.has(emailId)) return;
+
+      const email = currentEmails.find((e) => e.id === emailId);
+      if (!email) return;
+
+      const originalCategory = email.smartCategory;
+      if (originalCategory === newCategory) return;
+
+      pendingCategoryChanges.current.add(emailId);
+
+      try {
+        // Optimistic update
+        updateActiveAccountData((prev) => ({
+          ...prev,
+          emails: prev.emails.map((e) => (e.id === emailId ? { ...e, smartCategory: newCategory } : e)),
+        }));
+
+        if (window.electron && activeAccountId) {
+          try {
+            // Persist category change (preserve existing AI fields)
+            await window.electron.updateEmailSmartCategory({
+              emailId,
+              category: newCategory,
+              summary: email.aiSummary ?? undefined,
+              reasoning: email.aiReasoning ?? undefined,
+              confidence: email.confidence ?? undefined,
+            });
+          } catch (error) {
+            // Rollback on error
+            updateActiveAccountData((prev) => ({
+              ...prev,
+              emails: prev.emails.map((e) => (e.id === emailId ? { ...e, smartCategory: originalCategory } : e)),
+            }));
+            console.error('Category change failed:', error);
+            dialog.alert({
+              title: t('common.error'),
+              message: t('errors.categoryChangeFailed', {
+                defaultValue: 'Category change failed. Please try again.',
+              }),
+            });
+            return;
+          }
+
+          // Save feedback best-effort (no rollback needed)
+          if (originalCategory) {
+            try {
+              const feedbackId = `${emailId}-${Date.now()}`;
+              await window.electron.saveCategorizationFeedback({
+                id: feedbackId,
+                emailId,
+                accountId: activeAccountId,
+                originalCategory,
+                correctedCategory: newCategory,
+                sender: email.sender,
+                senderEmail: email.senderEmail,
+                subject: email.subject,
+                aiSummary: email.aiSummary ?? null,
+                aiReasoning: email.aiReasoning ?? null,
+                confidence: email.confidence ?? null,
+                correctedAt: Date.now(),
+              });
+            } catch (error) {
+              console.warn('Failed to save categorization feedback:', error);
+            }
+          }
+        }
+      } finally {
+        pendingCategoryChanges.current.delete(emailId);
+      }
+    },
+    [currentEmails, updateActiveAccountData, activeAccountId, dialog, t]
   );
 
   const {
@@ -710,7 +790,12 @@ const App: React.FC = () => {
             draggedEmailIds={draggedEmailIds}
             searchQuery={searchTerm}
           />
-          <EmailView email={selectedEmail} searchQuery={searchTerm} />
+          <EmailView
+            email={selectedEmail}
+            searchQuery={searchTerm}
+            categories={currentCategories}
+            onCategoryChange={handleCategoryChange}
+          />
         </div>
 
         {undoToast && (
@@ -777,6 +862,16 @@ const App: React.FC = () => {
           aiSettings={aiSettings}
           onSaveAISettings={setAiSettings}
           aiSaveError={aiSaveError}
+          onOpenFeedbackHistory={() => {
+            setIsSettingsOpen(false);
+            setIsFeedbackHistoryOpen(true);
+          }}
+        />
+
+        <FeedbackHistoryModal
+          isOpen={isFeedbackHistoryOpen}
+          onClose={() => setIsFeedbackHistoryOpen(false)}
+          accountId={activeAccountId || ''}
         />
       </div>
     </div>

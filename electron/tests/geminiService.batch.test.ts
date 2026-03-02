@@ -40,7 +40,7 @@ vi.mock('../../src/services/geminiService', async () => {
                 categoryId: res.category || DefaultEmailCategory.OTHER,
                 summary: res.summary || 'Analysiert',
                 reasoning: res.reasoning || 'Batch OK',
-                confidence: res.confidence || 0.8,
+                confidence: res.confidence ?? 0.8,
               };
             }
             // Fallback for missing items
