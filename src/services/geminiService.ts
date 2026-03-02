@@ -227,22 +227,27 @@ export const categorizeBatchWithAI = async (
   if (emails.length === 0) return [];
 
   // Fetch recent feedback examples for few-shot learning (if accountId provided)
-  const feedbackExamples: Array<{ senderEmail: string; originalCategory: string; correctedCategory: string; subject: string }> = [];
+  const feedbackExamples: Array<{
+    senderEmail: string;
+    originalCategory: string;
+    correctedCategory: string;
+    subject: string;
+  }> = [];
   if (accountId && window.electron?.getRecentFeedbackForSender) {
     // Extract unique sender emails from the batch
-    const uniqueSenders = Array.from(new Set(emails.map(e => e.senderEmail).filter(Boolean)));
+    const uniqueSenders = Array.from(new Set(emails.map((e) => e.senderEmail).filter(Boolean)));
 
     // Fetch recent feedback for each unique sender (limit 5 per sender)
     for (const senderEmail of uniqueSenders) {
       try {
         const feedback = await window.electron.getRecentFeedbackForSender(accountId, senderEmail, 5);
         // Collect relevant fields for prompt injection (will be used in subtask-4-2)
-        feedback.forEach(f => {
+        feedback.forEach((f) => {
           feedbackExamples.push({
             senderEmail: f.senderEmail,
             originalCategory: f.originalCategory,
             correctedCategory: f.correctedCategory,
-            subject: f.subject
+            subject: f.subject,
           });
         });
       } catch (error) {
@@ -263,8 +268,10 @@ export const categorizeBatchWithAI = async (
         id: { type: Type.STRING, description: 'The exact email ID from the input' },
         category: { type: Type.STRING },
         summary: { type: Type.STRING },
+        reasoning: { type: Type.STRING, description: 'Ein prägnanter Satz, warum diese Kategorie gewählt wurde' },
+        confidence: { type: Type.NUMBER, description: 'Konfidenz von 0.0 bis 1.0' },
       },
-      required: ['id', 'category', 'summary'],
+      required: ['id', 'category', 'summary', 'reasoning', 'confidence'],
     },
   };
 
@@ -290,9 +297,12 @@ export const categorizeBatchWithAI = async (
   if (feedbackExamples.length > 0) {
     // Limit to 5 examples to keep token budget reasonable
     const limitedExamples = feedbackExamples.slice(0, 5);
-    const exampleLines = limitedExamples.map(ex =>
-      `  - ${ex.senderEmail}: Emails wurden von "${ex.originalCategory}" zu "${ex.correctedCategory}" korrigiert (Betreff: "${ex.subject}")`
-    ).join('\n');
+    const exampleLines = limitedExamples
+      .map(
+        (ex) =>
+          `  - ${ex.senderEmail}: Emails wurden von "${ex.originalCategory}" zu "${ex.correctedCategory}" korrigiert (Betreff: "${ex.subject}")`
+      )
+      .join('\n');
 
     learnedPreferencesSection = `
 GELERNTE PRÄFERENZEN:
@@ -313,6 +323,7 @@ Emails: ${JSON.stringify(inputs)}
 Kategorien: ${targetCategories.join(', ')}
 
 Nutze existierende Kategorien. Falls keine passt, schlage neue vor (1 Wort). Vermeide "Sonstiges".
+Gib für jede Email ein kurzes "reasoning" (ein prägnanter Satz) und "confidence" (0.0-1.0) an.
 
 ${jsonFormatHint}`
       : `
@@ -327,6 +338,7 @@ ${learnedPreferencesSection}
       1. PRÜFE zuerst, ob die Email in eine der EXISTIERENDEN Kategorien passt. Das hat HÖCHSTE Priorität.
       2. NUR wenn absolut nichts passt, schlage eine NEUE, sprechende Kategorie vor (1 Wort, z.B. "Reisen").
       3. Vermeide "Sonstiges".
+      4. Gib für jede Email ein kurzes "reasoning" (ein prägnanter Satz, warum diese Kategorie) und "confidence" (0.0-1.0) an.
 
       ${jsonFormatHint}
     `;
@@ -390,7 +402,7 @@ ${learnedPreferencesSection}
         return {
           categoryId: res.category || DefaultEmailCategory.OTHER,
           summary: res.summary || 'Analysiert',
-          reasoning: res.reasoning || 'Batch OK',
+          reasoning: res.reasoning || '',
           confidence: isFallback ? rawConfidence * FALLBACK_CONFIDENCE_FACTOR : rawConfidence,
           indexFallbackUsed: isFallback,
         };

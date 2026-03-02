@@ -390,10 +390,13 @@ const App: React.FC = () => {
       }));
 
       try {
-        // Persist category change
+        // Persist category change (preserve existing AI fields)
         await window.electron.updateEmailSmartCategory({
           emailId,
-          category: newCategory
+          category: newCategory,
+          summary: email.aiSummary ?? undefined,
+          reasoning: email.aiReasoning ?? undefined,
+          confidence: email.confidence ?? undefined,
         });
 
         // Save feedback if there was an original AI category

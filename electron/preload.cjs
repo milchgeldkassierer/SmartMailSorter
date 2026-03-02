@@ -84,6 +84,13 @@ contextBridge.exposeInMainWorld('electron', {
     }
   },
 
+  // Categorization Feedback
+  saveCategorizationFeedback: (feedback) => ipcRenderer.invoke('save-categorization-feedback', feedback),
+  getCategorizationFeedback: (accountId, limit) => ipcRenderer.invoke('get-categorization-feedback', accountId, limit),
+  getRecentFeedbackForSender: (accountId, senderEmail, limit) => ipcRenderer.invoke('get-recent-feedback-for-sender', accountId, senderEmail, limit),
+  exportCategorizationFeedback: (accountId) => ipcRenderer.invoke('export-categorization-feedback', accountId),
+  clearCategorizationFeedback: (accountId) => ipcRenderer.invoke('clear-categorization-feedback', accountId),
+
   // External links
   openExternal: (url) => ipcRenderer.invoke('open-external-url', url),
 });
