@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { createRequire } from 'module';
 import path from 'path';
-import { ImapAccount, Email } from '../../src/types';
+import { ImapAccount, Email, CategorizationFeedback } from '../../src/types';
 
 // Create require function for CommonJS modules
 const require = createRequire(import.meta.url);
@@ -33,21 +33,6 @@ interface SearchHistory {
   id: string;
   query: string;
   timestamp: number;
-}
-
-interface CategorizationFeedback {
-  id: string;
-  emailId: string;
-  accountId: string;
-  originalCategory: string;
-  correctedCategory: string;
-  sender: string;
-  senderEmail: string;
-  subject: string;
-  aiSummary: string | null;
-  aiReasoning: string | null;
-  confidence: number;
-  correctedAt: number;
 }
 
 interface DbModule {
@@ -355,7 +340,7 @@ describe('Database Module', () => {
         aiSummary: 'Email summary',
         aiReasoning: 'AI reasoning',
         confidence: 0.85,
-        correctedAt: Date.now()
+        correctedAt: Date.now(),
       };
 
       // Save feedback
@@ -403,7 +388,7 @@ describe('Database Module', () => {
         aiSummary: null,
         aiReasoning: null,
         confidence: 0.8,
-        correctedAt: Date.now() - 1000
+        correctedAt: Date.now() - 1000,
       });
 
       db.saveCategorizationFeedback({
@@ -418,7 +403,7 @@ describe('Database Module', () => {
         aiSummary: null,
         aiReasoning: null,
         confidence: 0.9,
-        correctedAt: Date.now()
+        correctedAt: Date.now(),
       });
 
       // Get feedback for sender
@@ -459,7 +444,7 @@ describe('Database Module', () => {
           aiSummary: null,
           aiReasoning: null,
           confidence: 0.8,
-          correctedAt: Date.now() + i
+          correctedAt: Date.now() + i,
         });
       }
 
@@ -485,7 +470,7 @@ describe('Database Module', () => {
         aiSummary: 'Summary',
         aiReasoning: 'Reasoning',
         confidence: 0.9,
-        correctedAt: Date.now()
+        correctedAt: Date.now(),
       };
 
       db.saveCategorizationFeedback(feedback);
@@ -511,7 +496,7 @@ describe('Database Module', () => {
         aiSummary: null,
         aiReasoning: null,
         confidence: 0.8,
-        correctedAt: Date.now()
+        correctedAt: Date.now(),
       });
 
       let feedback = db.getCategorizationFeedback('test-acc', 100);
@@ -545,7 +530,7 @@ describe('Database Module', () => {
         aiSummary: null,
         aiReasoning: null,
         confidence: 0.8,
-        correctedAt: Date.now()
+        correctedAt: Date.now(),
       });
 
       let feedback = db.getCategorizationFeedback('test-acc', 100);
@@ -588,7 +573,7 @@ describe('Database Module', () => {
         aiSummary: null,
         aiReasoning: null,
         confidence: 0.8,
-        correctedAt: now - 10000
+        correctedAt: now - 10000,
       });
 
       db.saveCategorizationFeedback({
@@ -603,7 +588,7 @@ describe('Database Module', () => {
         aiSummary: null,
         aiReasoning: null,
         confidence: 0.9,
-        correctedAt: now
+        correctedAt: now,
       });
 
       const feedback = db.getCategorizationFeedback('test-acc', 100);
@@ -656,7 +641,7 @@ describe('Database Module', () => {
         aiSummary: null,
         aiReasoning: null,
         confidence: 0.8,
-        correctedAt: Date.now()
+        correctedAt: Date.now(),
       });
 
       db.saveCategorizationFeedback({
@@ -671,7 +656,7 @@ describe('Database Module', () => {
         aiSummary: null,
         aiReasoning: null,
         confidence: 0.9,
-        correctedAt: Date.now()
+        correctedAt: Date.now(),
       });
 
       // Get feedback for each account

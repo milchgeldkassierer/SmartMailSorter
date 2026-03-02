@@ -210,6 +210,7 @@ const GeneralTab: React.FC<GeneralTabProps> = ({ onOpenFeedbackHistory }) => {
         <div className="space-y-4">
           <h3 className="font-semibold text-slate-800">{t('generalTab.aiLearning')}</h3>
           <button
+            type="button"
             onClick={onOpenFeedbackHistory}
             className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 border border-blue-200 rounded hover:bg-blue-100 transition-colors"
           >

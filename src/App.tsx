@@ -210,6 +210,7 @@ const App: React.FC = () => {
     currentEmails,
     currentCategories,
     aiSettings,
+    accountId: activeAccountId,
     onDeleteEmail: handleDeleteEmail,
     onToggleRead: handleToggleRead,
     onToggleFlag: handleToggleFlag,
@@ -398,9 +399,18 @@ const App: React.FC = () => {
           reasoning: email.aiReasoning ?? undefined,
           confidence: email.confidence ?? undefined,
         });
+      } catch (error) {
+        // Rollback on error
+        updateActiveAccountData((prev) => ({
+          ...prev,
+          emails: prev.emails.map((e) => (e.id === emailId ? { ...e, smartCategory: originalCategory } : e)),
+        }));
+        throw error;
+      }
 
-        // Save feedback if there was an original AI category
-        if (originalCategory && originalCategory !== newCategory) {
+      // Save feedback best-effort (no rollback needed)
+      if (originalCategory) {
+        try {
           const feedbackId = `${emailId}-${Date.now()}`;
           await window.electron.saveCategorizationFeedback({
             id: feedbackId,
@@ -416,14 +426,9 @@ const App: React.FC = () => {
             confidence: email.confidence ?? null,
             correctedAt: Date.now(),
           });
+        } catch (error) {
+          console.warn('Failed to save categorization feedback:', error);
         }
-      } catch (error) {
-        // Rollback on error
-        updateActiveAccountData((prev) => ({
-          ...prev,
-          emails: prev.emails.map((e) => (e.id === emailId ? { ...e, smartCategory: originalCategory } : e)),
-        }));
-        throw error;
       }
     },
     [currentEmails, updateActiveAccountData, activeAccountId]

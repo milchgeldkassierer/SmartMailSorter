@@ -1,6 +1,13 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Email, Attachment, Category, CategoryTranslationKey, DefaultEmailCategory, FolderTranslationKey } from '../types';
+import {
+  Email,
+  Attachment,
+  Category,
+  CategoryTranslationKey,
+  DefaultEmailCategory,
+  FolderTranslationKey,
+} from '../types';
 import { CategoryIcon, BrainCircuit, Paperclip, ChevronDown } from './Icon';
 import { sanitizeHtml } from '../utils/sanitizeHtml';
 import { blockRemoteImages, buildIframeDoc } from '../utils/emailHtml';
@@ -39,8 +46,14 @@ const EmailView: React.FC<EmailViewProps> = ({ email, searchQuery, categories = 
     return translated === key ? categoryName : translated;
   };
 
+  // Reset category dropdown when email changes
+  useEffect(() => {
+    setIsCategoryDropdownOpen(false);
+  }, [email?.id]);
+
   // Close category dropdown when clicking outside
   useEffect(() => {
+    if (!isCategoryDropdownOpen) return;
     const handleClickOutside = (event: MouseEvent) => {
       if (categoryDropdownRef.current && !categoryDropdownRef.current.contains(event.target as Node)) {
         setIsCategoryDropdownOpen(false);
@@ -48,7 +61,7 @@ const EmailView: React.FC<EmailViewProps> = ({ email, searchQuery, categories = 
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  }, [isCategoryDropdownOpen]);
 
   useEffect(() => {
     if (email && email.hasAttachments && window.electron) {
@@ -266,15 +279,16 @@ const EmailView: React.FC<EmailViewProps> = ({ email, searchQuery, categories = 
           {email.smartCategory && (
             <div className="relative" ref={categoryDropdownRef}>
               <button
+                type="button"
                 onClick={() => setIsCategoryDropdownOpen(!isCategoryDropdownOpen)}
                 className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-full border border-slate-200 transition-colors cursor-pointer"
                 disabled={!onCategoryChange || categories.length === 0}
               >
                 <CategoryIcon category={email.smartCategory} className="w-4 h-4 text-slate-600" />
-                <span className="text-sm font-medium text-slate-700">{getCategoryDisplayName(email.smartCategory)}</span>
-                {onCategoryChange && categories.length > 0 && (
-                  <ChevronDown className="w-3.5 h-3.5 text-slate-500" />
-                )}
+                <span className="text-sm font-medium text-slate-700">
+                  {getCategoryDisplayName(email.smartCategory)}
+                </span>
+                {onCategoryChange && categories.length > 0 && <ChevronDown className="w-3.5 h-3.5 text-slate-500" />}
               </button>
 
               {/* Dropdown Menu */}
@@ -282,10 +296,13 @@ const EmailView: React.FC<EmailViewProps> = ({ email, searchQuery, categories = 
                 <div className="absolute right-0 mt-2 w-56 bg-white border border-slate-200 rounded-lg shadow-lg z-50 max-h-80 overflow-y-auto">
                   {categories.map((cat) => (
                     <button
+                      type="button"
                       key={cat.name}
                       onClick={() => {
                         if (email.id && cat.name !== email.smartCategory) {
-                          onCategoryChange(email.id, cat.name);
+                          Promise.resolve(onCategoryChange(email.id, cat.name)).catch((err) =>
+                            console.error('Category change failed:', err)
+                          );
                         }
                         setIsCategoryDropdownOpen(false);
                       }}

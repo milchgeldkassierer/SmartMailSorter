@@ -237,22 +237,27 @@ export const categorizeBatchWithAI = async (
     // Extract unique sender emails from the batch
     const uniqueSenders = Array.from(new Set(emails.map((e) => e.senderEmail).filter(Boolean)));
 
-    // Fetch recent feedback for each unique sender (limit 5 per sender)
-    for (const senderEmail of uniqueSenders) {
-      try {
-        const feedback = await window.electron.getRecentFeedbackForSender(accountId, senderEmail, 5);
-        // Collect relevant fields for prompt injection (will be used in subtask-4-2)
-        feedback.forEach((f) => {
-          feedbackExamples.push({
-            senderEmail: f.senderEmail,
-            originalCategory: f.originalCategory,
-            correctedCategory: f.correctedCategory,
-            subject: f.subject,
-          });
+    // Fetch recent feedback for each unique sender in parallel (limit 5 per sender)
+    const feedbackResults = await Promise.all(
+      uniqueSenders.map(async (senderEmail) => {
+        try {
+          return await window.electron.getRecentFeedbackForSender(accountId, senderEmail, 5);
+        } catch (error) {
+          // Silently continue if feedback fetch fails - categorization should still work
+          console.warn(`Failed to fetch feedback for sender ${senderEmail}:`, error);
+          return [];
+        }
+      })
+    );
+    // Collect relevant fields for prompt injection (will be used in subtask-4-2)
+    for (const results of feedbackResults) {
+      for (const f of results) {
+        feedbackExamples.push({
+          senderEmail: f.senderEmail,
+          originalCategory: f.originalCategory,
+          correctedCategory: f.correctedCategory,
+          subject: f.subject,
         });
-      } catch (error) {
-        // Silently continue if feedback fetch fails - categorization should still work
-        console.warn(`Failed to fetch feedback for sender ${senderEmail}:`, error);
       }
     }
   }
@@ -296,18 +301,17 @@ export const categorizeBatchWithAI = async (
   let learnedPreferencesSection = '';
   if (feedbackExamples.length > 0) {
     // Limit to 5 examples to keep token budget reasonable
-    const limitedExamples = feedbackExamples.slice(0, 5);
-    const exampleLines = limitedExamples
-      .map(
-        (ex) =>
-          `  - ${ex.senderEmail}: Emails wurden von "${ex.originalCategory}" zu "${ex.correctedCategory}" korrigiert (Betreff: "${ex.subject}")`
-      )
-      .join('\n');
+    const limitedExamples = feedbackExamples.slice(0, 5).map((ex) => ({
+      senderEmail: ex.senderEmail,
+      originalCategory: ex.originalCategory,
+      correctedCategory: ex.correctedCategory,
+      subject: ex.subject.replace(/[\n\r]/g, ' ').substring(0, 80),
+    }));
 
     learnedPreferencesSection = `
 GELERNTE PRÄFERENZEN:
 Der Benutzer hat folgende Korrekturen vorgenommen:
-${exampleLines}
+${JSON.stringify(limitedExamples)}
 
 Berücksichtige diese Präferenzen bei ähnlichen Emails.
 

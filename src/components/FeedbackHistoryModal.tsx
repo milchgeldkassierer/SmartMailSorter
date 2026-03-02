@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { X, Download, ArrowRight, History, Trash, Search } from './Icon';
 import { CategorizationFeedback } from '../types';
 import { CategoryIcon } from './Icon';
+import { formatDateTime } from '../utils/formatLocale';
 
 interface FeedbackHistoryModalProps {
   isOpen: boolean;
@@ -26,12 +27,36 @@ const FeedbackHistoryModal: React.FC<FeedbackHistoryModalProps> = ({ isOpen, onC
     };
   }, []);
 
+  const loadFeedback = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      if (!window?.electron?.getCategorizationFeedback) {
+        if (mountedRef.current) {
+          setFeedback([]);
+          setFilteredFeedback([]);
+        }
+        return;
+      }
+      const data = await window.electron.getCategorizationFeedback(accountId, 100);
+      if (mountedRef.current) {
+        setFeedback(data);
+        setFilteredFeedback(data);
+      }
+    } catch (error) {
+      console.error('Failed to load feedback history:', error);
+    } finally {
+      if (mountedRef.current) {
+        setIsLoading(false);
+      }
+    }
+  }, [accountId]);
+
   // Load feedback data when modal opens
   useEffect(() => {
     if (isOpen && accountId) {
       loadFeedback();
     }
-  }, [isOpen, accountId]);
+  }, [isOpen, accountId, loadFeedback]);
 
   // Filter feedback based on search query
   useEffect(() => {
@@ -63,25 +88,9 @@ const FeedbackHistoryModal: React.FC<FeedbackHistoryModalProps> = ({ isOpen, onC
     return () => window.removeEventListener('keydown', handleEscape);
   }, [isOpen, onClose, showClearConfirm]);
 
-  const loadFeedback = async () => {
-    setIsLoading(true);
-    try {
-      const data = await window.electron.getCategorizationFeedback(accountId, 100);
-      if (mountedRef.current) {
-        setFeedback(data);
-        setFilteredFeedback(data);
-      }
-    } catch (error) {
-      console.error('Failed to load feedback history:', error);
-    } finally {
-      if (mountedRef.current) {
-        setIsLoading(false);
-      }
-    }
-  };
-
   const handleExport = async () => {
     try {
+      if (!window?.electron?.exportCategorizationFeedback) return;
       const data = await window.electron.exportCategorizationFeedback(accountId);
 
       // Create export object with metadata
@@ -110,6 +119,7 @@ const FeedbackHistoryModal: React.FC<FeedbackHistoryModalProps> = ({ isOpen, onC
 
   const handleClearAll = async () => {
     try {
+      if (!window?.electron?.clearCategorizationFeedback) return;
       await window.electron.clearCategorizationFeedback(accountId);
       if (mountedRef.current) {
         setFeedback([]);
@@ -121,15 +131,8 @@ const FeedbackHistoryModal: React.FC<FeedbackHistoryModalProps> = ({ isOpen, onC
     }
   };
 
-  const formatDate = (timestamp: number) => {
-    const date = new Date(timestamp);
-    return date.toLocaleDateString('de-DE', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+  const formatDateValue = (timestamp: number) => {
+    return formatDateTime(timestamp) ?? new Date(timestamp).toLocaleString();
   };
 
   const handleOverlayClick = (e: React.MouseEvent) => {
@@ -147,6 +150,13 @@ const FeedbackHistoryModal: React.FC<FeedbackHistoryModalProps> = ({ isOpen, onC
       aria-labelledby="feedback-history-title"
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
       onClick={handleOverlayClick}
+      onKeyDown={(e: React.KeyboardEvent) => {
+        if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) {
+          e.preventDefault();
+          onClose();
+        }
+      }}
+      tabIndex={0}
     >
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-5xl overflow-hidden flex flex-col max-h-[90vh]">
         {/* Header */}
@@ -193,9 +203,7 @@ const FeedbackHistoryModal: React.FC<FeedbackHistoryModalProps> = ({ isOpen, onC
               <p className="text-lg font-medium">
                 {searchQuery ? t('feedbackHistory.noResults') : t('feedbackHistory.noFeedback')}
               </p>
-              {!searchQuery && (
-                <p className="text-sm mt-2">{t('feedbackHistory.noFeedbackHint')}</p>
-              )}
+              {!searchQuery && <p className="text-sm mt-2">{t('feedbackHistory.noFeedbackHint')}</p>}
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -221,12 +229,9 @@ const FeedbackHistoryModal: React.FC<FeedbackHistoryModalProps> = ({ isOpen, onC
                 </thead>
                 <tbody>
                   {filteredFeedback.map((item) => (
-                    <tr
-                      key={item.id}
-                      className="border-b border-slate-100 hover:bg-slate-50 transition-colors"
-                    >
+                    <tr key={item.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
                       <td className="py-3 px-4 text-sm text-slate-600 whitespace-nowrap">
-                        {formatDate(item.correctedAt)}
+                        {formatDateValue(item.correctedAt)}
                       </td>
                       <td className="py-3 px-4 text-sm text-slate-800">
                         <div className="max-w-xs truncate" title={item.subject}>
@@ -269,9 +274,7 @@ const FeedbackHistoryModal: React.FC<FeedbackHistoryModalProps> = ({ isOpen, onC
 
         {/* Footer */}
         <div className="flex items-center justify-between p-6 border-t border-slate-100 bg-slate-50">
-          <div className="text-sm text-slate-600">
-            {t('feedbackHistory.totalCount', { count: feedback.length })}
-          </div>
+          <div className="text-sm text-slate-600">{t('feedbackHistory.totalCount', { count: feedback.length })}</div>
           <div className="flex items-center gap-3">
             {feedback.length > 0 && (
               <>
@@ -301,9 +304,7 @@ const FeedbackHistoryModal: React.FC<FeedbackHistoryModalProps> = ({ isOpen, onC
       {showClearConfirm && (
         <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/30">
           <div className="bg-white rounded-xl shadow-2xl p-6 max-w-md">
-            <h3 className="text-lg font-bold text-slate-800 mb-3">
-              {t('feedbackHistory.clearConfirm.title')}
-            </h3>
+            <h3 className="text-lg font-bold text-slate-800 mb-3">{t('feedbackHistory.clearConfirm.title')}</h3>
             <p className="text-sm text-slate-600 mb-6">
               {t('feedbackHistory.clearConfirm.message', { count: feedback.length })}
             </p>

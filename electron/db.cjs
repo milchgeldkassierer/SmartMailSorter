@@ -215,7 +215,8 @@ function createSchema() {
       aiReasoning TEXT,
       confidence REAL,
       correctedAt INTEGER,
-      FOREIGN KEY(emailId) REFERENCES emails(id) ON DELETE CASCADE
+      FOREIGN KEY(emailId) REFERENCES emails(id) ON DELETE CASCADE,
+      FOREIGN KEY(accountId) REFERENCES accounts(id) ON DELETE CASCADE
     )
   `);
 
@@ -611,6 +612,7 @@ function updateEmailFlagStatus(id, isFlagged) {
 
 /** Drop all tables and recreate the schema (used for testing/reset). */
 function resetDb() {
+  db.exec('DROP TABLE IF EXISTS categorization_feedback');
   db.exec('DROP TABLE IF EXISTS attachments');
   db.exec('DROP TABLE IF EXISTS notification_settings');
   db.exec('DROP TABLE IF EXISTS saved_filters');

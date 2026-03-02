@@ -337,14 +337,14 @@ describe('EmailView', () => {
       const email = createEmail({ aiReasoning: undefined });
       render(<EmailView email={email} />);
 
-      expect(screen.queryByText('Gemini Analyse')).not.toBeInTheDocument();
+      expect(screen.queryByText('Smart Sort Analyse')).not.toBeInTheDocument();
     });
 
     it('should not render AI analysis section when aiReasoning is empty string', () => {
       const email = createEmail({ aiReasoning: '' });
       render(<EmailView email={email} />);
 
-      expect(screen.queryByText('Gemini Analyse')).not.toBeInTheDocument();
+      expect(screen.queryByText('Smart Sort Analyse')).not.toBeInTheDocument();
     });
 
     it('should render long AI reasoning text', () => {

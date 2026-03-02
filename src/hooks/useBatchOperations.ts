@@ -9,6 +9,7 @@ interface UseBatchOperationsProps {
   currentEmails: Email[];
   currentCategories: Category[];
   aiSettings: AISettings;
+  accountId?: string;
   onDeleteEmail: (id: string) => Promise<void>;
   onToggleRead: (id: string) => Promise<void>;
   onToggleFlag: (id: string) => Promise<void>;
@@ -47,6 +48,7 @@ export const useBatchOperations = ({
   dialog,
   onConfirmDelete,
   onConfirmNewCategories,
+  accountId,
 }: UseBatchOperationsProps): UseBatchOperationsReturn => {
   const { t } = useTranslation();
   const [isSorting, setIsSorting] = useState(false);
@@ -82,7 +84,7 @@ export const useBatchOperations = ({
       const enrichedChunk = await enrichEmailsWithContent(chunk);
 
       const categoryNames = currentCategories.map((c) => c.name);
-      const batchResults = await categorizeBatchWithAI(enrichedChunk, categoryNames, aiSettings);
+      const batchResults = await categorizeBatchWithAI(enrichedChunk, categoryNames, aiSettings, accountId);
 
       enrichedChunk.forEach((email, index) => {
         const sortResult = batchResults[index];
