@@ -55,6 +55,7 @@ interface DbModule {
   exportCategorizationFeedback: (accountId: string) => CategorizationFeedback[];
   clearCategorizationFeedback: (accountId: string) => { success: boolean; changes: number };
   deleteEmail: (emailId: string) => void;
+  deleteAccountDn: (id: string) => void;
 }
 
 // Import the database module under test
@@ -538,6 +539,32 @@ describe('Database Module', () => {
 
       // Delete the email (this should cascade delete feedback)
       db.deleteEmail('test-email-1');
+
+      feedback = db.getCategorizationFeedback('test-acc', 100);
+      expect(feedback).toEqual([]);
+    });
+
+    it('should cascade delete feedback when account is deleted', () => {
+      db.saveCategorizationFeedback({
+        id: 'acc-cascade-test',
+        emailId: 'test-email-1',
+        accountId: 'test-acc',
+        originalCategory: 'Inbox',
+        correctedCategory: 'Important',
+        sender: 'John',
+        senderEmail: 'john@example.com',
+        subject: 'Test',
+        aiSummary: null,
+        aiReasoning: null,
+        confidence: 0.8,
+        correctedAt: Date.now(),
+      });
+
+      let feedback = db.getCategorizationFeedback('test-acc', 100);
+      expect(feedback).toHaveLength(1);
+
+      // Delete the account (this should cascade delete feedback)
+      db.deleteAccountDn('test-acc');
 
       feedback = db.getCategorizationFeedback('test-acc', 100);
       expect(feedback).toEqual([]);

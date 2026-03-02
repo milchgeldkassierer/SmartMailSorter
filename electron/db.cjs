@@ -221,8 +221,12 @@ function createSchema() {
   `);
 
   // Create indexes for categorization_feedback for fast few-shot retrieval
-  db.exec('CREATE INDEX IF NOT EXISTS idx_categorization_feedback_accountId ON categorization_feedback(accountId)');
-  db.exec('CREATE INDEX IF NOT EXISTS idx_categorization_feedback_senderEmail ON categorization_feedback(senderEmail)');
+  db.exec(
+    'CREATE INDEX IF NOT EXISTS idx_categorization_feedback_account_correctedAt ON categorization_feedback(accountId, correctedAt DESC)'
+  );
+  db.exec(
+    'CREATE INDEX IF NOT EXISTS idx_categorization_feedback_account_sender_correctedAt ON categorization_feedback(accountId, senderEmail, correctedAt DESC)'
+  );
 }
 
 /** Migrate plaintext passwords to encrypted format using Electron safeStorage. */

@@ -145,9 +145,6 @@ const FeedbackHistoryModal: React.FC<FeedbackHistoryModalProps> = ({ isOpen, onC
 
   return (
     <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="feedback-history-title"
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
       onClick={handleOverlayClick}
       onKeyDown={(e: React.KeyboardEvent) => {
@@ -156,9 +153,14 @@ const FeedbackHistoryModal: React.FC<FeedbackHistoryModalProps> = ({ isOpen, onC
           onClose();
         }
       }}
-      tabIndex={0}
+      tabIndex={-1}
     >
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-5xl overflow-hidden flex flex-col max-h-[90vh]">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="feedback-history-title"
+        className="bg-white rounded-xl shadow-2xl w-full max-w-5xl overflow-hidden flex flex-col max-h-[90vh]"
+      >
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-blue-100">
           <div className="flex items-center gap-3">
@@ -186,6 +188,7 @@ const FeedbackHistoryModal: React.FC<FeedbackHistoryModalProps> = ({ isOpen, onC
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder={t('feedbackHistory.searchPlaceholder')}
+              aria-label={t('feedbackHistory.searchPlaceholder')}
               className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
@@ -303,8 +306,15 @@ const FeedbackHistoryModal: React.FC<FeedbackHistoryModalProps> = ({ isOpen, onC
       {/* Clear Confirmation Dialog */}
       {showClearConfirm && (
         <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/30">
-          <div className="bg-white rounded-xl shadow-2xl p-6 max-w-md">
-            <h3 className="text-lg font-bold text-slate-800 mb-3">{t('feedbackHistory.clearConfirm.title')}</h3>
+          <div
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="clear-confirm-title"
+            className="bg-white rounded-xl shadow-2xl p-6 max-w-md"
+          >
+            <h3 id="clear-confirm-title" className="text-lg font-bold text-slate-800 mb-3">
+              {t('feedbackHistory.clearConfirm.title')}
+            </h3>
             <p className="text-sm text-slate-600 mb-6">
               {t('feedbackHistory.clearConfirm.message', { count: feedback.length })}
             </p>

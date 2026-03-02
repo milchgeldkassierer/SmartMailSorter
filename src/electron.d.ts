@@ -90,7 +90,11 @@ declare global {
       // Categorization Feedback (AI Learning)
       saveCategorizationFeedback: (feedback: CategorizationFeedback) => Promise<CategorizationFeedbackOperationResult>;
       getCategorizationFeedback: (accountId: string, limit?: number) => Promise<CategorizationFeedback[]>;
-      getRecentFeedbackForSender: (accountId: string, senderEmail: string, limit?: number) => Promise<CategorizationFeedback[]>;
+      getRecentFeedbackForSender: (
+        accountId: string,
+        senderEmail: string,
+        limit?: number
+      ) => Promise<CategorizationFeedback[]>;
       exportCategorizationFeedback: (accountId: string) => Promise<CategorizationFeedback[]>;
       clearCategorizationFeedback: (accountId: string) => Promise<CategorizationFeedbackOperationResult>;
 

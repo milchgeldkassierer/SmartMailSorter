@@ -244,7 +244,8 @@ export const categorizeBatchWithAI = async (
           return await window.electron.getRecentFeedbackForSender(accountId, senderEmail, 5);
         } catch (error) {
           // Silently continue if feedback fetch fails - categorization should still work
-          console.warn(`Failed to fetch feedback for sender ${senderEmail}:`, error);
+          const domain = senderEmail.includes('@') ? senderEmail.split('@')[1] : '***';
+          console.warn(`Failed to fetch feedback for sender ***@${domain}:`, error);
           return [];
         }
       })
@@ -402,7 +403,7 @@ ${learnedPreferencesSection}
       const res = idMatch || (useIndexFallback ? resultsList[index] : undefined);
       if (res && res.category) {
         const isFallback = !idMatch && useIndexFallback;
-        const rawConfidence = res.confidence || 0.8;
+        const rawConfidence = res.confidence ?? 0.8;
         return {
           categoryId: res.category || DefaultEmailCategory.OTHER,
           summary: res.summary || 'Analysiert',
