@@ -236,11 +236,11 @@ export const categorizeBatchWithAI = async (
     // Extract unique sender emails from the batch
     const uniqueSenders = Array.from(new Set(emails.map((e) => e.senderEmail).filter(Boolean)));
 
-    // Fetch recent feedback for each unique sender in parallel (limit 5 per sender)
+    // Fetch recent feedback for each unique sender in parallel (limit 2 per sender for diversity)
     const feedbackResults = await Promise.all(
       uniqueSenders.map(async (senderEmail) => {
         try {
-          return await window.electron.getRecentFeedbackForSender(accountId, senderEmail, 5);
+          return await window.electron.getRecentFeedbackForSender(accountId, senderEmail, 2);
         } catch (error) {
           // Silently continue if feedback fetch fails - categorization should still work
           const domain = senderEmail.includes('@') ? senderEmail.split('@')[1] : '***';
@@ -249,15 +249,24 @@ export const categorizeBatchWithAI = async (
         }
       })
     );
-    // Collect relevant fields for few-shot learning prompt context
-    for (const results of feedbackResults) {
-      for (const f of results) {
-        feedbackExamples.push({
-          senderEmail: f.senderEmail,
-          originalCategory: f.originalCategory,
-          correctedCategory: f.correctedCategory,
-        });
+    // Round-robin collect from each sender to ensure diversity across senders
+    const maxExamples = 5;
+    let round = 0;
+    while (feedbackExamples.length < maxExamples) {
+      let added = false;
+      for (const results of feedbackResults) {
+        if (round < results.length && feedbackExamples.length < maxExamples) {
+          const f = results[round];
+          feedbackExamples.push({
+            senderEmail: f.senderEmail,
+            originalCategory: f.originalCategory,
+            correctedCategory: f.correctedCategory,
+          });
+          added = true;
+        }
       }
+      if (!added) break;
+      round++;
     }
   }
 

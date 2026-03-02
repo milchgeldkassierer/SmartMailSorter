@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   DefaultEmailCategory,
@@ -374,13 +374,19 @@ const App: React.FC = () => {
     [currentEmails, updateActiveAccountData, pushAction, t]
   );
 
+  const pendingCategoryChanges = useRef(new Set<string>());
+
   const handleCategoryChange = useCallback(
     async (emailId: string, newCategory: string) => {
+      if (pendingCategoryChanges.current.has(emailId)) return;
+
       const email = currentEmails.find((e) => e.id === emailId);
       if (!email) return;
 
       const originalCategory = email.smartCategory;
       if (originalCategory === newCategory) return;
+
+      pendingCategoryChanges.current.add(emailId);
 
       // Optimistic update
       updateActiveAccountData((prev) => ({
@@ -411,6 +417,7 @@ const App: React.FC = () => {
               defaultValue: 'Category change failed. Please try again.',
             }),
           });
+          pendingCategoryChanges.current.delete(emailId);
           return;
         }
 
@@ -437,6 +444,8 @@ const App: React.FC = () => {
           }
         }
       }
+
+      pendingCategoryChanges.current.delete(emailId);
     },
     [currentEmails, updateActiveAccountData, activeAccountId, dialog, t]
   );

@@ -250,7 +250,7 @@ const EmailView: React.FC<EmailViewProps> = ({ email, searchQuery, categories = 
       <div className="bg-white p-6 border-b border-slate-200 shadow-sm flex-shrink-0">
         <div className="flex items-start justify-between mb-4">
           <h1 className="text-2xl font-bold text-slate-900 leading-tight">{email.subject}</h1>
-          {email.confidence && (
+          {email.confidence != null && Number.isFinite(email.confidence) && (
             <div className="flex flex-col items-end">
               <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
                 {t('emailView.aiConfidence')}
