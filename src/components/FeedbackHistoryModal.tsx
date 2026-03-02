@@ -76,10 +76,12 @@ const FeedbackHistoryModal: React.FC<FeedbackHistoryModalProps> = ({ isOpen, onC
     }
   }, [searchQuery, feedback]);
 
-  // Handle escape key to close modal
+  // Handle escape key to close modal (only when open)
   useEffect(() => {
+    if (!isOpen) return;
+
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen && !showClearConfirm) {
+      if (e.key === 'Escape' && !showClearConfirm) {
         onClose();
       }
     };
