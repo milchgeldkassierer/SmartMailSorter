@@ -90,7 +90,7 @@ const FeedbackHistoryModal: React.FC<FeedbackHistoryModalProps> = ({ isOpen, onC
 
   const handleExport = async () => {
     try {
-      if (!window?.electron?.exportCategorizationFeedback) return;
+      if (!accountId || !window?.electron?.exportCategorizationFeedback) return;
       const data = await window.electron.exportCategorizationFeedback(accountId);
 
       // Create export object with metadata
@@ -119,7 +119,7 @@ const FeedbackHistoryModal: React.FC<FeedbackHistoryModalProps> = ({ isOpen, onC
 
   const handleClearAll = async () => {
     try {
-      if (!window?.electron?.clearCategorizationFeedback) return;
+      if (!accountId || !window?.electron?.clearCategorizationFeedback) return;
       await window.electron.clearCategorizationFeedback(accountId);
       if (mountedRef.current) {
         setFeedback([]);
