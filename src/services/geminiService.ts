@@ -306,7 +306,6 @@ export const categorizeBatchWithAI = async (
       senderEmail: ex.senderEmail,
       originalCategory: ex.originalCategory,
       correctedCategory: ex.correctedCategory,
-      subject: ex.subject.replace(/[\n\r]/g, ' ').substring(0, 80),
     }));
 
     learnedPreferencesSection = `

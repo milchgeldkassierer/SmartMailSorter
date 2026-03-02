@@ -66,11 +66,11 @@ const FeedbackHistoryModal: React.FC<FeedbackHistoryModalProps> = ({ isOpen, onC
       const query = searchQuery.toLowerCase();
       const filtered = feedback.filter(
         (item) =>
-          item.subject.toLowerCase().includes(query) ||
-          item.sender.toLowerCase().includes(query) ||
-          item.senderEmail.toLowerCase().includes(query) ||
-          item.originalCategory.toLowerCase().includes(query) ||
-          item.correctedCategory.toLowerCase().includes(query)
+          (item.subject ?? '').toLowerCase().includes(query) ||
+          (item.sender ?? '').toLowerCase().includes(query) ||
+          (item.senderEmail ?? '').toLowerCase().includes(query) ||
+          (item.originalCategory ?? '').toLowerCase().includes(query) ||
+          (item.correctedCategory ?? '').toLowerCase().includes(query)
       );
       setFilteredFeedback(filtered);
     }

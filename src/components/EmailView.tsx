@@ -276,7 +276,7 @@ const EmailView: React.FC<EmailViewProps> = ({ email, searchQuery, categories = 
           </div>
 
           {/* Category Selector Dropdown */}
-          {email.smartCategory && (
+          {(email.smartCategory || (onCategoryChange && categories.length > 0)) && (
             <div className="relative" ref={categoryDropdownRef}>
               <button
                 type="button"
@@ -284,9 +284,11 @@ const EmailView: React.FC<EmailViewProps> = ({ email, searchQuery, categories = 
                 className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-full border border-slate-200 transition-colors cursor-pointer"
                 disabled={!onCategoryChange || categories.length === 0}
               >
-                <CategoryIcon category={email.smartCategory} className="w-4 h-4 text-slate-600" />
+                <CategoryIcon category={email.smartCategory || ''} className="w-4 h-4 text-slate-600" />
                 <span className="text-sm font-medium text-slate-700">
-                  {getCategoryDisplayName(email.smartCategory)}
+                  {email.smartCategory
+                    ? getCategoryDisplayName(email.smartCategory)
+                    : t('categories.uncategorized', { defaultValue: 'Uncategorized' })}
                 </span>
                 {onCategoryChange && categories.length > 0 && <ChevronDown className="w-3.5 h-3.5 text-slate-500" />}
               </button>

@@ -376,8 +376,6 @@ const App: React.FC = () => {
 
   const handleCategoryChange = useCallback(
     async (emailId: string, newCategory: string) => {
-      if (!activeAccountId || !window.electron) return;
-
       const email = currentEmails.find((e) => e.id === emailId);
       if (!email) return;
 
@@ -390,49 +388,53 @@ const App: React.FC = () => {
         emails: prev.emails.map((e) => (e.id === emailId ? { ...e, smartCategory: newCategory } : e)),
       }));
 
-      try {
-        // Persist category change (preserve existing AI fields)
-        await window.electron.updateEmailSmartCategory({
-          emailId,
-          category: newCategory,
-          summary: email.aiSummary ?? undefined,
-          reasoning: email.aiReasoning ?? undefined,
-          confidence: email.confidence ?? undefined,
-        });
-      } catch (error) {
-        // Rollback on error
-        updateActiveAccountData((prev) => ({
-          ...prev,
-          emails: prev.emails.map((e) => (e.id === emailId ? { ...e, smartCategory: originalCategory } : e)),
-        }));
-        console.error('Category change failed:', error);
-        dialog.alert({
-          title: t('common.error'),
-          message: t('errors.categoryChangeFailed', { defaultValue: 'Category change failed. Please try again.' }),
-        });
-        return;
-      }
-
-      // Save feedback best-effort (no rollback needed)
-      if (originalCategory) {
+      if (window.electron && activeAccountId) {
         try {
-          const feedbackId = `${emailId}-${Date.now()}`;
-          await window.electron.saveCategorizationFeedback({
-            id: feedbackId,
+          // Persist category change (preserve existing AI fields)
+          await window.electron.updateEmailSmartCategory({
             emailId,
-            accountId: activeAccountId,
-            originalCategory,
-            correctedCategory: newCategory,
-            sender: email.sender,
-            senderEmail: email.senderEmail,
-            subject: email.subject,
-            aiSummary: email.aiSummary ?? null,
-            aiReasoning: email.aiReasoning ?? null,
-            confidence: email.confidence ?? null,
-            correctedAt: Date.now(),
+            category: newCategory,
+            summary: email.aiSummary ?? undefined,
+            reasoning: email.aiReasoning ?? undefined,
+            confidence: email.confidence ?? undefined,
           });
         } catch (error) {
-          console.warn('Failed to save categorization feedback:', error);
+          // Rollback on error
+          updateActiveAccountData((prev) => ({
+            ...prev,
+            emails: prev.emails.map((e) => (e.id === emailId ? { ...e, smartCategory: originalCategory } : e)),
+          }));
+          console.error('Category change failed:', error);
+          dialog.alert({
+            title: t('common.error'),
+            message: t('errors.categoryChangeFailed', {
+              defaultValue: 'Category change failed. Please try again.',
+            }),
+          });
+          return;
+        }
+
+        // Save feedback best-effort (no rollback needed)
+        if (originalCategory) {
+          try {
+            const feedbackId = `${emailId}-${Date.now()}`;
+            await window.electron.saveCategorizationFeedback({
+              id: feedbackId,
+              emailId,
+              accountId: activeAccountId,
+              originalCategory,
+              correctedCategory: newCategory,
+              sender: email.sender,
+              senderEmail: email.senderEmail,
+              subject: email.subject,
+              aiSummary: email.aiSummary ?? null,
+              aiReasoning: email.aiReasoning ?? null,
+              confidence: email.confidence ?? null,
+              correctedAt: Date.now(),
+            });
+          } catch (error) {
+            console.warn('Failed to save categorization feedback:', error);
+          }
         }
       }
     },
