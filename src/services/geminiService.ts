@@ -231,7 +231,6 @@ export const categorizeBatchWithAI = async (
     senderEmail: string;
     originalCategory: string;
     correctedCategory: string;
-    subject: string;
   }> = [];
   if (accountId && window.electron?.getRecentFeedbackForSender) {
     // Extract unique sender emails from the batch
@@ -257,7 +256,6 @@ export const categorizeBatchWithAI = async (
           senderEmail: f.senderEmail,
           originalCategory: f.originalCategory,
           correctedCategory: f.correctedCategory,
-          subject: f.subject,
         });
       }
     }

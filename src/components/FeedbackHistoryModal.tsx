@@ -166,6 +166,7 @@ const FeedbackHistoryModal: React.FC<FeedbackHistoryModalProps> = ({ isOpen, onC
             type="button"
             onClick={onClose}
             className="text-slate-400 hover:text-slate-600"
+            aria-label={t('common.close', { defaultValue: 'Close' })}
             data-testid="close-button"
           >
             <X className="w-6 h-6" />
@@ -258,7 +259,7 @@ const FeedbackHistoryModal: React.FC<FeedbackHistoryModalProps> = ({ isOpen, onC
                         </div>
                       </td>
                       <td className="py-3 px-4 text-sm text-slate-600">
-                        {item.confidence !== null
+                        {item.confidence !== null && Number.isFinite(item.confidence)
                           ? `${Math.min(100, Math.max(0, Math.round(item.confidence * 100)))}%`
                           : '-'}
                       </td>
