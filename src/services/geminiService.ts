@@ -405,12 +405,14 @@ ${learnedPreferencesSection}
       const res = idMatch || (useIndexFallback ? resultsList[index] : undefined);
       if (res && res.category) {
         const isFallback = !idMatch && useIndexFallback;
-        const rawConfidence = res.confidence ?? 0.8;
+        const parsedConfidence = Number(res.confidence ?? 0.8);
+        const rawConfidence = Number.isFinite(parsedConfidence) ? parsedConfidence : 0.8;
+        const finalConfidence = isFallback ? rawConfidence * FALLBACK_CONFIDENCE_FACTOR : rawConfidence;
         return {
           categoryId: res.category || DefaultEmailCategory.OTHER,
           summary: res.summary || 'Analysiert',
           reasoning: res.reasoning || '',
-          confidence: isFallback ? rawConfidence * FALLBACK_CONFIDENCE_FACTOR : rawConfidence,
+          confidence: Math.min(1, Math.max(0, finalConfidence)),
           indexFallbackUsed: isFallback,
         };
       }

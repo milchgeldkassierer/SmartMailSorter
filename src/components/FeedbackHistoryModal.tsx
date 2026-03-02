@@ -147,13 +147,6 @@ const FeedbackHistoryModal: React.FC<FeedbackHistoryModalProps> = ({ isOpen, onC
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
       onClick={handleOverlayClick}
-      onKeyDown={(e: React.KeyboardEvent) => {
-        if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) {
-          e.preventDefault();
-          onClose();
-        }
-      }}
-      tabIndex={-1}
     >
       <div
         role="dialog"
