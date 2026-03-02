@@ -265,7 +265,9 @@ const FeedbackHistoryModal: React.FC<FeedbackHistoryModalProps> = ({ isOpen, onC
                         </div>
                       </td>
                       <td className="py-3 px-4 text-sm text-slate-600">
-                        {item.confidence !== null ? `${Math.round(item.confidence * 100)}%` : '-'}
+                        {item.confidence !== null
+                          ? `${Math.min(100, Math.max(0, Math.round(item.confidence * 100)))}%`
+                          : '-'}
                       </td>
                     </tr>
                   ))}

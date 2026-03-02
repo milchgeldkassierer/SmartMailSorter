@@ -405,7 +405,12 @@ const App: React.FC = () => {
           ...prev,
           emails: prev.emails.map((e) => (e.id === emailId ? { ...e, smartCategory: originalCategory } : e)),
         }));
-        throw error;
+        console.error('Category change failed:', error);
+        dialog.alert({
+          title: t('common.error'),
+          message: t('errors.categoryChangeFailed', { defaultValue: 'Category change failed. Please try again.' }),
+        });
+        return;
       }
 
       // Save feedback best-effort (no rollback needed)
@@ -431,7 +436,7 @@ const App: React.FC = () => {
         }
       }
     },
-    [currentEmails, updateActiveAccountData, activeAccountId]
+    [currentEmails, updateActiveAccountData, activeAccountId, dialog, t]
   );
 
   const {
