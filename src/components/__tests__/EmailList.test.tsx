@@ -6,7 +6,12 @@ import { Email, INBOX_FOLDER } from '../../types';
 // Mock react-virtuoso since Virtuoso requires layout measurements unavailable in JSDOM
 let capturedEndReached: (() => void) | undefined;
 vi.mock('react-virtuoso', () => ({
-  Virtuoso: ({ totalCount, itemContent, endReached, style }: {
+  Virtuoso: ({
+    totalCount,
+    itemContent,
+    endReached,
+    style,
+  }: {
     totalCount: number;
     itemContent: (index: number) => React.ReactNode;
     endReached?: () => void;

@@ -42,133 +42,133 @@ interface EmailRowProps {
   searchQuery?: string;
 }
 
-const EmailRow = React.memo<EmailRowProps>(({
-  email,
-  selectedEmailId,
-  isSelected,
-  isDragged,
-  onRowClick,
-  onToggleSelection,
-  onDeleteEmail,
-  onToggleRead,
-  onToggleFlag,
-  onDragStart,
-  onDragEnd,
-  draggable,
-  searchQuery,
-}) => {
-  const { t } = useTranslation();
+const EmailRow = React.memo<EmailRowProps>(
+  ({
+    email,
+    selectedEmailId,
+    isSelected,
+    isDragged,
+    onRowClick,
+    onToggleSelection,
+    onDeleteEmail,
+    onToggleRead,
+    onToggleFlag,
+    onDragStart,
+    onDragEnd,
+    draggable,
+    searchQuery,
+  }) => {
+    const { t } = useTranslation();
 
-  return (
-    <div
-      role="listitem"
-      draggable={draggable}
-      onDragStart={onDragStart ? (e) => onDragStart(email.id, e) : undefined}
-      onDragEnd={onDragEnd}
-      aria-grabbed={isDragged || undefined}
-      onClick={(e) => onRowClick(email.id, e)}
-      className={`group relative p-4 pl-12 border-b border-slate-100 cursor-pointer hover:bg-slate-50 transition-colors ${
-        selectedEmailId === email.id
-          ? 'bg-blue-50 border-l-4 border-l-blue-600'
-          : 'border-l-4 border-l-transparent'
-      } ${isSelected ? 'bg-blue-50/50' : ''} ${isDragged ? 'opacity-50' : ''}`}
-    >
-      {/* Selection Checkbox (Absolute Left) */}
+    return (
       <div
-        className="absolute left-4 top-5 z-10"
-        onClick={(e) => {
-          e.stopPropagation();
-          onToggleSelection(email.id, e.shiftKey);
-        }}
+        role="listitem"
+        draggable={draggable}
+        onDragStart={onDragStart ? (e) => onDragStart(email.id, e) : undefined}
+        onDragEnd={onDragEnd}
+        aria-grabbed={isDragged || undefined}
+        onClick={(e) => onRowClick(email.id, e)}
+        className={`group relative p-4 pl-12 border-b border-slate-100 cursor-pointer hover:bg-slate-50 transition-colors ${
+          selectedEmailId === email.id ? 'bg-blue-50 border-l-4 border-l-blue-600' : 'border-l-4 border-l-transparent'
+        } ${isSelected ? 'bg-blue-50/50' : ''} ${isDragged ? 'opacity-50' : ''}`}
       >
+        {/* Selection Checkbox (Absolute Left) */}
         <div
-          className={`w-5 h-5 rounded-md border flex items-center justify-center transition-colors ${
-            isSelected
-              ? 'bg-blue-600 border-blue-600 text-white'
-              : 'bg-white border-slate-300 text-transparent group-hover:border-slate-400'
-          }`}
-        >
-          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-          </svg>
-        </div>
-      </div>
-
-      {/* Action Bar - Visible on Hover or if Flagged */}
-      <div className="absolute top-2 right-2 flex items-center gap-1">
-        {/* Delete & Read: Visible only on hover */}
-        <div className="hidden group-hover:flex items-center gap-1 bg-white/80 backdrop-blur-sm rounded-lg pr-1">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onToggleRead(email.id);
-            }}
-            className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-slate-200 rounded-full"
-            title={email.isRead ? t('emailList.markUnread') : t('emailList.markRead')}
-          >
-            {email.isRead ? <MailOpen className="w-4 h-4" /> : <Mail className="w-4 h-4" />}
-          </button>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onDeleteEmail(email.id);
-            }}
-            className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-full"
-            title={t('emailList.delete')}
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
-        </div>
-
-        {/* Star: Visible if flagged OR on group hover — last so it stays in place */}
-        <button
+          className="absolute left-4 top-5 z-10"
           onClick={(e) => {
             e.stopPropagation();
-            onToggleFlag(email.id);
+            onToggleSelection(email.id, e.shiftKey);
           }}
-          className={`p-1.5 rounded-full transition-all ${
-            email.isFlagged
-              ? 'text-yellow-400 opacity-100'
-              : 'text-slate-400 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto focus-visible:opacity-100 focus-visible:pointer-events-auto hover:bg-slate-200 hover:text-yellow-400'
-          }`}
-          title={email.isFlagged ? t('emailList.unflag') : t('emailList.flag')}
         >
-          <Star className={`w-4 h-4 ${email.isFlagged ? 'fill-current' : ''}`} />
-        </button>
-      </div>
-
-      <div className={`flex items-baseline mb-1 gap-2 ${email.isFlagged ? 'pr-9' : ''}`}>
-        <span className={`font-medium truncate min-w-0 ${email.isRead ? 'text-slate-600' : 'text-slate-900'}`}>
-          {displayName(email.sender)}
-        </span>
-        <span className="text-xs text-slate-400 whitespace-nowrap flex-shrink-0 ml-auto group-hover:invisible">
-          {formatEmailDate(new Date(email.date).getTime()) ?? ''}
-        </span>
-      </div>
-
-      <div
-        className={`text-sm mb-1 truncate pr-8 flex items-center gap-2 ${email.isRead ? 'text-slate-500' : 'text-slate-800 font-medium'}`}
-      >
-        <span
-          className="truncate"
-          dangerouslySetInnerHTML={{
-            __html: highlightMatches(email.subject, searchQuery),
-          }}
-        />
-        {email.hasAttachments && <Paperclip className="w-3.5 h-3.5 text-blue-600 flex-shrink-0" />}
-      </div>
-
-      <div className="text-xs text-slate-400 line-clamp-2">{email.body}</div>
-
-      {email.aiSummary && (
-        <div className="mt-2 flex items-center gap-1 text-[10px] text-blue-600 bg-blue-100 px-2 py-0.5 rounded w-fit">
-          <BrainCircuit className="w-3 h-3" />
-          <span className="truncate max-w-[200px]">{email.aiSummary}</span>
+          <div
+            className={`w-5 h-5 rounded-md border flex items-center justify-center transition-colors ${
+              isSelected
+                ? 'bg-blue-600 border-blue-600 text-white'
+                : 'bg-white border-slate-300 text-transparent group-hover:border-slate-400'
+            }`}
+          >
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
         </div>
-      )}
-    </div>
-  );
-});
+
+        {/* Action Bar - Visible on Hover or if Flagged */}
+        <div className="absolute top-2 right-2 flex items-center gap-1">
+          {/* Delete & Read: Visible only on hover */}
+          <div className="hidden group-hover:flex items-center gap-1 bg-white/80 backdrop-blur-sm rounded-lg pr-1">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleRead(email.id);
+              }}
+              className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-slate-200 rounded-full"
+              title={email.isRead ? t('emailList.markUnread') : t('emailList.markRead')}
+            >
+              {email.isRead ? <MailOpen className="w-4 h-4" /> : <Mail className="w-4 h-4" />}
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onDeleteEmail(email.id);
+              }}
+              className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-full"
+              title={t('emailList.delete')}
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Star: Visible if flagged OR on group hover — last so it stays in place */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleFlag(email.id);
+            }}
+            className={`p-1.5 rounded-full transition-all ${
+              email.isFlagged
+                ? 'text-yellow-400 opacity-100'
+                : 'text-slate-400 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto focus-visible:opacity-100 focus-visible:pointer-events-auto hover:bg-slate-200 hover:text-yellow-400'
+            }`}
+            title={email.isFlagged ? t('emailList.unflag') : t('emailList.flag')}
+          >
+            <Star className={`w-4 h-4 ${email.isFlagged ? 'fill-current' : ''}`} />
+          </button>
+        </div>
+
+        <div className={`flex items-baseline mb-1 gap-2 ${email.isFlagged ? 'pr-9' : ''}`}>
+          <span className={`font-medium truncate min-w-0 ${email.isRead ? 'text-slate-600' : 'text-slate-900'}`}>
+            {displayName(email.sender)}
+          </span>
+          <span className="text-xs text-slate-400 whitespace-nowrap flex-shrink-0 ml-auto group-hover:invisible">
+            {formatEmailDate(new Date(email.date).getTime()) ?? ''}
+          </span>
+        </div>
+
+        <div
+          className={`text-sm mb-1 truncate pr-8 flex items-center gap-2 ${email.isRead ? 'text-slate-500' : 'text-slate-800 font-medium'}`}
+        >
+          <span
+            className="truncate"
+            dangerouslySetInnerHTML={{
+              __html: highlightMatches(email.subject, searchQuery),
+            }}
+          />
+          {email.hasAttachments && <Paperclip className="w-3.5 h-3.5 text-blue-600 flex-shrink-0" />}
+        </div>
+
+        <div className="text-xs text-slate-400 line-clamp-2">{email.body}</div>
+
+        {email.aiSummary && (
+          <div className="mt-2 flex items-center gap-1 text-[10px] text-blue-600 bg-blue-100 px-2 py-0.5 rounded w-fit">
+            <BrainCircuit className="w-3 h-3" />
+            <span className="truncate max-w-[200px]">{email.aiSummary}</span>
+          </div>
+        )}
+      </div>
+    );
+  }
+);
 
 EmailRow.displayName = 'EmailRow';
 

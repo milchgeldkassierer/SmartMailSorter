@@ -16,9 +16,6 @@ import {
 // Standard folder name constants
 const STANDARD_EXCLUDED_FOLDERS = [SENT_FOLDER, SPAM_FOLDER, TRASH_FOLDER] as const;
 
-// Page size for paginated loading
-const PAGE_SIZE = 100;
-
 interface UseEmailsParams {
   activeAccountId: string;
   accounts: ImapAccount[];
@@ -165,36 +162,39 @@ export const useEmails = ({ activeAccountId, accounts: _accounts }: UseEmailsPar
   const [selectedEmailId, setSelectedEmailIdRaw] = useState<string | null>(null);
 
   // Wrapped setSelectedEmailId that manages body content LRU cache
-  const setSelectedEmailId = useCallback((id: string | null) => {
-    setSelectedEmailIdRaw((prevId) => {
-      if (id && id !== prevId) {
-        const cache = bodyCacheRef.current;
-        // Remove if already in cache, then add to front
-        const idx = cache.indexOf(id);
-        if (idx !== -1) cache.splice(idx, 1);
-        cache.unshift(id);
+  const setSelectedEmailId = useCallback(
+    (id: string | null) => {
+      setSelectedEmailIdRaw((prevId) => {
+        if (id && id !== prevId) {
+          const cache = bodyCacheRef.current;
+          // Remove if already in cache, then add to front
+          const idx = cache.indexOf(id);
+          if (idx !== -1) cache.splice(idx, 1);
+          cache.unshift(id);
 
-        // Evict body content from emails pushed out of cache
-        if (cache.length > BODY_CACHE_SIZE) {
-          const evicted = cache.splice(BODY_CACHE_SIZE);
-          if (evicted.length > 0) {
-            const evictedSet = new Set(evicted);
-            setData((prev) => {
-              const accountData = prev[activeAccountId];
-              if (!accountData) return prev;
-              const updatedEmails = accountData.emails.map((e) =>
-                evictedSet.has(e.id) && (e.body !== undefined || e.bodyHtml !== undefined)
-                  ? { ...e, body: undefined, bodyHtml: undefined }
-                  : e
-              );
-              return { ...prev, [activeAccountId]: { ...accountData, emails: updatedEmails } };
-            });
+          // Evict body content from emails pushed out of cache
+          if (cache.length > BODY_CACHE_SIZE) {
+            const evicted = cache.splice(BODY_CACHE_SIZE);
+            if (evicted.length > 0) {
+              const evictedSet = new Set(evicted);
+              setData((prev) => {
+                const accountData = prev[activeAccountId];
+                if (!accountData) return prev;
+                const updatedEmails = accountData.emails.map((e) =>
+                  evictedSet.has(e.id) && (e.body !== undefined || e.bodyHtml !== undefined)
+                    ? { ...e, body: undefined, bodyHtml: undefined }
+                    : e
+                );
+                return { ...prev, [activeAccountId]: { ...accountData, emails: updatedEmails } };
+              });
+            }
           }
         }
-      }
-      return id;
-    });
-  }, [activeAccountId, setData]);
+        return id;
+      });
+    },
+    [activeAccountId, setData]
+  );
 
   // Wrapped setSelectedCategory that clears body content from non-cached emails
   const setSelectedCategory = useCallback((category: string) => {
@@ -243,9 +243,7 @@ export const useEmails = ({ activeAccountId, accounts: _accounts }: UseEmailsPar
           const accountData = prev[prevAccount];
           if (!accountData) return prev;
           const stripped = accountData.emails.map((e) =>
-            e.body !== undefined || e.bodyHtml !== undefined
-              ? { ...e, body: undefined, bodyHtml: undefined }
-              : e
+            e.body !== undefined || e.bodyHtml !== undefined ? { ...e, body: undefined, bodyHtml: undefined } : e
           );
           return { ...prev, [prevAccount]: { ...accountData, emails: stripped } };
         });
@@ -435,9 +433,10 @@ export const useEmails = ({ activeAccountId, accounts: _accounts }: UseEmailsPar
         counts[catName] = currentEmails.filter((e) => e.folder === catName && !e.isRead).length;
       } else {
         // Use backend category counts if available, fall back to local count
-        counts[catName] = backendCategoryCounts[catName] !== undefined
-          ? currentEmails.filter((e) => e.smartCategory === catName && !e.isRead).length
-          : 0;
+        counts[catName] =
+          backendCategoryCounts[catName] !== undefined
+            ? currentEmails.filter((e) => e.smartCategory === catName && !e.isRead).length
+            : 0;
       }
     });
 
