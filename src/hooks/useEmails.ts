@@ -150,13 +150,56 @@ const shouldShowInCategory = (
   return email.smartCategory === selectedCategory;
 };
 
+// LRU cache size for email body content
+const BODY_CACHE_SIZE = 10;
+
 export const useEmails = ({ activeAccountId, accounts: _accounts }: UseEmailsParams): UseEmailsReturn => {
   // Data State - stored by account ID
   const [data, setData] = useState<Record<string, AccountData>>({});
 
+  // LRU cache for email body content - tracks IDs of emails that should keep their body loaded
+  const bodyCacheRef = useRef<string[]>([]);
+
   // UI Selection State
-  const [selectedCategory, setSelectedCategory] = useState<string>(DefaultEmailCategory.INBOX);
-  const [selectedEmailId, setSelectedEmailId] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategoryRaw] = useState<string>(DefaultEmailCategory.INBOX);
+  const [selectedEmailId, setSelectedEmailIdRaw] = useState<string | null>(null);
+
+  // Wrapped setSelectedEmailId that manages body content LRU cache
+  const setSelectedEmailId = useCallback((id: string | null) => {
+    setSelectedEmailIdRaw((prevId) => {
+      if (id && id !== prevId) {
+        const cache = bodyCacheRef.current;
+        // Remove if already in cache, then add to front
+        const idx = cache.indexOf(id);
+        if (idx !== -1) cache.splice(idx, 1);
+        cache.unshift(id);
+
+        // Evict body content from emails pushed out of cache
+        if (cache.length > BODY_CACHE_SIZE) {
+          const evicted = cache.splice(BODY_CACHE_SIZE);
+          if (evicted.length > 0) {
+            const evictedSet = new Set(evicted);
+            setData((prev) => {
+              const accountData = prev[activeAccountId];
+              if (!accountData) return prev;
+              const updatedEmails = accountData.emails.map((e) =>
+                evictedSet.has(e.id) && (e.body !== undefined || e.bodyHtml !== undefined)
+                  ? { ...e, body: undefined, bodyHtml: undefined }
+                  : e
+              );
+              return { ...prev, [activeAccountId]: { ...accountData, emails: updatedEmails } };
+            });
+          }
+        }
+      }
+      return id;
+    });
+  }, [activeAccountId, setData]);
+
+  // Wrapped setSelectedCategory that clears body content from non-cached emails
+  const setSelectedCategory = useCallback((category: string) => {
+    setSelectedCategoryRaw(category);
+  }, []);
 
   // Search State
   const [searchTerm, setSearchTerm] = useState('');
@@ -188,6 +231,30 @@ export const useEmails = ({ activeAccountId, accounts: _accounts }: UseEmailsPar
   const activeData = data[activeAccountId] || { emails: [], categories: [] };
   const currentEmails = activeData.emails;
   const currentCategories = activeData.categories;
+
+  // Clean up body content and reset cache when switching accounts
+  const prevAccountRef = useRef<string>(activeAccountId);
+  useEffect(() => {
+    if (prevAccountRef.current !== activeAccountId) {
+      const prevAccount = prevAccountRef.current;
+      // Strip body content from previous account's emails to free memory
+      if (prevAccount) {
+        setData((prev) => {
+          const accountData = prev[prevAccount];
+          if (!accountData) return prev;
+          const stripped = accountData.emails.map((e) =>
+            e.body !== undefined || e.bodyHtml !== undefined
+              ? { ...e, body: undefined, bodyHtml: undefined }
+              : e
+          );
+          return { ...prev, [prevAccount]: { ...accountData, emails: stripped } };
+        });
+      }
+      // Reset LRU cache for new account
+      bodyCacheRef.current = [];
+      prevAccountRef.current = activeAccountId;
+    }
+  }, [activeAccountId, setData]);
 
   // Fetch total count and category counts from backend
   useEffect(() => {

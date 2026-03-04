@@ -642,6 +642,15 @@ const App: React.FC = () => {
       <Sidebar
         selectedCategory={selectedCategory}
         onSelectCategory={(cat) => {
+          // Clear body content from non-selected emails when switching folders
+          updateActiveAccountData((prev) => ({
+            ...prev,
+            emails: prev.emails.map((e) =>
+              e.id !== selectedEmailId && (e.body !== undefined || e.bodyHtml !== undefined)
+                ? { ...e, body: undefined, bodyHtml: undefined }
+                : e
+            ),
+          }));
           setSelectedCategory(cat);
           setSelectedEmailId(null);
           setSearchTerm('');
