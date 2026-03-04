@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useEmails } from '../useEmails';
 import {
@@ -10,6 +10,23 @@ import {
   SPAM_FOLDER,
   FLAGGED_FOLDER,
 } from '../../types';
+
+// Mock window.electron IPC methods
+const mockGetEmailCount = vi.fn().mockResolvedValue(0);
+const mockGetCategoryCounts = vi.fn().mockResolvedValue([]);
+const mockSearchEmails = vi.fn().mockResolvedValue([]);
+
+beforeEach(() => {
+  mockGetEmailCount.mockReset().mockResolvedValue(0);
+  mockGetCategoryCounts.mockReset().mockResolvedValue([]);
+  mockSearchEmails.mockReset().mockResolvedValue([]);
+
+  (window as any).electron = {
+    getEmailCount: mockGetEmailCount,
+    getCategoryCounts: mockGetCategoryCounts,
+    searchEmails: mockSearchEmails,
+  };
+});
 
 describe('useEmails', () => {
   const mockAccount1: ImapAccount = {
@@ -93,10 +110,6 @@ describe('useEmails', () => {
     accounts: [mockAccount1, mockAccount2],
   };
 
-  beforeEach(() => {
-    // Reset any mocks if needed
-  });
-
   describe('Initial State', () => {
     it('should initialize with empty data', () => {
       const { result } = renderHook(() => useEmails(defaultParams));
@@ -132,6 +145,11 @@ describe('useEmails', () => {
       const { result } = renderHook(() => useEmails(defaultParams));
       expect(result.current.showUnsortedOnly).toBe(false);
     });
+
+    it('should initialize totalCount as 0', () => {
+      const { result } = renderHook(() => useEmails(defaultParams));
+      expect(result.current.totalCount).toBe(0);
+    });
   });
 
   describe('Computed Properties - Empty State', () => {
@@ -156,7 +174,7 @@ describe('useEmails', () => {
       expect(result.current.selectedEmail).toBe(null);
     });
 
-    it('should return false for canLoadMore when no data', () => {
+    it('should return false for canLoadMore (virtualization handles display)', () => {
       const { result } = renderHook(() => useEmails(defaultParams));
       expect(result.current.canLoadMore).toBe(false);
     });
@@ -252,10 +270,6 @@ describe('useEmails', () => {
   });
 
   describe('Filtering by Category', () => {
-    beforeEach(() => {
-      // Setup will be done in each test
-    });
-
     it('should filter emails for INBOX category', () => {
       const { result } = renderHook(() => useEmails(defaultParams));
 
@@ -456,8 +470,8 @@ describe('useEmails', () => {
     });
   });
 
-  describe('Pagination', () => {
-    it('should display first 100 emails by default', () => {
+  describe('Virtualized Display (no client-side pagination)', () => {
+    it('should display all filtered emails (virtualization handles rendering)', () => {
       const { result } = renderHook(() => useEmails(defaultParams));
       const manyEmails = Array.from({ length: 150 }, (_, i) => ({
         ...mockEmail1,
@@ -473,13 +487,14 @@ describe('useEmails', () => {
         });
       });
 
-      expect(result.current.displayedEmails).toHaveLength(100);
-      expect(result.current.canLoadMore).toBe(true);
+      // With virtualization, displayedEmails equals filteredEmails (all emails)
+      expect(result.current.displayedEmails).toHaveLength(150);
+      expect(result.current.canLoadMore).toBe(false);
     });
 
-    it('should load more emails when loadMoreEmails is called', () => {
+    it('should always have canLoadMore as false (virtualization handles scrolling)', () => {
       const { result } = renderHook(() => useEmails(defaultParams));
-      const manyEmails = Array.from({ length: 250 }, (_, i) => ({
+      const manyEmails = Array.from({ length: 500 }, (_, i) => ({
         ...mockEmail1,
         id: `email-${i}`,
       }));
@@ -488,26 +503,6 @@ describe('useEmails', () => {
         result.current.setData({
           'account-1': {
             emails: manyEmails,
-            categories: [],
-          },
-        });
-      });
-
-      act(() => {
-        result.current.loadMoreEmails();
-      });
-
-      expect(result.current.displayedEmails).toHaveLength(200);
-      expect(result.current.canLoadMore).toBe(true);
-    });
-
-    it('should set canLoadMore to false when all emails are displayed', () => {
-      const { result } = renderHook(() => useEmails(defaultParams));
-
-      act(() => {
-        result.current.setData({
-          'account-1': {
-            emails: [mockEmail1, mockEmail2],
             categories: [],
           },
         });
@@ -516,7 +511,7 @@ describe('useEmails', () => {
       expect(result.current.canLoadMore).toBe(false);
     });
 
-    it('should reset pagination when resetPagination is called', () => {
+    it('loadMoreEmails should be a no-op (backward compatibility)', () => {
       const { result } = renderHook(() => useEmails(defaultParams));
       const manyEmails = Array.from({ length: 250 }, (_, i) => ({
         ...mockEmail1,
@@ -530,24 +525,24 @@ describe('useEmails', () => {
             categories: [],
           },
         });
+      });
+
+      const countBefore = result.current.displayedEmails.length;
+
+      act(() => {
         result.current.loadMoreEmails();
       });
 
-      expect(result.current.displayedEmails).toHaveLength(200);
-
-      act(() => {
-        result.current.resetPagination();
-      });
-
-      expect(result.current.displayedEmails).toHaveLength(100);
+      // No change since loadMoreEmails is a no-op
+      expect(result.current.displayedEmails).toHaveLength(countBefore);
     });
 
-    it('should reset pagination when category changes', () => {
+    it('should display all emails for a category after switching', () => {
       const { result } = renderHook(() => useEmails(defaultParams));
       const manyEmails = Array.from({ length: 350 }, (_, i) => ({
         ...mockEmail1,
         id: `email-${i}`,
-        folder: i < 250 ? INBOX_FOLDER : SENT_FOLDER, // 250 in Posteingang, 100 in Gesendet
+        folder: i < 250 ? INBOX_FOLDER : SENT_FOLDER,
       }));
 
       act(() => {
@@ -557,10 +552,9 @@ describe('useEmails', () => {
             categories: [],
           },
         });
-        result.current.loadMoreEmails();
       });
 
-      expect(result.current.displayedEmails).toHaveLength(200);
+      expect(result.current.displayedEmails).toHaveLength(250);
 
       act(() => {
         result.current.setSelectedCategory('Gesendet');
@@ -568,29 +562,58 @@ describe('useEmails', () => {
 
       expect(result.current.displayedEmails).toHaveLength(100);
     });
+  });
 
-    it('should reset pagination when search term changes', () => {
+  describe('Backend IPC Integration', () => {
+    it('should call getEmailCount and getCategoryCounts on mount', async () => {
+      mockGetEmailCount.mockResolvedValue(500);
+      mockGetCategoryCounts.mockResolvedValue([
+        { smartCategory: 'Newsletter', count: 20 },
+        { smartCategory: 'Geschäftlich', count: 15 },
+      ]);
+
+      renderHook(() => useEmails(defaultParams));
+
+      // Wait for async effects
+      await vi.waitFor(() => {
+        expect(mockGetEmailCount).toHaveBeenCalledWith('account-1');
+        expect(mockGetCategoryCounts).toHaveBeenCalledWith('account-1');
+      });
+    });
+
+    it('should re-fetch counts when emails change', async () => {
+      mockGetEmailCount.mockResolvedValue(10);
+      mockGetCategoryCounts.mockResolvedValue([]);
+
       const { result } = renderHook(() => useEmails(defaultParams));
-      const manyEmails = Array.from({ length: 150 }, (_, i) => ({
-        ...mockEmail1,
-        id: `email-${i}`,
-      }));
+
+      await vi.waitFor(() => {
+        expect(mockGetEmailCount).toHaveBeenCalledTimes(1);
+      });
 
       act(() => {
         result.current.setData({
           'account-1': {
-            emails: manyEmails,
+            emails: [mockEmail1],
             categories: [],
           },
         });
-        result.current.loadMoreEmails();
       });
 
-      act(() => {
-        result.current.setSearchTerm('test');
+      await vi.waitFor(() => {
+        expect(mockGetEmailCount).toHaveBeenCalledTimes(2);
       });
+    });
 
-      expect(result.current.displayedEmails).toHaveLength(100);
+    it('should track totalCount from backend', async () => {
+      mockGetEmailCount.mockResolvedValue(1500);
+      mockGetCategoryCounts.mockResolvedValue([]);
+
+      const { result } = renderHook(() => useEmails(defaultParams));
+
+      await vi.waitFor(() => {
+        expect(result.current.totalCount).toBe(1500);
+      });
     });
   });
 
@@ -788,35 +811,24 @@ describe('useEmails', () => {
       expect(result.current.currentEmails[0]).toEqual(mockEmail2);
     });
 
-    it('should reset pagination when switching accounts', () => {
-      const { result, rerender } = renderHook(
+    it('should re-fetch counts when switching accounts', async () => {
+      mockGetEmailCount.mockResolvedValue(100);
+      mockGetCategoryCounts.mockResolvedValue([]);
+
+      const { rerender } = renderHook(
         ({ activeAccountId }) => useEmails({ activeAccountId, accounts: [mockAccount1, mockAccount2] }),
         { initialProps: { activeAccountId: 'account-1' } }
       );
 
-      const manyEmailsAccount1 = Array.from({ length: 250 }, (_, i) => ({
-        ...mockEmail1,
-        id: `email-acc1-${i}`,
-      }));
-
-      const manyEmailsAccount2 = Array.from({ length: 150 }, (_, i) => ({
-        ...mockEmail1,
-        id: `email-acc2-${i}`,
-      }));
-
-      act(() => {
-        result.current.setData({
-          'account-1': { emails: manyEmailsAccount1, categories: [] },
-          'account-2': { emails: manyEmailsAccount2, categories: [] },
-        });
-        result.current.loadMoreEmails();
+      await vi.waitFor(() => {
+        expect(mockGetEmailCount).toHaveBeenCalledWith('account-1');
       });
-
-      expect(result.current.displayedEmails).toHaveLength(200);
 
       rerender({ activeAccountId: 'account-2' });
 
-      expect(result.current.displayedEmails).toHaveLength(100);
+      await vi.waitFor(() => {
+        expect(mockGetEmailCount).toHaveBeenCalledWith('account-2');
+      });
     });
   });
 
@@ -972,7 +984,7 @@ describe('useEmails', () => {
       expect(result.current.filteredEmails[0]).toEqual(mockEmail1);
     });
 
-    it('should apply sort to displayed emails (pagination)', () => {
+    it('should apply sort to displayed emails', () => {
       const { result } = renderHook(() => useEmails(defaultParams));
       const emailA: Email = { ...mockEmail1, id: 'a', sender: 'Alpha', date: '2024-01-01T10:00:00Z' };
       const emailB: Email = { ...mockEmail2, id: 'b', sender: 'Beta', date: '2024-01-02T10:00:00Z' };
@@ -991,6 +1003,35 @@ describe('useEmails', () => {
       expect(result.current.displayedEmails[0].sender).toBe('Alpha');
       expect(result.current.displayedEmails[1].sender).toBe('Beta');
       expect(result.current.displayedEmails[2].sender).toBe('Charlie');
+    });
+  });
+
+  describe('Category Switching Triggers New Queries', () => {
+    it('should call getCategoryCounts when category changes', async () => {
+      mockGetEmailCount.mockResolvedValue(100);
+      mockGetCategoryCounts.mockResolvedValue([]);
+
+      const { result } = renderHook(() => useEmails(defaultParams));
+
+      await vi.waitFor(() => {
+        expect(mockGetCategoryCounts).toHaveBeenCalled();
+      });
+
+      const callCountBefore = mockGetCategoryCounts.mock.calls.length;
+
+      act(() => {
+        result.current.setData({
+          'account-1': {
+            emails: [mockEmail1],
+            categories: [],
+          },
+        });
+      });
+
+      // Changing emails triggers re-fetch of counts
+      await vi.waitFor(() => {
+        expect(mockGetCategoryCounts.mock.calls.length).toBeGreaterThan(callCountBefore);
+      });
     });
   });
 });
