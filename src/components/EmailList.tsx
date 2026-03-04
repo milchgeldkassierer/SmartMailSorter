@@ -18,6 +18,7 @@ interface EmailListProps {
   isLoading: boolean;
   onLoadMore?: () => void;
   hasMore?: boolean;
+  totalCount?: number;
   onDragStart?: (emailId: string, selectedIds: Set<string>, event: React.DragEvent) => void;
   onDragEnd?: () => void;
   draggedEmailIds?: string[];

@@ -32,6 +32,9 @@ import BatchActionBar from './components/BatchActionBar';
 import ProgressBar from './components/ProgressBar';
 import SavedFilterDialog from './components/SavedFilterDialog';
 
+// Page size for initial paginated loading (matches useEmails PAGE_SIZE)
+const PAGE_SIZE = 100;
+
 const App: React.FC = () => {
   const { t, ready } = useTranslation();
   const { accounts, activeAccountId, setAccounts, setActiveAccountId, addAccount, removeAccount, switchAccount } =
@@ -68,8 +71,10 @@ const App: React.FC = () => {
     selectedEmail,
     categoryCounts,
     canLoadMore,
+    totalCount,
     updateActiveAccountData,
     loadMoreEmails,
+    resetPagination,
   } = useEmails({ activeAccountId, accounts });
 
   const { addCategory, deleteCategory, renameCategory, autoDiscoverFolders } = useCategories();
@@ -225,8 +230,10 @@ const App: React.FC = () => {
     activeAccountId,
     accounts,
     onAccountsUpdate: setAccounts,
-    onDataUpdate: (accountId, { emails }) =>
-      setData((prev: Record<string, AccountData>) => ({ ...prev, [accountId]: { ...prev[accountId], emails } })),
+    onDataUpdate: (accountId, { emails }) => {
+      setData((prev: Record<string, AccountData>) => ({ ...prev, [accountId]: { ...prev[accountId], emails } }));
+      resetPagination();
+    },
     dialog,
   });
 
@@ -483,7 +490,7 @@ const App: React.FC = () => {
         if (loadedAccounts.length > 0) {
           setAccounts(loadedAccounts);
           setActiveAccountId(loadedAccounts[0].id);
-          const emails = await window.electron.getEmails(loadedAccounts[0].id);
+          const emails = await window.electron.getEmailsPaginated(loadedAccounts[0].id, PAGE_SIZE, 0);
           setData({ [loadedAccounts[0].id]: { emails, categories: savedCategories } });
         } else {
           setIsSettingsOpen(true);
@@ -542,12 +549,13 @@ const App: React.FC = () => {
     const handleAutoSyncCompleted = async () => {
       if (!activeAccountId) return;
       try {
-        const emails = await window.electron.getEmails(activeAccountId);
+        const emails = await window.electron.getEmailsPaginated(activeAccountId, PAGE_SIZE, 0);
         const categories = await window.electron.getCategories();
         setData((prev: Record<string, AccountData>) => ({
           ...prev,
           [activeAccountId]: { ...prev[activeAccountId], emails, categories },
         }));
+        resetPagination();
       } catch (error) {
         console.error('Failed to refresh after auto-sync:', error);
       }
@@ -560,14 +568,14 @@ const App: React.FC = () => {
         window.electron.removeAutoSyncCompletedListener(handleAutoSyncCompleted);
       }
     };
-  }, [activeAccountId, setData]);
+  }, [activeAccountId, setData, resetPagination]);
 
   // Fetch emails when switching accounts
   useEffect(() => {
     (async () => {
       if (!activeAccountId || !window.electron) return;
       try {
-        const emails = await window.electron.getEmails(activeAccountId);
+        const emails = await window.electron.getEmailsPaginated(activeAccountId, PAGE_SIZE, 0);
         const categories = await window.electron.getCategories();
         await autoDiscoverFolders(emails, categories);
         const finalCategories = await window.electron.getCategories();
@@ -593,7 +601,7 @@ const App: React.FC = () => {
         await window.electron.addAccount(newAccount);
         addAccount(newAccount);
         switchAccount(newAccount.id);
-        const emails = await window.electron.getEmails(newAccount.id);
+        const emails = await window.electron.getEmailsPaginated(newAccount.id, PAGE_SIZE, 0);
         setData((prev: Record<string, AccountData>) => ({
           ...prev,
           [newAccount.id]: {
@@ -785,6 +793,7 @@ const App: React.FC = () => {
             isLoading={false}
             onLoadMore={loadMoreEmails}
             hasMore={canLoadMore}
+            totalCount={totalCount}
             onDragStart={onEmailDragStart}
             onDragEnd={onDragEnd}
             draggedEmailIds={draggedEmailIds}
