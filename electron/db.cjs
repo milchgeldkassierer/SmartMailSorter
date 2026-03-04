@@ -88,6 +88,9 @@ function createSchema() {
   db.exec('CREATE INDEX IF NOT EXISTS idx_emails_accountId_category ON emails(accountId, smartCategory)');
   db.exec('CREATE INDEX IF NOT EXISTS idx_emails_category_date ON emails(smartCategory, date)');
 
+  // Composite index for efficient unread counts per account/folder
+  db.exec('CREATE INDEX IF NOT EXISTS idx_emails_accountId_folder_isRead ON emails(accountId, folder, isRead)');
+
   // Create Attachments Table
   db.exec(`
     CREATE TABLE IF NOT EXISTS attachments (
@@ -931,6 +934,68 @@ function clearCategorizationFeedback(accountId) {
   return { success: true, changes: info.changes };
 }
 
+/**
+ * Retrieve a paginated list of emails for an account (without full body).
+ * Includes a snippet (first 150 chars of body) for preview.
+ * @param {string} accountId - Account to fetch emails for
+ * @param {number} limit - Number of emails per page
+ * @param {number} offset - Number of emails to skip
+ * @returns {Array} Paginated emails with snippet field
+ */
+function getEmailsPaginated(accountId, limit = 50, offset = 0) {
+  const emails = db
+    .prepare(
+      `
+    SELECT
+      id, accountId, sender, senderEmail, subject,
+      SUBSTR(body, 1, 150) AS snippet,
+      date, folder, smartCategory, isRead, isFlagged, hasAttachments,
+      aiSummary, aiReasoning, confidence, uid
+    FROM emails
+    WHERE accountId = ?
+    ORDER BY date DESC
+    LIMIT ? OFFSET ?
+  `
+    )
+    .all(accountId, limit, offset);
+
+  return emails.map((email) => ({
+    ...email,
+    isRead: Boolean(email.isRead),
+    isFlagged: Boolean(email.isFlagged),
+    hasAttachments: Boolean(email.hasAttachments),
+  }));
+}
+
+/**
+ * Get total email count for an account.
+ * @param {string} accountId - Account to count emails for
+ * @returns {number} Total email count
+ */
+function getEmailCount(accountId) {
+  const result = db.prepare('SELECT COUNT(*) as count FROM emails WHERE accountId = ?').get(accountId);
+  return result ? result.count : 0;
+}
+
+/**
+ * Get email counts grouped by smart category for an account.
+ * @param {string} accountId - Account to get category counts for
+ * @returns {Array<{smartCategory: string, count: number}>} Category counts
+ */
+function getCategoryCounts(accountId) {
+  return db
+    .prepare(
+      `
+    SELECT smartCategory, COUNT(*) as count
+    FROM emails
+    WHERE accountId = ?
+    GROUP BY smartCategory
+    ORDER BY count DESC
+  `
+    )
+    .all(accountId);
+}
+
 module.exports = {
   init,
   close,
@@ -939,6 +1004,9 @@ module.exports = {
   addAccount,
   updateAccountSync,
   getEmails,
+  getEmailsPaginated,
+  getEmailCount,
+  getCategoryCounts,
   searchEmails,
   getEmailContent,
   saveEmail,
