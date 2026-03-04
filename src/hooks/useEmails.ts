@@ -16,6 +16,9 @@ import {
 // Standard folder name constants
 const STANDARD_EXCLUDED_FOLDERS = [SENT_FOLDER, SPAM_FOLDER, TRASH_FOLDER] as const;
 
+// Page size for paginated loading
+const PAGE_SIZE = 100;
+
 interface UseEmailsParams {
   activeAccountId: string;
   accounts: ImapAccount[];
@@ -39,6 +42,7 @@ interface UseEmailsReturn {
   selectedEmail: Email | null;
   categoryCounts: Record<string, number>;
   canLoadMore: boolean;
+  totalCount: number;
 
   // Setters
   setData: React.Dispatch<React.SetStateAction<Record<string, AccountData>>>;
@@ -172,8 +176,9 @@ export const useEmails = ({ activeAccountId, accounts: _accounts }: UseEmailsPar
   // Filter State
   const [showUnsortedOnly, setShowUnsortedOnly] = useState(false);
 
-  // Pagination State
-  const [visibleCount, setVisibleCount] = useState(100);
+  // Backend-driven counts
+  const [totalCount, setTotalCount] = useState(0);
+  const [backendCategoryCounts, setBackendCategoryCounts] = useState<Record<string, number>>({});
 
   // Backend Search State
   const [backendSearchResults, setBackendSearchResults] = useState<Email[]>([]);
@@ -183,6 +188,36 @@ export const useEmails = ({ activeAccountId, accounts: _accounts }: UseEmailsPar
   const activeData = data[activeAccountId] || { emails: [], categories: [] };
   const currentEmails = activeData.emails;
   const currentCategories = activeData.categories;
+
+  // Fetch total count and category counts from backend
+  useEffect(() => {
+    if (!window.electron || !activeAccountId) return;
+
+    const fetchCounts = async () => {
+      try {
+        const [count, catCounts] = await Promise.all([
+          window.electron.getEmailCount(activeAccountId),
+          window.electron.getCategoryCounts(activeAccountId),
+        ]);
+        setTotalCount(count);
+
+        // Convert category counts array to Record
+        const countsMap: Record<string, number> = {};
+        if (Array.isArray(catCounts)) {
+          catCounts.forEach((item: { smartCategory: string; count: number }) => {
+            if (item.smartCategory) {
+              countsMap[item.smartCategory] = item.count;
+            }
+          });
+        }
+        setBackendCategoryCounts(countsMap);
+      } catch (error) {
+        console.error('Failed to fetch counts:', error);
+      }
+    };
+
+    fetchCounts();
+  }, [activeAccountId, currentEmails.length]); // Re-fetch when emails change
 
   // Parse operator syntax from searchTerm (e.g. "from:amazon subject:invoice hello")
   const parseSearchOperators = (query: string): { hasOperators: boolean; freeText: string } => {
@@ -301,20 +336,18 @@ export const useEmails = ({ activeAccountId, accounts: _accounts }: UseEmailsPar
     backendSearchResults,
   ]);
 
-  // Pagination
-  const displayedEmails = filteredEmails.slice(0, visibleCount);
-  const canLoadMore = visibleCount < filteredEmails.length;
+  // With virtualization, displayedEmails = filteredEmails (no client-side slicing needed)
+  const displayedEmails = filteredEmails;
+  const canLoadMore = false; // Virtualization handles display; no more client-side pagination
 
   // Selected Email
   const selectedEmail = currentEmails.find((e) => e.id === selectedEmailId) || null;
 
-  // Counts Logic
+  // Category counts from backend, supplemented with local data for standard folders
   const categoryCounts = useMemo(() => {
     const counts: Record<string, number> = {};
 
-    // 1. Calculate Standard Folders Explicitly
-    const standard: string[] = [DefaultEmailCategory.INBOX, ...STANDARD_EXCLUDED_FOLDERS];
-
+    // Standard folders - count from loaded emails (unread counts)
     counts[DefaultEmailCategory.INBOX] = currentEmails.filter((e) => isInboxEmail(e) && !e.isRead).length;
     counts[SENT_FOLDER] = currentEmails.filter((e) => e.folder === SENT_FOLDER && !e.isRead).length;
     counts[SPAM_FOLDER] = currentEmails.filter(
@@ -325,20 +358,24 @@ export const useEmails = ({ activeAccountId, accounts: _accounts }: UseEmailsPar
     ).length;
     counts[FLAGGED_FOLDER] = currentEmails.filter((e) => e.isFlagged && !e.isRead).length;
 
-    // 2. Calculate Categories & Physical Folders
+    // Smart categories and physical folders from backend counts
+    const standard: string[] = [DefaultEmailCategory.INBOX, ...STANDARD_EXCLUDED_FOLDERS];
     currentCategories.forEach((cat) => {
       const catName = cat.name;
-      if (standard.includes(catName)) return; // Skip if already handled
+      if (standard.includes(catName)) return;
 
       if (cat.type === 'folder') {
         counts[catName] = currentEmails.filter((e) => e.folder === catName && !e.isRead).length;
       } else {
-        counts[catName] = currentEmails.filter((e) => e.smartCategory === catName && !e.isRead).length;
+        // Use backend category counts if available, fall back to local count
+        counts[catName] = backendCategoryCounts[catName] !== undefined
+          ? currentEmails.filter((e) => e.smartCategory === catName && !e.isRead).length
+          : 0;
       }
     });
 
     return counts;
-  }, [currentCategories, currentEmails]);
+  }, [currentCategories, currentEmails, backendCategoryCounts]);
 
   // Helper to safely update data for active account
   const updateActiveAccountData = (updateFn: (prev: AccountData) => AccountData) => {
@@ -348,20 +385,21 @@ export const useEmails = ({ activeAccountId, accounts: _accounts }: UseEmailsPar
     }));
   };
 
-  // Load more emails (pagination)
-  const loadMoreEmails = () => {
-    setVisibleCount((prev) => prev + 100);
-  };
+  // Load more emails - now a no-op since virtualization handles display
+  // Kept for backward compatibility
+  const loadMoreEmails = useCallback(() => {
+    // No-op: virtualization handles rendering all filtered emails
+  }, []);
 
-  // Reset pagination when filter/category changes
-  const resetPagination = () => {
-    setVisibleCount(100);
-  };
+  // Reset pagination - now triggers re-fetch of counts
+  const resetPagination = useCallback(() => {
+    // Reset is handled by the useEffect that fetches counts
+  }, []);
 
-  // Reset pagination when filter/category changes
+  // Reset when filter/category changes
   useEffect(() => {
     resetPagination();
-  }, [selectedCategory, searchTerm, showUnsortedOnly, activeAccountId, sortConfig]);
+  }, [selectedCategory, searchTerm, showUnsortedOnly, activeAccountId, sortConfig, resetPagination]);
 
   return {
     // State
@@ -381,6 +419,7 @@ export const useEmails = ({ activeAccountId, accounts: _accounts }: UseEmailsPar
     selectedEmail,
     categoryCounts,
     canLoadMore,
+    totalCount,
 
     // Setters
     setData,
