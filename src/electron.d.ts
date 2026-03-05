@@ -23,6 +23,8 @@ declare global {
       addAccount: (account: ImapAccount) => Promise<SyncResult>;
       deleteAccount: (id: string) => Promise<boolean>;
       getEmails: (accountId: string) => Promise<Email[]>;
+      getEmailCount: (accountId: string) => Promise<number>;
+      getCategoryCounts: (accountId: string) => Promise<Array<{ smartCategory: string; count: number }>>;
       syncAccount: (accountId: string) => Promise<SyncResult>;
       testConnection: (account: ImapAccount) => Promise<{ success: boolean; error?: string }>;
       resetDb: () => Promise<{ success: boolean; error?: string; message?: string } | boolean>;

@@ -15,6 +15,7 @@ import {
   Clock,
   Star,
   Filter,
+  Mail,
 } from './Icon';
 import {
   ImapAccount,
@@ -60,6 +61,7 @@ interface SidebarProps {
   onCreateFilter?: () => void;
   onEditFilter?: (filter: SavedFilter) => void;
   onDeleteFilter?: (filterId: string) => void;
+  totalEmailCount?: number;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({
@@ -86,6 +88,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   onCreateFilter,
   onEditFilter,
   onDeleteFilter,
+  totalEmailCount,
 }) => {
   const { t } = useTranslation();
   const [isAdding, setIsAdding] = useState(false);
@@ -697,6 +700,16 @@ const Sidebar: React.FC<SidebarProps> = ({
         ) : (
           <div className="w-full h-1.5 bg-slate-700 rounded-full overflow-hidden">
             <div className="h-full bg-slate-600 w-full animate-pulse opacity-20" />
+          </div>
+        )}
+
+        {totalEmailCount != null && (
+          <div className="flex items-center justify-between text-xs text-slate-400 mt-2">
+            <div className="flex items-center gap-1.5">
+              <Mail className="w-3 h-3" />
+              <span>{t('emailList.emails')}</span>
+            </div>
+            <span>{formatNumber(totalEmailCount)}</span>
           </div>
         )}
       </div>

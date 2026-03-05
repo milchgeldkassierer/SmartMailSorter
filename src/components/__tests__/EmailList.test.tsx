@@ -3,6 +3,31 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import EmailList from '../EmailList';
 import { Email, INBOX_FOLDER } from '../../types';
 
+// Mock react-virtuoso since Virtuoso requires layout measurements unavailable in JSDOM
+let capturedEndReached: (() => void) | undefined;
+vi.mock('react-virtuoso', () => ({
+  Virtuoso: ({
+    totalCount,
+    itemContent,
+    endReached,
+    style,
+  }: {
+    totalCount: number;
+    itemContent: (index: number) => React.ReactNode;
+    endReached?: () => void;
+    style?: React.CSSProperties;
+  }) => {
+    capturedEndReached = endReached;
+    return (
+      <div data-testid="virtuoso-mock" style={style}>
+        {Array.from({ length: totalCount }, (_, i) => (
+          <div key={i}>{itemContent(i)}</div>
+        ))}
+      </div>
+    );
+  },
+}));
+
 describe('EmailList', () => {
   // Sample email factory
   const createEmail = (overrides: Partial<Email> = {}): Email => ({
@@ -41,6 +66,7 @@ describe('EmailList', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    capturedEndReached = undefined;
   });
 
   describe('Loading State', () => {
@@ -110,12 +136,6 @@ describe('EmailList', () => {
   });
 
   describe('Email List Rendering', () => {
-    it('should render email count header', () => {
-      render(<EmailList {...defaultProps} />);
-
-      expect(screen.getByText('Emails (3)')).toBeInTheDocument();
-    });
-
     it('should render all email senders', () => {
       render(<EmailList {...defaultProps} />);
 
@@ -579,88 +599,79 @@ describe('EmailList', () => {
     });
   });
 
-  describe('Load More', () => {
-    it('should render load more button when hasMore is true and onLoadMore is provided', () => {
+  describe('Load More (via Virtuoso endReached)', () => {
+    it('should call onLoadMore via endReached when hasMore is true', () => {
       const onLoadMore = vi.fn();
       render(<EmailList {...defaultProps} hasMore={true} onLoadMore={onLoadMore} />);
 
-      expect(screen.getByText('Mehr laden...')).toBeInTheDocument();
+      // Simulate Virtuoso triggering endReached
+      expect(capturedEndReached).toBeDefined();
+      capturedEndReached!();
+
+      expect(onLoadMore).toHaveBeenCalled();
     });
 
-    it('should not render load more button when hasMore is false', () => {
+    it('should not call onLoadMore via endReached when hasMore is false', () => {
       const onLoadMore = vi.fn();
       render(<EmailList {...defaultProps} hasMore={false} onLoadMore={onLoadMore} />);
 
-      expect(screen.queryByText('Mehr laden...')).not.toBeInTheDocument();
+      expect(capturedEndReached).toBeDefined();
+      capturedEndReached!();
+
+      expect(onLoadMore).not.toHaveBeenCalled();
     });
 
-    it('should not render load more button when onLoadMore is not provided', () => {
+    it('should not call onLoadMore via endReached when onLoadMore is not provided', () => {
       render(<EmailList {...defaultProps} hasMore={true} onLoadMore={undefined} />);
 
-      expect(screen.queryByText('Mehr laden...')).not.toBeInTheDocument();
-    });
+      expect(capturedEndReached).toBeDefined();
+      capturedEndReached!();
 
-    it('should call onLoadMore when clicking load more button', () => {
-      const onLoadMore = vi.fn();
-      render(<EmailList {...defaultProps} hasMore={true} onLoadMore={onLoadMore} />);
-
-      const loadMoreButton = screen.getByText('Mehr laden...');
-      fireEvent.click(loadMoreButton);
-
-      expect(onLoadMore).toHaveBeenCalled();
-    });
-
-    it('should not trigger row click when clicking load more button', () => {
-      const onRowClick = vi.fn();
-      const onLoadMore = vi.fn();
-      render(<EmailList {...defaultProps} hasMore={true} onLoadMore={onLoadMore} onRowClick={onRowClick} />);
-
-      const loadMoreButton = screen.getByText('Mehr laden...');
-      fireEvent.click(loadMoreButton);
-
-      expect(onLoadMore).toHaveBeenCalled();
-      expect(onRowClick).not.toHaveBeenCalled();
+      // No error thrown, and no onLoadMore called
     });
   });
 
   describe('Virtual Scrolling', () => {
-    it('should render only first 50 emails by default', () => {
-      // Create 60 emails
+    it('should pass totalCount equal to emails.length to Virtuoso', () => {
       const manyEmails = Array.from({ length: 60 }, (_, i) =>
         createEmail({ id: `email-${i}`, sender: `Sender ${i}`, subject: `Subject ${i}` })
       );
 
       render(<EmailList {...defaultProps} emails={manyEmails} />);
 
-      // Should render first 50 emails
-      expect(screen.getByText('Sender 0')).toBeInTheDocument();
-      expect(screen.getByText('Sender 49')).toBeInTheDocument();
-      expect(screen.queryByText('Sender 50')).not.toBeInTheDocument();
+      // With our mock, all items are rendered (Virtuoso handles virtualization in real browser)
+      expect(screen.getAllByRole('listitem')).toHaveLength(manyEmails.length);
     });
 
-    it('should show correct total count in header even with virtual scrolling', () => {
-      const manyEmails = Array.from({ length: 100 }, (_, i) =>
-        createEmail({ id: `email-${i}`, sender: `Sender ${i}` })
-      );
+    it('should fire endReached callback for infinite loading', () => {
+      const onLoadMore = vi.fn();
+      render(<EmailList {...defaultProps} hasMore={true} onLoadMore={onLoadMore} />);
 
-      render(<EmailList {...defaultProps} emails={manyEmails} />);
+      expect(capturedEndReached).toBeDefined();
+      capturedEndReached!();
 
-      expect(screen.getByText('Emails (100)')).toBeInTheDocument();
+      expect(onLoadMore).toHaveBeenCalledTimes(1);
     });
 
-    it('should reset visible count when emails prop changes', async () => {
+    it('should render loading state instead of Virtuoso when isLoading', () => {
+      render(<EmailList {...defaultProps} isLoading={true} />);
+
+      const spinner = document.querySelector('.animate-spin');
+      expect(spinner).toBeInTheDocument();
+      expect(screen.queryByTestId('virtuoso-mock')).not.toBeInTheDocument();
+    });
+
+    it('should reset visible items when emails prop changes', () => {
       const emails50 = Array.from({ length: 50 }, (_, i) => createEmail({ id: `email-${i}`, sender: `Sender ${i}` }));
 
       const { rerender } = render(<EmailList {...defaultProps} emails={emails50} />);
 
-      // Rerender with new emails
       const newEmails = Array.from({ length: 10 }, (_, i) =>
         createEmail({ id: `new-email-${i}`, sender: `New Sender ${i}` })
       );
 
       rerender(<EmailList {...defaultProps} emails={newEmails} />);
 
-      // New emails should be rendered
       expect(screen.getByText('New Sender 0')).toBeInTheDocument();
       expect(screen.queryByText('Sender 0')).not.toBeInTheDocument();
     });
@@ -708,7 +719,6 @@ describe('EmailList', () => {
 
       render(<EmailList {...defaultProps} emails={[singleEmail]} />);
 
-      expect(screen.getByText('Emails (1)')).toBeInTheDocument();
       expect(screen.getByText(singleEmail.sender)).toBeInTheDocument();
     });
 
@@ -735,7 +745,7 @@ describe('EmailList', () => {
       render(<EmailList {...defaultProps} emails={mixedEmails} />);
 
       // All emails should render without issues
-      expect(screen.getByText('Emails (4)')).toBeInTheDocument();
+      expect(screen.getAllByRole('listitem')).toHaveLength(4);
     });
 
     it('should handle multiple selections correctly', () => {

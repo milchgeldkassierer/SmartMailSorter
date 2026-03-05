@@ -67,9 +67,9 @@ const App: React.FC = () => {
     displayedEmails,
     selectedEmail,
     categoryCounts,
-    canLoadMore,
+    totalCount,
     updateActiveAccountData,
-    loadMoreEmails,
+    refreshCounts,
   } = useEmails({ activeAccountId, accounts });
 
   const { addCategory, deleteCategory, renameCategory, autoDiscoverFolders } = useCategories();
@@ -225,8 +225,13 @@ const App: React.FC = () => {
     activeAccountId,
     accounts,
     onAccountsUpdate: setAccounts,
-    onDataUpdate: (accountId, { emails }) =>
-      setData((prev: Record<string, AccountData>) => ({ ...prev, [accountId]: { ...prev[accountId], emails } })),
+    onDataUpdate: (accountId, { emails }) => {
+      setData((prev: Record<string, AccountData>) => {
+        const previous = prev[accountId] ?? { emails: [], categories: [] };
+        return { ...prev, [accountId]: { ...previous, emails } };
+      });
+      refreshCounts();
+    },
     dialog,
   });
 
@@ -548,6 +553,7 @@ const App: React.FC = () => {
           ...prev,
           [activeAccountId]: { ...prev[activeAccountId], emails, categories },
         }));
+        refreshCounts();
       } catch (error) {
         console.error('Failed to refresh after auto-sync:', error);
       }
@@ -560,7 +566,7 @@ const App: React.FC = () => {
         window.electron.removeAutoSyncCompletedListener(handleAutoSyncCompleted);
       }
     };
-  }, [activeAccountId, setData]);
+  }, [activeAccountId, setData, refreshCounts]);
 
   // Fetch emails when switching accounts
   useEffect(() => {
@@ -738,6 +744,7 @@ const App: React.FC = () => {
             handleMoveToSmartCategory(emailIds, targetCategory);
           }
         }}
+        totalEmailCount={totalCount}
       />
 
       <div className="flex-1 flex flex-col min-w-0">
@@ -783,8 +790,6 @@ const App: React.FC = () => {
             onToggleRead={(id) => handleToggleRead(id).catch(() => {})}
             onToggleFlag={(id) => handleToggleFlag(id).catch(() => {})}
             isLoading={false}
-            onLoadMore={loadMoreEmails}
-            hasMore={canLoadMore}
             onDragStart={onEmailDragStart}
             onDragEnd={onDragEnd}
             draggedEmailIds={draggedEmailIds}

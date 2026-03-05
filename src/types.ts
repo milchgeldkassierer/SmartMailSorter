@@ -73,7 +73,7 @@ export interface Email {
   sender: string;
   senderEmail: string;
   subject: string;
-  body: string;
+  body?: string;
   bodyHtml?: string;
   date: string; // ISO string
   folder: string; // Physical folder: Posteingang, Gesendet, etc.

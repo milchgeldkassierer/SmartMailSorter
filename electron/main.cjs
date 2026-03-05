@@ -146,6 +146,9 @@ app.whenReady().then(() => {
   });
 
   ipcMain.handle('get-emails', (event, accountId) => db.getEmails(accountId));
+  ipcMain.handle('get-emails-paginated', (event, accountId, limit, offset) => db.getEmailsPaginated(accountId, limit, offset));
+  ipcMain.handle('get-email-count', (event, accountId) => db.getEmailCount(accountId));
+  ipcMain.handle('get-category-counts', (event, accountId) => db.getCategoryCounts(accountId));
   ipcMain.handle('get-email-attachments', (event, emailId) => db.getEmailAttachments(emailId));
   ipcMain.handle('get-email-content', (event, emailId) => {
     logger.debug(`[IPC] Fetching content for ${emailId}`);

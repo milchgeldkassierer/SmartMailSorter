@@ -38,7 +38,7 @@ interface UseEmailsReturn {
   displayedEmails: Email[];
   selectedEmail: Email | null;
   categoryCounts: Record<string, number>;
-  canLoadMore: boolean;
+  totalCount: number;
 
   // Setters
   setData: React.Dispatch<React.SetStateAction<Record<string, AccountData>>>;
@@ -51,8 +51,7 @@ interface UseEmailsReturn {
 
   // Helper Functions
   updateActiveAccountData: (updateFn: (prev: AccountData) => AccountData) => void;
-  loadMoreEmails: () => void;
-  resetPagination: () => void;
+  refreshCounts: () => void;
 }
 
 // Helper function to check if an email belongs in INBOX
@@ -146,13 +145,80 @@ const shouldShowInCategory = (
   return email.smartCategory === selectedCategory;
 };
 
+// LRU cache size for email body content
+const BODY_CACHE_SIZE = 10;
+
 export const useEmails = ({ activeAccountId, accounts: _accounts }: UseEmailsParams): UseEmailsReturn => {
   // Data State - stored by account ID
   const [data, setData] = useState<Record<string, AccountData>>({});
 
+  // LRU cache for email body content - tracks IDs of emails that should keep their body loaded
+  const bodyCacheRef = useRef<string[]>([]);
+
   // UI Selection State
-  const [selectedCategory, setSelectedCategory] = useState<string>(DefaultEmailCategory.INBOX);
-  const [selectedEmailId, setSelectedEmailId] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategoryRaw] = useState<string>(DefaultEmailCategory.INBOX);
+  const [selectedEmailId, setSelectedEmailIdRaw] = useState<string | null>(null);
+
+  // Wrapped setSelectedEmailId that manages body content LRU cache
+  const setSelectedEmailId = useCallback(
+    (id: string | null) => {
+      if (id) {
+        const cache = bodyCacheRef.current;
+        // Remove if already in cache, then add to front
+        const idx = cache.indexOf(id);
+        if (idx !== -1) cache.splice(idx, 1);
+        cache.unshift(id);
+
+        // Evict body content from emails pushed out of cache
+        if (cache.length > BODY_CACHE_SIZE) {
+          const evicted = cache.splice(BODY_CACHE_SIZE);
+          if (evicted.length > 0) {
+            const evictedSet = new Set(evicted);
+            setData((prev) => {
+              const accountData = prev[activeAccountId];
+              if (!accountData) return prev;
+              let changed = false;
+              const updatedEmails = [...accountData.emails];
+              for (let i = 0; i < updatedEmails.length; i++) {
+                const e = updatedEmails[i];
+                if (evictedSet.has(e.id) && (e.body !== undefined || e.bodyHtml !== undefined)) {
+                  updatedEmails[i] = { ...e, body: undefined, bodyHtml: undefined };
+                  changed = true;
+                }
+              }
+              if (!changed) return prev;
+              return { ...prev, [activeAccountId]: { ...accountData, emails: updatedEmails } };
+            });
+          }
+        }
+      }
+      setSelectedEmailIdRaw(id);
+    },
+    [activeAccountId, setData]
+  );
+
+  // Wrapped setSelectedCategory that resets LRU body cache and evicts body content
+  const setSelectedCategory = useCallback(
+    (category: string) => {
+      bodyCacheRef.current = [];
+      setData((prev) => {
+        const accountData = prev[activeAccountId];
+        if (!accountData) return prev;
+        const hasBody = accountData.emails.some((e) => e.body !== undefined || e.bodyHtml !== undefined);
+        if (!hasBody) return prev;
+        const emails = [...accountData.emails];
+        for (let i = 0; i < emails.length; i++) {
+          const e = emails[i];
+          if (e.body !== undefined || e.bodyHtml !== undefined) {
+            emails[i] = { ...e, body: undefined, bodyHtml: undefined };
+          }
+        }
+        return { ...prev, [activeAccountId]: { ...accountData, emails } };
+      });
+      setSelectedCategoryRaw(category);
+    },
+    [activeAccountId, setData]
+  );
 
   // Search State
   const [searchTerm, setSearchTerm] = useState('');
@@ -172,8 +238,8 @@ export const useEmails = ({ activeAccountId, accounts: _accounts }: UseEmailsPar
   // Filter State
   const [showUnsortedOnly, setShowUnsortedOnly] = useState(false);
 
-  // Pagination State
-  const [visibleCount, setVisibleCount] = useState(100);
+  // Backend-driven counts
+  const [totalCount, setTotalCount] = useState(0);
 
   // Backend Search State
   const [backendSearchResults, setBackendSearchResults] = useState<Email[]>([]);
@@ -183,6 +249,56 @@ export const useEmails = ({ activeAccountId, accounts: _accounts }: UseEmailsPar
   const activeData = data[activeAccountId] || { emails: [], categories: [] };
   const currentEmails = activeData.emails;
   const currentCategories = activeData.categories;
+
+  // Clean up body content and reset cache when switching accounts
+  const prevAccountRef = useRef<string>(activeAccountId);
+  useEffect(() => {
+    if (prevAccountRef.current !== activeAccountId) {
+      const prevAccount = prevAccountRef.current;
+      // Strip body content from previous account's emails to free memory
+      if (prevAccount) {
+        setData((prev) => {
+          const accountData = prev[prevAccount];
+          if (!accountData) return prev;
+          let changed = false;
+          const stripped = [...accountData.emails];
+          for (let i = 0; i < stripped.length; i++) {
+            const e = stripped[i];
+            if (e.body !== undefined || e.bodyHtml !== undefined) {
+              stripped[i] = { ...e, body: undefined, bodyHtml: undefined };
+              changed = true;
+            }
+          }
+          if (!changed) return prev;
+          return { ...prev, [prevAccount]: { ...accountData, emails: stripped } };
+        });
+      }
+      // Reset LRU cache for new account
+      bodyCacheRef.current = [];
+      prevAccountRef.current = activeAccountId;
+    }
+  }, [activeAccountId, setData]);
+
+  // Fetch total count and category counts from backend
+  useEffect(() => {
+    if (!window.electron || !activeAccountId) return;
+    let stale = false;
+
+    const fetchCounts = async () => {
+      try {
+        const count = await window.electron.getEmailCount(activeAccountId);
+        if (stale) return;
+        setTotalCount(count);
+      } catch (error) {
+        console.error('Failed to fetch counts:', error);
+      }
+    };
+
+    fetchCounts();
+    return () => {
+      stale = true;
+    };
+  }, [activeAccountId, currentEmails.length]); // Re-fetch when emails change
 
   // Parse operator syntax from searchTerm (e.g. "from:amazon subject:invoice hello")
   const parseSearchOperators = (query: string): { hasOperators: boolean; freeText: string } => {
@@ -301,20 +417,17 @@ export const useEmails = ({ activeAccountId, accounts: _accounts }: UseEmailsPar
     backendSearchResults,
   ]);
 
-  // Pagination
-  const displayedEmails = filteredEmails.slice(0, visibleCount);
-  const canLoadMore = visibleCount < filteredEmails.length;
+  // With virtualization, displayedEmails = filteredEmails (no client-side slicing needed)
+  const displayedEmails = filteredEmails;
 
   // Selected Email
   const selectedEmail = currentEmails.find((e) => e.id === selectedEmailId) || null;
 
-  // Counts Logic
+  // Category counts from backend, supplemented with local data for standard folders
   const categoryCounts = useMemo(() => {
     const counts: Record<string, number> = {};
 
-    // 1. Calculate Standard Folders Explicitly
-    const standard: string[] = [DefaultEmailCategory.INBOX, ...STANDARD_EXCLUDED_FOLDERS];
-
+    // Standard folders - count from loaded emails (unread counts)
     counts[DefaultEmailCategory.INBOX] = currentEmails.filter((e) => isInboxEmail(e) && !e.isRead).length;
     counts[SENT_FOLDER] = currentEmails.filter((e) => e.folder === SENT_FOLDER && !e.isRead).length;
     counts[SPAM_FOLDER] = currentEmails.filter(
@@ -325,14 +438,16 @@ export const useEmails = ({ activeAccountId, accounts: _accounts }: UseEmailsPar
     ).length;
     counts[FLAGGED_FOLDER] = currentEmails.filter((e) => e.isFlagged && !e.isRead).length;
 
-    // 2. Calculate Categories & Physical Folders
+    // Smart categories and physical folders from backend counts
+    const standard: string[] = [DefaultEmailCategory.INBOX, ...STANDARD_EXCLUDED_FOLDERS];
     currentCategories.forEach((cat) => {
       const catName = cat.name;
-      if (standard.includes(catName)) return; // Skip if already handled
+      if (standard.includes(catName)) return;
 
       if (cat.type === 'folder') {
         counts[catName] = currentEmails.filter((e) => e.folder === catName && !e.isRead).length;
       } else {
+        // Count from local emails for smart categories
         counts[catName] = currentEmails.filter((e) => e.smartCategory === catName && !e.isRead).length;
       }
     });
@@ -348,20 +463,11 @@ export const useEmails = ({ activeAccountId, accounts: _accounts }: UseEmailsPar
     }));
   };
 
-  // Load more emails (pagination)
-  const loadMoreEmails = () => {
-    setVisibleCount((prev) => prev + 100);
-  };
-
-  // Reset pagination when filter/category changes
-  const resetPagination = () => {
-    setVisibleCount(100);
-  };
-
-  // Reset pagination when filter/category changes
-  useEffect(() => {
-    resetPagination();
-  }, [selectedCategory, searchTerm, showUnsortedOnly, activeAccountId, sortConfig]);
+  // Refresh email count from backend
+  const refreshCounts = useCallback(() => {
+    if (!window.electron || !activeAccountId) return;
+    window.electron.getEmailCount(activeAccountId).then(setTotalCount).catch(console.error);
+  }, [activeAccountId]);
 
   return {
     // State
@@ -380,7 +486,7 @@ export const useEmails = ({ activeAccountId, accounts: _accounts }: UseEmailsPar
     displayedEmails,
     selectedEmail,
     categoryCounts,
-    canLoadMore,
+    totalCount,
 
     // Setters
     setData,
@@ -393,7 +499,6 @@ export const useEmails = ({ activeAccountId, accounts: _accounts }: UseEmailsPar
 
     // Helper Functions
     updateActiveAccountData,
-    loadMoreEmails,
-    resetPagination,
+    refreshCounts,
   };
 };
