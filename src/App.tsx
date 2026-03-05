@@ -67,11 +67,9 @@ const App: React.FC = () => {
     displayedEmails,
     selectedEmail,
     categoryCounts,
-    canLoadMore,
     totalCount,
     updateActiveAccountData,
-    loadMoreEmails,
-    resetPagination,
+    refreshCounts,
   } = useEmails({ activeAccountId, accounts });
 
   const { addCategory, deleteCategory, renameCategory, autoDiscoverFolders } = useCategories();
@@ -232,7 +230,7 @@ const App: React.FC = () => {
         const previous = prev[accountId] ?? { emails: [], categories: [] };
         return { ...prev, [accountId]: { ...previous, emails } };
       });
-      resetPagination();
+      refreshCounts();
     },
     dialog,
   });
@@ -555,7 +553,7 @@ const App: React.FC = () => {
           ...prev,
           [activeAccountId]: { ...prev[activeAccountId], emails, categories },
         }));
-        resetPagination();
+        refreshCounts();
       } catch (error) {
         console.error('Failed to refresh after auto-sync:', error);
       }
@@ -568,7 +566,7 @@ const App: React.FC = () => {
         window.electron.removeAutoSyncCompletedListener(handleAutoSyncCompleted);
       }
     };
-  }, [activeAccountId, setData, resetPagination]);
+  }, [activeAccountId, setData, refreshCounts]);
 
   // Fetch emails when switching accounts
   useEffect(() => {
@@ -643,14 +641,20 @@ const App: React.FC = () => {
         selectedCategory={selectedCategory}
         onSelectCategory={(cat) => {
           // Clear body content from non-selected emails when switching folders
-          updateActiveAccountData((prev) => ({
-            ...prev,
-            emails: prev.emails.map((e) =>
-              e.id !== selectedEmailId && (e.body !== undefined || e.bodyHtml !== undefined)
-                ? { ...e, body: undefined, bodyHtml: undefined }
-                : e
-            ),
-          }));
+          updateActiveAccountData((prev) => {
+            const needsClear = prev.emails.some(
+              (e) => e.id !== selectedEmailId && (e.body !== undefined || e.bodyHtml !== undefined)
+            );
+            if (!needsClear) return prev;
+            return {
+              ...prev,
+              emails: prev.emails.map((e) =>
+                e.id !== selectedEmailId && (e.body !== undefined || e.bodyHtml !== undefined)
+                  ? { ...e, body: undefined, bodyHtml: undefined }
+                  : e
+              ),
+            };
+          });
           setSelectedCategory(cat);
           setSelectedEmailId(null);
           setSearchTerm('');
@@ -801,8 +805,6 @@ const App: React.FC = () => {
             onToggleRead={(id) => handleToggleRead(id).catch(() => {})}
             onToggleFlag={(id) => handleToggleFlag(id).catch(() => {})}
             isLoading={false}
-            onLoadMore={loadMoreEmails}
-            hasMore={canLoadMore}
             onDragStart={onEmailDragStart}
             onDragEnd={onDragEnd}
             draggedEmailIds={draggedEmailIds}

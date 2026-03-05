@@ -174,11 +174,6 @@ describe('useEmails', () => {
       const { result } = renderHook(() => useEmails(defaultParams));
       expect(result.current.selectedEmail).toBe(null);
     });
-
-    it('should return false for canLoadMore (virtualization handles display)', () => {
-      const { result } = renderHook(() => useEmails(defaultParams));
-      expect(result.current.canLoadMore).toBe(false);
-    });
   });
 
   describe('setData', () => {
@@ -490,52 +485,6 @@ describe('useEmails', () => {
 
       // With virtualization, displayedEmails equals filteredEmails (all emails)
       expect(result.current.displayedEmails).toHaveLength(150);
-      expect(result.current.canLoadMore).toBe(false);
-    });
-
-    it('should always have canLoadMore as false (virtualization handles scrolling)', () => {
-      const { result } = renderHook(() => useEmails(defaultParams));
-      const manyEmails = Array.from({ length: 500 }, (_, i) => ({
-        ...mockEmail1,
-        id: `email-${i}`,
-      }));
-
-      act(() => {
-        result.current.setData({
-          'account-1': {
-            emails: manyEmails,
-            categories: [],
-          },
-        });
-      });
-
-      expect(result.current.canLoadMore).toBe(false);
-    });
-
-    it('loadMoreEmails should be a no-op (backward compatibility)', () => {
-      const { result } = renderHook(() => useEmails(defaultParams));
-      const manyEmails = Array.from({ length: 250 }, (_, i) => ({
-        ...mockEmail1,
-        id: `email-${i}`,
-      }));
-
-      act(() => {
-        result.current.setData({
-          'account-1': {
-            emails: manyEmails,
-            categories: [],
-          },
-        });
-      });
-
-      const countBefore = result.current.displayedEmails.length;
-
-      act(() => {
-        result.current.loadMoreEmails();
-      });
-
-      // No change since loadMoreEmails is a no-op
-      expect(result.current.displayedEmails).toHaveLength(countBefore);
     });
 
     it('should display all emails for a category after switching', () => {
@@ -566,7 +515,7 @@ describe('useEmails', () => {
   });
 
   describe('Backend IPC Integration', () => {
-    it('should call getEmailCount and getCategoryCounts on mount', async () => {
+    it('should call getEmailCount on mount', async () => {
       mockGetEmailCount.mockResolvedValue(500);
       mockGetCategoryCounts.mockResolvedValue([
         { smartCategory: 'Newsletter', count: 20 },

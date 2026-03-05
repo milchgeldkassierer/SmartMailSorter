@@ -990,7 +990,7 @@ function getCategoryCounts(accountId) {
       `
     SELECT smartCategory, COUNT(*) as count
     FROM emails
-    WHERE accountId = ?
+    WHERE accountId = ? AND smartCategory IS NOT NULL AND smartCategory != ''
     GROUP BY smartCategory
     ORDER BY count DESC
   `

@@ -66,6 +66,7 @@ describe('EmailList', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    capturedEndReached = undefined;
   });
 
   describe('Loading State', () => {

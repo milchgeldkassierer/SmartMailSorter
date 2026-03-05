@@ -38,7 +38,6 @@ interface UseEmailsReturn {
   displayedEmails: Email[];
   selectedEmail: Email | null;
   categoryCounts: Record<string, number>;
-  canLoadMore: boolean;
   totalCount: number;
 
   // Setters
@@ -52,8 +51,7 @@ interface UseEmailsReturn {
 
   // Helper Functions
   updateActiveAccountData: (updateFn: (prev: AccountData) => AccountData) => void;
-  loadMoreEmails: () => void;
-  resetPagination: () => void;
+  refreshCounts: () => void;
 }
 
 // Helper function to check if an email belongs in INBOX
@@ -179,11 +177,16 @@ export const useEmails = ({ activeAccountId, accounts: _accounts }: UseEmailsPar
             setData((prev) => {
               const accountData = prev[activeAccountId];
               if (!accountData) return prev;
-              const updatedEmails = accountData.emails.map((e) =>
-                evictedSet.has(e.id) && (e.body !== undefined || e.bodyHtml !== undefined)
-                  ? { ...e, body: undefined, bodyHtml: undefined }
-                  : e
-              );
+              let changed = false;
+              const updatedEmails = [...accountData.emails];
+              for (let i = 0; i < updatedEmails.length; i++) {
+                const e = updatedEmails[i];
+                if (evictedSet.has(e.id) && (e.body !== undefined || e.bodyHtml !== undefined)) {
+                  updatedEmails[i] = { ...e, body: undefined, bodyHtml: undefined };
+                  changed = true;
+                }
+              }
+              if (!changed) return prev;
               return { ...prev, [activeAccountId]: { ...accountData, emails: updatedEmails } };
             });
           }
@@ -194,8 +197,9 @@ export const useEmails = ({ activeAccountId, accounts: _accounts }: UseEmailsPar
     [activeAccountId, setData]
   );
 
-  // Wrapped setSelectedCategory that clears body content from non-cached emails
+  // Wrapped setSelectedCategory that resets LRU body cache
   const setSelectedCategory = useCallback((category: string) => {
+    bodyCacheRef.current = [];
     setSelectedCategoryRaw(category);
   }, []);
 
@@ -239,9 +243,16 @@ export const useEmails = ({ activeAccountId, accounts: _accounts }: UseEmailsPar
         setData((prev) => {
           const accountData = prev[prevAccount];
           if (!accountData) return prev;
-          const stripped = accountData.emails.map((e) =>
-            e.body !== undefined || e.bodyHtml !== undefined ? { ...e, body: undefined, bodyHtml: undefined } : e
-          );
+          let changed = false;
+          const stripped = [...accountData.emails];
+          for (let i = 0; i < stripped.length; i++) {
+            const e = stripped[i];
+            if (e.body !== undefined || e.bodyHtml !== undefined) {
+              stripped[i] = { ...e, body: undefined, bodyHtml: undefined };
+              changed = true;
+            }
+          }
+          if (!changed) return prev;
           return { ...prev, [prevAccount]: { ...accountData, emails: stripped } };
         });
       }
@@ -391,7 +402,6 @@ export const useEmails = ({ activeAccountId, accounts: _accounts }: UseEmailsPar
 
   // With virtualization, displayedEmails = filteredEmails (no client-side slicing needed)
   const displayedEmails = filteredEmails;
-  const canLoadMore = false; // Virtualization handles display; no more client-side pagination
 
   // Selected Email
   const selectedEmail = currentEmails.find((e) => e.id === selectedEmailId) || null;
@@ -436,21 +446,11 @@ export const useEmails = ({ activeAccountId, accounts: _accounts }: UseEmailsPar
     }));
   };
 
-  // Load more emails - now a no-op since virtualization handles display
-  // Kept for backward compatibility
-  const loadMoreEmails = useCallback(() => {
-    // No-op: virtualization handles rendering all filtered emails
-  }, []);
-
-  // Reset pagination - now triggers re-fetch of counts
-  const resetPagination = useCallback(() => {
-    // Reset is handled by the useEffect that fetches counts
-  }, []);
-
-  // Reset when filter/category changes
-  useEffect(() => {
-    resetPagination();
-  }, [selectedCategory, searchTerm, showUnsortedOnly, activeAccountId, sortConfig, resetPagination]);
+  // Refresh email count from backend
+  const refreshCounts = useCallback(() => {
+    if (!window.electron || !activeAccountId) return;
+    window.electron.getEmailCount(activeAccountId).then(setTotalCount).catch(console.error);
+  }, [activeAccountId]);
 
   return {
     // State
@@ -469,7 +469,6 @@ export const useEmails = ({ activeAccountId, accounts: _accounts }: UseEmailsPar
     displayedEmails,
     selectedEmail,
     categoryCounts,
-    canLoadMore,
     totalCount,
 
     // Setters
@@ -483,7 +482,6 @@ export const useEmails = ({ activeAccountId, accounts: _accounts }: UseEmailsPar
 
     // Helper Functions
     updateActiveAccountData,
-    loadMoreEmails,
-    resetPagination,
+    refreshCounts,
   };
 };
