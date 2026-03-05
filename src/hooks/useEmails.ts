@@ -197,11 +197,28 @@ export const useEmails = ({ activeAccountId, accounts: _accounts }: UseEmailsPar
     [activeAccountId, setData]
   );
 
-  // Wrapped setSelectedCategory that resets LRU body cache
-  const setSelectedCategory = useCallback((category: string) => {
-    bodyCacheRef.current = [];
-    setSelectedCategoryRaw(category);
-  }, []);
+  // Wrapped setSelectedCategory that resets LRU body cache and evicts body content
+  const setSelectedCategory = useCallback(
+    (category: string) => {
+      bodyCacheRef.current = [];
+      setData((prev) => {
+        const accountData = prev[activeAccountId];
+        if (!accountData) return prev;
+        const hasBody = accountData.emails.some((e) => e.body !== undefined || e.bodyHtml !== undefined);
+        if (!hasBody) return prev;
+        const emails = [...accountData.emails];
+        for (let i = 0; i < emails.length; i++) {
+          const e = emails[i];
+          if (e.body !== undefined || e.bodyHtml !== undefined) {
+            emails[i] = { ...e, body: undefined, bodyHtml: undefined };
+          }
+        }
+        return { ...prev, [activeAccountId]: { ...accountData, emails } };
+      });
+      setSelectedCategoryRaw(category);
+    },
+    [activeAccountId, setData]
+  );
 
   // Search State
   const [searchTerm, setSearchTerm] = useState('');

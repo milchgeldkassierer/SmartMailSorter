@@ -640,8 +640,7 @@ describe('EmailList', () => {
       render(<EmailList {...defaultProps} emails={manyEmails} />);
 
       // With our mock, all items are rendered (Virtuoso handles virtualization in real browser)
-      expect(screen.getByText('Sender 0')).toBeInTheDocument();
-      expect(screen.getByText('Sender 59')).toBeInTheDocument();
+      expect(screen.getAllByRole('listitem')).toHaveLength(manyEmails.length);
     });
 
     it('should fire endReached callback for infinite loading', () => {
@@ -662,7 +661,7 @@ describe('EmailList', () => {
       expect(screen.queryByTestId('virtuoso-mock')).not.toBeInTheDocument();
     });
 
-    it('should reset visible items when emails prop changes', async () => {
+    it('should reset visible items when emails prop changes', () => {
       const emails50 = Array.from({ length: 50 }, (_, i) => createEmail({ id: `email-${i}`, sender: `Sender ${i}` }));
 
       const { rerender } = render(<EmailList {...defaultProps} emails={emails50} />);

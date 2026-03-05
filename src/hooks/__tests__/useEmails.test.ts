@@ -297,7 +297,7 @@ describe('useEmails', () => {
       });
 
       expect(result.current.filteredEmails).toHaveLength(1);
-      expect(result.current.filteredEmails[0]).toEqual(mockEmail4);
+      expect(result.current.filteredEmails[0].id).toBe(mockEmail4.id);
     });
 
     it('should filter emails for Spam category', () => {
@@ -314,7 +314,7 @@ describe('useEmails', () => {
       });
 
       expect(result.current.filteredEmails).toHaveLength(1);
-      expect(result.current.filteredEmails[0]).toEqual(mockEmail5);
+      expect(result.current.filteredEmails[0].id).toBe(mockEmail5.id);
     });
 
     it('should filter emails by smart category', () => {
@@ -331,7 +331,7 @@ describe('useEmails', () => {
       });
 
       expect(result.current.filteredEmails).toHaveLength(1);
-      expect(result.current.filteredEmails[0]).toEqual(mockEmail3);
+      expect(result.current.filteredEmails[0].id).toBe(mockEmail3.id);
     });
 
     it('should filter unsorted emails when showUnsortedOnly is true', () => {
@@ -955,7 +955,7 @@ describe('useEmails', () => {
     });
   });
 
-  describe('Category Switching Triggers New Queries', () => {
+  describe('Email Data Changes Trigger New Queries', () => {
     it('should re-fetch email count when emails change', async () => {
       mockGetEmailCount.mockResolvedValue(100);
       mockGetCategoryCounts.mockResolvedValue([]);
