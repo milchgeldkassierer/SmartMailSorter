@@ -164,34 +164,32 @@ export const useEmails = ({ activeAccountId, accounts: _accounts }: UseEmailsPar
   // Wrapped setSelectedEmailId that manages body content LRU cache
   const setSelectedEmailId = useCallback(
     (id: string | null) => {
-      setSelectedEmailIdRaw((prevId) => {
-        if (id && id !== prevId) {
-          const cache = bodyCacheRef.current;
-          // Remove if already in cache, then add to front
-          const idx = cache.indexOf(id);
-          if (idx !== -1) cache.splice(idx, 1);
-          cache.unshift(id);
+      if (id) {
+        const cache = bodyCacheRef.current;
+        // Remove if already in cache, then add to front
+        const idx = cache.indexOf(id);
+        if (idx !== -1) cache.splice(idx, 1);
+        cache.unshift(id);
 
-          // Evict body content from emails pushed out of cache
-          if (cache.length > BODY_CACHE_SIZE) {
-            const evicted = cache.splice(BODY_CACHE_SIZE);
-            if (evicted.length > 0) {
-              const evictedSet = new Set(evicted);
-              setData((prev) => {
-                const accountData = prev[activeAccountId];
-                if (!accountData) return prev;
-                const updatedEmails = accountData.emails.map((e) =>
-                  evictedSet.has(e.id) && (e.body !== undefined || e.bodyHtml !== undefined)
-                    ? { ...e, body: undefined, bodyHtml: undefined }
-                    : e
-                );
-                return { ...prev, [activeAccountId]: { ...accountData, emails: updatedEmails } };
-              });
-            }
+        // Evict body content from emails pushed out of cache
+        if (cache.length > BODY_CACHE_SIZE) {
+          const evicted = cache.splice(BODY_CACHE_SIZE);
+          if (evicted.length > 0) {
+            const evictedSet = new Set(evicted);
+            setData((prev) => {
+              const accountData = prev[activeAccountId];
+              if (!accountData) return prev;
+              const updatedEmails = accountData.emails.map((e) =>
+                evictedSet.has(e.id) && (e.body !== undefined || e.bodyHtml !== undefined)
+                  ? { ...e, body: undefined, bodyHtml: undefined }
+                  : e
+              );
+              return { ...prev, [activeAccountId]: { ...accountData, emails: updatedEmails } };
+            });
           }
         }
-        return id;
-      });
+      }
+      setSelectedEmailIdRaw(id);
     },
     [activeAccountId, setData]
   );
@@ -221,7 +219,6 @@ export const useEmails = ({ activeAccountId, accounts: _accounts }: UseEmailsPar
 
   // Backend-driven counts
   const [totalCount, setTotalCount] = useState(0);
-  const [backendCategoryCounts, setBackendCategoryCounts] = useState<Record<string, number>>({});
 
   // Backend Search State
   const [backendSearchResults, setBackendSearchResults] = useState<Email[]>([]);
@@ -257,31 +254,22 @@ export const useEmails = ({ activeAccountId, accounts: _accounts }: UseEmailsPar
   // Fetch total count and category counts from backend
   useEffect(() => {
     if (!window.electron || !activeAccountId) return;
+    let stale = false;
 
     const fetchCounts = async () => {
       try {
-        const [count, catCounts] = await Promise.all([
-          window.electron.getEmailCount(activeAccountId),
-          window.electron.getCategoryCounts(activeAccountId),
-        ]);
+        const count = await window.electron.getEmailCount(activeAccountId);
+        if (stale) return;
         setTotalCount(count);
-
-        // Convert category counts array to Record
-        const countsMap: Record<string, number> = {};
-        if (Array.isArray(catCounts)) {
-          catCounts.forEach((item: { smartCategory: string; count: number }) => {
-            if (item.smartCategory) {
-              countsMap[item.smartCategory] = item.count;
-            }
-          });
-        }
-        setBackendCategoryCounts(countsMap);
       } catch (error) {
         console.error('Failed to fetch counts:', error);
       }
     };
 
     fetchCounts();
+    return () => {
+      stale = true;
+    };
   }, [activeAccountId, currentEmails.length]); // Re-fetch when emails change
 
   // Parse operator syntax from searchTerm (e.g. "from:amazon subject:invoice hello")
@@ -432,16 +420,13 @@ export const useEmails = ({ activeAccountId, accounts: _accounts }: UseEmailsPar
       if (cat.type === 'folder') {
         counts[catName] = currentEmails.filter((e) => e.folder === catName && !e.isRead).length;
       } else {
-        // Use backend category counts if available, fall back to local count
-        counts[catName] =
-          backendCategoryCounts[catName] !== undefined
-            ? currentEmails.filter((e) => e.smartCategory === catName && !e.isRead).length
-            : 0;
+        // Count from local emails for smart categories
+        counts[catName] = currentEmails.filter((e) => e.smartCategory === catName && !e.isRead).length;
       }
     });
 
     return counts;
-  }, [currentCategories, currentEmails, backendCategoryCounts]);
+  }, [currentCategories, currentEmails]);
 
   // Helper to safely update data for active account
   const updateActiveAccountData = (updateFn: (prev: AccountData) => AccountData) => {

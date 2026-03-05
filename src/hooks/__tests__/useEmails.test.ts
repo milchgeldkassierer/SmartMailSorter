@@ -21,6 +21,7 @@ beforeEach(() => {
   mockGetCategoryCounts.mockReset().mockResolvedValue([]);
   mockSearchEmails.mockReset().mockResolvedValue([]);
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (window as any).electron = {
     getEmailCount: mockGetEmailCount,
     getCategoryCounts: mockGetCategoryCounts,
@@ -577,7 +578,6 @@ describe('useEmails', () => {
       // Wait for async effects
       await vi.waitFor(() => {
         expect(mockGetEmailCount).toHaveBeenCalledWith('account-1');
-        expect(mockGetCategoryCounts).toHaveBeenCalledWith('account-1');
       });
     });
 
@@ -1007,17 +1007,17 @@ describe('useEmails', () => {
   });
 
   describe('Category Switching Triggers New Queries', () => {
-    it('should call getCategoryCounts when category changes', async () => {
+    it('should re-fetch email count when emails change', async () => {
       mockGetEmailCount.mockResolvedValue(100);
       mockGetCategoryCounts.mockResolvedValue([]);
 
       const { result } = renderHook(() => useEmails(defaultParams));
 
       await vi.waitFor(() => {
-        expect(mockGetCategoryCounts).toHaveBeenCalled();
+        expect(mockGetEmailCount).toHaveBeenCalled();
       });
 
-      const callCountBefore = mockGetCategoryCounts.mock.calls.length;
+      const callCountBefore = mockGetEmailCount.mock.calls.length;
 
       act(() => {
         result.current.setData({
@@ -1030,7 +1030,7 @@ describe('useEmails', () => {
 
       // Changing emails triggers re-fetch of counts
       await vi.waitFor(() => {
-        expect(mockGetCategoryCounts.mock.calls.length).toBeGreaterThan(callCountBefore);
+        expect(mockGetEmailCount.mock.calls.length).toBeGreaterThan(callCountBefore);
       });
     });
   });

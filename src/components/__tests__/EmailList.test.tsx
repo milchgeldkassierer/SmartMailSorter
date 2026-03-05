@@ -135,12 +135,6 @@ describe('EmailList', () => {
   });
 
   describe('Email List Rendering', () => {
-    it('should render email count header', () => {
-      render(<EmailList {...defaultProps} />);
-
-      expect(screen.getByText('Emails (3)')).toBeInTheDocument();
-    });
-
     it('should render all email senders', () => {
       render(<EmailList {...defaultProps} />);
 
@@ -649,22 +643,6 @@ describe('EmailList', () => {
       expect(screen.getByText('Sender 59')).toBeInTheDocument();
     });
 
-    it('should show correct total count in header using totalCount prop', () => {
-      render(<EmailList {...defaultProps} totalCount={500} />);
-
-      expect(screen.getByText('Emails (500)')).toBeInTheDocument();
-    });
-
-    it('should show correct total count in header from emails.length when totalCount not provided', () => {
-      const manyEmails = Array.from({ length: 100 }, (_, i) =>
-        createEmail({ id: `email-${i}`, sender: `Sender ${i}` })
-      );
-
-      render(<EmailList {...defaultProps} emails={manyEmails} />);
-
-      expect(screen.getByText('Emails (100)')).toBeInTheDocument();
-    });
-
     it('should fire endReached callback for infinite loading', () => {
       const onLoadMore = vi.fn();
       render(<EmailList {...defaultProps} hasMore={true} onLoadMore={onLoadMore} />);
@@ -741,7 +719,6 @@ describe('EmailList', () => {
 
       render(<EmailList {...defaultProps} emails={[singleEmail]} />);
 
-      expect(screen.getByText('Emails (1)')).toBeInTheDocument();
       expect(screen.getByText(singleEmail.sender)).toBeInTheDocument();
     });
 
@@ -768,7 +745,7 @@ describe('EmailList', () => {
       render(<EmailList {...defaultProps} emails={mixedEmails} />);
 
       // All emails should render without issues
-      expect(screen.getByText('Emails (4)')).toBeInTheDocument();
+      expect(screen.getAllByRole('listitem')).toHaveLength(4);
     });
 
     it('should handle multiple selections correctly', () => {

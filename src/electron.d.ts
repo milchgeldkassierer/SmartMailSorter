@@ -25,7 +25,7 @@ declare global {
       getEmails: (accountId: string) => Promise<Email[]>;
       getEmailsPaginated: (accountId: string, limit?: number, offset?: number) => Promise<Email[]>;
       getEmailCount: (accountId: string) => Promise<number>;
-      getCategoryCounts: (accountId: string) => Promise<Record<string, number>>;
+      getCategoryCounts: (accountId: string) => Promise<Array<{ smartCategory: string; count: number }>>;
       syncAccount: (accountId: string) => Promise<SyncResult>;
       testConnection: (account: ImapAccount) => Promise<{ success: boolean; error?: string }>;
       resetDb: () => Promise<{ success: boolean; error?: string; message?: string } | boolean>;

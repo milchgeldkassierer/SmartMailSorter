@@ -943,6 +943,8 @@ function clearCategorizationFeedback(accountId) {
  * @returns {Array} Paginated emails with snippet field
  */
 function getEmailsPaginated(accountId, limit = 50, offset = 0) {
+  const safeLimit = Math.min(200, Math.max(1, Number(limit) || 50));
+  const safeOffset = Math.max(0, Number(offset) || 0);
   const emails = db
     .prepare(
       `
@@ -953,11 +955,11 @@ function getEmailsPaginated(accountId, limit = 50, offset = 0) {
       aiSummary, aiReasoning, confidence, uid
     FROM emails
     WHERE accountId = ?
-    ORDER BY date DESC
+    ORDER BY date DESC, id DESC
     LIMIT ? OFFSET ?
   `
     )
-    .all(accountId, limit, offset);
+    .all(accountId, safeLimit, safeOffset);
 
   return emails.map((email) => ({
     ...email,

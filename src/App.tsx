@@ -32,9 +32,6 @@ import BatchActionBar from './components/BatchActionBar';
 import ProgressBar from './components/ProgressBar';
 import SavedFilterDialog from './components/SavedFilterDialog';
 
-// Page size for initial paginated loading (matches useEmails PAGE_SIZE)
-const PAGE_SIZE = 100;
-
 const App: React.FC = () => {
   const { t, ready } = useTranslation();
   const { accounts, activeAccountId, setAccounts, setActiveAccountId, addAccount, removeAccount, switchAccount } =
@@ -231,7 +228,10 @@ const App: React.FC = () => {
     accounts,
     onAccountsUpdate: setAccounts,
     onDataUpdate: (accountId, { emails }) => {
-      setData((prev: Record<string, AccountData>) => ({ ...prev, [accountId]: { ...prev[accountId], emails } }));
+      setData((prev: Record<string, AccountData>) => {
+        const previous = prev[accountId] ?? { emails: [], categories: [] };
+        return { ...prev, [accountId]: { ...previous, emails } };
+      });
       resetPagination();
     },
     dialog,
@@ -490,7 +490,7 @@ const App: React.FC = () => {
         if (loadedAccounts.length > 0) {
           setAccounts(loadedAccounts);
           setActiveAccountId(loadedAccounts[0].id);
-          const emails = await window.electron.getEmailsPaginated(loadedAccounts[0].id, PAGE_SIZE, 0);
+          const emails = await window.electron.getEmails(loadedAccounts[0].id);
           setData({ [loadedAccounts[0].id]: { emails, categories: savedCategories } });
         } else {
           setIsSettingsOpen(true);
@@ -549,7 +549,7 @@ const App: React.FC = () => {
     const handleAutoSyncCompleted = async () => {
       if (!activeAccountId) return;
       try {
-        const emails = await window.electron.getEmailsPaginated(activeAccountId, PAGE_SIZE, 0);
+        const emails = await window.electron.getEmails(activeAccountId);
         const categories = await window.electron.getCategories();
         setData((prev: Record<string, AccountData>) => ({
           ...prev,
@@ -575,7 +575,7 @@ const App: React.FC = () => {
     (async () => {
       if (!activeAccountId || !window.electron) return;
       try {
-        const emails = await window.electron.getEmailsPaginated(activeAccountId, PAGE_SIZE, 0);
+        const emails = await window.electron.getEmails(activeAccountId);
         const categories = await window.electron.getCategories();
         await autoDiscoverFolders(emails, categories);
         const finalCategories = await window.electron.getCategories();
@@ -601,7 +601,7 @@ const App: React.FC = () => {
         await window.electron.addAccount(newAccount);
         addAccount(newAccount);
         switchAccount(newAccount.id);
-        const emails = await window.electron.getEmailsPaginated(newAccount.id, PAGE_SIZE, 0);
+        const emails = await window.electron.getEmails(newAccount.id);
         setData((prev: Record<string, AccountData>) => ({
           ...prev,
           [newAccount.id]: {
@@ -755,6 +755,7 @@ const App: React.FC = () => {
             handleMoveToSmartCategory(emailIds, targetCategory);
           }
         }}
+        totalEmailCount={totalCount}
       />
 
       <div className="flex-1 flex flex-col min-w-0">
@@ -802,7 +803,6 @@ const App: React.FC = () => {
             isLoading={false}
             onLoadMore={loadMoreEmails}
             hasMore={canLoadMore}
-            totalCount={totalCount}
             onDragStart={onEmailDragStart}
             onDragEnd={onDragEnd}
             draggedEmailIds={draggedEmailIds}

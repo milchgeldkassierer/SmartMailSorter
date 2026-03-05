@@ -19,7 +19,6 @@ interface EmailListProps {
   isLoading: boolean;
   onLoadMore?: () => void;
   hasMore?: boolean;
-  totalCount?: number;
   onDragStart?: (emailId: string, selectedIds: Set<string>, event: React.DragEvent) => void;
   onDragEnd?: () => void;
   draggedEmailIds?: string[];
@@ -184,7 +183,6 @@ const EmailList: React.FC<EmailListProps> = ({
   isLoading,
   onLoadMore,
   hasMore,
-  totalCount,
   onDragStart,
   onDragEnd,
   draggedEmailIds,
@@ -232,8 +230,6 @@ const EmailList: React.FC<EmailListProps> = ({
     }
   }, [hasMore, onLoadMore]);
 
-  const displayCount = totalCount ?? emails.length;
-
   if (isLoading) {
     return (
       <div className="flex-1 flex items-center justify-center bg-white border-r border-slate-200">
@@ -259,11 +255,6 @@ const EmailList: React.FC<EmailListProps> = ({
 
   return (
     <div className="w-80 md:w-96 flex-shrink-0 bg-white border-r border-slate-200 flex flex-col h-full overflow-hidden">
-      <div className="p-4 border-b border-slate-100 flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-slate-800">
-          {t('emailList.emails')} ({displayCount})
-        </h2>
-      </div>
       <Virtuoso
         style={{ flex: 1 }}
         totalCount={emails.length}
