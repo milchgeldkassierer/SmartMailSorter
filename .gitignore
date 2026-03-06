@@ -41,3 +41,4 @@ coverage/
 .worktrees/
 .security-key
 logs/security/
+.playwright-cli/
