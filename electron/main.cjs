@@ -25,6 +25,8 @@ const isDev = !app.isPackaged;
 let autoSyncTimer = null;
 let autoSyncDebounceTimer = null;
 let isSyncing = false;
+let syncStartedAt = null;
+const SYNC_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes max per sync cycle
 
 /** Start the periodic auto-sync timer for all accounts. */
 function startAutoSync(intervalMinutes) {
@@ -54,10 +56,18 @@ function stopAutoSync() {
 /** Run a single auto-sync cycle for all accounts with debounce protection. */
 async function runAutoSync() {
   if (isSyncing) {
-    logger.info('[AutoSync] Sync already in progress, skipping');
-    return;
+    // Check if sync has been stuck for too long and force-reset
+    if (syncStartedAt && Date.now() - syncStartedAt > SYNC_TIMEOUT_MS) {
+      logger.warn('[AutoSync] Previous sync exceeded timeout, force-resetting isSyncing flag');
+      isSyncing = false;
+      syncStartedAt = null;
+    } else {
+      logger.info('[AutoSync] Sync already in progress, skipping');
+      return;
+    }
   }
   isSyncing = true;
+  syncStartedAt = Date.now();
   logger.info('[AutoSync] Starting automatic sync for all accounts');
   try {
     const accounts = db.getAccounts();
@@ -73,6 +83,7 @@ async function runAutoSync() {
     }
   } finally {
     isSyncing = false;
+    syncStartedAt = null;
     // Notify all renderer windows (always, even on failure, so UI can recover)
     const windows = BrowserWindow.getAllWindows();
     for (const win of windows) {
@@ -273,11 +284,18 @@ app.whenReady().then(() => {
 
   ipcMain.handle('sync-account', async (event, accountId) => {
     if (isSyncing) {
-      return {
-        success: false,
-        error: 'SYNC_IN_PROGRESS',
-        message: 'Eine Synchronisation läuft bereits. Bitte warten.',
-      };
+      // Force-reset if stuck beyond timeout
+      if (syncStartedAt && Date.now() - syncStartedAt > SYNC_TIMEOUT_MS) {
+        logger.warn('[IPC sync-account] Previous sync exceeded timeout, force-resetting');
+        isSyncing = false;
+        syncStartedAt = null;
+      } else {
+        return {
+          success: false,
+          error: 'SYNC_IN_PROGRESS',
+          message: 'Eine Synchronisation läuft bereits. Bitte warten.',
+        };
+      }
     }
     // Retrieve account with decrypted password for IMAP operations
     const accountWithPassword = db.getAccountWithPassword(accountId);
@@ -286,10 +304,12 @@ app.whenReady().then(() => {
       return { success: false, error: 'Account not found' };
     }
     isSyncing = true;
+    syncStartedAt = Date.now();
     try {
       return await imap.syncAccount(accountWithPassword);
     } finally {
       isSyncing = false;
+      syncStartedAt = null;
     }
   });
 
@@ -392,16 +412,16 @@ app.whenReady().then(() => {
 
   ipcMain.handle('save-email', (event, email) => db.saveEmail(email));
 
-  ipcMain.handle('get-categories', () => db.getCategories());
-  ipcMain.handle('add-category', (event, name, type) => db.addCategory(name, type));
-  ipcMain.handle('update-category-type', (event, name, type) => db.updateCategoryType(name, type));
+  ipcMain.handle('get-categories', (event, accountId) => db.getCategories(accountId));
+  ipcMain.handle('add-category', (event, name, type, accountId) => db.addCategory(name, type, accountId));
+  ipcMain.handle('update-category-type', (event, name, type, accountId) => db.updateCategoryType(name, type, accountId));
 
-  ipcMain.handle('delete-smart-category', (event, categoryName) => {
-    return db.deleteSmartCategory(categoryName);
+  ipcMain.handle('delete-smart-category', (event, categoryName, accountId) => {
+    return db.deleteSmartCategory(categoryName, accountId);
   });
 
-  ipcMain.handle('rename-smart-category', (event, { oldName, newName }) => {
-    return db.renameSmartCategory(oldName, newName);
+  ipcMain.handle('rename-smart-category', (event, { oldName, newName, accountId }) => {
+    return db.renameSmartCategory(oldName, newName, accountId);
   });
 
   // Advanced Search IPC handlers

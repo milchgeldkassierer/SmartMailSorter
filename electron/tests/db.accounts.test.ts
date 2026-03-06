@@ -23,11 +23,11 @@ interface DbModule {
   saveEmail: (email: { id: string; accountId: string; [key: string]: unknown }) => void;
   getEmails: (accountId: string) => Array<{ id: string; accountId: string; [key: string]: unknown }>;
   resetDb: () => void;
-  getCategories: () => Array<{ name: string; type: string }>;
-  addCategory: (name: string, type?: string) => { changes: number };
-  deleteSmartCategory: (categoryName: string) => { changes: number };
-  renameSmartCategory: (oldName: string, newName: string) => { success: boolean };
-  updateCategoryType: (name: string, newType: string) => { changes: number };
+  getCategories: (accountId?: string) => Array<{ name: string; type: string }>;
+  addCategory: (name: string, type?: string, accountId?: string) => { changes: number };
+  deleteSmartCategory: (categoryName: string, accountId?: string) => { changes: number };
+  renameSmartCategory: (oldName: string, newName: string, accountId?: string) => { success: boolean };
+  updateCategoryType: (name: string, newType: string, accountId?: string) => { changes: number };
   getMaxUidForFolder: (accountId: string, folder: string) => number;
   getAllUidsForFolder: (accountId: string, folder: string) => number[];
   migrateFolder: (oldName: string, newName: string) => void;
@@ -1009,8 +1009,25 @@ describe('Database Account CRUD Operations', () => {
   });
 
   describe('Category Operations', () => {
+    const CAT_ACCT = 'cat-ops-account';
+
+    // Categories are account-scoped — need an account for seeding
+    beforeEach(() => {
+      db.addAccount({
+        id: CAT_ACCT,
+        name: 'Cat Ops',
+        email: 'catops@test.com',
+        provider: 'test',
+        imapHost: 'imap.test.com',
+        imapPort: 993,
+        username: 'catops',
+        password: 'pass',
+        color: '#000000',
+      });
+    });
+
     it('should get default categories after init', () => {
-      const categories = db.getCategories();
+      const categories = db.getCategories(CAT_ACCT);
 
       // Should have default system categories
       expect(categories.length).toBeGreaterThan(0);
@@ -1023,24 +1040,22 @@ describe('Database Account CRUD Operations', () => {
     });
 
     it('should add a custom category (lines 375-386)', () => {
-      const result = db.addCategory('CustomCategory', 'custom');
+      const result = db.addCategory('CustomCategory', 'custom', CAT_ACCT);
 
       expect(result.changes).toBe(1);
 
-      const categories = db.getCategories();
+      const categories = db.getCategories(CAT_ACCT);
       const custom = categories.find((c) => c.name === 'CustomCategory');
       expect(custom).toBeDefined();
       expect(custom?.type).toBe('custom');
     });
 
-    it('should throw on duplicate category addition (lines 380-385)', () => {
-      // Add a category
-      db.addCategory('DuplicateTest', 'custom');
+    it('should handle duplicate category addition gracefully', () => {
+      db.addCategory('DuplicateTest', 'custom', CAT_ACCT);
 
-      // Try to add the same category again - should throw due to PRIMARY KEY constraint
-      // Note: The code checks for 'SQLITE_CONSTRAINT_UNIQUE' but SQLite returns
-      // 'SQLITE_CONSTRAINT_PRIMARYKEY' for primary key violations, so the error is re-thrown
-      expect(() => db.addCategory('DuplicateTest', 'custom')).toThrow();
+      // Second add returns changes: 0 (gracefully handled)
+      const result = db.addCategory('DuplicateTest', 'custom', CAT_ACCT);
+      expect(result.changes).toBe(0);
     });
 
     it('should update category type', () => {

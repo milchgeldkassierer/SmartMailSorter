@@ -72,7 +72,9 @@ const App: React.FC = () => {
     refreshCounts,
   } = useEmails({ activeAccountId, accounts });
 
-  const { addCategory, deleteCategory, renameCategory, autoDiscoverFolders } = useCategories();
+  const { addCategory, deleteCategory, renameCategory, autoDiscoverFolders } = useCategories({
+    accountId: activeAccountId,
+  });
 
   const handleSelectEmail = async (id: string) => {
     setSelectedEmailId(id);
@@ -92,6 +94,31 @@ const App: React.FC = () => {
       }
     }
   };
+
+  // Auto-mark email as read after 2 seconds of viewing
+  const autoReadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (autoReadTimerRef.current) {
+      clearTimeout(autoReadTimerRef.current);
+      autoReadTimerRef.current = null;
+    }
+    if (!selectedEmailId || !activeAccountId) return;
+    const email = currentEmails.find((e) => e.id === selectedEmailId);
+    if (!email || email.isRead) return;
+
+    autoReadTimerRef.current = setTimeout(() => {
+      autoReadTimerRef.current = null;
+      handleToggleRead(selectedEmailId).catch(() => {});
+    }, 2000);
+
+    return () => {
+      if (autoReadTimerRef.current) {
+        clearTimeout(autoReadTimerRef.current);
+        autoReadTimerRef.current = null;
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedEmailId]);
 
   const handleDeleteEmail = async (id: string) => {
     const emailToDelete = currentEmails.find((e) => e.id === id);
@@ -484,11 +511,11 @@ const App: React.FC = () => {
       if (!window.electron) return;
       try {
         const loadedAccounts = await window.electron.getAccounts();
-        const savedCategories = await window.electron.getCategories();
         if (loadedAccounts.length > 0) {
           setAccounts(loadedAccounts);
           setActiveAccountId(loadedAccounts[0].id);
           const emails = await window.electron.getEmails(loadedAccounts[0].id);
+          const savedCategories = await window.electron.getCategories(loadedAccounts[0].id);
           setData({ [loadedAccounts[0].id]: { emails, categories: savedCategories } });
         } else {
           setIsSettingsOpen(true);
@@ -516,6 +543,10 @@ const App: React.FC = () => {
       });
   }, []);
 
+  // Stable ref to currentEmails so the notification listener doesn't re-register on every email change
+  const currentEmailsRef = useRef(currentEmails);
+  currentEmailsRef.current = currentEmails;
+
   // Handle notification clicks
   useEffect(() => {
     if (!window.electron) return;
@@ -525,7 +556,7 @@ const App: React.FC = () => {
       setSelectedEmailId(data.emailId);
 
       // Find the email's category and switch to it
-      const email = currentEmails.find((e) => e.id === data.emailId);
+      const email = currentEmailsRef.current.find((e) => e.id === data.emailId);
       if (email && email.smartCategory) {
         setSelectedCategory(email.smartCategory);
       }
@@ -538,17 +569,20 @@ const App: React.FC = () => {
         window.electron.removeNotificationClickedListener(handleNotificationClick);
       }
     };
-  }, [currentEmails, setSelectedEmailId, setSelectedCategory]);
+  }, [setSelectedEmailId, setSelectedCategory]);
 
   // Listen for auto-sync completed events and refresh data
   useEffect(() => {
     if (!window.electron) return;
+    let stale = false;
 
     const handleAutoSyncCompleted = async () => {
       if (!activeAccountId) return;
       try {
         const emails = await window.electron.getEmails(activeAccountId);
-        const categories = await window.electron.getCategories();
+        if (stale) return;
+        const categories = await window.electron.getCategories(activeAccountId);
+        if (stale) return;
         setData((prev: Record<string, AccountData>) => ({
           ...prev,
           [activeAccountId]: { ...prev[activeAccountId], emails, categories },
@@ -562,6 +596,7 @@ const App: React.FC = () => {
     window.electron.onAutoSyncCompleted(handleAutoSyncCompleted);
 
     return () => {
+      stale = true;
       if (window.electron) {
         window.electron.removeAutoSyncCompletedListener(handleAutoSyncCompleted);
       }
@@ -574,9 +609,9 @@ const App: React.FC = () => {
       if (!activeAccountId || !window.electron) return;
       try {
         const emails = await window.electron.getEmails(activeAccountId);
-        const categories = await window.electron.getCategories();
+        const categories = await window.electron.getCategories(activeAccountId);
         await autoDiscoverFolders(emails, categories);
-        const finalCategories = await window.electron.getCategories();
+        const finalCategories = await window.electron.getCategories(activeAccountId);
         setData((prev: Record<string, AccountData>) => ({
           ...prev,
           [activeAccountId]: { emails, categories: finalCategories },

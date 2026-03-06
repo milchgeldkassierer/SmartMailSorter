@@ -25,11 +25,11 @@ contextBridge.exposeInMainWorld('electron', {
   updateEmailSmartCategory: (data) => ipcRenderer.invoke('update-email-smart-category', data),
   saveEmail: (email) => ipcRenderer.invoke('save-email', email),
 
-  // Categories
-  getCategories: () => ipcRenderer.invoke('get-categories'),
-  addCategory: (name, type) => ipcRenderer.invoke('add-category', name, type),
-  updateCategoryType: (name, type) => ipcRenderer.invoke('update-category-type', name, type),
-  deleteSmartCategory: (categoryName) => ipcRenderer.invoke('delete-smart-category', categoryName),
+  // Categories (account-scoped)
+  getCategories: (accountId) => ipcRenderer.invoke('get-categories', accountId),
+  addCategory: (name, type, accountId) => ipcRenderer.invoke('add-category', name, type, accountId),
+  updateCategoryType: (name, type, accountId) => ipcRenderer.invoke('update-category-type', name, type, accountId),
+  deleteSmartCategory: (categoryName, accountId) => ipcRenderer.invoke('delete-smart-category', categoryName, accountId),
   renameSmartCategory: (data) => ipcRenderer.invoke('rename-smart-category', data),
 
   // Advanced Search

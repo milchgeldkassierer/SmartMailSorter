@@ -52,6 +52,9 @@ function createImapClient(account) {
       pass: account.password,
     },
     logger: false,
+    connectionTimeout: 30_000,
+    greetingTimeout: 15_000,
+    socketTimeout: 120_000,
   });
 }
 

@@ -125,42 +125,113 @@ function createSchema() {
   } catch (_e) {
     // Column already exists
   }
-  // Create Categories Table
+  // Create Categories Table (account-scoped)
   db.exec(`
     CREATE TABLE IF NOT EXISTS categories (
-      name TEXT PRIMARY KEY,
-      type TEXT DEFAULT 'custom', -- 'system' or 'custom'
-      icon TEXT
+      accountId TEXT NOT NULL DEFAULT '__global__',
+      name TEXT NOT NULL,
+      type TEXT DEFAULT 'custom',
+      icon TEXT,
+      PRIMARY KEY (accountId, name)
     )
   `);
 
-  // Seed Defaults if empty
-  const count = db.prepare('SELECT count(*) as c FROM categories').get().c;
-  if (count === 0) {
-    const defaults = [
-      { name: 'Rechnungen', type: 'system' },
-      { name: 'Newsletter', type: 'system' },
-      { name: 'Privat', type: 'system' },
-      { name: 'Geschäftlich', type: 'system' },
-      { name: 'Kündigungen', type: 'system' },
-      { name: 'Sonstiges', type: 'system' },
-    ];
-    const insert = db.prepare('INSERT INTO categories (name, type) VALUES (@name, @type)');
-    defaults.forEach((cat) => insert.run(cat));
+  // Migration: if old categories table exists without accountId, recreate with account scope
+  try {
+    const cols = db.pragma('table_info(categories)').map((c) => c.name);
+    if (!cols.includes('accountId')) {
+      logger.info('[DB] Migrating categories table to account-scoped schema');
+      const oldCategories = db.prepare('SELECT name, type, icon FROM categories').all();
+      db.exec('DROP TABLE categories');
+      db.exec(`
+        CREATE TABLE categories (
+          accountId TEXT NOT NULL DEFAULT '__global__',
+          name TEXT NOT NULL,
+          type TEXT DEFAULT 'custom',
+          icon TEXT,
+          PRIMARY KEY (accountId, name)
+        )
+      `);
+      // Re-insert old categories per account — smart categories go to all, folders only where relevant
+      const accountIds = db.prepare('SELECT id FROM accounts').all().map((a) => a.id);
+      if (accountIds.length > 0) {
+        const insert = db.prepare('INSERT OR IGNORE INTO categories (accountId, name, type, icon) VALUES (?, ?, ?, ?)');
+        const hasEmailsInFolder = db.prepare(
+          'SELECT 1 FROM emails WHERE accountId = ? AND folder = ? LIMIT 1'
+        );
+        for (const acctId of accountIds) {
+          for (const cat of oldCategories) {
+            if (cat.type === 'folder') {
+              // Only add folder categories where the account actually has emails in that folder
+              if (hasEmailsInFolder.get(acctId, cat.name)) {
+                insert.run(acctId, cat.name, cat.type, cat.icon);
+              }
+            } else {
+              // Smart/system/custom categories go to all accounts
+              insert.run(acctId, cat.name, cat.type, cat.icon);
+            }
+          }
+        }
+      }
+      logger.info(`[DB] Migrated ${oldCategories.length} categories for ${accountIds.length} account(s)`);
+    }
+  } catch (e) {
+    logger.error('[DB] Categories migration check failed:', e);
+  }
+
+  // Post-migration cleanup: remove folder categories that don't belong to an account
+  // (covers cases where migration already ran but copied folders blindly)
+  try {
+    const folderCats = db.prepare("SELECT accountId, name FROM categories WHERE type = 'folder'").all();
+    if (folderCats.length > 0) {
+      const hasEmails = db.prepare('SELECT 1 FROM emails WHERE accountId = ? AND folder = ? LIMIT 1');
+      const delCat = db.prepare('DELETE FROM categories WHERE accountId = ? AND name = ? AND type = ?');
+      let removed = 0;
+      for (const fc of folderCats) {
+        if (!hasEmails.get(fc.accountId, fc.name)) {
+          delCat.run(fc.accountId, fc.name, 'folder');
+          removed++;
+        }
+      }
+      if (removed > 0) {
+        logger.info(`[DB] Cleaned up ${removed} orphaned folder categories`);
+      }
+    }
+  } catch (e) {
+    logger.error('[DB] Folder category cleanup failed:', e);
+  }
+
+  // Seed default smart categories for accounts that have no categories yet
+  const defaultSmartCategories = [
+    { name: 'Rechnungen', type: 'system' },
+    { name: 'Newsletter', type: 'system' },
+    { name: 'Privat', type: 'system' },
+    { name: 'Geschäftlich', type: 'system' },
+    { name: 'Kündigungen', type: 'system' },
+    { name: 'Sonstiges', type: 'system' },
+  ];
+  const accountRows = db.prepare('SELECT id FROM accounts').all();
+  const seedInsert = db.prepare('INSERT OR IGNORE INTO categories (accountId, name, type) VALUES (?, ?, ?)');
+  for (const acct of accountRows) {
+    const catCount = db.prepare('SELECT count(*) as c FROM categories WHERE accountId = ?').get(acct.id).c;
+    if (catCount === 0) {
+      defaultSmartCategories.forEach((cat) => seedInsert.run(acct.id, cat.name, cat.type));
+    }
   }
 
   // SYNC/MIGRATION: Ensure categories used in emails (custom folders) exist in the categories table
-  // This restores categories that might have been created before the categories table existed.
   try {
     const usedCategories = db
-      .prepare('SELECT DISTINCT smartCategory FROM emails WHERE smartCategory IS NOT NULL AND smartCategory != ?')
+      .prepare(
+        'SELECT DISTINCT e.accountId, e.smartCategory FROM emails e WHERE e.smartCategory IS NOT NULL AND e.smartCategory != ?'
+      )
       .all('');
     const insertIgnore = db.prepare(
-      "INSERT OR IGNORE INTO categories (name, type, icon) VALUES (?, 'custom', 'folder-outline')"
+      "INSERT OR IGNORE INTO categories (accountId, name, type, icon) VALUES (?, ?, 'custom', 'folder-outline')"
     );
 
     usedCategories.forEach((row) => {
-      insertIgnore.run(row.smartCategory);
+      insertIgnore.run(row.accountId, row.smartCategory);
     });
   } catch (e) {
     logger.error('Failed to sync categories from emails:', e);
@@ -399,10 +470,24 @@ function addAccount(account) {
     INSERT INTO accounts (id, name, email, provider, imapHost, imapPort, username, password, color)
     VALUES (@id, @name, @email, @provider, @imapHost, @imapPort, @username, @password, @color)
   `);
-  return stmt.run({
+  const result = stmt.run({
     ...account,
     password: encryptedPassword,
   });
+
+  // Seed default smart categories for the new account
+  const defaultSmartCategories = [
+    { name: 'Rechnungen', type: 'system' },
+    { name: 'Newsletter', type: 'system' },
+    { name: 'Privat', type: 'system' },
+    { name: 'Geschäftlich', type: 'system' },
+    { name: 'Kündigungen', type: 'system' },
+    { name: 'Sonstiges', type: 'system' },
+  ];
+  const catInsert = db.prepare('INSERT OR IGNORE INTO categories (accountId, name, type) VALUES (?, ?, ?)');
+  defaultSmartCategories.forEach((cat) => catInsert.run(account.id, cat.name, cat.type));
+
+  return result;
 }
 
 /** Update the last sync UID and timestamp for an account after IMAP sync. */
@@ -633,19 +718,30 @@ function resetDb() {
 
 // --- Category Methods ---
 
-/** Get all category names sorted alphabetically. */
-function _getCategories() {
+/** Get all category names sorted alphabetically (for a specific account or all). */
+function _getCategories(accountId) {
+  if (accountId) {
+    return db
+      .prepare('SELECT name FROM categories WHERE accountId = ? ORDER BY name ASC')
+      .all(accountId)
+      .map((c) => c.name);
+  }
   return db
-    .prepare('SELECT name FROM categories ORDER BY name ASC')
+    .prepare('SELECT DISTINCT name FROM categories ORDER BY name ASC')
     .all()
     .map((c) => c.name);
 }
 
 /** Add a custom category, ignoring duplicates. */
-function _addCategory(name) {
+function _addCategory(name, accountId) {
   try {
-    const stmt = db.prepare('INSERT INTO categories (name, type) VALUES (?, ?)');
-    stmt.run(name, 'custom');
+    if (accountId) {
+      const stmt = db.prepare('INSERT INTO categories (accountId, name, type) VALUES (?, ?, ?)');
+      stmt.run(accountId, name, 'custom');
+    } else {
+      const stmt = db.prepare('INSERT INTO categories (name, type) VALUES (?, ?)');
+      stmt.run(name, 'custom');
+    }
     return true;
   } catch (_e) {
     // Ignore duplicates
@@ -654,37 +750,57 @@ function _addCategory(name) {
 }
 
 /** Delete a category and untag all emails that were assigned to it. */
-function deleteSmartCategory(categoryName) {
-  logger.info(`[DB] Deleting category "${categoryName}"`);
+function deleteSmartCategory(categoryName, accountId) {
+  logger.info(`[DB] Deleting category "${categoryName}" for account ${accountId || 'all'}`);
 
   // 1. Remove from categories table
-  const delStmt = db.prepare('DELETE FROM categories WHERE name = ?');
-  delStmt.run(categoryName);
+  if (accountId) {
+    db.prepare('DELETE FROM categories WHERE accountId = ? AND name = ?').run(accountId, categoryName);
+  } else {
+    db.prepare('DELETE FROM categories WHERE name = ?').run(categoryName);
+  }
 
-  // 2. Untag emails
-  const stmt = db.prepare('UPDATE emails SET smartCategory = NULL WHERE smartCategory = ?');
-  const info = stmt.run(categoryName);
+  // 2. Untag emails (scoped to account if provided)
+  let info;
+  if (accountId) {
+    info = db
+      .prepare('UPDATE emails SET smartCategory = NULL WHERE smartCategory = ? AND accountId = ?')
+      .run(categoryName, accountId);
+  } else {
+    info = db.prepare('UPDATE emails SET smartCategory = NULL WHERE smartCategory = ?').run(categoryName);
+  }
 
   logger.info(`[DB] Deleted category. Emails affected: ${info.changes}`);
   return { success: true, changes: info.changes };
 }
 
 /** Rename a category and update all associated emails (transactional). */
-function renameSmartCategory(oldName, newName) {
-  logger.info(`[DB] Renaming category from "${oldName}" to "${newName}"`);
+function renameSmartCategory(oldName, newName, accountId) {
+  logger.info(`[DB] Renaming category from "${oldName}" to "${newName}" for account ${accountId || 'all'}`);
 
-  // Transaction to ensure consistency
   const transaction = db.transaction(() => {
-    // 1. Create new category
-    try {
-      db.prepare('INSERT INTO categories (name, type) VALUES (?, ?)').run(newName, 'custom');
-    } catch (_e) {} // Exists? ignore
+    if (accountId) {
+      // 1. Create new category for this account
+      try {
+        db.prepare('INSERT INTO categories (accountId, name, type) VALUES (?, ?, ?)').run(accountId, newName, 'custom');
+      } catch (_e) {} // Exists? ignore
 
-    // 2. Update emails
-    db.prepare('UPDATE emails SET smartCategory = ? WHERE smartCategory = ?').run(newName, oldName);
+      // 2. Update emails for this account
+      db.prepare('UPDATE emails SET smartCategory = ? WHERE smartCategory = ? AND accountId = ?').run(
+        newName,
+        oldName,
+        accountId
+      );
 
-    // 3. Delete old category
-    db.prepare('DELETE FROM categories WHERE name = ?').run(oldName);
+      // 3. Delete old category for this account
+      db.prepare('DELETE FROM categories WHERE accountId = ? AND name = ?').run(accountId, oldName);
+    } else {
+      try {
+        db.prepare('INSERT INTO categories (name, type) VALUES (?, ?)').run(newName, 'custom');
+      } catch (_e) {}
+      db.prepare('UPDATE emails SET smartCategory = ? WHERE smartCategory = ?').run(newName, oldName);
+      db.prepare('DELETE FROM categories WHERE name = ?').run(oldName);
+    }
   });
 
   transaction();
@@ -1026,22 +1142,35 @@ module.exports = {
   getTotalUnreadEmailCount,
 
   // New Category Methods
-  getCategories: () => db.prepare('SELECT name, type FROM categories ORDER BY name').all(),
-  addCategory: (name, type = 'custom') => {
+  getCategories: (accountId) => {
+    if (!accountId) {
+      return db.prepare('SELECT name, type FROM categories ORDER BY name').all();
+    }
+    return db.prepare('SELECT name, type FROM categories WHERE accountId = ? ORDER BY name').all(accountId);
+  },
+  addCategory: (name, type = 'custom', accountId) => {
     try {
+      if (accountId) {
+        const stmt = db.prepare('INSERT INTO categories (accountId, name, type) VALUES (?, ?, ?)');
+        const info = stmt.run(accountId, name, type);
+        return { success: true, changes: info.changes };
+      }
       const stmt = db.prepare('INSERT INTO categories (name, type) VALUES (?, ?)');
       const info = stmt.run(name, type);
       return { success: true, changes: info.changes };
     } catch (err) {
-      if (err.code === 'SQLITE_CONSTRAINT_UNIQUE') {
-        // If it exists, we might want to ensure the type is correct?
-        // For now, ignore. App.tsx will call updateCategoryType if needed.
+      if (err.code === 'SQLITE_CONSTRAINT_UNIQUE' || err.code === 'SQLITE_CONSTRAINT_PRIMARYKEY') {
         return { success: true, changes: 0 };
       }
       throw err;
     }
   },
-  updateCategoryType: (name, newType) => {
+  updateCategoryType: (name, newType, accountId) => {
+    if (accountId) {
+      const stmt = db.prepare('UPDATE categories SET type = ? WHERE accountId = ? AND name = ?');
+      const info = stmt.run(newType, accountId, name);
+      return { success: true, changes: info.changes };
+    }
     const stmt = db.prepare('UPDATE categories SET type = ? WHERE name = ?');
     const info = stmt.run(newType, name);
     return { success: true, changes: info.changes };
@@ -1102,8 +1231,6 @@ module.exports = {
 /** Migrate emails and categories from one folder name to another (transactional). */
 function migrateFolder(oldName, newName) {
   const updateEmails = db.prepare('UPDATE emails SET folder = ? WHERE folder = ?');
-  // Also update category if it exists as a "Smart Category" (which we treated physical folders as)
-  const updateCategory = db.prepare('UPDATE categories SET name = ? WHERE name = ?');
 
   const transaction = db.transaction(() => {
     // 1. Update emails physical folder
@@ -1112,11 +1239,11 @@ function migrateFolder(oldName, newName) {
       logger.info(`[DB] Migrated ${info.changes} emails from ${oldName} to ${newName}`);
     }
 
-    // 2. Update category name if present
+    // 2. Update category name across all accounts
     try {
-      updateCategory.run(newName, oldName);
+      db.prepare('UPDATE categories SET name = ? WHERE name = ?').run(newName, oldName);
     } catch (err) {
-      // If target category exists, just delete old one
+      // If target category exists for some accounts, just delete old entries
       if (err.code === 'SQLITE_CONSTRAINT_UNIQUE') {
         db.prepare('DELETE FROM categories WHERE name = ?').run(oldName);
       }

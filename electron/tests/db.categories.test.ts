@@ -28,11 +28,11 @@ interface Category {
 
 interface DbModule {
   init: (path: string) => void;
-  getCategories: () => Category[];
-  addCategory: (name: string, type?: string) => { changes: number };
-  updateCategoryType: (name: string, newType: string) => { changes: number };
-  deleteSmartCategory: (categoryName: string) => { changes: number };
-  renameSmartCategory: (oldName: string, newName: string) => { success: boolean };
+  getCategories: (accountId?: string) => Category[];
+  addCategory: (name: string, type?: string, accountId?: string) => { changes: number };
+  updateCategoryType: (name: string, newType: string, accountId?: string) => { changes: number };
+  deleteSmartCategory: (categoryName: string, accountId?: string) => { changes: number };
+  renameSmartCategory: (oldName: string, newName: string, accountId?: string) => { success: boolean };
   addAccount: (account: {
     id: string;
     name: string;
@@ -63,16 +63,30 @@ interface DbModule {
 // Import the database module under test
 const db: DbModule = require('../db.cjs');
 
+const TEST_ACCOUNT = {
+  id: 'test-account-1',
+  name: 'Test',
+  email: 'test@test.com',
+  provider: 'test',
+  imapHost: 'imap.test.com',
+  imapPort: 993,
+  username: 'test',
+  password: 'pass',
+  color: '#000000',
+};
+
 describe('Database Categories Module', () => {
   beforeEach(() => {
     // Initialize with in-memory DB for test isolation
     // This exercises the DI path in db.cjs
     db.init(':memory:');
+    // Categories are account-scoped — create a test account to seed defaults
+    db.addAccount(TEST_ACCOUNT);
   });
 
   describe('getCategories', () => {
     it('should return default system categories after initialization', () => {
-      const categories = db.getCategories();
+      const categories = db.getCategories(TEST_ACCOUNT.id);
 
       // Verify we have the default system categories
       expect(categories.length).toBeGreaterThanOrEqual(6);
@@ -87,7 +101,7 @@ describe('Database Categories Module', () => {
     });
 
     it('should return categories with name and type properties', () => {
-      const categories = db.getCategories();
+      const categories = db.getCategories(TEST_ACCOUNT.id);
 
       expect(categories.length).toBeGreaterThan(0);
       categories.forEach((cat) => {
@@ -99,7 +113,7 @@ describe('Database Categories Module', () => {
     });
 
     it('should have system type for default categories', () => {
-      const categories = db.getCategories();
+      const categories = db.getCategories(TEST_ACCOUNT.id);
 
       const systemCategory = categories.find((c) => c.name === 'Rechnungen');
       expect(systemCategory?.type).toBe('system');
@@ -108,87 +122,76 @@ describe('Database Categories Module', () => {
 
   describe('addCategory', () => {
     it('should add a new custom category', () => {
-      const result = db.addCategory('MyCategory');
+      const result = db.addCategory('MyCategory', 'custom', TEST_ACCOUNT.id);
 
       expect(result.changes).toBe(1);
 
-      const categories = db.getCategories();
+      const categories = db.getCategories(TEST_ACCOUNT.id);
       const myCategory = categories.find((c) => c.name === 'MyCategory');
       expect(myCategory).toBeDefined();
       expect(myCategory?.type).toBe('custom');
     });
 
     it('should add a category with specified type', () => {
-      const result = db.addCategory('SystemCat', 'system');
+      const result = db.addCategory('SystemCat', 'system', TEST_ACCOUNT.id);
 
       expect(result.changes).toBe(1);
 
-      const categories = db.getCategories();
+      const categories = db.getCategories(TEST_ACCOUNT.id);
       const systemCat = categories.find((c) => c.name === 'SystemCat');
       expect(systemCat).toBeDefined();
       expect(systemCat?.type).toBe('system');
     });
 
     it('should handle duplicate category gracefully', () => {
-      db.addCategory('Duplicate');
+      db.addCategory('Duplicate', 'custom', TEST_ACCOUNT.id);
 
-      // Second add of same name should throw SQLITE_CONSTRAINT_PRIMARYKEY
-      // (name is the primary key, not just unique constraint)
-      try {
-        db.addCategory('Duplicate');
-        // If it doesn't throw, verify no duplicates
-        const categories = db.getCategories();
-        const dupCount = categories.filter((c) => c.name === 'Duplicate').length;
-        expect(dupCount).toBe(1);
-      } catch (err: unknown) {
-        // Expected: Primary key violation for duplicate names
-        expect((err as { code: string }).code).toBe('SQLITE_CONSTRAINT_PRIMARYKEY');
-      }
+      // Second add of same name+accountId should be handled gracefully
+      const result = db.addCategory('Duplicate', 'custom', TEST_ACCOUNT.id);
+      // addCategory catches SQLITE_CONSTRAINT_UNIQUE and returns changes: 0
+      expect(result.changes).toBe(0);
+
+      const categories = db.getCategories(TEST_ACCOUNT.id);
+      const dupCount = categories.filter((c) => c.name === 'Duplicate').length;
+      expect(dupCount).toBe(1);
     });
 
     it('should not duplicate existing system categories', () => {
       // Try to add a category with same name as system category
-      // Should throw SQLITE_CONSTRAINT_PRIMARYKEY since name is PK
-      try {
-        db.addCategory('Rechnungen');
-        // If it doesn't throw, verify count
-        const categories = db.getCategories();
-        const rechnungenCount = categories.filter((c) => c.name === 'Rechnungen').length;
-        expect(rechnungenCount).toBe(1);
-      } catch (err: unknown) {
-        expect((err as { code: string }).code).toBe('SQLITE_CONSTRAINT_PRIMARYKEY');
-      }
+      const result = db.addCategory('Rechnungen', 'custom', TEST_ACCOUNT.id);
+      expect(result.changes).toBe(0);
+
+      const categories = db.getCategories(TEST_ACCOUNT.id);
+      const rechnungenCount = categories.filter((c) => c.name === 'Rechnungen').length;
+      expect(rechnungenCount).toBe(1);
     });
   });
 
   describe('updateCategoryType', () => {
     it('should update an existing category type', () => {
-      // First add a custom category
-      db.addCategory('TestCategory', 'custom');
+      db.addCategory('TestCategory', 'custom', TEST_ACCOUNT.id);
 
-      // Update it to system
-      const result = db.updateCategoryType('TestCategory', 'system');
+      const result = db.updateCategoryType('TestCategory', 'system', TEST_ACCOUNT.id);
 
       expect(result.changes).toBe(1);
 
-      const categories = db.getCategories();
+      const categories = db.getCategories(TEST_ACCOUNT.id);
       const updated = categories.find((c) => c.name === 'TestCategory');
       expect(updated?.type).toBe('system');
     });
 
     it('should change system category to custom', () => {
-      // Update a default system category
-      const result = db.updateCategoryType('Privat', 'custom');
+      const result = db.updateCategoryType('Privat', 'custom', TEST_ACCOUNT.id);
 
       expect(result.changes).toBe(1);
 
-      const categories = db.getCategories();
+      const categories = db.getCategories(TEST_ACCOUNT.id);
       const privat = categories.find((c) => c.name === 'Privat');
       expect(privat?.type).toBe('custom');
     });
 
     it('should return 0 changes for non-existent category', () => {
-      const result = db.updateCategoryType('NonExistent', 'custom');
+      const result = db.updateCategoryType('NonExistent', 'custom', TEST_ACCOUNT.id);
 
       expect(result.changes).toBe(0);
     });
@@ -196,41 +199,22 @@ describe('Database Categories Module', () => {
 
   describe('deleteSmartCategory', () => {
     it('should delete a category from the database', () => {
-      // Add a category first
-      db.addCategory('ToDelete');
+      db.addCategory('ToDelete', 'custom', TEST_ACCOUNT.id);
 
-      // Verify it exists
-      let categories = db.getCategories();
+      let categories = db.getCategories(TEST_ACCOUNT.id);
       expect(categories.find((c) => c.name === 'ToDelete')).toBeDefined();
 
-      // Delete it
-      db.deleteSmartCategory('ToDelete');
+      db.deleteSmartCategory('ToDelete', TEST_ACCOUNT.id);
 
-      // Verify it's gone
-      categories = db.getCategories();
+      categories = db.getCategories(TEST_ACCOUNT.id);
       expect(categories.find((c) => c.name === 'ToDelete')).toBeUndefined();
     });
 
     it('should untag emails when deleting category', () => {
-      // Add an account and email with category
-      const account = {
-        id: 'acc-cat-1',
-        name: 'Test',
-        email: 't@t.com',
-        provider: 'test',
-        imapHost: 'imap.test.com',
-        imapPort: 993,
-        username: 'test',
-        password: 'pass',
-        color: '#000000',
-      };
-      db.addAccount(account);
-
-      // Add a category and email with that category
-      db.addCategory('TempCategory');
+      db.addCategory('TempCategory', 'custom', TEST_ACCOUNT.id);
       db.saveEmail({
         id: 'email-cat-1',
-        accountId: 'acc-cat-1',
+        accountId: TEST_ACCOUNT.id,
         sender: 'Test Sender',
         senderEmail: 'sender@test.com',
         subject: 'Test Subject',
@@ -242,69 +226,49 @@ describe('Database Categories Module', () => {
         uid: 1,
       });
 
-      // Delete the category
-      const result = db.deleteSmartCategory('TempCategory');
+      const result = db.deleteSmartCategory('TempCategory', TEST_ACCOUNT.id);
 
-      // Should affect 1 email
       expect(result.changes).toBe(1);
 
-      // Verify email's category is now null
-      const emails = db.getEmails('acc-cat-1');
+      const emails = db.getEmails(TEST_ACCOUNT.id);
       expect(emails[0].smartCategory).toBeNull();
     });
 
     it('should handle deleting non-existent category', () => {
-      // Should not throw
-      const result = db.deleteSmartCategory('NonExistent');
+      const result = db.deleteSmartCategory('NonExistent', TEST_ACCOUNT.id);
       expect(result.changes).toBe(0);
     });
 
     it('should handle deleting category with no emails', () => {
-      db.addCategory('EmptyCategory');
+      db.addCategory('EmptyCategory', 'custom', TEST_ACCOUNT.id);
 
-      const result = db.deleteSmartCategory('EmptyCategory');
+      const result = db.deleteSmartCategory('EmptyCategory', TEST_ACCOUNT.id);
 
-      // 0 emails affected
       expect(result.changes).toBe(0);
 
-      // Category should be gone
-      const categories = db.getCategories();
+      const categories = db.getCategories(TEST_ACCOUNT.id);
       expect(categories.find((c) => c.name === 'EmptyCategory')).toBeUndefined();
     });
   });
 
   describe('renameSmartCategory', () => {
     it('should rename a category', () => {
-      db.addCategory('OldName');
+      db.addCategory('OldName', 'custom', TEST_ACCOUNT.id);
 
-      const result = db.renameSmartCategory('OldName', 'NewName');
+      const result = db.renameSmartCategory('OldName', 'NewName', TEST_ACCOUNT.id);
 
       expect(result.success).toBe(true);
 
-      const categories = db.getCategories();
+      const categories = db.getCategories(TEST_ACCOUNT.id);
       expect(categories.find((c) => c.name === 'OldName')).toBeUndefined();
       expect(categories.find((c) => c.name === 'NewName')).toBeDefined();
     });
 
     it('should update emails when renaming category', () => {
-      // Setup account and email
-      const account = {
-        id: 'acc-rename-1',
-        name: 'Test',
-        email: 't@t.com',
-        provider: 'test',
-        imapHost: 'imap.test.com',
-        imapPort: 993,
-        username: 'test',
-        password: 'pass',
-        color: '#000000',
-      };
-      db.addAccount(account);
-
-      db.addCategory('OldCategory');
+      db.addCategory('OldCategory', 'custom', TEST_ACCOUNT.id);
       db.saveEmail({
         id: 'email-rename-1',
-        accountId: 'acc-rename-1',
+        accountId: TEST_ACCOUNT.id,
         sender: 'Test Sender',
         senderEmail: 'sender@test.com',
         subject: 'Test Subject',
@@ -316,42 +280,37 @@ describe('Database Categories Module', () => {
         uid: 1,
       });
 
-      // Rename the category
-      db.renameSmartCategory('OldCategory', 'NewCategory');
+      db.renameSmartCategory('OldCategory', 'NewCategory', TEST_ACCOUNT.id);
 
-      // Verify email has new category
-      const emails = db.getEmails('acc-rename-1');
+      const emails = db.getEmails(TEST_ACCOUNT.id);
       expect(emails[0].smartCategory).toBe('NewCategory');
     });
 
     it('should handle renaming to existing category name', () => {
-      db.addCategory('CategoryA');
-      db.addCategory('CategoryB');
+      db.addCategory('CategoryA', 'custom', TEST_ACCOUNT.id);
+      db.addCategory('CategoryB', 'custom', TEST_ACCOUNT.id);
 
-      // Rename A to B (B already exists)
-      const result = db.renameSmartCategory('CategoryA', 'CategoryB');
+      const result = db.renameSmartCategory('CategoryA', 'CategoryB', TEST_ACCOUNT.id);
 
       expect(result.success).toBe(true);
 
-      // A should be gone, B should exist
-      const categories = db.getCategories();
+      const categories = db.getCategories(TEST_ACCOUNT.id);
       expect(categories.find((c) => c.name === 'CategoryA')).toBeUndefined();
       expect(categories.find((c) => c.name === 'CategoryB')).toBeDefined();
     });
 
     it('should handle renaming non-existent category', () => {
-      // Should not throw, still returns success
-      const result = db.renameSmartCategory('NonExistent', 'NewName');
+      const result = db.renameSmartCategory('NonExistent', 'NewName', TEST_ACCOUNT.id);
 
       expect(result.success).toBe(true);
     });
 
     it('should rename category with new category as custom type', () => {
-      db.addCategory('SourceCat', 'system');
+      db.addCategory('SourceCat', 'system', TEST_ACCOUNT.id);
 
-      db.renameSmartCategory('SourceCat', 'TargetCat');
+      db.renameSmartCategory('SourceCat', 'TargetCat', TEST_ACCOUNT.id);
 
-      const categories = db.getCategories();
+      const categories = db.getCategories(TEST_ACCOUNT.id);
       const target = categories.find((c) => c.name === 'TargetCat');
       expect(target).toBeDefined();
       expect(target?.type).toBe('custom');

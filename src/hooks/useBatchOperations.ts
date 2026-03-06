@@ -290,7 +290,7 @@ export const useBatchOperations = ({
         const exists = newCats.some((c) => c.name === catName);
         if (!exists) {
           newCats.push({ name: catName, type: 'custom' });
-          if (window.electron) window.electron.addCategory(catName, 'custom');
+          if (window.electron) window.electron.addCategory(catName, 'custom', accountId);
         }
       });
       onUpdateCategories(newCats);

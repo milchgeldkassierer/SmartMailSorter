@@ -62,12 +62,16 @@ declare global {
       }) => Promise<EmailOperationResult>;
       saveEmail: (email: Email) => Promise<void>;
 
-      // Categories
-      getCategories: () => Promise<Category[]>;
-      addCategory: (name: string, type?: string) => Promise<CategoryOperationResult>;
-      updateCategoryType: (name: string, type: string) => Promise<CategoryOperationResult>;
-      deleteSmartCategory: (categoryName: string) => Promise<CategoryOperationResult>;
-      renameSmartCategory: (data: { oldName: string; newName: string }) => Promise<CategoryOperationResult>;
+      // Categories (account-scoped)
+      getCategories: (accountId?: string) => Promise<Category[]>;
+      addCategory: (name: string, type?: string, accountId?: string) => Promise<CategoryOperationResult>;
+      updateCategoryType: (name: string, type: string, accountId?: string) => Promise<CategoryOperationResult>;
+      deleteSmartCategory: (categoryName: string, accountId?: string) => Promise<CategoryOperationResult>;
+      renameSmartCategory: (data: {
+        oldName: string;
+        newName: string;
+        accountId?: string;
+      }) => Promise<CategoryOperationResult>;
 
       // Attachments & Content
       getEmailAttachments: (emailId: string) => Promise<Attachment[]>;

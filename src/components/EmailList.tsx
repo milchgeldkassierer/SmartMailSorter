@@ -69,7 +69,7 @@ const EmailRow = React.memo<EmailRowProps>(
         onClick={(e) => onRowClick(email.id, e)}
         className={`group relative p-4 pl-12 border-b border-slate-100 cursor-pointer hover:bg-slate-50 transition-colors ${
           selectedEmailId === email.id ? 'bg-blue-50 border-l-4 border-l-blue-600' : 'border-l-4 border-l-transparent'
-        } ${isSelected ? 'bg-blue-50/50' : ''} ${isDragged ? 'opacity-50' : ''}`}
+        } ${isSelected ? 'bg-blue-50/50' : ''} ${isDragged ? 'opacity-50' : ''} ${!email.isRead ? 'bg-blue-50/30' : ''}`}
       >
         {/* Selection Checkbox (Absolute Left) */}
         <div
@@ -136,7 +136,10 @@ const EmailRow = React.memo<EmailRowProps>(
         </div>
 
         <div className={`flex items-baseline mb-1 gap-2 ${email.isFlagged ? 'pr-9' : ''}`}>
-          <span className={`font-medium truncate min-w-0 ${email.isRead ? 'text-slate-600' : 'text-slate-900'}`}>
+          {!email.isRead && (
+            <span className="w-2 h-2 rounded-full bg-blue-600 flex-shrink-0 relative top-[1px]" />
+          )}
+          <span className={`truncate min-w-0 ${email.isRead ? 'font-medium text-slate-500' : 'font-semibold text-slate-900'}`}>
             {displayName(email.sender)}
           </span>
           <span className="text-xs text-slate-400 whitespace-nowrap flex-shrink-0 ml-auto group-hover:invisible">
@@ -145,7 +148,7 @@ const EmailRow = React.memo<EmailRowProps>(
         </div>
 
         <div
-          className={`text-sm mb-1 truncate pr-8 flex items-center gap-2 ${email.isRead ? 'text-slate-500' : 'text-slate-800 font-medium'}`}
+          className={`text-sm mb-1 truncate pr-8 flex items-center gap-2 ${email.isRead ? 'text-slate-400' : 'text-slate-800 font-medium'}`}
         >
           <span
             className="truncate"
@@ -156,7 +159,7 @@ const EmailRow = React.memo<EmailRowProps>(
           {email.hasAttachments && <Paperclip className="w-3.5 h-3.5 text-blue-600 flex-shrink-0" />}
         </div>
 
-        <div className="text-xs text-slate-400 line-clamp-2">{email.body}</div>
+        <div className={`text-xs line-clamp-2 ${email.isRead ? 'text-slate-400' : 'text-slate-500'}`}>{email.body}</div>
 
         {email.aiSummary && (
           <div className="mt-2 flex items-center gap-1 text-[10px] text-blue-600 bg-blue-100 px-2 py-0.5 rounded w-fit">
